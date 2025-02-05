@@ -68,29 +68,43 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 
 	fmt.Fprintln(rdbg, "add", t2s.Hash.String(), FeePackagesDirty, t2s.MemInputCnt)
 	if !FeePackagesDirty && t2s.MemInputCnt > 0 { // go through all the parents...
-		var resort bool
-		for vout, meminput := range t2s.MemInputs {
-			if meminput { // and add yoursef to their packages
-				if parnet, has := TransactionsToSend[btc.BIdx(t2s.TxIn[vout].Input.Hash[:])]; has {
-					x := parnet.addToPackages(t2s)
-					fmt.Fprintln(rdbg, " - to parnet", parnet.Hash.String(), "   resort:", x, resort)
-					if x {
-						resort = true
-					}
-				} else {
-					println("ERROR: t2s being added has mem input which does not exist")
-				}
+		parents := t2s.getAllTopParents()
+		fmt.Fprintln(rdbg, " + found", len(parents), "top parents", FeePackagesNeedSorting)
+		for _, parent := range parents {
+			if parent.MemInputCnt != 0 {
+				println("ERROR: parent.MemInputCnt!=0 must not happen here")
+				continue
 			}
-		}
-		if resort {
-			common.CountSafe("TxPkgsAddResort")
-			sortFeePackages()
+			parent.addToPackages(t2s)
+			fmt.Fprintln(rdbg, " + added to parent", parent.Hash.String(), "   resort:", FeePackagesNeedSorting)
 		}
 	}
+	fmt.Fprintln(rdbg, "after need sorting:", FeePackagesNeedSorting)
 
 	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
 		common.SetMinFeePerKB(0) // nothing removed so set the minimal fee
 	}
+}
+
+func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
+	var do_one_parent func(t2s *OneTxToSend)
+	do_one_parent = func(t2s *OneTxToSend) {
+		for vout, meminput := range t2s.MemInputs {
+			if meminput { // and add yoursef to their packages
+				if parent, has := TransactionsToSend[btc.BIdx(t2s.TxIn[vout].Input.Hash[:])]; has {
+					if parent.MemInputCnt == 0 {
+						result = append(result, parent)
+					} else {
+						do_one_parent(parent)
+					}
+				} else {
+					println("ERROR: getAllTopParents t2s being added has mem input which does not exist")
+				}
+			}
+		}
+	}
+	do_one_parent(tx)
+	return
 }
 
 // Delete deletes the tx from the mempool.
@@ -374,7 +388,7 @@ func (tx *OneTxToSend) Id() string {
 
 // If t2s belongs to any packages, we add the child at the end of each of them
 // If t2s does not belong to any packages, we create a new 2-txs package for it and the child
-func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) (resort bool) {
+func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 	common.CountSafe("TxPkgsAdd")
 	//FeePackagesDirty = true
 	//return
@@ -386,42 +400,56 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) (resort bool) {
 	}()
 
 	if len(parent.InPackages) == 0 {
-		fmt.Fprintln(rdbg, " - add new package")
-		// we create a new package with two elements: [parent, new_child]
-		pkg := &OneTxsPackage{Txs: []*OneTxToSend{parent, new_child}, Id: newPkgId()}
-		pkg.Weight += parent.Weight() + new_child.Weight()
-		pkg.Fee += parent.Fee + new_child.Fee
-		parent.InPackages = []*OneTxsPackage{pkg}
-		new_child.InPackages = append(new_child.InPackages, pkg) // there can be more than one call with same new_child
-		FeePackages = append(FeePackages, pkg)
-		resort = true
-		common.CountSafe("TxPkgsAddNew")
-		if CheckForErrors() {
-			pkg.checkForDups()
+		// we create a new package, like in lookForPackages()
+		if pandch := parent.GetItWithAllChildren(); len(pandch) > 1 {
+			pkg := &OneTxsPackage{Txs: pandch, Id: newPkgId()}
+			for _, t := range pandch {
+				pkg.Weight += t.Weight()
+				pkg.Fee += t.Fee
+				t.InPackages = append(t.InPackages, pkg)
+			}
+			fmt.Fprintln(rdbg, "   - add new pkg with parent", parent.Id(), "and", len(pandch), "txs")
+			for _, t := range pandch {
+				fmt.Fprintln(rdbg, "      tx", t.Id(), "  meminputs:", t.MemInputCnt)
+			}
+			FeePackages = append(FeePackages, pkg)
+			FeePackagesNeedSorting = true
+			common.CountSafe("TxPkgsAddNew")
+			if CheckForErrors() {
+				pkg.checkForDups()
+			}
+		} else {
+			println("ERROR: in addToPackages parent's GetItWithAllChildren returned only", len(pandch), "txs")
 		}
 	} else {
-		fmt.Fprintln(rdbg, " - update old package")
+		fmt.Fprintln(rdbg, " - update old packages", len(parent.InPackages))
 		// here we go through all the packages and append the new_child at their ends
 		for _, pkg := range parent.InPackages {
-			if slices.Contains(pkg.Txs, new_child) {
-				fmt.Fprintln(rdbg, " - skip")
+			if !pkg.hasAllTheParentsFor(new_child) {
+				// this is not out package
+				fmt.Fprintln(rdbg, "   - does not have all the parents", len(parent.InPackages))
+				continue
+			}
+			if !slices.Contains(pkg.Txs, new_child) {
+				fmt.Fprintln(rdbg, "   - skip")
 				// this can happen when a new child uses more tha one vout from the parent
 				common.CountSafe("TxPkgsAddDupTx")
-			} else {
-				fmt.Fprintln(rdbg, " - add")
-				pkg.Txs = append(pkg.Txs, new_child)
-				pkg.Weight += new_child.Weight()
-				pkg.Fee += new_child.Fee
-				new_child.InPackages = append(new_child.InPackages, pkg)
-				resort = true
-				common.CountSafe("TxPkgsAddAppend")
-				if CheckForErrors() {
-					pkg.checkForDups()
-				}
+				continue
 			}
+			fmt.Fprintln(rdbg, "   - add tx number", len(pkg.Txs))
+			pkg.Txs = append(pkg.Txs, new_child)
+			pkg.Weight += new_child.Weight()
+			pkg.Fee += new_child.Fee
+			new_child.InPackages = append(new_child.InPackages, pkg)
+			FeePackagesNeedSorting = true
+			common.CountSafe("TxPkgsAddAppend")
+			if CheckForErrors() {
+				pkg.checkForDups()
+			}
+			ch := parent.GetItWithAllChildren()
+			fmt.Fprintln(rdbg, "     ... verify pkg's txs count", len(pkg.Txs), len(ch))
 		}
 	}
-	return
 }
 
 // removes itself from any grup containing it
@@ -431,7 +459,6 @@ func (t2s *OneTxToSend) delFromPackages() {
 	return
 
 	var records2remove int
-	var resort bool
 	if len(t2s.InPackages) == 0 {
 		return
 	}
@@ -474,7 +501,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 			pkg.Fee -= t2s.Fee
 			pkg.Weight -= t2s.Weight()
 			pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
-			resort = true
+			FeePackagesNeedSorting = true
 		}
 	}
 
@@ -489,13 +516,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 			}
 		}
 		FeePackages = new_pkgs_list
-		resort = true
-	}
-
-	//fmt.Fprintln(rdbg, "resort:", resort)
-	if resort {
-		common.CountSafe("TxPkgsDelResort")
-		sortFeePackages()
+		FeePackagesNeedSorting = true
 	}
 }
 

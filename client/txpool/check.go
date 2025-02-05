@@ -32,7 +32,7 @@ func cfl(label string) {
 	}
 	common.CountSafe("TxPkgs_CLF")
 	if checkFeeList() {
-		println("*** fee packages list first noticed broken in", label)
+		println("*** fee packages list first noticed broken in", label, "\a")
 		dumpPkgList("packages_broken.txt")
 		debug.PrintStack()
 		donot = true

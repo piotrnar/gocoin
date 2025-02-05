@@ -312,6 +312,10 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
+	for i := range spent {
+		SpentOutputs[spent[i]] = bidx
+	}
+
 	rec.Clean()
 	rec.Footprint = uint32(rec.SysSize())
 	checkSortedOK("net.A")
@@ -320,10 +324,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	rec.Add(bidx)
 	checkSortedOK("net.B")
 	rdbg = nil
-
-	for i := range spent {
-		SpentOutputs[spent[i]] = bidx
-	}
 
 	wtg := WaitingForInputs[bidx]
 	if wtg != nil {
@@ -381,15 +381,18 @@ func checkSortedOK(from string) {
 	if VerifyMempoolSort(GetSortedMempoolRBF()) {
 		println("Sorting fucked in", from)
 		println("before it:\n", rdbg.String())
-		println()
+		dumpPkgList("pkglist_broken.txt")
+		rdbg = new(bytes.Buffer)
 		println("Now retry sort again, this time with FeePackagesDirty")
 		FeePackagesDirty = true
 		if VerifyMempoolSort(GetSortedMempoolRBF()) {
 			println("*** again fucked ***")
-			os.Exit(1)
 		} else {
+			println(rdbg.String())
 			println("Fixed")
+			dumpPkgList("pkglist_fixed.txt")
 		}
+		os.Exit(1)
 	}
 }
 

@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -23,10 +24,13 @@ const (
 var (
 	nextTxsPoolExpire time.Time = time.Now().Add(POOL_EXPIRE_INTERVAL)
 	BestT2S, WorstT2S *OneTxToSend
-	SortingSupressed  bool
-	SortListDirty     bool
-	FeePackages       []*OneTxsPackage = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
-	FeePackagesDirty  bool
+
+	SortingSupressed bool
+	SortListDirty    bool
+
+	FeePackages            []*OneTxsPackage = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
+	FeePackagesDirty       bool
+	FeePackagesNeedSorting bool
 )
 
 // call it with false to restore sorting
@@ -439,7 +443,9 @@ type OneTxsPackage struct {
 }
 
 func (pk *OneTxsPackage) String() (res string) {
-	res = fmt.Sprintf("Id:%d  SPB:%.5f  Txs:%d", pk.Id, 4.0*float64(pk.Fee)/float64(pk.Weight), len(pk.Txs))
+	//res = fmt.Sprintf("Id:%d  SPB:%.5f  Txs:%d", pk.Id, 4.0*float64(pk.Fee)/float64(pk.Weight), len(pk.Txs))
+	res = fmt.Sprintf("SPB:%.5f  w:%d   f:%d Txs:%d", 4.0*float64(pk.Fee)/float64(pk.Weight), pk.Weight,
+		pk.Fee, len(pk.Txs))
 	return
 }
 
@@ -453,6 +459,35 @@ func (pk *OneTxsPackage) anyIn(list map[*OneTxToSend]bool) (ok bool) {
 		}
 	}
 	return
+}
+
+func (pk *OneTxsPackage) hasAllTheParentsFor(child *OneTxToSend) bool {
+	if len(pk.Txs)*len(child.TxIn) > 10 {
+		m := make(map[btc.BIDX]bool, len(pk.Txs))
+		for _, t := range pk.Txs {
+			m[t.Hash.BIdx()] = true
+		}
+		for _, in := range child.TxIn {
+			if !m[btc.BIdx(in.Input.Hash[:])] {
+				return false
+			}
+		}
+	} else {
+		has_parent_for := func(txid []byte) bool {
+			for _, t := range pk.Txs {
+				if bytes.Equal(t.Hash.Hash[:], txid) {
+					return true
+				}
+			}
+			return false
+		}
+		for _, in := range child.TxIn {
+			if !has_parent_for(in.Input.Hash[:]) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (pk *OneTxsPackage) checkForDups() bool {
@@ -476,13 +511,25 @@ var (
 )
 
 func sortFeePackages() {
-	common.CountSafe("TxPkgsSort")
-	sta := time.Now()
-	sort.Slice(FeePackages, func(i, j int) bool {
-		return FeePackages[i].Fee*uint64(FeePackages[j].Weight) > FeePackages[j].Fee*uint64(FeePackages[i].Weight)
-	})
-	SortFeePackagesTime += time.Since(sta)
-	SortFeePackagesCount++
+	if FeePackagesNeedSorting {
+		FeePackagesNeedSorting = false
+		common.CountSafe("TxPkgsSortDo")
+		sta := time.Now()
+		sort.Slice(FeePackages, func(i, j int) bool {
+			iv := FeePackages[i].Fee * uint64(FeePackages[j].Weight)
+			jv := FeePackages[j].Fee * uint64(FeePackages[i].Weight)
+			if iv != jv {
+				return iv > jv
+			}
+			return binary.LittleEndian.Uint64(FeePackages[i].Txs[0].Hash.Hash[:8]) >
+				binary.LittleEndian.Uint64(FeePackages[j].Txs[0].Hash.Hash[:8])
+			//return FeePackages[i].Fee*uint64(FeePackages[j].Weight) > FeePackages[j].Fee*uint64(FeePackages[i].Weight)
+		})
+		SortFeePackagesTime += time.Since(sta)
+		SortFeePackagesCount++
+	} else {
+		common.CountSafe("TxPkgsSortSkip")
+	}
 }
 
 func dumpPkgList(fn string) {
@@ -496,12 +543,12 @@ func dumpPkgListHere(f io.Writer) {
 	for _, pkg := range FeePackages {
 		fmt.Fprintln(f, "package", pkg.String(), "with", len(pkg.Txs), "txs:")
 		for _, t := range pkg.Txs {
-			fmt.Fprintln(f, "   *", t.Hash.String(), len(t.InPackages))
+			fmt.Fprintln(f, "   *", t.Hash.String(), "  mic:", t.MemInputCnt, "  inpkgs:", len(t.InPackages))
 			for idx, pkg := range t.InPackages {
 				fmt.Fprintln(f, "   ", idx, pkg.String())
 			}
-			fmt.Fprintln(f)
 		}
+		fmt.Fprintln(f)
 	}
 }
 
@@ -514,13 +561,24 @@ func newPkgId() int {
 
 // builds FeePackages list, if neccessary
 func lookForPackages() {
+	defer sortFeePackages()
+	if rdbg != nil {
+		fmt.Fprintln(rdbg, "lookForPackages  sld:", SortListDirty, "  fpd:", FeePackagesDirty, "  fpns:", FeePackagesNeedSorting)
+	}
+
 	if SortListDirty {
 		common.CountSafe("TxBuildListFirst")
 		buildSortedList()
 	}
 	if !FeePackagesDirty {
+		if rdbg != nil {
+			fmt.Fprintln(rdbg, "lookForPackages  TxPkgsHaveThem")
+		}
 		common.CountSafe("TxPkgsHaveThem")
 		return
+	}
+	if rdbg != nil {
+		fmt.Fprintln(rdbg, "lookForPackages  TxPkgsNeedThem")
 	}
 	common.CountSafe("TxPkgsNeedThem")
 	sta := time.Now()
@@ -543,8 +601,7 @@ func lookForPackages() {
 			FeePackages = append(FeePackages, pkg)
 		}
 	}
-	sortFeePackages()
-	//dumpPkgList("packages.txt")
+	FeePackagesNeedSorting = true
 	FeePackagesDirty = false
 	LookForPackagesTime += time.Since(sta)
 	LookForPackagesCount++
