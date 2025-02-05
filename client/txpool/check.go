@@ -42,7 +42,6 @@ func cfl(label string) {
 			println("packages_broken.txt also created")
 		}
 	}
-	rdbg = nil
 }
 
 func checkFeeList() bool {

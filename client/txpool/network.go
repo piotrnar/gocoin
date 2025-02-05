@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"sync"
@@ -293,7 +294,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	for len(rbf_tx_list) > 0 {
-		checkSortedOK("net.RBF.A")
 		var ctx *OneTxToSend
 		for ctx = range rbf_tx_list {
 			if ctx.HasNoChildren() {
@@ -306,7 +306,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 		ctx.Delete(false, TX_REJECTED_REPLACED)
 		delete(rbf_tx_list, ctx)
-		checkSortedOK("net.RBF.B")
 	}
 
 	rec := &OneTxToSend{Volume: totinp, Local: ntx.Local, Fee: fee,
@@ -316,8 +315,12 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	rec.Clean()
 	rec.Footprint = uint32(rec.SysSize())
 	checkSortedOK("net.A")
+	rdbg = new(bytes.Buffer)
+	fmt.Fprintln(rdbg, "adding tx", rec.Hash.String())
+	dumpPkgListHere(rdbg)
 	rec.Add(bidx)
 	checkSortedOK("net.B")
+	rdbg = nil
 
 	for i := range spent {
 		SpentOutputs[spent[i]] = bidx
@@ -378,7 +381,9 @@ func checkSortedOK(from string) {
 	cfl("in tick")
 	if VerifyMempoolSort(GetSortedMempoolRBF()) {
 		println("Sorting fucked in", from)
-		println("Retry sort again, this time with FeePackagesDirty")
+		println("before it:\n", rdbg.String())
+		println()
+		println("Now retry sort again, this time with FeePackagesDirty")
 		FeePackagesDirty = true
 		if VerifyMempoolSort(GetSortedMempoolRBF()) {
 			println("*** again fucked ***")

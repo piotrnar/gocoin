@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"fmt"
 	"os"
 	"runtime/debug"
 	"slices"
@@ -47,7 +48,6 @@ type OneTxToSend struct {
 }
 
 func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
-
 	TransactionsToSend[bidx] = t2s
 	t2s.AddToSort()
 	TransactionsToSendWeight += uint64(t2s.Weight())
@@ -66,20 +66,15 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		}
 	}
 
+	fmt.Fprintln(rdbg, "add", t2s.Hash.String(), FeePackagesDirty, t2s.MemInputCnt)
 	if !FeePackagesDirty && t2s.MemInputCnt > 0 { // go through all the parents...
-		//checkSortedOK("add begin")
-		/*
-			cfl("before add")
-			rdbg = new(bytes.Buffer)
-			fmt.Fprintln(rdbg, "Adding t2s", t2s.Hash.String(), t2s.MemInputCnt)
-			dumpPkgListHere(rdbg)
-		*/
-
 		var resort bool
 		for vout, meminput := range t2s.MemInputs {
 			if meminput { // and add yoursef to their packages
 				if parnet, has := TransactionsToSend[btc.BIdx(t2s.TxIn[vout].Input.Hash[:])]; has {
-					if parnet.addToPackages(t2s) {
+					x := parnet.addToPackages(t2s)
+					fmt.Fprintln(rdbg, " - to parnet", parnet.Hash.String(), "   resort:", x, resort)
+					if x {
 						resort = true
 					}
 				} else {
@@ -88,12 +83,9 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 			}
 		}
 		if resort {
-			//cfl("middle add")
 			common.CountSafe("TxPkgsAddResort")
 			sortFeePackages()
 		}
-		//cfl("end of add")
-		//checkSortedOK("add end")
 	}
 
 	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
@@ -376,6 +368,10 @@ var (
 	DelFromPackagesCount uint
 )
 
+func (tx *OneTxToSend) Id() string {
+	return tx.Hash.String()
+}
+
 // If t2s belongs to any packages, we add the child at the end of each of them
 // If t2s does not belong to any packages, we create a new 2-txs package for it and the child
 func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) (resort bool) {
@@ -390,6 +386,7 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) (resort bool) {
 	}()
 
 	if len(parent.InPackages) == 0 {
+		fmt.Fprintln(rdbg, " - add new package")
 		// we create a new package with two elements: [parent, new_child]
 		pkg := &OneTxsPackage{Txs: []*OneTxToSend{parent, new_child}, Id: newPkgId()}
 		pkg.Weight += parent.Weight() + new_child.Weight()
@@ -403,12 +400,15 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) (resort bool) {
 			pkg.checkForDups()
 		}
 	} else {
+		fmt.Fprintln(rdbg, " - update old package")
 		// here we go through all the packages and append the new_child at their ends
 		for _, pkg := range parent.InPackages {
 			if slices.Contains(pkg.Txs, new_child) {
+				fmt.Fprintln(rdbg, " - skip")
 				// this can happen when a new child uses more tha one vout from the parent
 				common.CountSafe("TxPkgsAddDupTx")
 			} else {
+				fmt.Fprintln(rdbg, " - add")
 				pkg.Txs = append(pkg.Txs, new_child)
 				pkg.Weight += new_child.Weight()
 				pkg.Fee += new_child.Fee
