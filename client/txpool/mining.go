@@ -122,9 +122,8 @@ func BlockMined(bl *btc.Block) {
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
 	cfl("BlockMined start")
-	FeePackagesDirty = true
-
 	for _, tx := range bl.Txs[1:] {
+		FeePackagesDirty = true
 		tx_mined(tx)
 	}
 	for _, tx := range bl.Txs[1:] {
@@ -178,9 +177,9 @@ func MarkChildrenForMem(tx *btc.Tx) {
 
 func BlockUndone(bl *btc.Block) {
 	var cnt int
-	FeePackagesDirty = true
 	common.CountSafe("TxPkgsBlockUndo")
 	for _, tx := range bl.Txs[1:] {
+		FeePackagesDirty = true
 		// put it back into the mempool
 		ntx := &TxRcvd{Tx: tx, Trusted: true}
 
