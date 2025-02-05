@@ -28,9 +28,9 @@ var (
 	SortingSupressed bool
 	SortListDirty    bool
 
-	FeePackages            []*OneTxsPackage = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
-	FeePackagesDirty       bool
-	FeePackagesNeedSorting bool
+	FeePackages       []*OneTxsPackage = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
+	FeePackagesDirty  bool
+	FeePackagesReSort bool
 )
 
 // call it with false to restore sorting
@@ -83,7 +83,6 @@ func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 
 // this function is only called from withing BlockChain.CommitBlock()
 func (t2s *OneTxToSend) ResortWithChildren() {
-	FeePackagesDirty = true // it's faster to rebuild the packages after than maintain them here.
 	// ... same for keeping mempool sorted, so we always suppress sorting before comitting a block
 	if SortingSupressed { // But this check is here just in case
 		SortListDirty = true
@@ -91,7 +90,7 @@ func (t2s *OneTxToSend) ResortWithChildren() {
 	}
 
 	// Normally we should not get here as blocks are precessed with SortingSupressed
-	// So the code below is pretty much unused, althout it has been seen working fine.
+	// So the code below is pretty much unused, although it has been seen working fine (but slow).
 	common.CountSafe("TxMined**Resort")
 	// now get the new worst parent
 	wpr := t2s.findWorstParent()
@@ -510,8 +509,8 @@ var (
 )
 
 func sortFeePackages() {
-	if FeePackagesNeedSorting {
-		FeePackagesNeedSorting = false
+	if FeePackagesReSort {
+		FeePackagesReSort = false
 		common.CountSafe("TxPkgsSortDo")
 		sta := time.Now()
 		sort.Slice(FeePackages, func(i, j int) bool {
@@ -580,7 +579,7 @@ func lookForPackages() {
 			FeePackages = append(FeePackages, pkg)
 		}
 	}
-	FeePackagesNeedSorting = true
+	FeePackagesReSort = true
 	FeePackagesDirty = false
 	LookForPackagesTime += time.Since(sta)
 	LookForPackagesCount++
