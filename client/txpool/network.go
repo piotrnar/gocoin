@@ -317,7 +317,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	checkSortedOK("net.A")
 	rdbg = new(bytes.Buffer)
 	fmt.Fprintln(rdbg, "adding tx", rec.Hash.String())
-	dumpPkgListHere(rdbg)
 	rec.Add(bidx)
 	checkSortedOK("net.B")
 	rdbg = nil
