@@ -399,7 +399,9 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) (resort bool) {
 		FeePackages = append(FeePackages, pkg)
 		resort = true
 		common.CountSafe("TxPkgsAddNew")
-		pkg.checkForDups()
+		if CheckForErrors() {
+			pkg.checkForDups()
+		}
 	} else {
 		// here we go through all the packages and append the new_child at their ends
 		for _, pkg := range parent.InPackages {
@@ -413,7 +415,9 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) (resort bool) {
 				new_child.InPackages = append(new_child.InPackages, pkg)
 				resort = true
 				common.CountSafe("TxPkgsAddAppend")
-				pkg.checkForDups()
+				if CheckForErrors() {
+					pkg.checkForDups()
+				}
 			}
 		}
 	}
