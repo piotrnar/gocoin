@@ -151,6 +151,9 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	delete(TransactionsToSend, tx.Hash.BIdx())
+	if !FeePackagesDirty {
+		cfl("inside Del")
+	}
 	if fprint2remove != uint64(tx.Footprint) {
 		// TODO: check if it ever prints
 		println("footprint mismatch:", fprint2remove, tx.Footprint)

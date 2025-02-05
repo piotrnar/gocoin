@@ -50,7 +50,10 @@ func checkFeeList() bool {
 		return false
 	}
 
+	valid_pkgs := make(map[*OneTxsPackage]bool, len(FeePackages))
+
 	for _, pkg := range FeePackages {
+		valid_pkgs[pkg] = true
 		if len(pkg.Txs) < 2 {
 			println("ERROR: package has only", len(pkg.Txs), "txs")
 			return true
@@ -69,15 +72,26 @@ func checkFeeList() bool {
 		}
 	}
 
+	found_pkgs := make(map[*OneTxsPackage]bool, len(valid_pkgs))
 	for _, t2s := range TransactionsToSend {
 		if t2s.InPackages != nil {
 			for _, pkg := range t2s.InPackages {
-				if !slices.Contains(pkg.Txs, t2s) {
-					println("ERROR: pkg does not have the tx which ir should")
+				if !valid_pkgs[pkg] {
+					println("ERROR: pkg", pkg.String(), "from t2s", t2s.Id(), "is not on the pkg list")
 					return true
 				}
+				if !slices.Contains(pkg.Txs, t2s) {
+					println("ERROR: pkg", pkg.String(), "does not have the tx", t2s.Id)
+					return true
+				}
+				found_pkgs[pkg] = true
 			}
 		}
+	}
+
+	if len(found_pkgs) != len(valid_pkgs) {
+		println("ERROR: did not find a reference to every pkg in the mempool", len(found_pkgs), (valid_pkgs))
+		return true
 	}
 
 	common.CountSafe("TxPkgsCheckOK")
