@@ -293,6 +293,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		sigops += uint(tx.CountWitnessSigOps(i, pos[i].Pk_script))
 	}
 
+	s := fmt.Sprint(len(rbf_tx_list))
+	cfl("net before rbf " + s)
 	for len(rbf_tx_list) > 0 {
 		var ctx *OneTxToSend
 		for ctx = range rbf_tx_list {
@@ -301,12 +303,13 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			}
 		}
 		if ctx == nil {
-			println("ERROR: rbf_tx_list not emty, but cannot find a tx with no children")
+			println("ERROR: rbf_tx_list not empty, but cannot find a tx with no children")
 			break
 		}
 		ctx.Delete(false, TX_REJECTED_REPLACED)
 		delete(rbf_tx_list, ctx)
 	}
+	cfl("net after rbf " + s)
 
 	rec := &OneTxToSend{Volume: totinp, Local: ntx.Local, Fee: fee,
 		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
@@ -315,10 +318,12 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	rec.Clean()
 	rec.Footprint = uint32(rec.SysSize())
 
+	cfl("net before add")
 	for i := range spent {
 		SpentOutputs[spent[i]] = bidx
 	}
 	rec.Add(bidx)
+	cfl("net after add")
 
 	wtg := WaitingForInputs[bidx]
 	if wtg != nil {
@@ -372,7 +377,7 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 
 // make sure to call it with the mutex locked
 func checkSortedOK(from string) {
-	cfl("in tick")
+	cfl("tick")
 	if VerifyMempoolSort(GetSortedMempoolRBF()) {
 		println("Sorting fucked in", from)
 		println("before it:\n", rdbg.String())
