@@ -24,13 +24,14 @@ func (t *OneTxToSend) isInMap() (yes bool) {
 
 var donot bool
 var rdbg *bytes.Buffer
+var rd1, rd2 *bytes.Buffer
 
 func cfl(label string) {
 	if donot {
 		rdbg = nil
 		return
 	}
-	common.CountSafe("TxPkgs_CLF")
+	//common.CountSafe("TxPkgs_CLF")
 	if checkFeeList() {
 		println("*** fee packages list first noticed broken in", label, "\a")
 		dumpPkgList("packages_broken.txt")
@@ -38,9 +39,17 @@ func cfl(label string) {
 		donot = true
 
 		if rdbg != nil {
-			os.WriteFile("packages_before.txt", rdbg.Bytes(), 0600)
-			println("packages_broken.txt also created")
+			println(rdbg.String())
 		}
+		if rd1 != nil {
+			os.WriteFile("packages_before1.txt", rd1.Bytes(), 0600)
+			println("packages_before1.txt created")
+		}
+		if rd2 != nil {
+			os.WriteFile("packages_before2.txt", rd2.Bytes(), 0600)
+			println("packages_before2.txt created")
+		}
+		os.Exit(1)
 	}
 }
 

@@ -121,7 +121,6 @@ func BlockMined(bl *btc.Block) {
 
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
-	cfl("BlockMined start")
 	for _, tx := range bl.Txs[1:] {
 		FeePackagesDirty = true
 		tx_mined(tx)
@@ -132,7 +131,6 @@ func BlockMined(bl *btc.Block) {
 			wtgs = append(wtgs, wtg)
 		}
 	}
-	cfl("BlockMined end")
 	TxMutex.Unlock()
 
 	// Try to redo waiting txs

@@ -293,8 +293,12 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		sigops += uint(tx.CountWitnessSigOps(i, pos[i].Pk_script))
 	}
 
-	s := fmt.Sprint(len(rbf_tx_list))
-	cfl("net before rbf " + s)
+	cfl("pre ctx.Delete for")
+	rdbg = new(bytes.Buffer)
+	rd1 = new(bytes.Buffer)
+	rd2 = new(bytes.Buffer)
+	dumpPkgListHere(rd1)
+	fmt.Fprintln(rdbg, "About to delete replaced txs cnt", len(rbf_tx_list))
 	for len(rbf_tx_list) > 0 {
 		var ctx *OneTxToSend
 		for ctx = range rbf_tx_list {
@@ -306,10 +310,16 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			println("ERROR: rbf_tx_list not empty, but cannot find a tx with no children")
 			break
 		}
+		fmt.Fprintln(rdbg, " ... doing del txid", ctx.Id(), "-", len(rbf_tx_list), "left")
+		dumpPkgListHere(rd2)
+
 		ctx.Delete(false, TX_REJECTED_REPLACED)
+		cfl("post ctx.Delete" + ctx.Id())
 		delete(rbf_tx_list, ctx)
 	}
-	cfl("net after rbf " + s)
+	rdbg = nil
+	rd1 = nil
+	rd2 = nil
 
 	rec := &OneTxToSend{Volume: totinp, Local: ntx.Local, Fee: fee,
 		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
@@ -318,12 +328,10 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	rec.Clean()
 	rec.Footprint = uint32(rec.SysSize())
 
-	cfl("net before add")
 	for i := range spent {
 		SpentOutputs[spent[i]] = bidx
 	}
 	rec.Add(bidx)
-	cfl("net after add")
 
 	wtg := WaitingForInputs[bidx]
 	if wtg != nil {

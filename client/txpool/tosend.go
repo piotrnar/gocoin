@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"fmt"
 	"os"
 	"runtime/debug"
 	"slices"
@@ -151,9 +152,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	delete(TransactionsToSend, tx.Hash.BIdx())
-	if !FeePackagesDirty {
-		cfl("inside Del")
-	}
+
 	if fprint2remove != uint64(tx.Footprint) {
 		// TODO: check if it ever prints
 		println("footprint mismatch:", fprint2remove, tx.Footprint)
@@ -452,7 +451,9 @@ func (t2s *OneTxToSend) delFromPackages() {
 		DelFromPackagesCount++
 	}()
 
+	fmt.Fprintf(rdbg, "Doing del from packages", len(t2s.InPackages))
 	for _, pkg := range t2s.InPackages {
+		fmt.Fprintf(rdbg, " pkg", pkg.String())
 		common.CountSafe("TxPkgsDelTick")
 		if CheckForErrors() && len(pkg.Txs) < 2 {
 			println("ERROR: delFromPackages called on t2s that has pkg with less than txs", pkg)
@@ -478,6 +479,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 			FeePackagesReSort = true
 		}
 	}
+	fmt.Fprintf(rdbg, "Got out. records2remove:", records2remove)
 
 	if records2remove > 0 {
 		common.CountSafe("TxPkgsDelGrCnt")
@@ -485,7 +487,10 @@ func (t2s *OneTxToSend) delFromPackages() {
 		new_pkgs_list := make([]*OneTxsPackage, 0, cap(FeePackages))
 		for _, pkg := range FeePackages {
 			if pkg.Txs != nil {
+				fmt.Fprintf(rdbg, "  keep pkg", pkg.String())
 				new_pkgs_list = append(new_pkgs_list, pkg)
+			} else {
+				fmt.Fprintf(rdbg, "  remove pkg", pkg.String())
 			}
 		}
 		FeePackages = new_pkgs_list
