@@ -188,8 +188,9 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 
 	// Check for a proper fee
 	fee := totinp - totout
-	if !ntx.Local && fee < (uint64(tx.VSize())*common.MinFeePerKB()/1000) { // do not check minimum fee for locally loaded txs
+	if !ntx.Local && 4000*fee < uint64(tx.Weight())*common.MinFeePerKB() { // do not check minimum fee for locally loaded txs
 		//RejectTx(ntx.Tx, TX_REJECTED_LOW_FEE, nil)  - we do not store low fee txs in TransactionsRejected anymore
+		common.CountSafe("TxRejected-LowFee") // we count it here
 		return TX_REJECTED_LOW_FEE, nil
 	}
 
