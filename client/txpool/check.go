@@ -240,9 +240,9 @@ func MempoolCheck() bool {
 
 		totsize += uint64(t2s.Footprint)
 
-		if t2s.Weight() == 0 {
+		if t2s.NoWitSize == 0 || t2s.Size == 0 {
 			dupa++
-			fmt.Println(dupa, "Tx", t2s.Hash.String(), "haz seight 0")
+			fmt.Println(dupa, "Tx", t2s.Hash.String(), "has broken size:", t2s.NoWitSize, t2s.Size)
 		}
 
 		for i, inp := range t2s.TxIn {
@@ -250,11 +250,11 @@ func MempoolCheck() bool {
 			if outk, ok := SpentOutputs[inp.Input.UIdx()]; ok {
 				if outk != t2s.Hash.BIdx() {
 					dupa++
-					fmt.Println(dupa, "Tx", t2s.Hash.String(), "input", i, "has a mismatch in SpentOutputs record", outk)
+					fmt.Println(dupa, "Tx", t2s.Hash.String(), "input has a mismatch in SpentOutputs record", i, outk)
 				}
 			} else {
 				dupa++
-				fmt.Println(dupa, "Tx", t2s.Hash.String(), "input", i, "is not in SpentOutputs")
+				fmt.Println(dupa, "Tx", t2s.Hash.String(), "input is not in SpentOutputs", i)
 			}
 
 			_, ok := TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]
@@ -262,26 +262,24 @@ func MempoolCheck() bool {
 			if t2s.MemInputs == nil {
 				if ok {
 					dupa++
-					fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInputs==nil but input", i, "is in mempool", inp.Input.String())
+					fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInputs==nil but input is in mempool", i, inp.Input.String())
 				}
 			} else {
 				if t2s.MemInputs[i] {
 					micnt++
 					if !ok {
 						dupa++
-						fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInput set but input", i, "NOT in mempool", inp.Input.String())
+						fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInput set but input NOT in mempool", i, inp.Input.String())
 					}
 				} else {
 					if ok {
 						dupa++
-						fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInput NOT set but input", i, "IS in mempool", inp.Input.String())
+						fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInput NOT set but input IS in mempool", i, inp.Input.String())
 					}
-				}
-			}
-			if _, ok := TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]; !ok {
-				if unsp := common.BlockChain.Unspent.UnspentGet(&inp.Input); unsp == nil {
-					dupa++
-					fmt.Println(dupa, "Mempool tx", t2s.Hash.String(), "has no input", i)
+					if unsp := common.BlockChain.Unspent.UnspentGet(&inp.Input); unsp == nil {
+						dupa++
+						fmt.Println(dupa, "Mempool tx", t2s.Hash.String(), "has no valid input in UTXO db:", i)
+					}
 				}
 			}
 		}
@@ -439,6 +437,10 @@ func MempoolCheck() bool {
 	if checkFeeList() {
 		dupa++
 		fmt.Println(dupa, "checkFeeList failed")
+	}
+
+	if dupa == 0 {
+		common.CountSafe("Tx MPCheckOK")
 	}
 
 	return dupa > 0

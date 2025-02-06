@@ -47,6 +47,9 @@ type OneTxToSend struct {
 }
 
 func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
+	for _, inp := range t2s.TxIn {
+		SpentOutputs[inp.Input.UIdx()] = bidx
+	}
 	TransactionsToSend[bidx] = t2s
 	t2s.AddToSort()
 	TransactionsToSendWeight += uint64(t2s.Weight())
@@ -128,21 +131,50 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 				}
 			}
 		}
-	}
-
-	if CheckForErrors() && !SortingSupressed && !tx.HasNoChildren() {
-		println("ERROR: Delete called on t2s that still has some children", with_children,
-			"\n  ", tx.Hash.String())
-		ch := tx.GetChildren()
-		for _, t := range ch {
-			println("  -", t.Hash.String())
+	} else if CheckForErrors() {
+		var po btc.TxPrevOut
+		po.Hash = tx.Hash.Hash
+		for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
+			if so, ok := SpentOutputs[po.UIdx()]; ok {
+				child_missing := ""
+				if child, ok := TransactionsToSend[so]; ok {
+					// extra check to exclude children that use just-mined inputs
+					if child.MemInputCnt > 0 {
+						for vo, ti := range child.TxIn {
+							if ti.Input == po {
+								if child.MemInputs[vo] {
+									child_missing = child.Id()
+									break
+								}
+							}
+						}
+					}
+				} else {
+					println("ERROR: deleting t2s", tx.Id(), "but we have its spent_out that points nowhere!!")
+				}
+				if child_missing != "" {
+					println("ERROR: deleting t2s", tx.Id(), "but we still have it's child:", child_missing)
+				}
+			}
 		}
-		debug.PrintStack()
-		os.Exit(1)
 	}
 
 	for _, txin := range tx.TxIn {
-		delete(SpentOutputs, txin.Input.UIdx())
+		uidx := txin.Input.UIdx()
+		delete(SpentOutputs, uidx)
+
+		//  remove data of any rejected txs that use this input
+		if lst, ok := RejectedUsedUTXOs[uidx]; ok {
+			for _, bidx := range lst {
+				if txr, ok := TransactionsRejected[bidx]; ok {
+					common.CountSafePar("TxMinedRjctUTXO-", txr.Reason)
+					DeleteRejectedByTxr(txr)
+				} else if CheckForErrors() {
+					println("ERROR: txr marked for removal but not present in TransactionsRejected")
+				}
+			}
+			delete(RejectedUsedUTXOs, uidx) // this record will not be needed anymore
+		}
 	}
 
 	TransactionsToSendWeight -= uint64(tx.Weight())

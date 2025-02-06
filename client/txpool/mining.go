@@ -16,15 +16,15 @@ func (rec *OneTxToSend) IIdx(key uint64) int {
 	return -1
 }
 
-// UnMarkChildrenForMem clears the MemInput flag of all the children (used when a tx is mined).
-func (tx *OneTxToSend) UnMarkChildrenForMem() {
+// outputsMined clears the MemInput flag of all the children (used when a tx is mined).
+func (tx *OneTxToSend) outputsMined() {
 	// Go through all the tx's outputs and unmark MemInputs in txs that have been spending it
 	var po btc.TxPrevOut
 	po.Hash = tx.Hash.Hash
 	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
 		uidx := po.UIdx()
 		if val, ok := SpentOutputs[uidx]; ok {
-			if rec := TransactionsToSend[val]; rec != nil {
+			if rec, ok := TransactionsToSend[val]; ok {
 				if CheckForErrors() && rec.MemInputs == nil {
 					common.CountSafe("TxMinedMeminER1")
 					println("ERROR: ", po.String(), "just mined in", rec.Hash.String(), "- not marked as mem")
@@ -67,8 +67,8 @@ func tx_mined(tx *btc.Tx) {
 	h := tx.Hash
 	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
 		common.CountSafe("TxMinedAccepted")
+		rec.outputsMined()
 		rec.Delete(false, 0)
-		rec.UnMarkChildrenForMem()
 	}
 	if mr, ok := TransactionsRejected[h.BIdx()]; ok {
 		common.CountSafePar("TxMinedRejected-", mr.Reason)
@@ -78,6 +78,7 @@ func tx_mined(tx *btc.Tx) {
 		common.CountSafe("TxMinedPending")
 		delete(TransactionsPending, h.BIdx())
 	}
+	return
 
 	// now do through all the spent inputs and...
 	for _, inp := range tx.TxIn {
@@ -119,10 +120,15 @@ func tx_mined(tx *btc.Tx) {
 func BlockMined(bl *btc.Block) {
 	common.CountSafe("TxPkgsBlockMined")
 
+	if len(bl.Txs) < 2 {
+		return
+	}
+
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
-	for _, tx := range bl.Txs[1:] {
-		FeePackagesDirty = true
+	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
+		tx := bl.Txs[i]
+		FeePackagesDirty = true // this will spare us all the struggle with trying to re-package
 		tx_mined(tx)
 	}
 	for _, tx := range bl.Txs[1:] {

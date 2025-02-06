@@ -101,7 +101,19 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	network.MutexRcv.Unlock()
 
 	txpool.BlockCommitInProgress(true)
+	txpool.TxMutex.Lock()
+	if txpool.MempoolCheck() {
+		println("Mempool check error before CommitBlock()")
+		debug.PrintStack()
+		os.Exit(1)
+	}
+	txpool.TxMutex.Unlock()
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
+	if txpool.MempoolCheck() {
+		println("Mempool check error after CommitBlock()")
+		debug.PrintStack()
+		os.Exit(1)
+	}
 	txpool.BlockCommitInProgress(false)
 	if bl.LastKnownHeight-bl.Height > common.Get(&common.CFG.Memory.MaxCachedBlks) {
 		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused

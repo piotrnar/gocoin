@@ -2,6 +2,8 @@ package txpool
 
 import (
 	"fmt"
+	"os"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -376,5 +378,13 @@ func Tick() {
 		TxMutex.Lock()
 		checkSortedOK("Tick")
 		TxMutex.Unlock()
+	}
+	TxMutex.Lock()
+	mpc := MempoolCheck()
+	TxMutex.Unlock()
+	if mpc {
+		println("Mempool check error inside the tick")
+		debug.PrintStack()
+		os.Exit(1)
 	}
 }
