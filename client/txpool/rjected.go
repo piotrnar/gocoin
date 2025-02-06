@@ -54,10 +54,11 @@ const (
 	TX_REJECTED_LEN_MISMATCH = 103
 	TX_REJECTED_EMPTY_INPUT  = 104
 
-	TX_REJECTED_OVERSPEND = 154
-	TX_REJECTED_BAD_INPUT = 157
+	TX_REJECTED_OVERSPEND   = 154
+	TX_REJECTED_BAD_INPUT   = 157
+	TX_REJECTED_SCRIPT_FAIL = 158
 
-	TX_REJECTED_DATA_PURGED = 199
+	TX_REJECTED_DATA_PURGED = 200
 
 	// Anything from the list below might eventually get mined
 	TX_REJECTED_NO_TXOU     = 202
@@ -263,7 +264,7 @@ func retryWaitingForInput(wtg *OneWaitingList) {
 		}
 		DeleteRejectedByIdx(k)
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
-		if processTx(pendtxrcv) == 0 {
+		if res, _ := processTx(pendtxrcv); res == 0 {
 			common.CountSafe("TxRetryAccepted")
 			if CheckForErrors() {
 				if txr, ok := TransactionsRejected[k]; ok {

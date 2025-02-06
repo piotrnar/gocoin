@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -45,7 +46,7 @@ func send_tx(par string) {
 	if ptx, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
 		txpool.TxMutex.Unlock()
 		cnt := network.NetRouteInv(1, txid, nil)
-		ptx.Invsentcnt += cnt
+		atomic.AddUint32(&ptx.Invsentcnt, cnt)
 		fmt.Println("INV for TxID", txid.String(), "sent to", cnt, "node(s)")
 		fmt.Println("If it does not appear in the chain, you may want to redo it.")
 	} else {
@@ -65,7 +66,7 @@ func send1_tx(par string) {
 	if ptx, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
 		txpool.TxMutex.Unlock()
 		usif.SendInvToRandomPeer(1, txid)
-		ptx.Invsentcnt++
+		atomic.AddUint32(&ptx.Invsentcnt, 1)
 		fmt.Println("INV for TxID", txid.String(), "sent to a random node")
 		fmt.Println("If it does not appear in the chain, you may want to redo it.")
 	} else {
@@ -155,7 +156,7 @@ func decode_tx(pars string) {
 			fmt.Println()
 		}
 		if t2s != nil {
-			fmt.Println("Invs sent cnt:", t2s.Invsentcnt)
+			fmt.Println("Invs sent cnt:", atomic.LoadUint32(&t2s.Invsentcnt))
 			fmt.Println("Tx sent cnt:", t2s.SentCnt)
 			fmt.Println("Frst seen:", t2s.Firstseen.Format("2006-01-02 15:04:05"))
 			fmt.Println("Last seen:", t2s.Lastseen.Format("2006-01-02 15:04:05"))
@@ -254,7 +255,7 @@ func list_txs(par string) {
 		}
 
 		fmt.Printf("%5d) ...%7d/%7d %s %6d bytes / %4.1fspb - INV snt %d times, %s\n",
-			cnt, totlen, totweigth, v.Tx.Hash.String(), len(v.Raw), v.SPB(), v.Invsentcnt, snt)
+			cnt, totlen, totweigth, v.Tx.Hash.String(), len(v.Raw), v.SPB(), atomic.LoadUint32(&v.Invsentcnt), snt)
 
 	}
 }
@@ -412,7 +413,7 @@ func send_all_tx(par string) {
 	txpool.TxMutex.Unlock()
 	for _, v := range tmp {
 		cnt := network.NetRouteInv(1, &v.Tx.Hash, nil)
-		v.Invsentcnt += cnt
+		atomic.AddUint32(&v.Invsentcnt, cnt)
 		fmt.Println("INV for TxID", v.Tx.Hash.String(), "sent to", cnt, "node(s)")
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -153,7 +154,7 @@ func tx_xml(w http.ResponseWriter, v *txpool.OneTxToSend, verbose bool) {
 	}
 	fmt.Fprint(w, "<own>", v.Local, "</own>")
 	fmt.Fprint(w, "<firstseen>", v.Firstseen.Unix(), "</firstseen>")
-	fmt.Fprint(w, "<invsentcnt>", v.Invsentcnt, "</invsentcnt>")
+	fmt.Fprint(w, "<invsentcnt>", atomic.LoadUint32(&v.Invsentcnt), "</invsentcnt>")
 	fmt.Fprint(w, "<sigops>", v.SigopsCost, "</sigops>")
 	fmt.Fprint(w, "<sentcnt>", v.SentCnt, "</sentcnt>")
 	fmt.Fprint(w, "<sentlast>", v.Lastsent.Unix(), "</sentlast>")
@@ -304,7 +305,7 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 					if cnt == 0 {
 						usif.SendInvToRandomPeer(1, tid)
 					} else {
-						ptx.Invsentcnt += cnt
+						atomic.AddUint32(&ptx.Invsentcnt, cnt)
 					}
 				} else {
 					txpool.TxMutex.Unlock()
@@ -319,7 +320,7 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 				if ptx, ok := txpool.TransactionsToSend[tid.BIdx()]; ok {
 					txpool.TxMutex.Unlock()
 					usif.SendInvToRandomPeer(1, tid)
-					ptx.Invsentcnt++
+					atomic.AddUint32(&ptx.Invsentcnt, 1)
 				} else {
 					txpool.TxMutex.Unlock()
 				}

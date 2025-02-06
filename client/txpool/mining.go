@@ -149,14 +149,14 @@ func BlockUndone(bl *btc.Block) {
 	FeePackagesDirty = true // this will spare us all the struggle with trying to re-package each tx
 	for _, tx := range bl.Txs[1:] {
 		ntx := &TxRcvd{Tx: tx, Trusted: true, Unmined: true}
-		if needThisTxExt(&ntx.Hash, nil) == 0 {
-			if processTx(ntx) == 0 {
-				common.CountSafe("TxPutBackOK")
+		if need := needThisTxExt(&ntx.Hash, nil); need == 0 {
+			if res, _ := processTx(ntx); res == 0 {
+				common.CountSafe("TxUnmineOK")
 			} else {
-				common.CountSafe("TxPutBackFail")
+				common.CountSafePar("TxUnmineFail-", res)
 			}
 		} else {
-			common.CountSafe("TxPutBackNoNeed")
+			common.CountSafePar("TxUnmineNoNeed-", need)
 		}
 	}
 	TxMutex.Unlock()

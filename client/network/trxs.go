@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/txpool"
@@ -60,7 +61,35 @@ func (c *OneConnection) TxInvNotify(hash []byte) {
 	}
 }
 
-func txPoolCB(conid uint32, info int, par interface{}) (res int) {
+func isRoutable(rec *txpool.OneTxToSend) (yes bool, spkb uint64) {
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
+
+	if !common.CFG.TXRoute.Enabled {
+		common.CountSafe("TxRouteDisabled")
+		rec.Blocked = txpool.TX_REJECTED_DISABLED
+		return
+	}
+	if !rec.Local {
+		common.CountSafe("TxRouteNoLocal")
+		return
+	}
+	if rec.Weight() > int(common.Get(&common.CFG.TXRoute.MaxTxWeight)) {
+		common.CountSafe("TxRouteTooBig")
+		rec.Blocked = txpool.TX_REJECTED_TOO_BIG
+		return
+	}
+	if 4000*rec.Fee < uint64(rec.Weight())*common.RouteMinFeePerKB() {
+		common.CountSafe("TxRouteLowFee")
+		rec.Blocked = txpool.TX_REJECTED_LOW_FEE
+		return
+	}
+	yes = true
+	spkb = 4000 * rec.Fee / uint64(rec.Weight())
+	return
+}
+
+func txPoolCB(conid uint32, result byte, t2s *txpool.OneTxToSend) {
 	Mutex_net.Lock()
 	c := GetConnFromID(conid)
 	Mutex_net.Unlock()
@@ -69,27 +98,29 @@ func txPoolCB(conid uint32, info int, par interface{}) (res int) {
 		return
 	}
 
-	if info == txpool.FEEDBACK_TX_ROUTABLE {
-		p := par.(*txpool.FeedbackRoutable)
-		res = int(NetRouteInvExt(MSG_TX, p.TxID, c, p.SPKB))
+	if result != 0 {
+		if result == txpool.TX_REJECTED_OVERSPEND {
+			c.DoS("TxOversend")
+		} else if result == txpool.TX_REJECTED_SCRIPT_FAIL {
+			c.DoS("TxScriptFail")
+		} else {
+			c.Mutex.Lock()
+			c.cntInc(fmt.Sprint("TxRej", result))
+			c.Mutex.Unlock()
+		}
 		return
 	}
 
-	if info == txpool.FEEDBACK_TX_ACCEPTED {
-		c.Mutex.Lock()
-		c.txsCha[c.txsCurIdx]++
-		c.X.TxsReceived++
-		c.Mutex.Unlock()
-		return
-	}
+	c.Mutex.Lock()
+	c.txsCha[c.txsCurIdx]++
+	c.X.TxsReceived++
+	c.Mutex.Unlock()
 
-	if info == txpool.FEEDBACK_TX_BAD {
-		c.DoS(par.(string))
-		return
+	if yes, spkb := isRoutable(t2s); yes {
+		if cnt := NetRouteInvExt(MSG_TX, &t2s.Hash, c, spkb); cnt > 0 {
+			atomic.AddUint32(&t2s.Invsentcnt, 1)
+		}
 	}
-
-	println("ERROR: unhandled txPoolCB command", info)
-	return
 }
 
 // ParseTxNet handles incoming "tx" messages.
