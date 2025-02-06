@@ -297,6 +297,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		cfl("pre ctx.Delete for")
 		rdbg = new(bytes.Buffer)
 		rd1 = new(bytes.Buffer)
+		rd2 = new(bytes.Buffer)
 		dumpPkgListHere(rd1)
 		fmt.Fprintln(rdbg, "About to delete replaced txs cnt", len(rbf_tx_list))
 		for len(rbf_tx_list) > 0 {
