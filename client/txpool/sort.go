@@ -498,6 +498,7 @@ func sortFeePackages() {
 		common.CountSafe("TxPkgsSortDo")
 		sta := time.Now()
 		sort.Slice(FeePackages, func(i, j int) bool {
+			/* use this one if you want to have them sorted in a predictible order (useful for debugging)
 			iv := FeePackages[i].Fee * uint64(FeePackages[j].Weight)
 			jv := FeePackages[j].Fee * uint64(FeePackages[i].Weight)
 			if iv != jv {
@@ -505,7 +506,8 @@ func sortFeePackages() {
 			}
 			return binary.LittleEndian.Uint64(FeePackages[i].Txs[0].Hash.Hash[:8]) >
 				binary.LittleEndian.Uint64(FeePackages[j].Txs[0].Hash.Hash[:8])
-			//return FeePackages[i].Fee*uint64(FeePackages[j].Weight) > FeePackages[j].Fee*uint64(FeePackages[i].Weight)
+			*/
+			return FeePackages[i].Fee*uint64(FeePackages[j].Weight) > FeePackages[j].Fee*uint64(FeePackages[i].Weight)
 		})
 		SortFeePackagesTime += time.Since(sta)
 		SortFeePackagesCount++
