@@ -49,7 +49,7 @@ func (t2s *OneTxToSend) AddToSort() {
 	//fmt.Printf("adding %p / %s with spb %.2f  %p/%p\n", t2s, btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), BestT2S, WorstT2S)
 
 	if WorstT2S == nil || BestT2S == nil {
-		if common.Get(&common.CFG.TXPool.CheckErrors) && (WorstT2S != nil || BestT2S != nil) {
+		if CheckForErrors() && (WorstT2S != nil || BestT2S != nil) {
 			println("ERROR: if WorstT2S is nil BestT2S should be nil too", WorstT2S, BestT2S)
 			WorstT2S, BestT2S = nil, nil
 		}
@@ -112,7 +112,7 @@ func (t2s *OneTxToSend) ResortWithChildren() {
 		// our parent is above us - we can only move up the list
 		// first check if we can move it at all
 		one_above_us := t2s.Better
-		if common.Get(&common.CFG.TXPool.CheckErrors) && one_above_us == nil {
+		if CheckForErrors() && one_above_us == nil {
 			println("ERROR: we have a parent but we are on top")
 			goto do_the_children
 		}
@@ -123,7 +123,7 @@ func (t2s *OneTxToSend) ResortWithChildren() {
 
 		// we will move by at least one, so we can delete the record now
 		t2s.DelFromSort()
-		if common.Get(&common.CFG.TXPool.CheckErrors) && (BestT2S == nil || WorstT2S == nil) {
+		if CheckForErrors() && (BestT2S == nil || WorstT2S == nil) {
 			println("ERROR: we have a parent but the list is empty after we removed ourselves")
 			return // we dont need to check for children as there obviously arent any records left
 		}
@@ -183,7 +183,7 @@ func (t2s *OneTxToSend) DelFromSort() {
 		}
 		return
 	}
-	if common.Get(&common.CFG.TXPool.CheckErrors) {
+	if CheckForErrors() {
 		if t2s.Worse == nil {
 			println("ERROR: t2s.Worse is nil but t2s was not WorstT2S", WorstT2S, BestT2S, t2s.Worse)
 			debug.PrintStack()
@@ -197,7 +197,7 @@ func (t2s *OneTxToSend) DelFromSort() {
 	}
 	t2s.Worse.Better = t2s.Better
 
-	if common.Get(&common.CFG.TXPool.CheckErrors) {
+	if CheckForErrors() {
 		if t2s.Better == nil {
 			println("ERROR: t2s.Better is nil but t2s was not BestT2S", WorstT2S, BestT2S, t2s.Better)
 			debug.PrintStack()
@@ -249,7 +249,7 @@ func (t2s *OneTxToSend) findWorstParent() (wpr *OneTxToSend) {
 		if mi {
 			parent_bidx := btc.BIdx(t2s.Tx.TxIn[i].Input.Hash[:])
 			parent := TransactionsToSend[parent_bidx]
-			if common.Get(&common.CFG.TXPool.CheckErrors) && parent == nil {
+			if CheckForErrors() && parent == nil {
 				println("ERROR: not existing parent", btc.BIdxString(parent_bidx), "for", t2s.Hash.String())
 				return
 			}
@@ -419,7 +419,7 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 		append_txs(txkey)
 	}
 
-	if common.Get(&common.CFG.TXPool.CheckErrors) && (idx != len(result) || idx != len(already_in) || len(parent_of) != 0) {
+	if CheckForErrors() && (idx != len(result) || idx != len(already_in) || len(parent_of) != 0) {
 		println("ERROR: Get sorted mempool idx:", idx, " result:", len(result), " alreadyin:", len(already_in), " parents:", len(parent_of))
 		result = result[:idx]
 	}
@@ -710,7 +710,7 @@ func GetSortedMempool() (result []*OneTxToSend) {
 	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
 	var prv_idx uint64
 	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
-		if common.Get(&common.CFG.TXPool.CheckErrors) && (prv_idx != 0 && prv_idx >= t2s.SortIndex) {
+		if CheckForErrors() && (prv_idx != 0 && prv_idx >= t2s.SortIndex) {
 			println("ERROR: GetSortedMempool corupt sort index", len(TransactionsToSend), prv_idx, t2s.SortIndex)
 		}
 		prv_idx = t2s.SortIndex
