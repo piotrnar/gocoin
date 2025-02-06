@@ -466,7 +466,12 @@ func (t2s *OneTxToSend) delFromPackages() {
 		}
 
 		if len(pkg.Txs) == 2 {
-			pkg.Txs[0].removePkg(pkg) // remove reference to this pkg from our parent
+			// remove reference to this pkg from the other txs that owned it
+			if pkg.Txs[0] == t2s {
+				pkg.Txs[1].removePkg(pkg)
+			} else {
+				pkg.Txs[0].removePkg(pkg)
+			}
 			pkg.Txs = nil
 			records2remove++
 		} else {
@@ -479,7 +484,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 			}
 			pkg.Fee -= t2s.Fee
 			pkg.Weight -= t2s.Weight()
-			pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
+			pkg.Txs = slices.Delete(pkg.Txs, txidx, txidx+1)
 			FeePackagesReSort = true
 		}
 	}
