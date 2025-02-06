@@ -260,8 +260,8 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 			println(fmt.Sprintf("ERROR: txr %s %d in w4i rec %16x, but data is nil (its w4prt:%p)", txr.Id.String(), txr.Reason, k, txr.Waiting4))
 			continue
 		}
-		pendtxrcv := &TxRcvd{Tx: txr.Tx}
-		if HandleNetTx(pendtxrcv, true) {
+		pendtxrcv := &TxRcvd{Tx: txr.Tx, Retry: true}
+		if HandleNetTx(pendtxrcv) {
 			common.CountSafe("TxRetryAccepted")
 			if CheckForErrors() {
 				if txr, ok := TransactionsRejected[k]; ok {

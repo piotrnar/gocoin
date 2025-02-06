@@ -29,6 +29,7 @@ type TxRcvd struct {
 	FeedbackCB     func(connid uint32, info int, param interface{}) int
 	FromCID        uint32
 	Trusted, Local bool
+	Retry, Unmined bool
 }
 
 type FeedbackRoutable struct {
@@ -72,7 +73,7 @@ func NeedThisTxExt(id *btc.Uint256, cb func()) (why_not int) {
 }
 
 // HandleNetTx must be called from the chain's thread.
-func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
+func HandleNetTx(ntx *TxRcvd) (accepted bool) {
 	common.CountSafe("HandleNetTx")
 
 	tx := ntx.Tx
@@ -86,7 +87,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	TxMutex.Lock() // Make sure to Unlock it before each possible return
 
-	if !retry {
+	if !ntx.Retry {
 		if _, present := TransactionsPending[bidx]; !present {
 			// It had to be mined in the meantime, so just drop it now
 			TxMutex.Unlock()
@@ -317,6 +318,10 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	rec.Footprint = uint32(rec.SysSize())
 	rec.Add(bidx)
 
+	if ntx.Unmined {
+		outputsUnmined(ntx.Tx)
+	}
+
 	wtg := WaitingForInputs[bidx]
 	if wtg != nil {
 		defer RetryWaitingForInput(wtg) // Redo waiting txs when leaving this function
@@ -364,7 +369,7 @@ func (rec *OneTxToSend) isRoutable() bool {
 }
 
 func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
-	return HandleNetTx(&TxRcvd{Tx: tx, Trusted: true, Local: true}, true)
+	return HandleNetTx(&TxRcvd{Tx: tx, Trusted: true, Local: true, Retry: true})
 }
 
 func Tick() {

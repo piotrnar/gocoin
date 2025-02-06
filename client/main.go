@@ -593,7 +593,7 @@ func main() {
 
 			case newtx := <-network.NetTxs:
 				common.CountSafe("DoMainNetTx")
-				txpool.HandleNetTx(newtx, false)
+				txpool.HandleNetTx(newtx)
 
 			case <-netTick:
 				common.CountSafe("DoMainNetTick")
@@ -694,7 +694,7 @@ func main() {
 			case newtx := <-network.NetTxs:
 				common.Busy()
 				common.CountSafe("MainNetTx")
-				txpool.HandleNetTx(newtx, false)
+				txpool.HandleNetTx(newtx)
 
 			case <-netTick:
 				common.Busy()

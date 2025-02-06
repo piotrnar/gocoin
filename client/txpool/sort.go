@@ -91,6 +91,13 @@ func (t2s *OneTxToSend) ResortWithChildren() {
 	// Normally we should not get here as blocks are precessed with SortingSupressed
 	// So the code below is pretty much unused, although it has been seen working fine (but slow).
 	common.CountSafe("TxMined**Resort")
+
+	// The code below seems to be broken and does not work well during block undone
+	// TODO: maybe fix it (although it is not worth using it during a block sumission/undoing)
+	println("Warninign: ResortWithChildren() called with SortingSupressed not set - fixing it")
+	SortListDirty = true
+	return
+
 	// now get the new worst parent
 	wpr := t2s.findWorstParent()
 	if wpr == t2s.Better {
@@ -144,6 +151,7 @@ func (t2s *OneTxToSend) ResortWithChildren() {
 	}
 
 do_the_children:
+	common.CountSafe("TxSortDoChildren")
 	// now do the children
 	var po btc.TxPrevOut
 	po.Hash = t2s.Hash.Hash

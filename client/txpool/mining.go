@@ -110,8 +110,8 @@ func BlockMined(bl *btc.Block) {
 	}
 }
 
-// MarkChildrenForMem sets the MemInput flag of all the children (used when a tx is mined).
-func MarkChildrenForMem(tx *btc.Tx) {
+// outputsUnmined sets the MemInput flag of all the children (used when a tx is unmined / block undone).
+func outputsUnmined(tx *btc.Tx) {
 	// Go through all the tx's outputs and mark MemInputs in txs that have been spending it
 	var po btc.TxPrevOut
 	po.Hash = tx.Hash.Hash
@@ -147,10 +147,10 @@ func BlockUndone(bl *btc.Block) {
 	for _, tx := range bl.Txs[1:] {
 		FeePackagesDirty = true
 		// put it back into the mempool
-		ntx := &TxRcvd{Tx: tx, Trusted: true}
+		ntx := &TxRcvd{Tx: tx, Trusted: true, Retry: true, Unmined: true}
 
 		if NeedThisTx(&ntx.Hash, nil) {
-			if HandleNetTx(ntx, true) {
+			if HandleNetTx(ntx) {
 				common.CountSafe("TxPutBackOK")
 				cnt++
 			} else {
@@ -160,11 +160,8 @@ func BlockUndone(bl *btc.Block) {
 			common.CountSafe("TxPutBackNoNeed")
 		}
 
-		TxMutex.Lock()
-		MarkChildrenForMem(tx)
-		TxMutex.Unlock()
 	}
 	if cnt != len(bl.Txs)-1 {
-		println("WARNING: network.BlockUndone("+bl.Hash.String()+") - ", cnt, "of", len(bl.Txs)-1, "txs put back")
+		println("WARNING: network.BlockUndone("+bl.Hash.String()+") - only ", cnt, "of", len(bl.Txs)-1, "txs put back")
 	}
 }
