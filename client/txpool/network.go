@@ -372,8 +372,8 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 func Tick() {
 	ExpireOldTxs()
 	LimitRejected()
-	TxMutex.Lock()
 	if CheckForErrors() {
+		TxMutex.Lock()
 		checkSortedOK("Tick")
 		TxMutex.Unlock()
 	}
