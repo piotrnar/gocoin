@@ -62,6 +62,10 @@ func checkFeeList() bool {
 	valid_pkgs := make(map[*OneTxsPackage]bool, len(FeePackages))
 
 	for _, pkg := range FeePackages {
+		if valid_pkgs[pkg] {
+			println("ERROR: pkg", pkg.String(), "is twice on the list")
+			return true
+		}
 		valid_pkgs[pkg] = true
 		if len(pkg.Txs) < 2 {
 			println("ERROR: package has only", len(pkg.Txs), "txs")
