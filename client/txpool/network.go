@@ -378,14 +378,11 @@ func Tick() {
 	if CheckForErrors() {
 		TxMutex.Lock()
 		checkSortedOK("Tick")
+		if MempoolCheck() {
+			println("Mempool check error inside the tick")
+			debug.PrintStack()
+			os.Exit(1)
+		}
 		TxMutex.Unlock()
-	}
-	TxMutex.Lock()
-	mpc := MempoolCheck()
-	TxMutex.Unlock()
-	if mpc {
-		println("Mempool check error inside the tick")
-		debug.PrintStack()
-		os.Exit(1)
 	}
 }
