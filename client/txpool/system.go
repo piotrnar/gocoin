@@ -23,6 +23,8 @@ func (t *OneTxRejected) SysSize() (size int) {
 	if t.Waiting4 != nil {
 		size += int(unsafe.Sizeof(*t.Waiting4))
 	}
-	size += t.Tx.SysSize()
+	if t.Tx != nil {
+		size += t.Tx.SysSize()
+	}
 	return
 }
