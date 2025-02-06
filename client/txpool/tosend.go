@@ -141,10 +141,6 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		debug.PrintStack()
 		os.Exit(1)
 	}
-	if !FeePackagesDirty {
-		tx.delFromPackages() // remove it from FeePackages
-	}
-	tx.InPackages = nil
 
 	for _, txin := range tx.TxIn {
 		delete(SpentOutputs, txin.Input.UIdx())
@@ -152,6 +148,11 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	delete(TransactionsToSend, tx.Hash.BIdx())
+
+	if !FeePackagesDirty {
+		tx.delFromPackages() // remove it from FeePackages
+	}
+	tx.InPackages = nil
 
 	if fprint2remove != uint64(tx.Footprint) {
 		// TODO: check if it ever prints
@@ -469,22 +470,50 @@ func (t2s *OneTxToSend) delFromPackages() {
 			// remove reference to this pkg from the other txs that owned it
 			if pkg.Txs[0] == t2s {
 				pkg.Txs[1].removePkg(pkg)
+				// TODO: check if it prints
+				println("ERROR: delFromPackages our tx if first on the two list!")
 			} else {
 				pkg.Txs[0].removePkg(pkg)
 			}
 			pkg.Txs = nil
 			records2remove++
+			common.CountSafe("TxPkgsDelGrA")
 		} else {
 			common.CountSafe("TxPkgsDelTx")
-			txidx := slices.Index(pkg.Txs, t2s)
-			if CheckForErrors() && txidx < 0 {
-				println("ERROR: removeFromPackages referenced package not on list")
+			pandch := pkg.Txs[0].GetItWithAllChildren()
+			if len(pandch) >= len(pkg.Txs) {
+				println("ERROR: delFromPackages -> GetItWithAllChildren returned cnt", len(pandch), pkg.Txs)
 				FeePackagesDirty = true
 				return
 			}
-			pkg.Fee -= t2s.Fee
-			pkg.Weight -= t2s.Weight()
-			pkg.Txs = slices.Delete(pkg.Txs, txidx, txidx+1)
+			// first unmark all txs using this pkg (we may mark them back later)
+			for _, t := range pkg.Txs {
+				if CheckForErrors() && t == t2s {
+					println("ERROR: delFromPackages -> GetItWithAllChildren returned tx that is us")
+					FeePackagesDirty = true
+					return
+				}
+				t.removePkg(pkg)
+			}
+
+			if len(pandch) > 1 {
+				pkg := &OneTxsPackage{Txs: pandch}
+				for _, t := range pandch {
+					pkg.Weight += t.Weight()
+					pkg.Fee += t.Fee
+					t.InPackages = append(t.InPackages, pkg) // now mark back the tx using our pkg
+				}
+				FeePackages = append(FeePackages, pkg)
+				FeePackagesReSort = true
+				common.CountSafe("TxPkgsAddNew")
+				if CheckForErrors() {
+					pkg.checkForDups()
+				}
+			} else {
+				pkg.Txs = nil
+				records2remove++
+				common.CountSafe("TxPkgsDelGrB")
+			}
 			FeePackagesReSort = true
 		}
 	}
