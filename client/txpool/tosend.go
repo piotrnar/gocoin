@@ -1,7 +1,6 @@
 package txpool
 
 import (
-	"fmt"
 	"os"
 	"runtime/debug"
 	"slices"
@@ -451,13 +450,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 		DelFromPackagesCount++
 	}()
 
-	if rdbg != nil {
-		fmt.Fprintln(rdbg, "Doing del from packages", len(t2s.InPackages))
-	}
 	for _, pkg := range t2s.InPackages {
-		if rdbg != nil {
-			fmt.Fprintln(rdbg, " pkg", pkg.String())
-		}
 		common.CountSafe("TxPkgsDelTick")
 		if CheckForErrors() && len(pkg.Txs) < 2 {
 			println("ERROR: delFromPackages called on t2s that has pkg with less than txs", pkg)
@@ -488,9 +481,6 @@ func (t2s *OneTxToSend) delFromPackages() {
 			FeePackagesReSort = true
 		}
 	}
-	if rdbg != nil {
-		fmt.Fprintln(rdbg, "Got out. records2remove:", records2remove)
-	}
 
 	if records2remove > 0 {
 		common.CountSafe("TxPkgsDelGrCnt")
@@ -498,14 +488,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 		new_pkgs_list := make([]*OneTxsPackage, 0, cap(FeePackages))
 		for _, pkg := range FeePackages {
 			if pkg.Txs != nil {
-				if rdbg != nil {
-					fmt.Fprintln(rdbg, "  keep pkg", pkg.String())
-				}
 				new_pkgs_list = append(new_pkgs_list, pkg)
-			} else {
-				if rdbg != nil {
-					fmt.Fprintln(rdbg, "  remove pkg", pkg.String())
-				}
 			}
 		}
 		FeePackages = new_pkgs_list

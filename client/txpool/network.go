@@ -1,9 +1,7 @@
 package txpool
 
 import (
-	"bytes"
 	"fmt"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -293,34 +291,20 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		sigops += uint(tx.CountWitnessSigOps(i, pos[i].Pk_script))
 	}
 
-	if len(rbf_tx_list) > 0 {
-		cfl("pre ctx.Delete for")
-		rdbg = new(bytes.Buffer)
-		rd1 = new(bytes.Buffer)
-		dumpPkgListHere(rd1)
-		fmt.Fprintln(rdbg, "About to delete replaced txs cnt", len(rbf_tx_list))
-		for len(rbf_tx_list) > 0 {
-			var ctx *OneTxToSend
-			for ctx = range rbf_tx_list {
-				if ctx.HasNoChildren() {
-					break
-				}
-			}
-			if ctx == nil {
-				println("ERROR: rbf_tx_list not empty, but cannot find a tx with no children")
+	for len(rbf_tx_list) > 0 {
+		var ctx *OneTxToSend
+		for ctx = range rbf_tx_list {
+			if ctx.HasNoChildren() {
 				break
 			}
-			fmt.Fprintln(rdbg, " ... doing del txid", ctx.Id(), "-", len(rbf_tx_list), "left")
-			rd2.Reset()
-			dumpPkgListHere(rd2)
-
-			ctx.Delete(false, TX_REJECTED_REPLACED)
-			cfl("post ctx.Delete" + ctx.Id())
-			delete(rbf_tx_list, ctx)
 		}
-		rdbg = nil
-		rd1 = nil
-		rd2 = nil
+		if ctx == nil {
+			println("ERROR: rbf_tx_list not empty, but cannot find a tx with no children")
+			break
+		}
+
+		ctx.Delete(false, TX_REJECTED_REPLACED)
+		delete(rbf_tx_list, ctx)
 	}
 
 	rec := &OneTxToSend{Volume: totinp, Local: ntx.Local, Fee: fee,
@@ -385,31 +369,12 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 	return HandleNetTx(&TxRcvd{Tx: tx, Trusted: true, Local: true}, true)
 }
 
-// make sure to call it with the mutex locked
-func checkSortedOK(from string) {
-	cfl("tick")
-	if VerifyMempoolSort(GetSortedMempoolRBF()) {
-		println("Sorting fucked in", from)
-		println("before it:\n", rdbg.String())
-		dumpPkgList("pkglist_broken.txt")
-		rdbg = new(bytes.Buffer)
-		println("Now retry sort again, this time with FeePackagesDirty")
-		FeePackagesDirty = true
-		if VerifyMempoolSort(GetSortedMempoolRBF()) {
-			println("*** again fucked ***")
-		} else {
-			println(rdbg.String())
-			println("Fixed")
-			dumpPkgList("pkglist_fixed.txt")
-		}
-		os.Exit(1)
-	}
-}
-
 func Tick() {
 	ExpireOldTxs()
 	LimitRejected()
 	TxMutex.Lock()
-	checkSortedOK("Tick")
-	TxMutex.Unlock()
+	if CheckForErrors() {
+		checkSortedOK("Tick")
+		TxMutex.Unlock()
+	}
 }

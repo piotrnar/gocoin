@@ -53,6 +53,42 @@ func cfl(label string) {
 	}
 }
 
+// make sure to call it with the mutex locked
+func checkSortedOK(from string) {
+	cfl(from)
+	if VerifyMempoolSort(GetSortedMempoolRBF()) {
+		println("Sorting fucked in", from)
+		println("before it:\n", rdbg.String())
+		dumpPkgList("pkglist_broken.txt")
+		rdbg = new(bytes.Buffer)
+		println("Now retry sort again, this time with FeePackagesDirty")
+		FeePackagesDirty = true
+		if VerifyMempoolSort(GetSortedMempoolRBF()) {
+			println("*** again fucked ***")
+		} else {
+			println(rdbg.String())
+			println("Fixed")
+			dumpPkgList("pkglist_fixed.txt")
+		}
+		os.Exit(1)
+	}
+}
+
+func (pk *OneTxsPackage) checkForDups() bool {
+	for i, t := range pk.Txs[:len(pk.Txs)-1] {
+		if slices.Contains(pk.Txs[i+1:], t) {
+			println("ERROR: pkg", pk.String(), "contains the same tx twice:", t.Hash.String())
+			if rdbg != nil {
+				println(rdbg.String())
+			}
+			debug.PrintStack()
+			os.Exit(1)
+			return true
+		}
+	}
+	return false
+}
+
 func checkFeeList() bool {
 	if FeePackagesDirty {
 		common.CountSafe("TxPkgsCheckDirty")
