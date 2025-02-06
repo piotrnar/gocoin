@@ -70,7 +70,7 @@ func isRoutable(rec *txpool.OneTxToSend) (yes bool, spkb uint64) {
 		rec.Blocked = txpool.TX_REJECTED_DISABLED
 		return
 	}
-	if !rec.Local {
+	if rec.Local {
 		common.CountSafe("TxRouteNoLocal")
 		return
 	}
