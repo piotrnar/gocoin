@@ -51,7 +51,7 @@ func (tx *OneTxToSend) outputsMined() {
 					rec.Footprint -= uint32(reduced_size)
 					TransactionsToSendSize -= uint64(reduced_size)
 				}
-				rec.ResortWithChildren()
+				rec.resortWithChildren()
 			} else if CheckForErrors() {
 				common.CountSafe("TxMinedMeminERR")
 				println("ERROR:", po.String(), " in SpentOutputs, but not in mempool")
@@ -128,7 +128,7 @@ func outputsUnmined(tx *btc.Tx) {
 				idx := rec.IIdx(uidx)
 				rec.MemInputs[idx] = true
 				rec.MemInputCnt++
-				rec.ResortWithChildren()
+				rec.resortWithChildren()
 				common.CountSafe("TxPutBackMemIn")
 				if CheckForErrors() && rec.Footprint != uint32(rec.SysSize()) {
 					println("ERROR: MarkChildrenForMem footprint mismatch", rec.Footprint, uint32(rec.SysSize()))
