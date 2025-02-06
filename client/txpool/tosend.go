@@ -506,7 +506,6 @@ func (t2s *OneTxToSend) delFromPackages() {
 					pkg.Fee += t.Fee
 					t.InPackages = append(t.InPackages, pkg) // now mark back the tx using our pkg
 				}
-				FeePackages = append(FeePackages, pkg)
 				FeePackagesReSort = true
 				common.CountSafe("TxPkgsDelTx")
 				if CheckForErrors() {
