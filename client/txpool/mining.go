@@ -81,16 +81,15 @@ func tx_mined(tx *btc.Tx) {
 // BlockMined removes all the block's tx from the mempool.
 func BlockMined(bl *btc.Block) {
 	common.CountSafe("TxPkgsBlockMined")
-
 	if len(bl.Txs) < 2 {
 		return
 	}
 
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
+	FeePackagesDirty = true                // this will spare us all the struggle with trying to re-package each tx
 	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
 		tx := bl.Txs[i]
-		FeePackagesDirty = true // this will spare us all the struggle with trying to re-package
 		tx_mined(tx)
 	}
 	for _, tx := range bl.Txs[1:] {
@@ -142,26 +141,22 @@ func outputsUnmined(tx *btc.Tx) {
 }
 
 func BlockUndone(bl *btc.Block) {
-	var cnt int
 	common.CountSafe("TxPkgsBlockUndo")
-	for _, tx := range bl.Txs[1:] {
-		FeePackagesDirty = true
-		// put it back into the mempool
-		ntx := &TxRcvd{Tx: tx, Trusted: true, Retry: true, Unmined: true}
+	if len(bl.Txs) < 2 {
+		return
+	}
 
+	FeePackagesDirty = true // this will spare us all the struggle with trying to re-package each tx
+	for _, tx := range bl.Txs[1:] {
+		ntx := &TxRcvd{Tx: tx, Trusted: true, Retry: true, Unmined: true}
 		if NeedThisTx(&ntx.Hash, nil) {
 			if HandleNetTx(ntx) {
 				common.CountSafe("TxPutBackOK")
-				cnt++
 			} else {
 				common.CountSafe("TxPutBackFail")
 			}
 		} else {
 			common.CountSafe("TxPutBackNoNeed")
 		}
-
-	}
-	if cnt != len(bl.Txs)-1 {
-		println("WARNING: network.BlockUndone("+bl.Hash.String()+") - only ", cnt, "of", len(bl.Txs)-1, "txs put back")
 	}
 }
