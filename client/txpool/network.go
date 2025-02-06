@@ -316,7 +316,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			dumpPkgListHere(rd2)
 
 			ctx.Delete(false, TX_REJECTED_REPLACED)
-			cfl("post ctx.Delete" + ctx.Id())
+			cfl("post ctx.Delete " + ctx.Id())
 			delete(rbf_tx_list, ctx)
 		}
 		rdbg = nil
