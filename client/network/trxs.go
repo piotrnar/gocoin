@@ -85,13 +85,13 @@ func isRoutable(rec *txpool.OneTxToSend) (yes bool, spkb uint64) {
 		rec.Blocked = txpool.TX_REJECTED_TOO_BIG
 		return
 	}
-	if 4000*rec.Fee < uint64(rec.Weight())*common.RouteMinFeePerKB() {
+	spkb = 4000 * rec.Fee / uint64(rec.Weight())
+	if spkb < common.RouteMinFeePerKB() {
 		common.CountSafe("TxRouteLowFee")
 		rec.Blocked = txpool.TX_REJECTED_LOW_FEE
 		return
 	}
 	yes = true
-	spkb = 4000 * rec.Fee / uint64(rec.Weight())
 	return
 }
 
