@@ -488,24 +488,27 @@ func (t2s *OneTxToSend) delFromPackages() {
 			}
 			// first unmark all txs using this pkg (we may mark them back later)
 			for _, t := range pkg.Txs {
-				if CheckForErrors() && t == t2s {
-					println("ERROR: delFromPackages -> GetItWithAllChildren returned tx that is us")
-					FeePackagesDirty = true
-					return
+				if t != t2s {
+					t.removePkg(pkg)
 				}
-				t.removePkg(pkg)
 			}
-
 			if len(pandch) > 1 {
-				pkg := &OneTxsPackage{Txs: pandch}
+				pkg.Txs = pandch
+				pkg.Weight = 0
+				pkg.Fee = 0
 				for _, t := range pandch {
+					if CheckForErrors() && t == t2s {
+						println("ERROR: delFromPackages -> GetItWithAllChildren returned us")
+						FeePackagesDirty = true
+						return
+					}
 					pkg.Weight += t.Weight()
 					pkg.Fee += t.Fee
 					t.InPackages = append(t.InPackages, pkg) // now mark back the tx using our pkg
 				}
 				FeePackages = append(FeePackages, pkg)
 				FeePackagesReSort = true
-				common.CountSafe("TxPkgsAddNew")
+				common.CountSafe("TxPkgsDelTx")
 				if CheckForErrors() {
 					pkg.checkForDups()
 				}
