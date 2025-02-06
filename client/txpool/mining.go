@@ -25,13 +25,13 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 		uidx := po.UIdx()
 		if val, ok := SpentOutputs[uidx]; ok {
 			if rec := TransactionsToSend[val]; rec != nil {
-				if common.Get(&common.CFG.TXPool.CheckErrors) && rec.MemInputs == nil {
+				if CheckForErrors() && rec.MemInputs == nil {
 					common.CountSafe("TxMinedMeminER1")
 					println("ERROR: ", po.String(), "just mined in", rec.Hash.String(), "- not marked as mem")
 					continue
 				}
 				idx := rec.IIdx(uidx)
-				if common.Get(&common.CFG.TXPool.CheckErrors) {
+				if CheckForErrors() {
 					if idx < 0 {
 						common.CountSafe("TxMinedMeminER2")
 						println("ERROR: ", po.String(), " just mined. Was in SpentOutputs & mempool, but DUPA")
@@ -54,7 +54,7 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 					TransactionsToSendSize -= uint64(reduced_size)
 				}
 				rec.ResortWithChildren()
-			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+			} else if CheckForErrors() {
 				common.CountSafe("TxMinedMeminERR")
 				println("ERROR:", po.String(), " in SpentOutputs, but not in mempool")
 			}
@@ -94,7 +94,7 @@ func tx_mined(tx *btc.Tx) {
 					common.CountSafe("TxMinedOtherSpend")
 				}
 				rec.Delete(true, 0)
-			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+			} else if CheckForErrors() {
 				println("ERROR: Input from ", inp.Input.String(), " in SpentOutputs, but tx not in mempool")
 			}
 			delete(SpentOutputs, idx)
@@ -106,7 +106,7 @@ func tx_mined(tx *btc.Tx) {
 				if txr, ok := TransactionsRejected[bidx]; ok {
 					common.CountSafePar("TxMinedRjctUTXO-", txr.Reason)
 					DeleteRejectedByTxr(txr)
-				} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+				} else if CheckForErrors() {
 					println("ERROR: txr marked for removal but not present in TransactionsRejected")
 				}
 			}
@@ -162,10 +162,10 @@ func MarkChildrenForMem(tx *btc.Tx) {
 				rec.MemInputCnt++
 				rec.ResortWithChildren()
 				common.CountSafe("TxPutBackMemIn")
-				if common.Get(&common.CFG.TXPool.CheckErrors) && rec.Footprint != uint32(rec.SysSize()) {
+				if CheckForErrors() && rec.Footprint != uint32(rec.SysSize()) {
 					println("ERROR: MarkChildrenForMem footprint mismatch", rec.Footprint, uint32(rec.SysSize()))
 				}
-			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+			} else if CheckForErrors() {
 				println("ERROR: MarkChildrenForMem", po.String(), " in SpentOutputs, but not in mempool")
 				common.CountSafe("TxPutBackMeminERR")
 			}

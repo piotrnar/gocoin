@@ -395,7 +395,7 @@ func MempoolLoad() bool {
 	SortListDirty = true
 	lookForPackages()
 
-	if common.Get(&common.CFG.TXPool.CheckErrors) {
+	if CheckForErrors() {
 		if MempoolCheck() {
 			println("ERROR: TXPool not OK after loading. Start the client with -mp0 to recover.")
 			os.Exit(1)

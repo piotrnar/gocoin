@@ -102,7 +102,7 @@ func TRIdIsZeroArrayRec(idx int) bool {
 // Make sure to call it with locked TxMutex.
 func AddRejectedTx(txr *OneTxRejected) {
 	bidx := txr.Id.BIdx()
-	if common.Get(&common.CFG.TXPool.CheckErrors) {
+	if CheckForErrors() {
 		if _, ok := TransactionsRejected[bidx]; ok {
 			println("ERROR: AddRejectedTx: TxR", txr.Id.String(), "is already on the list")
 			return
@@ -190,7 +190,7 @@ func (tr *OneTxRejected) cleanup() {
 					RejectedUsedUTXOs[uidx] = newref
 					common.CountSafe("TxUsedUTXOrem")
 				}
-			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+			} else if CheckForErrors() {
 				println("ERROR: TxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
 			}
 		}
@@ -212,10 +212,10 @@ func (tr *OneTxRejected) cleanup() {
 				} else {
 					w4i.Ids = newlist
 				}
-			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+			} else if CheckForErrors() {
 				println("ERROR: WaitingForInputs record", tr.Waiting4.String(), "did not point back to txr", tr.Id.String())
 			}
-		} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+		} else if CheckForErrors() {
 			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String(), "from txr", tr.Id.String())
 		}
 		WaitingForInputsSize -= uint64(tr.Footprint)
@@ -263,7 +263,7 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if HandleNetTx(pendtxrcv, true) {
 			common.CountSafe("TxRetryAccepted")
-			if common.Get(&common.CFG.TXPool.CheckErrors) {
+			if CheckForErrors() {
 				if txr, ok := TransactionsRejected[k]; ok {
 					println("ERROR: tx", txr.Id.String(), "accepted but still in rejected")
 				}
