@@ -99,7 +99,7 @@ func (t2s *OneTxToSend) ResortWithChildren() {
 	// we may have to move it. first let's remove it from the index
 	if wpr == nil {
 		wpr = BestT2S // if there is no parent, we can go all the way to the top
-	} else {
+	} else if wpr.Worse != nil {
 		wpr = wpr.Worse // we must insert it after the worst parent (not before it)
 	}
 	if wpr.SortIndex > t2s.SortIndex {
