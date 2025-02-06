@@ -74,8 +74,7 @@ func checkFeeList() bool {
 				return true
 			}
 			if !slices.Contains(t.InPackages, pkg) {
-				println("ERROR: tx in pkg", pkg.String(), "does not point back to the package", idx,
-					"\n  ...", t.Hash.String())
+				println("ERROR: tx", idx, t.Id(), "in pkg", pkg.String(), "does not point back to the package")
 				return true
 			}
 		}
