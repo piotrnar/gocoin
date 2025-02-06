@@ -315,10 +315,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	rec.Clean()
 	rec.Footprint = uint32(rec.SysSize())
-
-	for i := range spent {
-		SpentOutputs[spent[i]] = bidx
-	}
 	rec.Add(bidx)
 
 	wtg := WaitingForInputs[bidx]
