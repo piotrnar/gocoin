@@ -71,9 +71,15 @@ func isRoutable(rec *txpool.OneTxToSend) (yes bool, spkb uint64) {
 		return
 	}
 	if rec.Local {
-		common.CountSafe("TxRouteNoLocal")
+		common.CountSafe("TxRouteLocal")
 		return
 	}
+	if rec.MemInputCnt > 0 && !common.Get(&common.CFG.TXRoute.MemInputs) {
+		common.CountSafe("TxRouteNotMined")
+		rec.Blocked = txpool.TX_REJECTED_NOT_MINED
+		return
+	}
+
 	if rec.Weight() > int(common.Get(&common.CFG.TXRoute.MaxTxWeight)) {
 		common.CountSafe("TxRouteTooBig")
 		rec.Blocked = txpool.TX_REJECTED_TOO_BIG
