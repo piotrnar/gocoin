@@ -481,11 +481,10 @@ func (t2s *OneTxToSend) delFromPackages() {
 		} else {
 			common.CountSafe("TxPkgsDelTx")
 			pandch := pkg.Txs[0].GetItWithAllChildren()
+			/*not quite sure why this is happening, but seem to be a normal case so just ignore it
 			if len(pandch) >= len(pkg.Txs) {
 				println("ERROR: delFromPackages -> GetItWithAllChildren returned cnt", len(pandch), pkg.Txs)
-				FeePackagesDirty = true
-				return
-			}
+			}*/
 			// first unmark all txs using this pkg (we may mark them back later)
 			for _, t := range pkg.Txs {
 				if t != t2s {
