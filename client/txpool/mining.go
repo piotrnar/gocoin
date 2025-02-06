@@ -98,15 +98,14 @@ func BlockMined(bl *btc.Block) {
 			wtgs = append(wtgs, wtg)
 		}
 	}
-	TxMutex.Unlock()
-
-	// Try to redo waiting txs
-	if len(wtgs) > 0 {
+	if len(wtgs) > 0 { // Try to redo waiting txs
 		common.CountSafeAdd("TxMinedGotInput", uint64(len(wtgs)))
 		for _, wtg := range wtgs {
-			RetryWaitingForInput(wtg)
+			retryWaitingForInput(wtg)
 		}
 	}
+	TxMutex.Unlock()
+
 }
 
 // outputsUnmined sets the MemInput flag of all the children (used when a tx is unmined / block undone).
@@ -146,11 +145,12 @@ func BlockUndone(bl *btc.Block) {
 		return
 	}
 
+	TxMutex.Lock()
 	FeePackagesDirty = true // this will spare us all the struggle with trying to re-package each tx
 	for _, tx := range bl.Txs[1:] {
-		ntx := &TxRcvd{Tx: tx, Trusted: true, Retry: true, Unmined: true}
-		if NeedThisTx(&ntx.Hash, nil) {
-			if HandleNetTx(ntx) {
+		ntx := &TxRcvd{Tx: tx, Trusted: true, Unmined: true}
+		if needThisTxExt(&ntx.Hash, nil) == 0 {
+			if processTx(ntx) == 0 {
 				common.CountSafe("TxPutBackOK")
 			} else {
 				common.CountSafe("TxPutBackFail")
@@ -159,4 +159,5 @@ func BlockUndone(bl *btc.Block) {
 			common.CountSafe("TxPutBackNoNeed")
 		}
 	}
+	TxMutex.Unlock()
 }

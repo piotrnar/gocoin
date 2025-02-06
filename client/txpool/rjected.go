@@ -46,7 +46,8 @@ type OneWaitingList struct {
 }
 
 const (
-	TX_REJECTED_DISABLED = 1 // Only used for transactions in TransactionsToSend for Blocked field
+	TX_REJECTED_DISABLED    = 1 // Only used for transactions in TransactionsToSend for Blocked field
+	TX_REJECTED_NOT_PENDING = 2
 
 	TX_REJECTED_TOO_BIG      = 101
 	TX_REJECTED_FORMAT       = 102
@@ -253,15 +254,16 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 }
 
 // Make sure to call it with locked TxMutex
-func RetryWaitingForInput(wtg *OneWaitingList) {
+func retryWaitingForInput(wtg *OneWaitingList) {
 	for _, k := range wtg.Ids {
 		txr := TransactionsRejected[k]
 		if txr.Tx == nil {
 			println(fmt.Sprintf("ERROR: txr %s %d in w4i rec %16x, but data is nil (its w4prt:%p)", txr.Id.String(), txr.Reason, k, txr.Waiting4))
 			continue
 		}
-		pendtxrcv := &TxRcvd{Tx: txr.Tx, Retry: true}
-		if HandleNetTx(pendtxrcv) {
+		DeleteRejectedByIdx(k)
+		pendtxrcv := &TxRcvd{Tx: txr.Tx}
+		if processTx(pendtxrcv) == 0 {
 			common.CountSafe("TxRetryAccepted")
 			if CheckForErrors() {
 				if txr, ok := TransactionsRejected[k]; ok {
@@ -292,6 +294,8 @@ func ReasonToString(reason byte) string {
 		return ""
 	case TX_REJECTED_DISABLED:
 		return "RELAY_OFF"
+	case TX_REJECTED_NOT_PENDING:
+		return "NOT_PENDING"
 	case TX_REJECTED_TOO_BIG:
 		return "TOO_BIG"
 	case TX_REJECTED_FORMAT:
