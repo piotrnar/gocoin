@@ -122,10 +122,9 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 
 	if with_children {
 		// remove all the children that are spending from tx
-		var po btc.TxPrevOut
-		po.Hash = tx.Hash.Hash
-		for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
-			if so, ok := SpentOutputs[po.UIdx()]; ok {
+		for vout := range tx.TxOut {
+			uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
+			if so, ok := SpentOutputs[uidx]; ok {
 				if child, ok := TransactionsToSend[so]; ok {
 					child.Delete(true, reason)
 				}
@@ -248,10 +247,8 @@ func txChecker(tx *btc.Tx) bool {
 
 // GetChildren gets all first level children of the tx.
 func (tx *OneTxToSend) HasNoChildren() bool {
-	var po btc.TxPrevOut
-	po.Hash = tx.Hash.Hash
-	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
-		uidx := po.UIdx()
+	for vout := range tx.TxOut {
+		uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
 		if _, ok := SpentOutputs[uidx]; ok {
 			return false
 		}
@@ -261,18 +258,13 @@ func (tx *OneTxToSend) HasNoChildren() bool {
 
 // GetChildren gets all first level children of the tx.
 func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
-	var po btc.TxPrevOut
-	po.Hash = tx.Hash.Hash
-
 	res := make(map[*OneTxToSend]bool)
-
-	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
-		uidx := po.UIdx()
+	for vout := range tx.TxOut {
+		uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
 		if val, ok := SpentOutputs[uidx]; ok {
 			res[TransactionsToSend[val]] = true
 		}
 	}
-
 	result = make([]*OneTxToSend, len(res))
 	var idx int
 	for ttx := range res {
