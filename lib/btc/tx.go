@@ -87,9 +87,13 @@ func (t *Tx) Clean() {
 	t.TxVerVars = nil
 }
 
-func (po *TxPrevOut) UIdx() uint64 {
+func UIdx(hash []byte, vout uint32) uint64 {
 	// use different bytes than BIDX, just to make sure we're not mixing them
-	return binary.LittleEndian.Uint64(po.Hash[24:32]) ^ uint64(po.Vout)
+	return binary.LittleEndian.Uint64(hash[24:32]) ^ uint64(vout)
+}
+
+func (po *TxPrevOut) UIdx() uint64 {
+	return UIdx(po.Hash[24:32], po.Vout)
 }
 
 func (to *TxOut) String(testnet bool) (s string) {
