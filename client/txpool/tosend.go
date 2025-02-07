@@ -132,16 +132,15 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 			}
 		}
 	} else if CheckForErrors() {
-		var po btc.TxPrevOut
-		po.Hash = tx.Hash.Hash
-		for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
-			if so, ok := SpentOutputs[po.UIdx()]; ok {
+		for vout := range tx.TxOut {
+			uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
+			if so, ok := SpentOutputs[uidx]; ok {
 				child_missing := ""
 				if child, ok := TransactionsToSend[so]; ok {
 					// extra check to exclude children that use just-mined inputs
 					if child.MemInputCnt > 0 {
 						for vo, ti := range child.TxIn {
-							if ti.Input == po {
+							if ti.Input.UIdx() == uidx {
 								if child.MemInputs[vo] {
 									child_missing = child.Id()
 									break
