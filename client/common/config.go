@@ -85,6 +85,7 @@ var (
 			RejectRecCnt   uint16
 			SaveOnDisk     bool
 			NotFullRBF     bool
+			HoldSorting    bool // during block commit
 			CheckErrors    bool
 		}
 		TXRoute struct {
@@ -190,6 +191,7 @@ func InitConfig() {
 	CFG.TXPool.MaxNoUtxoMB = 5.0
 	CFG.TXPool.RejectRecCnt = 20000
 	CFG.TXPool.SaveOnDisk = true
+	CFG.TXPool.HoldSorting = true
 
 	CFG.TXRoute.Enabled = true
 	CFG.TXRoute.FeePerByte = 0.0
