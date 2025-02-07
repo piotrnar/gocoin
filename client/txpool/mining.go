@@ -17,22 +17,20 @@ func (rec *OneTxToSend) IIdx(key uint64) int {
 // outputsMined clears the MemInput flag of all the children (used when a tx is mined).
 func (tx *OneTxToSend) outputsMined() {
 	// Go through all the tx's outputs and unmark MemInputs in txs that have been spending it
-	var po btc.TxPrevOut
-	po.Hash = tx.Hash.Hash
-	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
-		uidx := po.UIdx()
+	for vout := range tx.TxOut {
+		uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
 		if val, ok := SpentOutputs[uidx]; ok {
 			if rec, ok := TransactionsToSend[val]; ok {
 				if CheckForErrors() && rec.MemInputs == nil {
 					common.CountSafe("TxMinedMeminER1")
-					println("ERROR: ", po.String(), "just mined in", rec.Hash.String(), "- not marked as mem")
+					println("ERROR: out just mined in", rec.Hash.String(), "- not marked as mem")
 					continue
 				}
 				idx := rec.IIdx(uidx)
 				if CheckForErrors() {
 					if idx < 0 {
 						common.CountSafe("TxMinedMeminER2")
-						println("ERROR: ", po.String(), " just mined. Was in SpentOutputs & mempool, but DUPA")
+						println("ERROR: out just mined. Was in SpentOutputs & mempool, but DUPA")
 						continue
 					}
 					if !rec.MemInputs[idx] {
@@ -54,7 +52,7 @@ func (tx *OneTxToSend) outputsMined() {
 				rec.resortWithChildren()
 			} else if CheckForErrors() {
 				common.CountSafe("TxMinedMeminERR")
-				println("ERROR:", po.String(), " in SpentOutputs, but not in mempool")
+				println("ERROR: out in SpentOutputs, but not in mempool")
 			}
 		}
 	}
@@ -168,10 +166,8 @@ func BlockMined(bl *btc.Block) {
 // outputsUnmined sets the MemInput flag of all the children (used when a tx is unmined / block undone).
 func outputsUnmined(tx *btc.Tx) {
 	// Go through all the tx's outputs and mark MemInputs in txs that have been spending it
-	var po btc.TxPrevOut
-	po.Hash = tx.Hash.Hash
-	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
-		uidx := po.UIdx()
+	for vout := range tx.TxOut {
+		uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
 		if val, ok := SpentOutputs[uidx]; ok {
 			if rec := TransactionsToSend[val]; rec != nil {
 				if rec.MemInputs == nil {
@@ -189,7 +185,7 @@ func outputsUnmined(tx *btc.Tx) {
 					println("ERROR: MarkChildrenForMem footprint mismatch", rec.Footprint, uint32(rec.SysSize()))
 				}
 			} else if CheckForErrors() {
-				println("ERROR: MarkChildrenForMem", po.String(), " in SpentOutputs, but not in mempool")
+				println("ERROR: MarkChildrenForMem: in SpentOutputs, but not in mempool")
 				common.CountSafe("TxPutBackMeminERR")
 			}
 		}
