@@ -459,7 +459,7 @@ func MempoolCheck() bool {
 }
 
 func CheckForErrors() bool {
-	return common.Get(&common.CFG.TXPool.CheckErrors)
+	return common.CheckForMempoolErrors.Get()
 }
 
 /* --== Let's keep it here for now as it sometimes comes handy for debuging
