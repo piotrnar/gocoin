@@ -82,20 +82,37 @@ func (t2s *OneTxToSend) AddToSort() {
 	}
 }
 
-func (t2s *OneTxToSend) findFirstFit(wpr *OneTxToSend) *OneTxToSend {
-	for wpr != nil {
-		if isFirstTxBetter(t2s, wpr) {
-			return wpr
+func (t2s *OneTxToSend) findFirstFitDown(from *OneTxToSend) *OneTxToSend {
+	for from != nil {
+		if isFirstTxBetter(t2s, from) {
+			return from
 		}
-		wpr = wpr.Worse
+		from = from.Worse
 	}
 	return nil
+}
+
+func (t2s *OneTxToSend) findFirstFitUp(worst *OneTxToSend) (found *OneTxToSend) {
+	for {
+		if isFirstTxBetter(worst, t2s) {
+			return
+		}
+		found = worst
+		if worst.Better == nil {
+			return
+		}
+		worst = worst.Better
+	}
 }
 
 func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 	defer doStats()
 	sta := time.Now()
-	wpr = t2s.findFirstFit(wpr)
+	if false {
+		wpr = t2s.findFirstFitDown(wpr)
+	} else {
+		wpr = t2s.findFirstFitUp(WorstT2S)
+	}
 	FindListSlotTime += time.Since(sta)
 	FindListSlotCount++
 	if wpr != nil {
