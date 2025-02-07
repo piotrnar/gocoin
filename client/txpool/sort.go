@@ -26,6 +26,8 @@ var (
 
 	SortingSupressed     bool
 	SortListDirty        bool
+	FindListSlotTime     time.Duration
+	FindListSlotCount    uint
 	InsertToListTime     time.Duration
 	InsertToListCount    uint
 	FindWorstParnetTime  time.Duration
@@ -80,19 +82,29 @@ func (t2s *OneTxToSend) AddToSort() {
 	}
 }
 
-func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
-	defer doStats()
-	InsertToListCount++
-	sta := time.Now()
+func (t2s *OneTxToSend) findFirstFit(wpr *OneTxToSend) *OneTxToSend {
 	for wpr != nil {
 		if isFirstTxBetter(t2s, wpr) {
-			t2s.insertBefore(wpr)
-			InsertToListTime += time.Since(sta)
-			return
+			return wpr
 		}
 		wpr = wpr.Worse
 	}
-	InsertToListTime += time.Since(sta)
+	return nil
+}
+
+func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
+	defer doStats()
+	sta := time.Now()
+	wpr = t2s.findFirstFit(wpr)
+	FindListSlotTime += time.Since(sta)
+	FindListSlotCount++
+	if wpr != nil {
+		sta := time.Now()
+		t2s.insertBefore(wpr)
+		InsertToListTime += time.Since(sta)
+		InsertToListCount++
+		return
+	}
 	// we reached the worst element - append it at the end
 	WorstT2S.Worse = t2s
 	t2s.Better = WorstT2S

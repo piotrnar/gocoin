@@ -552,6 +552,7 @@ func tx_pool_stats(par string) {
 	fmt.Printf("SortingSupressed: %t,  SortIndexDirty: %t\n", txpool.SortingSupressed, txpool.SortListDirty)
 	fmt.Printf("SortIndexNow: %06d <-> %06d   SortIndexEver: %06d <-> %06d\n", get_perc(txpool.BestT2S.SortRank),
 		get_perc(txpool.WorstT2S.SortRank), get_perc(txpool.SortIndexMin), get_perc(txpool.SortIndexMax))
+	fmt.Printf("FindListSlot happened %d times, taking %s total\n", txpool.FindListSlotCount, txpool.FindListSlotTime.String())
 	if txpool.InsertToListCount > 0 {
 		fmt.Printf("InsertToList happened %d times, taking %s total  (%s avg)\n",
 			txpool.InsertToListCount, txpool.InsertToListTime.String(),

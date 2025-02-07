@@ -42,7 +42,6 @@ div.tablab {
 	</tr>
 	</table>
 </td>
-
 <td valign="top" align="center">
 	<div class="tablab">Tx counters B</div>
 	<table class="mono bord" width="100%" id="tab_txs_b">
@@ -52,9 +51,18 @@ div.tablab {
 	</tr>
 	</table>
 </td>
+<td valign="top" align="center">
+	<div class="tablab">Tx counters C</div>
+	<table class="mono bord" width="100%" id="tab_txs_c">
+	<tr>
+		<th>Counter
+		<th>Value
+	</tr>
+	</table>
+</td>
 </tr>
 <tr>
-<td valign="top" align="center" colspan="4">
+<td valign="top" align="center" colspan="5">
 	<div class="tablab">Network counters</div>
 	<table class="mono bord" width="100%" id="tab_net">
 	<tr>
@@ -136,19 +144,20 @@ function ref_counters() {
 
 			var txs_a = new Array()
 			var txs_b = new Array()
+			var txs_c = new Array()
 			if (cts.txs!=null) for (i=0; i<cts.txs.length; i++) {
-				if (cts.txs[i].var.substr(0,4)=='Pkgs') {
+				var prefix = cts.txs[i].var.substr(0,4)
+				if (prefix=='Sort') {
+					txs_c.push(cts.txs[i])
+				} else if (prefix=='Pkgs') {
 					txs_b.push(cts.txs[i])
 				} else {
 					txs_a.push(cts.txs[i])
 				}
 			}
 			do_one_table(tab_txs_a, txs_a, "Tx")
-			try {
 			do_one_table(tab_txs_b, txs_b, "Tx")
-			} catch (e) {
-				console.log("pipa", e)
-			}
+			do_one_table(tab_txs_c, txs_c, "Tx")
 
 
 			while (tab_net.rows.length>2) tab_net.deleteRow(2)
