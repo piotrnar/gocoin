@@ -512,7 +512,7 @@ func init() {
 	newUi("redo", true, redo_block, "Redo last block")
 	newUi("savebl bls", false, dump_block, "Saves a block to disk: <hash>")
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
-	newUi("trust t", true, switch_trust, "Assume all downloaded blocks trusted: 0|1")
+	newUi("trust", true, switch_trust, "Assume all downloaded blocks trusted: 0|1")
 	newUi("undo", true, undo_block, "Undo one last block")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
 }
