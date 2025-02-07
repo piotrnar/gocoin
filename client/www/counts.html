@@ -14,6 +14,19 @@ div.tablab {
 	Counters disabled in the config file (<code>Stats.NoCounters</code>)</div>
 <table width="100%" id="counters_table" style="display:none" border="0">
 <tr>
+<td valign="top" align="right" colspan="5">
+	<span onclick="cnts_type_gen.click()" class="hand">
+	<input type="radio" name="cnts_type" id="cnts_type_gen" onchange="type_changed()" checked
+		onclick="event.stopPropagation()"> Generic
+	</span>
+	<span onclick="cnts_type_net.click()" class="hand">
+	<input type="radio" name="cnts_type" id="cnts_type_net" onchange="type_changed()"
+		onclick="event.stopPropagation()"> Network
+	</span>
+</tr>
+</tr>
+
+<tr id="gen_stats_row" style="display:table-row">
 <td valign="top" align="center">
 	<div class="tablab">Generic counters A</div>
 	<table class="mono bord" width="100%" id="tab_gen_a">
@@ -31,10 +44,9 @@ div.tablab {
 		<th>Value
 	</tr>
 	</table>
-	</td>
-
+</td>
 <td valign="top" align="center">
-	<div class="tablab">Tx counters A</div>
+	<div class="tablab">Tx generic</div>
 	<table class="mono bord" width="100%" id="tab_txs_a">
 	<tr>
 		<th>Counter
@@ -43,7 +55,7 @@ div.tablab {
 	</table>
 </td>
 <td valign="top" align="center">
-	<div class="tablab">Tx counters B</div>
+	<div class="tablab">Tx packages</div>
 	<table class="mono bord" width="100%" id="tab_txs_b">
 	<tr>
 		<th>Counter
@@ -52,7 +64,7 @@ div.tablab {
 	</table>
 </td>
 <td valign="top" align="center">
-	<div class="tablab">Tx counters C</div>
+	<div class="tablab">Tx sorting</div>
 	<table class="mono bord" width="100%" id="tab_txs_c">
 	<tr>
 		<th>Counter
@@ -61,10 +73,11 @@ div.tablab {
 	</table>
 </td>
 </tr>
-<tr>
+
+<tr id="net_stats_row" style="display:none">
 <td valign="top" align="center" colspan="5">
-	<div class="tablab">Network counters</div>
-	<table class="mono bord" width="100%" id="tab_net">
+	<div class="tablab">Network commands</div>
+	<table class="mono bord" width="400" id="tab_net">
 	<tr>
 		<th rowspan="2">Network Message
 		<th colspan="2">Received
@@ -81,6 +94,18 @@ div.tablab {
 </tr>
 </table>
 <script>
+function type_changed() {
+	if (cnts_type_gen.checked) {
+		net_stats_row.style.display = 'none'
+		gen_stats_row.style.display = 'table-row'
+		localStorage.setItem("counters_view_type", "gen")
+	} else {
+		net_stats_row.style.display = 'table-row'
+		gen_stats_row.style.display = 'none'
+		localStorage.setItem("counters_view_type", "net")
+	}
+}
+
 function make_clickable(el, t2c='') {
 	var s = t2c=='' ? el.innerText : t2c
 	var dashpos = s.indexOf("-")
@@ -109,24 +134,24 @@ function ref_counters() {
 				return
 			}
 
-			function do_one_table(tab_gen_a, gen_a, prefix='') {
-				for (i=0; i<gen_a.length; i++) {
+			function do_one_table(output_table, data, prefix='') {
+				for (i=0; i<data.length; i++) {
 					var row
-					if (i < tab_gen_a.rows.length-1) {
-						row = tab_gen_a.rows[i+1]
+					if (i < output_table.rows.length-1) {
+						row = output_table.rows[i+1]
 					} else {
-						row = tab_gen_a.insertRow(-1)
+						row = output_table.insertRow(-1)
 						row.insertCell(-1)
 						row.insertCell(-1)
 						row.cells[0].className = 'gennam'
 						row.cells[1].className = 'genval'
 					}
-					row.cells[0].innerText = gen_a[i].var
-					row.cells[1].innerText = gen_a[i].cnt
-					make_clickable(row.cells[0], prefix+cts.txs[i].var)
+					row.cells[0].innerText = data[i].var
+					row.cells[1].innerText = data[i].cnt
+					make_clickable(row.cells[0], prefix+data[i].var)
 				}
-				while (tab_gen_a.rows.length > gen_a.length + 1) {
-					tab_gen_a.deleteRow(tab_gen_a.rows.length-1)
+				while (output_table.rows.length > data.length + 1) {
+					output_table.deleteRow(output_table.rows.length-1)
 				}
 			}
 
@@ -161,29 +186,34 @@ function ref_counters() {
 
 
 			while (tab_net.rows.length>2) tab_net.deleteRow(2)
-			if (cts.net!=null)  for (i=0; i<cts.net.length; i++) {
-				var row = tab_net.insertRow(-1)
-
-				var col = row.insertCell(-1)
-				col.className = 'netnam'
-				col.innerText = cts.net[i].var
-				make_clickable(col)
-
-				col = row.insertCell(-1)
-				col.className = 'netcnt'
-				col.innerText = cts.net[i].rcvd
-
-				col = row.insertCell(-1)
-				col.className = 'netcnt'
-				col.innerText = cts.net[i].rbts
-
-				col = row.insertCell(-1)
-				col.className = 'netbts'
-				col.innerText = cts.net[i].sent
-
-				col = row.insertCell(-1)
-				col.className = 'netcnt'
-				col.innerText = cts.net[i].sbts
+			if (cts.net!=null) {
+				for (i=0; i<cts.net.length; i++) {
+					var row
+					if (i < tab_net.rows.length-2) {
+						row = tab_net.rows[i+2]
+					} else {
+						row = tab_net.insertRow(-1)
+						row.insertCell(-1)
+						row.insertCell(-1)
+						row.insertCell(-1)
+						row.insertCell(-1)
+						row.insertCell(-1)
+						row.cells[0].className = 'netnam'
+						row.cells[1].className = 'netcnt'
+						row.cells[2].className = 'netbts'
+						row.cells[3].className = 'netcnt'
+						row.cells[4].className = 'netbts'
+					}
+					row.cells[0].innerText = cts.net[i].var
+					make_clickable(row.cells[0])
+					row.cells[1].innerText = cts.net[i].rcvd
+					row.cells[2].innerText = cts.net[i].rbts
+					row.cells[3].innerText = cts.net[i].sent
+					row.cells[4].innerText = cts.net[i].sbts
+				}
+			}
+			while (tab_net.rows.length > cts.net.length + 2) {
+				tab_net.deleteRow(tab_net.rows.length-2)
 			}
 			nocounters_message.style.display='none'
 			counters_table.style.display='table'
@@ -196,4 +226,7 @@ function ref_counters() {
 	aj.send(null)
 }
 ref_counters()
+
+if (localStorage.getItem("counters_view_type") == "net")  cnts_type_net.click()
+
 </script>
