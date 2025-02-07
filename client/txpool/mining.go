@@ -65,42 +65,10 @@ func (tx *OneTxToSend) outputsMined() {
 // tx_mined is called for each tx mined in a new block.
 func tx_mined(tx *btc.Tx) {
 	h := tx.Hash
-	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
-		common.CountSafe("TxMinedAccepted")
-		rec.outputsMined()
-		rec.Delete(false, 0)
-	}
-	if mr, ok := TransactionsRejected[h.BIdx()]; ok {
-		common.CountSafePar("TxMinedRejected-", mr.Reason)
-		DeleteRejectedByTxr(mr)
-	}
-	if _, ok := TransactionsPending[h.BIdx()]; ok {
-		common.CountSafe("TxMinedPending")
-		delete(TransactionsPending, h.BIdx())
-	}
 
-	// now do through all the spent inputs and...
+	// remove data of any rejected tx that would use any of just mined inputs
 	for _, inp := range tx.TxIn {
 		idx := inp.Input.UIdx()
-
-		// 1. make sure we are not leaving them in SpentOutputs
-		if val, ok := SpentOutputs[idx]; ok {
-			if rec := TransactionsToSend[val]; rec != nil {
-				// if we got here, the txs has been Malleabled
-				if rec.Local {
-					common.CountSafe("TxMinedMalleabled")
-					fmt.Println("Input from own ", rec.Tx.Hash.String(), " mined in ", tx.Hash.String())
-				} else {
-					common.CountSafe("TxMinedOtherSpend")
-				}
-				rec.Delete(true, 0)
-			} else {
-				println("ERROR: Input from ", inp.Input.String(), " in SpentOutputs, but tx not in mempool")
-			}
-			delete(SpentOutputs, idx)
-		}
-
-		// 2. remove data of any rejected txs that use this input
 		if lst, ok := RejectedUsedUTXOs[idx]; ok {
 			for _, bidx := range lst {
 				if txr, ok := TransactionsRejected[bidx]; ok {
@@ -112,6 +80,49 @@ func tx_mined(tx *btc.Tx) {
 			}
 			delete(RejectedUsedUTXOs, idx) // this record will not be needed anymore
 		}
+	}
+
+	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
+		// if we have this tx in mempool, remove it
+		common.CountSafe("TxMinedAccepted")
+		rec.outputsMined()
+		rec.Delete(false, 0)
+	} else {
+		// if this tx was not in mempool, maybe anothe one is, that was spending (any of) the outputs?
+		// in such case, make sure to discard it, along with all its children
+		for _, inp := range tx.TxIn {
+			idx := inp.Input.UIdx()
+			if val, ok := SpentOutputs[idx]; ok {
+				if rec := TransactionsToSend[val]; rec != nil {
+					// there is this one...
+					if rec.Local {
+						common.CountSafe("TxMinedMalleabled")
+						fmt.Println("Input from own ", rec.Tx.Hash.String(), " mined in ", tx.Hash.String())
+					} else {
+						common.CountSafe("TxMinedOtherSpend")
+					}
+					rec.Delete(true, 0)
+					if CheckForErrors() {
+						if _, ok := SpentOutputs[idx]; ok {
+							println("ERROR: SpentOutput was supposed to be deleted, but still here", inp.Input.String())
+						}
+					}
+				} else {
+					println("ERROR: Input from ", inp.Input.String(), " in SpentOutputs, but tx not in mempool")
+					delete(SpentOutputs, idx)
+				}
+			}
+		}
+	}
+
+	if mr, ok := TransactionsRejected[h.BIdx()]; ok {
+		common.CountSafePar("TxMinedRejected-", mr.Reason)
+		DeleteRejectedByTxr(mr)
+	}
+
+	if _, ok := TransactionsPending[h.BIdx()]; ok {
+		common.CountSafe("TxMinedPending")
+		delete(TransactionsPending, h.BIdx())
 	}
 }
 
