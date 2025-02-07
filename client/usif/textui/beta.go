@@ -192,7 +192,7 @@ func DumpTxList(label, fn string, txs []*txpool.OneTxToSend) {
 		fmt.Fprintln(f, label+" sorting:")
 		for i, t := range txs {
 			fmt.Fprintf(f, "%6d)  ptr:%p  spb:%.4f  memins:%d  bidx:%s  idx:%d\n", i+1, t,
-				t.SPB(), t.MemInputCnt, btc.BIdxString(t.Hash.BIdx()), t.SortIndex)
+				t.SPB(), t.MemInputCnt, btc.BIdxString(t.Hash.BIdx()), t.SortRank)
 			for i, yes := range t.MemInputs {
 				if yes {
 					bbi := btc.BIdx(t.TxIn[i].Input.Hash[:])
