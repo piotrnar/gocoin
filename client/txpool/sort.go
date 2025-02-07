@@ -16,7 +16,7 @@ import (
 
 const (
 	SORT_START_INDEX     = 0x1000000000000000 // 1/16th of max uint64 value
-	SORT_INDEX_STEP      = 1e10               // this should be enough for 100 million txs - TODO: make it dynamic
+	SORT_INDEX_STEP      = 1e12               // this should be enough for 1 million txs - TODO: make it dynamic
 	POOL_EXPIRE_INTERVAL = time.Hour
 )
 
