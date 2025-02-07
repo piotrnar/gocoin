@@ -16,7 +16,7 @@ import (
 
 const (
 	SORT_START_INDEX     = 0x1000000000000000 // 1/16th of max uint64 value
-	SORT_INDEX_STEP      = 1e10
+	SORT_INDEX_STEP      = 1e10               // this should be enough for 100 million txs - TODO: make it dynamic
 	POOL_EXPIRE_INTERVAL = time.Hour
 )
 
@@ -299,8 +299,12 @@ func (t2s *OneTxToSend) fixIndex() {
 		t2s.SortIndex = t2s.Worse.SortIndex / 2
 		if t2s.SortIndex == t2s.Worse.SortIndex {
 			t2s.SortIndex = SORT_START_INDEX
-			cnt, _ := t2s.reindexDown(SORT_INDEX_STEP)
-			common.CountSafeAdd("TxSortReindexALL", cnt)
+			cnt, _, overflow := t2s.reindexDown(SORT_INDEX_STEP)
+			if overflow {
+				println("ERROR: fixIndex resort overflow - this should not happen here")
+			} else {
+				common.CountSafeAdd("TxSortReindexALL", cnt)
+			}
 			return
 		}
 	}
@@ -318,17 +322,27 @@ func (t2s *OneTxToSend) fixIndex() {
 	}
 
 	// we will have tp reindex down
-	cnt, end := t2s.Better.reindexDown(SORT_INDEX_STEP / 4)
-	if end {
+	common.CountSafe("TxSortReindexCnt")
+	cnt, end, overflow := t2s.Better.reindexDown(SORT_INDEX_STEP / 4)
+	if overflow {
+		common.CountSafeAdd("TxSortReindexOFW", cnt)
+		BestT2S.reindexDown(SORT_INDEX_STEP)
+	} else if end {
 		common.CountSafeAdd("TxSortReindexEnd", cnt)
 	} else {
 		common.CountSafeAdd("TxSortReindexMid", cnt)
 	}
 }
 
-func (t *OneTxToSend) reindexDown(step uint64) (cnt uint64, toend bool) {
+func (t *OneTxToSend) reindexDown(step uint64) (cnt uint64, toend, overflow bool) {
 	index := t.SortIndex
 	for t = t.Worse; t != nil; t = t.Worse {
+		new_index := index + step
+		if new_index < index {
+			println("reindexDown: index overflow")
+			overflow = true
+			return
+		}
 		index += step
 		if t.SortIndex >= index {
 			return
