@@ -515,6 +515,8 @@ func push_old_txs(par string) {
 func tx_pool_stats(par string) {
 	txpool.CheckPoolSizes()
 	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
+
 	var sw_cnt, sw_siz, sw_wgt uint64
 	for _, v := range txpool.TransactionsToSend {
 		if v.SegWit != nil {
@@ -538,6 +540,9 @@ func tx_pool_stats(par string) {
 	get_perc := func(v uint64) uint64 {
 		v >>= 20
 		max := uint64(0xffffffffffffffff>>20) + 1
+		if max == 0 {
+			return 999
+		}
 		return 1e6 * v / max
 	}
 
@@ -568,7 +573,6 @@ func tx_pool_stats(par string) {
 	fmt.Printf("DelFromPackages happened %d times, taking %s total\n", txpool.DelFromPackagesCount, txpool.DelFromPackagesTime.String())
 	fmt.Println()
 	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
-	txpool.TxMutex.Unlock()
 }
 
 func init() {

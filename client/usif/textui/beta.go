@@ -108,6 +108,13 @@ func sort_test(par string) {
 	txpool.TxMutex.Lock()
 	defer txpool.TxMutex.Unlock()
 
+	if par == "resort" {
+		println("SortListDirty = true")
+		txpool.SortListDirty = true
+		txpool.FeePackagesDirty = true
+		txpool.FeePackagesReSort = true
+	}
+
 	println("Doing mempool check first")
 	if txpool.MempoolCheck() {
 		println("PIPA")
@@ -135,8 +142,11 @@ func sort_test(par string) {
 	}
 	println("All lists have", len(tx1), "txs each")
 
+	println("ver 1...")
 	txpool.VerifyMempoolSort(tx1)
+	println("ver 2...")
 	txpool.VerifyMempoolSort(tx2)
+	println("ver 3...")
 	txpool.VerifyMempoolSort(tx3)
 	println("Correct sorting verification complete")
 
