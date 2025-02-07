@@ -546,6 +546,13 @@ func tx_pool_stats(par string) {
 		return 1e6 * v / max
 	}
 
+	get_avg_time := func(t time.Duration, cnt uint) time.Duration {
+		if cnt == 0 {
+			return 0
+		}
+		return t / time.Duration(cnt)
+	}
+
 	fmt.Printf("Mempool: %d in %d txs, carrying total weight of %d (~%d blocks)\n", txpool.TransactionsToSendSize, len(txpool.TransactionsToSend), txpool.TransactionsToSendWeight, txpool.TransactionsToSendWeight/4e6)
 	fmt.Printf("  SegWit-txs: %d (%d%%) in %d (%d%%) txs, carrying weight %d (%d%%)\n", sw_siz, sw_perc_size, sw_cnt, sw_perc_cnt, sw_wgt, sw_perc_weight)
 	fmt.Printf("  Number of Spent Outputs: %d\n", len(txpool.SpentOutputs))
@@ -555,16 +562,8 @@ func tx_pool_stats(par string) {
 	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
 	fmt.Println()
 	fmt.Printf("SortingSupressed: %t,  SortIndexDirty: %t\n", txpool.SortingSupressed, txpool.SortListDirty)
-	fmt.Printf("SortIndexNow: %06d <-> %06d   SortIndexEver: %06d <-> %06d\n", get_perc(txpool.BestT2S.SortRank),
-		get_perc(txpool.WorstT2S.SortRank), get_perc(txpool.SortIndexMin), get_perc(txpool.SortIndexMax))
-	if txpool.FindListSlotCount > 0 {
-		fmt.Printf("FindListSlot happened %d times, taking %s total  (%s avg)\n",
-			txpool.FindListSlotCount, txpool.FindListSlotTime.String(),
-			(txpool.FindListSlotTime / time.Duration(txpool.FindListSlotCount)).String())
-	}
-	fmt.Printf("InsertToList happened %d times, taking %s total\n",
-		txpool.InsertToListCount, txpool.InsertToListTime.String())
-	fmt.Printf("FindWorstParnet happened %d times, taking %s total\n", txpool.FindWorstParnetCount, txpool.FindWorstParnetTime.String())
+	fmt.Printf("SortIndexNow: %06d <-> %06d   SortIndexEver: %06d <-> %06d\n", get_perc(txpool.BestT2S.SortRank), get_perc(txpool.WorstT2S.SortRank), get_perc(txpool.SortIndexMin), get_perc(txpool.SortIndexMax))
+	fmt.Printf("AddToSort happened %d times, taking %s total  (%s avg)\n", txpool.AddToSortCount, txpool.AddToSortTime.String(), get_avg_time(txpool.AddToSortTime, txpool.AddToSortCount))
 	fmt.Println()
 	fmt.Printf("FeePackages Count: %d,  FeePackagesDirty: %t\n", len(txpool.FeePackages), txpool.FeePackagesDirty)
 	fmt.Printf("SortFeePackages happened %d times, taking %s total\n", txpool.SortFeePackagesCount, txpool.SortFeePackagesTime.String())

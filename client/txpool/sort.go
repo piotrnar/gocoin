@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	SORT_START_INDEX     = uint64(1 << 60) // 1/16th of max uint64 value
+	SORT_START_INDEX     = uint64(1 << 62) // 1/4th of max uint64 value
 	POOL_EXPIRE_INTERVAL = time.Hour
 )
 
@@ -23,15 +23,11 @@ var (
 	nextTxsPoolExpire time.Time = time.Now().Add(POOL_EXPIRE_INTERVAL)
 	BestT2S, WorstT2S *OneTxToSend
 	SortIndexStep     uint64 = 1e12 // this should be enough for 1 million txs - TODO: make it dynamic
+	SortingSupressed  bool
+	SortListDirty     bool // means the BestT2S <--> WorstT2S list is useless and needs rebuilding
 
-	SortingSupressed     bool
-	SortListDirty        bool
-	FindListSlotTime     time.Duration
-	FindListSlotCount    uint
-	InsertToListTime     time.Duration
-	InsertToListCount    uint
-	FindWorstParnetTime  time.Duration
-	FindWorstParnetCount uint
+	AddToSortTime  time.Duration // findFirstWorse is the most time consuming bit
+	AddToSortCount uint
 
 	FeePackages          []*OneTxsPackage = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
 	FeePackagesDirty     bool
@@ -75,52 +71,23 @@ func (t2s *OneTxToSend) AddToSort() {
 		return
 	}
 
+	sta := time.Now()
 	if wpr := t2s.findWorstParent(); wpr == nil {
 		t2s.insertDownFromHere(BestT2S)
 	} else {
 		t2s.insertDownFromHere(wpr.Worse)
 	}
-}
-
-func (t2s *OneTxToSend) findFirstFitDown(from *OneTxToSend) *OneTxToSend {
-	for from != nil {
-		if isFirstTxBetter(t2s, from) {
-			return from
-		}
-		from = from.Worse
-	}
-	return nil
-}
-
-func (t2s *OneTxToSend) findFirstFitUp(worst *OneTxToSend) (found *OneTxToSend) {
-	for {
-		if isFirstTxBetter(worst, t2s) {
-			return
-		}
-		found = worst
-		if worst.Better == nil {
-			return
-		}
-		worst = worst.Better
-	}
+	AddToSortTime += time.Since(sta)
+	AddToSortCount++
 }
 
 func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
-	defer doStats()
-	sta := time.Now()
-	if false {
-		wpr = t2s.findFirstFitDown(wpr)
-	} else {
-		wpr = t2s.findFirstFitUp(WorstT2S)
-	}
-	FindListSlotTime += time.Since(sta)
-	FindListSlotCount++
-	if wpr != nil {
-		sta := time.Now()
-		t2s.insertBefore(wpr)
-		InsertToListTime += time.Since(sta)
-		InsertToListCount++
-		return
+	for wpr != nil { // we have to do it from top-down
+		if isFirstTxBetter(t2s, wpr) {
+			t2s.insertBefore(wpr)
+			return
+		}
+		wpr = wpr.Worse
 	}
 	// we reached the worst element - append it at the end
 	WorstT2S.Worse = t2s
@@ -144,14 +111,15 @@ func (t2s *OneTxToSend) resortWithChildren() {
 	// So the code below is pretty much unused, although it has been seen working fine (but slow).
 	common.CountSafe("TxMined**Resort")
 
-	// The code below seems to be broken and does not work well during block undone
-	// TODO: maybe fix it (although it is not worth using it during a block sumission/undoing)
-	if time.Since(resortWithChildrenWarningLastDone) > time.Minute {
-		println("Warninign: ResortWithChildren() called with SortingSupressed not set - fixing it")
-		resortWithChildrenWarningLastDone = time.Now()
-	}
-	SortListDirty = true
 	if false {
+		// The code below seems to be broken and does not work well during block undone
+		// TODO: maybe fix it (although it is not worth using it during a block sumission/undoing)
+		if time.Since(resortWithChildrenWarningLastDone) > time.Minute {
+			println("Warninign: ResortWithChildren() called with SortingSupressed not set - fixing it")
+			resortWithChildrenWarningLastDone = time.Now()
+		}
+		SortListDirty = true
+	} else {
 		// now get the new worst parent
 		wpr := t2s.findWorstParent()
 		if wpr == t2s.Better {
@@ -224,7 +192,7 @@ var (
 	SortIndexMin, SortIndexMax uint64
 )
 
-func doStats() {
+func updateSortWidthStats() {
 	if BestT2S == nil || WorstT2S == nil {
 		return
 	}
@@ -234,10 +202,9 @@ func doStats() {
 		SortIndexValid = true
 		return
 	}
-	if SortIndexMin < BestT2S.SortRank {
+	if BestT2S.SortRank < SortIndexMin {
 		SortIndexMin = BestT2S.SortRank
-	}
-	if SortIndexMax > WorstT2S.SortRank {
+	} else if WorstT2S.SortRank > SortIndexMax {
 		SortIndexMax = WorstT2S.SortRank
 	}
 }
@@ -328,11 +295,6 @@ func VerifyMempoolSort(txs []*OneTxToSend) bool {
 }
 
 func (t2s *OneTxToSend) findWorstParent() (wpr *OneTxToSend) {
-	FindWorstParnetCount++
-	sta := time.Now()
-	defer func() {
-		FindWorstParnetTime += time.Since(sta)
-	}()
 	for i, mi := range t2s.MemInputs {
 		if mi {
 			parent_bidx := btc.BIdx(t2s.Tx.TxIn[i].Input.Hash[:])
@@ -360,6 +322,7 @@ func (t2s *OneTxToSend) insertBefore(wpr *OneTxToSend) {
 	t2s.Worse = wpr
 	wpr.Better = t2s
 	t2s.fixIndex()
+	updateSortWidthStats()
 }
 
 /*
@@ -408,14 +371,6 @@ func (t2s *OneTxToSend) fixIndex() {
 		return
 	}
 
-	/*
-		if t2s.Better != nil && t2s.Worse != nil {
-			println("reindexDown because we are between", t2s.Better.SortIndex, "and", t2s.Worse.SortIndex,
-				"->", t2s.Better.idx(), "/", t2s.Worse.idx(), "of", len(TransactionsToSend))
-		} else {
-			println("reindexDown but", t2s.Better, "and", t2s.Worse)
-		}*/
-	// we will have tp reindex down
 	t2s.Better.reindexDown(SortIndexStep / 16)
 }
 
@@ -876,4 +831,5 @@ func buildSortedList() {
 		WorstT2S = t2s
 	}
 	WorstT2S.Worse = nil
+	updateSortWidthStats()
 }
