@@ -197,7 +197,7 @@ func CheckPoolSizes() (dupa int) {
 	return
 }
 
-func check_the_index(dupa int) int {
+func checkSortIndex(dupa int) int {
 	seen := make(map[btc.BIDX]int)
 	for idx := TRIdxTail; ; idx = TRIdxNext(idx) {
 		bidx := TRIdxArray[idx]
@@ -222,6 +222,74 @@ func check_the_index(dupa int) int {
 		}
 	}
 	return dupa
+}
+
+func checkRejectedUsedUTXOs() (dupa int) {
+	var spent_cnt int
+	for utxoidx, lst := range RejectedUsedUTXOs {
+		spent_cnt += len(lst)
+		for _, bidx := range lst {
+			if txr, ok := TransactionsRejected[bidx]; ok && txr.Tx != nil {
+				var found bool
+				for _, inp := range txr.TxIn {
+					if _, ok := RejectedUsedUTXOs[inp.Input.UIdx()]; ok {
+						found = true
+						break
+					}
+					if !found {
+						dupa++
+						fmt.Println(dupa, "Tx", txr.Id.String(), "in RejectedUsedUTXOs but without back reference to RejectedUsedUTXOs")
+					}
+				}
+
+			} else {
+				dupa++
+				fmt.Println(dupa, "btc.BIDX", btc.BIdxString(bidx), "present in RejectedUsedUTXOs",
+					fmt.Sprintf("%016x", utxoidx), "but not in TransactionsRejected")
+				if t2s, ok := TransactionsToSend[bidx]; ok {
+					fmt.Println("   It is however in T2S", t2s.Hash.String())
+				} else {
+					fmt.Println("   Not it is in T2S")
+				}
+			}
+		}
+	}
+	tot_utxo_used := 0
+	for _, tr := range TransactionsRejected {
+		if tr.Tx != nil && tr.Tx.Raw != nil {
+			tot_utxo_used += len(tr.Tx.TxIn)
+		}
+	}
+	if spent_cnt != tot_utxo_used {
+		dupa++
+		fmt.Println(dupa, "RejectedUsedUTXOs count mismatch", spent_cnt, tot_utxo_used)
+
+		fmt.Println("Checking which txids are missing...")
+		for bidx, txr := range TransactionsRejected {
+			if txr.Tx == nil {
+				continue
+			}
+			for _, inp := range txr.TxIn {
+				uidx := inp.Input.UIdx()
+				if lst, ok := RejectedUsedUTXOs[uidx]; ok {
+					var found bool
+					for _, bi := range lst {
+						if bidx == bi {
+							found = true
+							break
+						}
+					}
+					if !found {
+						fmt.Println(" - Missing on list", inp.Input.String(), "\n  for", txr.Id.String())
+					}
+				} else {
+					fmt.Println(" - Missing record", inp.Input.String(), "\n  for", txr.Id.String())
+				}
+				RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], txr.Id.BIdx())
+			}
+		}
+	}
+	return
 }
 
 // MempoolCheck verifies the Mempool for consistency.
@@ -315,15 +383,12 @@ func MempoolCheck() bool {
 	}
 
 	totsize = 0
-	tot_utxo_used := 0
 	for _, tr := range TransactionsRejected {
 		totsize += uint64(tr.Footprint)
 		if tr.Tx != nil {
 			if tr.Tx.Raw == nil {
 				dupa++
 				fmt.Println(dupa, "TxR", tr.Id.String(), "has Tx but no Raw")
-			} else {
-				tot_utxo_used += len(tr.Tx.TxIn)
 			}
 			if tr.Reason < 200 {
 				dupa++
@@ -377,67 +442,9 @@ func MempoolCheck() bool {
 		fmt.Println(dupa, "WaitingForInputsSize mismatch", w4isize, WaitingForInputsSize)
 	}
 
-	dupa += check_the_index(dupa)
+	dupa += checkSortIndex(dupa)
 	dupa += checkPoolSizes()
-
-	spent_cnt = 0
-	for utxoidx, lst := range RejectedUsedUTXOs {
-		spent_cnt += len(lst)
-		for _, bidx := range lst {
-			if txr, ok := TransactionsRejected[bidx]; ok && txr.Tx != nil {
-				var found bool
-				for _, inp := range txr.TxIn {
-					if _, ok := RejectedUsedUTXOs[inp.Input.UIdx()]; ok {
-						found = true
-						break
-					}
-					if !found {
-						dupa++
-						fmt.Println(dupa, "Tx", txr.Id.String(), "in RejectedUsedUTXOs but without back reference to RejectedUsedUTXOs")
-					}
-				}
-
-			} else {
-				dupa++
-				fmt.Println(dupa, "btc.BIDX", btc.BIdxString(bidx), "present in RejectedUsedUTXOs",
-					fmt.Sprintf("%016x", utxoidx), "but not in TransactionsRejected")
-				if t2s, ok := TransactionsToSend[bidx]; ok {
-					fmt.Println("   It is however in T2S", t2s.Hash.String())
-				} else {
-					fmt.Println("   Not it is in T2S")
-				}
-			}
-		}
-	}
-	if spent_cnt != tot_utxo_used {
-		dupa++
-		fmt.Println(dupa, "RejectedUsedUTXOs count mismatch", spent_cnt, tot_utxo_used)
-
-		fmt.Println("Checking which txids are missing...")
-		for bidx, txr := range TransactionsRejected {
-			if txr.Tx == nil {
-				continue
-			}
-			for _, inp := range txr.TxIn {
-				uidx := inp.Input.UIdx()
-				if lst, ok := RejectedUsedUTXOs[uidx]; ok {
-					var found bool
-					for _, bi := range lst {
-						if bidx == bi {
-							found = true
-							break
-						}
-					}
-					if !found {
-						fmt.Println(" - Missing on list", inp.Input.String(), "\n  for", txr.Id.String())
-					}
-				} else {
-					fmt.Println(" - Missing record", inp.Input.String(), "\n  for", txr.Id.String())
-				}
-				RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], txr.Id.BIdx())
-			}
-		}
-	}
+	dupa += checkRejectedUsedUTXOs()
 
 	if checkFeeList() {
 		dupa++
