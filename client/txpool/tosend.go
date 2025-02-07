@@ -167,7 +167,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		if lst, ok := RejectedUsedUTXOs[uidx]; ok {
 			for _, bidx := range lst {
 				if txr, ok := TransactionsRejected[bidx]; ok {
-					common.CountSafePar("TxMinedRjctUTXO-", txr.Reason)
+					common.CountSafePar("TxPurgeRjctUTXO-", txr.Reason)
 					DeleteRejectedByTxr(txr)
 				} else if CheckForErrors() {
 					println("ERROR: txr marked for removal but not present in TransactionsRejected")
