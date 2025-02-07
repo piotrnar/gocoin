@@ -1,6 +1,8 @@
 package txpool
 
 import (
+	"fmt"
+
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -75,6 +77,41 @@ func tx_mined(tx *btc.Tx) {
 	if _, ok := TransactionsPending[h.BIdx()]; ok {
 		common.CountSafe("TxMinedPending")
 		delete(TransactionsPending, h.BIdx())
+	}
+
+	// now do through all the spent inputs and...
+	for _, inp := range tx.TxIn {
+		idx := inp.Input.UIdx()
+
+		// 1. make sure we are not leaving them in SpentOutputs
+		if val, ok := SpentOutputs[idx]; ok {
+			if rec := TransactionsToSend[val]; rec != nil {
+				// if we got here, the txs has been Malleabled
+				if rec.Local {
+					common.CountSafe("TxMinedMalleabled")
+					fmt.Println("Input from own ", rec.Tx.Hash.String(), " mined in ", tx.Hash.String())
+				} else {
+					common.CountSafe("TxMinedOtherSpend")
+				}
+				rec.Delete(true, 0)
+			} else {
+				println("ERROR: Input from ", inp.Input.String(), " in SpentOutputs, but tx not in mempool")
+			}
+			delete(SpentOutputs, idx)
+		}
+
+		// 2. remove data of any rejected txs that use this input
+		if lst, ok := RejectedUsedUTXOs[idx]; ok {
+			for _, bidx := range lst {
+				if txr, ok := TransactionsRejected[bidx]; ok {
+					common.CountSafePar("TxMinedRjctUTXO-", txr.Reason)
+					DeleteRejectedByTxr(txr)
+				} else {
+					println("ERROR: txr marked for removal but not present in TransactionsRejected")
+				}
+			}
+			delete(RejectedUsedUTXOs, idx) // this record will not be needed anymore
+		}
 	}
 }
 
