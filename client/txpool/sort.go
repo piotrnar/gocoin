@@ -15,22 +15,36 @@ import (
 )
 
 const (
-	SORT_START_INDEX     = 0x1000000000000000 // 1/16th of max uint64 value
-	SORT_INDEX_STEP      = 1e12               // this should be enough for 1 million txs - TODO: make it dynamic
+	SORT_START_INDEX     = uint64(1 << 60) // 1/16th of max uint64 value
 	POOL_EXPIRE_INTERVAL = time.Hour
 )
 
 var (
 	nextTxsPoolExpire time.Time = time.Now().Add(POOL_EXPIRE_INTERVAL)
 	BestT2S, WorstT2S *OneTxToSend
+	SortIndexStep     uint64 = 1e12 // this should be enough for 1 million txs - TODO: make it dynamic
 
 	SortingSupressed bool
 	SortListDirty    bool
+	SortTxListTime   time.Duration
+	SortTxListCount  uint
 
-	FeePackages       []*OneTxsPackage = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
-	FeePackagesDirty  bool
-	FeePackagesReSort bool
+	FeePackages          []*OneTxsPackage = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
+	FeePackagesDirty     bool
+	FeePackagesReSort    bool
+	SortFeePackagesTime  time.Duration
+	SortFeePackagesCount uint
+	LookForPackagesTime  time.Duration
+	LookForPackagesCount uint
 )
+
+func adjustSortIndexStep() {
+	cnt := len(TransactionsToSend)
+	if cnt < 100e3 {
+		cnt = 100e3
+	}
+	SortIndexStep = (1 << 60) / uint64(2*cnt)
+}
 
 // call it with false to restore sorting
 func BlockCommitInProgress(yes bool) {
@@ -65,6 +79,12 @@ func (t2s *OneTxToSend) AddToSort() {
 }
 
 func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
+	defer doStats()
+	sta := time.Now()
+	defer func() {
+		SortTxListTime += time.Since(sta)
+		SortTxListCount++
+	}()
 	for wpr != nil {
 		if isFirstTxBetter(t2s, wpr) {
 			t2s.insertBefore(wpr)
@@ -76,7 +96,7 @@ func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 	WorstT2S.Worse = t2s
 	t2s.Better = WorstT2S
 	t2s.Worse = nil
-	t2s.SortIndex = WorstT2S.SortIndex + SORT_INDEX_STEP
+	t2s.SortIndex = WorstT2S.SortIndex + SortIndexStep
 	WorstT2S = t2s
 }
 
@@ -157,10 +177,8 @@ func (t2s *OneTxToSend) resortWithChildren() {
 	do_the_children:
 		common.CountSafe("TxSortDoChildren")
 		// now do the children
-		var po btc.TxPrevOut
-		po.Hash = t2s.Hash.Hash
-		for po.Vout = 0; po.Vout < uint32(len(t2s.TxOut)); po.Vout++ {
-			uidx := po.UIdx()
+		for vout := range t2s.TxOut {
+			uidx := btc.UIdx(t2s.Hash.Hash[:], uint32(vout))
 			if val, ok := SpentOutputs[uidx]; ok {
 				if rec, ok := TransactionsToSend[val]; ok {
 					rec.resortWithChildren()
@@ -168,6 +186,29 @@ func (t2s *OneTxToSend) resortWithChildren() {
 				}
 			}
 		}
+	}
+}
+
+var (
+	SortIndexValid             bool
+	SortIndexMin, SortIndexMax uint64
+)
+
+func doStats() {
+	if BestT2S == nil || WorstT2S == nil {
+		return
+	}
+	if !SortIndexValid {
+		SortIndexMin = BestT2S.SortIndex
+		SortIndexMax = WorstT2S.SortIndex
+		SortIndexValid = true
+		return
+	}
+	if SortIndexMin < BestT2S.SortIndex {
+		SortIndexMin = BestT2S.SortIndex
+	}
+	if SortIndexMax > WorstT2S.SortIndex {
+		SortIndexMax = WorstT2S.SortIndex
 	}
 }
 
@@ -286,55 +327,86 @@ func (t2s *OneTxToSend) insertBefore(wpr *OneTxToSend) {
 	t2s.fixIndex()
 }
 
+/*
+func (t2s *OneTxToSend) idx() (cnt int) {
+	for t := BestT2S; t != nil; t = t.Worse {
+		if t == t2s {
+			break
+		}
+		cnt++
+	}
+	return
+}
+*/
+
 func (t2s *OneTxToSend) fixIndex() {
 	if t2s.Better == nil {
 		if t2s.Worse == nil {
 			t2s.SortIndex = SORT_START_INDEX
+			common.CountSafe("TxSortHadLotA1")
 			return
 		}
-		if t2s.Worse.SortIndex > SORT_INDEX_STEP {
-			t2s.SortIndex = t2s.Worse.SortIndex - SORT_INDEX_STEP
+		if t2s.Worse.SortIndex > SortIndexStep {
+			t2s.SortIndex = t2s.Worse.SortIndex - SortIndexStep
+			common.CountSafe("TxSortHadLotA2")
 			return
 		}
 		t2s.SortIndex = t2s.Worse.SortIndex / 2
 		if t2s.SortIndex == t2s.Worse.SortIndex {
-			t2s.SortIndex = SORT_START_INDEX
-			cnt, _, overflow := t2s.reindexDown(SORT_INDEX_STEP)
-			if overflow {
-				println("ERROR: fixIndex resort overflow - this should not happen here")
-			} else {
-				common.CountSafeAdd("TxSortReindexALL", cnt)
-			}
+			common.CountSafe("TxSortHNoLotA3")
+			reindexEverything()
 			return
 		}
 	}
 
 	better_idx := t2s.Better.SortIndex
 	if t2s.Worse == nil {
-		t2s.SortIndex = better_idx + SORT_INDEX_STEP
+		t2s.SortIndex = better_idx + SortIndexStep
+		common.CountSafe("TxSortHadLotB")
 		return
 	}
 
 	diff := t2s.Worse.SortIndex - better_idx
 	if diff >= 2 {
 		t2s.SortIndex = better_idx + diff/2
+		//common.CountSafe("TxSortHadLotC")
 		return
 	}
 
+	/*
+		if t2s.Better != nil && t2s.Worse != nil {
+			println("reindexDown because we are between", t2s.Better.SortIndex, "and", t2s.Worse.SortIndex,
+				"->", t2s.Better.idx(), "/", t2s.Worse.idx(), "of", len(TransactionsToSend))
+		} else {
+			println("reindexDown but", t2s.Better, "and", t2s.Worse)
+		}*/
 	// we will have tp reindex down
-	common.CountSafe("TxSortReindexCnt")
-	cnt, end, overflow := t2s.Better.reindexDown(SORT_INDEX_STEP / 4)
-	if overflow {
-		common.CountSafeAdd("TxSortReindexOFW", cnt)
-		BestT2S.reindexDown(SORT_INDEX_STEP)
-	} else if end {
-		common.CountSafeAdd("TxSortReindexEnd", cnt)
-	} else {
-		common.CountSafeAdd("TxSortReindexMid", cnt)
-	}
+	t2s.Better.reindexDown(SortIndexStep / 16)
 }
 
-func (t *OneTxToSend) reindexDown(step uint64) (cnt uint64, toend, overflow bool) {
+func (t *OneTxToSend) reindexDown(step uint64) {
+	var cnt uint64
+	var toend, overflow bool
+	defer func() {
+		if overflow {
+			println("reindexDown SortIndex overflow")
+			reindexEverything()
+			return
+		}
+		//println("   ... results", cnt, toend, overflow)
+		common.CountSafe("TxSortReinCnt")
+		if overflow {
+			common.CountSafe("TxSortReinCntOFW")
+			common.CountSafeAdd("TxSortReindexOFW", cnt)
+		}
+		if toend {
+			common.CountSafe("TxSortReinCntEnd")
+			common.CountSafeAdd("TxSortReindexEnd", cnt)
+		} else {
+			common.CountSafe("TxSortReinCntMid")
+			common.CountSafeAdd("TxSortReindexMid", cnt)
+		}
+	}()
 	index := t.SortIndex
 	for t = t.Worse; t != nil; t = t.Worse {
 		new_index := index + step
@@ -351,20 +423,35 @@ func (t *OneTxToSend) reindexDown(step uint64) (cnt uint64, toend, overflow bool
 		cnt++
 	}
 	toend = true
-	return
+}
+
+func reindexEverything() {
+	common.CountSafe("TxSortREINDEX")
+	adjustSortIndexStep()
+	println("reindex", SORT_START_INDEX, SortIndexStep)
+	index := uint64(SORT_START_INDEX)
+	for t := BestT2S; t != nil; t = t.Worse {
+		t.SortIndex = index
+		index += SortIndexStep
+	}
 }
 
 func isFirstTxBetter(rec_i, rec_j *OneTxToSend) bool {
-	rate_i := rec_i.Fee * uint64(rec_j.Weight())
-	rate_j := rec_j.Fee * uint64(rec_i.Weight())
-	if rate_i != rate_j {
-		return rate_i > rate_j
+	if true {
+		// this method of sorting is faster, but harder for debugging
+		return rec_i.Fee*uint64(rec_j.Weight()) > rec_j.Fee*uint64(rec_i.Weight())
+	} else {
+		rate_i := rec_i.Fee * uint64(rec_j.Weight())
+		rate_j := rec_j.Fee * uint64(rec_i.Weight())
+		if rate_i != rate_j {
+			return rate_i > rate_j
+		}
+		if rec_i.MemInputCnt != rec_j.MemInputCnt {
+			return rec_i.MemInputCnt < rec_j.MemInputCnt
+		}
+		return binary.LittleEndian.Uint64(rec_i.Hash.Hash[:btc.Uint256IdxLen]) >
+			binary.LittleEndian.Uint64(rec_j.Hash.Hash[:btc.Uint256IdxLen])
 	}
-	if rec_i.MemInputCnt != rec_j.MemInputCnt {
-		return rec_i.MemInputCnt < rec_j.MemInputCnt
-	}
-	return binary.LittleEndian.Uint64(rec_i.Hash.Hash[:btc.Uint256IdxLen]) >
-		binary.LittleEndian.Uint64(rec_j.Hash.Hash[:btc.Uint256IdxLen])
 }
 
 // GetSortedMempool returns txs sorted by SPB, but with parents first.
@@ -510,14 +597,6 @@ func (pk *OneTxsPackage) hasAllTheParentsFor(child *OneTxToSend) bool {
 	}
 	return true
 }
-
-var (
-	SortFeePackagesTime  time.Duration
-	SortFeePackagesCount uint
-
-	LookForPackagesTime  time.Duration
-	LookForPackagesCount uint
-)
 
 func sortFeePackages() {
 	if FeePackagesReSort {
@@ -753,8 +832,9 @@ func buildSortedList() {
 	WorstT2S.Better, WorstT2S.Worse = nil, nil
 	SortIndex = SORT_START_INDEX
 	BestT2S.SortIndex = SortIndex
+	adjustSortIndexStep()
 	for _, t2s := range ts[1:] {
-		SortIndex += SORT_INDEX_STEP
+		SortIndex += SortIndexStep
 		t2s.SortIndex = SortIndex
 		t2s.Better = WorstT2S
 		WorstT2S.Worse = t2s

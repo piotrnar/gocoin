@@ -535,6 +535,12 @@ func tx_pool_stats(par string) {
 		sw_perc_weight = 100 * sw_wgt / txpool.TransactionsToSendWeight
 	}
 
+	get_perc := func(v uint64) uint64 {
+		v >>= 20
+		max := uint64(0xffffffffffffffff>>20) + 1
+		return 1e6 * v / max
+	}
+
 	fmt.Printf("Mempool: %d in %d txs, carrying total weight of %d (~%d blocks)\n", txpool.TransactionsToSendSize, len(txpool.TransactionsToSend), txpool.TransactionsToSendWeight, txpool.TransactionsToSendWeight/4e6)
 	fmt.Printf("  SegWit-txs: %d (%d%%) in %d (%d%%) txs, carrying weight %d (%d%%)\n", sw_siz, sw_perc_size, sw_cnt, sw_perc_cnt, sw_wgt, sw_perc_weight)
 	fmt.Printf("  Number of Spent Outputs: %d\n", len(txpool.SpentOutputs))
@@ -543,6 +549,9 @@ func tx_pool_stats(par string) {
 	fmt.Printf("  Rejected used UTXOs: %d\n", len(txpool.RejectedUsedUTXOs))
 	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
 	fmt.Printf("SortingSupressed: %t,  SortIndexDirty: %t\n", txpool.SortingSupressed, txpool.SortListDirty)
+	fmt.Printf("SortTxList happened %d times, taking %s total\n", txpool.SortTxListCount, txpool.SortTxListTime.String())
+	fmt.Printf("SortIndexNow: %d <-> %d   SortIndexEver: %d <-> %d\n", get_perc(txpool.BestT2S.SortIndex),
+		get_perc(txpool.WorstT2S.SortIndex), get_perc(txpool.SortIndexMin), get_perc(txpool.SortIndexMax))
 	fmt.Printf("FeePackages Count: %d,  FeePackagesDirty: %t\n", len(txpool.FeePackages), txpool.FeePackagesDirty)
 	fmt.Printf("SortFeePackages happened %d times, taking %s total\n", txpool.SortFeePackagesCount, txpool.SortFeePackagesTime.String())
 	fmt.Printf("LookForPackages happened %d times, taking %s total\n", txpool.LookForPackagesCount, txpool.LookForPackagesTime.String())
