@@ -312,12 +312,12 @@ func MempoolCheck() bool {
 	totsize = 0
 	tot_utxo_used := 0
 	for _, tr := range TransactionsRejected {
+		totsize += uint64(tr.Footprint)
 		if tr.Tx != nil {
 			if tr.Tx.Raw == nil {
 				dupa++
 				fmt.Println(dupa, "TxR", tr.Id.String(), "has Tx but no Raw")
 			} else {
-				totsize += uint64(tr.Footprint)
 				tot_utxo_used += len(tr.Tx.TxIn)
 			}
 			if tr.Reason < 200 {
@@ -352,7 +352,7 @@ func MempoolCheck() bool {
 	}
 	if totsize != TransactionsRejectedSize {
 		dupa++
-		fmt.Println(dupa, "TransactionsRejectedSize mismatch", totsize, TransactionsRejectedSize)
+		fmt.Println(dupa, "TransactionsRejectedSize mismatch", totsize, TransactionsRejectedSize, len(TransactionsRejected))
 	}
 
 	spent_cnt = 0
