@@ -135,9 +135,8 @@ func AddRejectedTx(txr *OneTxRejected) {
 			WaitingForInputs[txr.Waiting4.BIdx()] = rec
 			WaitingForInputsSize += uint64(txr.Footprint)
 		}
-		TransactionsRejectedSize += uint64(txr.Footprint)
 	}
-
+	TransactionsRejectedSize += uint64(txr.Footprint)
 	limitRejectedSizeIfNeeded()
 }
 
