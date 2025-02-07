@@ -147,11 +147,6 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 
 	tx.SetHash(pl)
 
-	if tx.Weight() > int(common.Get(&common.CFG.TXPool.MaxTxWeight)) {
-		txpool.RejectTx(tx, txpool.TX_REJECTED_TOO_BIG, nil)
-		return
-	}
-
 	txpool.NeedThisTx(&tx.Hash, func() {
 		// This body is called with a locked TxMutex
 		tx.Raw = pl

@@ -73,6 +73,12 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 	var frommemcnt int
 
 	common.CountSafe("Tx Procesed")
+
+	if ntx.Weight() > int(common.Get(&common.CFG.TXPool.MaxTxWeight)) {
+		rejectTx(tx, TX_REJECTED_TOO_BIG, nil)
+		return TX_REJECTED_TOO_BIG, nil
+	}
+
 	pos := make([]*btc.TxOut, len(tx.TxIn))
 	spent := make([]uint64, len(tx.TxIn))
 
