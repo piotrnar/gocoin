@@ -258,12 +258,14 @@ func MempoolCheck() bool {
 			}
 
 			_, ok := TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]
+			var check_utxo_db bool
 
 			if t2s.MemInputs == nil {
 				if ok {
 					dupa++
 					fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInputs==nil but input is in mempool", i, inp.Input.String())
 				}
+				check_utxo_db = true
 			} else {
 				if t2s.MemInputs[i] {
 					micnt++
@@ -272,14 +274,17 @@ func MempoolCheck() bool {
 						fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInput set but input NOT in mempool", i, inp.Input.String())
 					}
 				} else {
-					if ok {
-						dupa++
-						fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInput NOT set but input IS in mempool", i, inp.Input.String())
-					}
-					if unsp := common.BlockChain.Unspent.UnspentGet(&inp.Input); unsp == nil {
-						dupa++
-						fmt.Println(dupa, "Mempool tx", t2s.Hash.String(), "has no valid input in UTXO db:", i)
-					}
+					check_utxo_db = true
+				}
+			}
+			if check_utxo_db {
+				if ok {
+					dupa++
+					fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInput NOT set but input IS in mempool", i, inp.Input.String())
+				}
+				if unsp := common.BlockChain.Unspent.UnspentGet(&inp.Input); unsp == nil {
+					dupa++
+					fmt.Println(dupa, "Mempool tx", t2s.Hash.String(), "has no valid input in UTXO db:", i)
 				}
 			}
 		}
