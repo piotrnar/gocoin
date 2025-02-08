@@ -185,6 +185,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	TransactionsToSendSize -= uint64(tx.Footprint)
+	tx.Footprint = 0 // to track if something tries to modify it later
 
 	if reason != 0 {
 		rejectTx(tx.Tx, reason, nil)
