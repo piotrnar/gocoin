@@ -14,12 +14,18 @@ div.tablab {
 	Counters disabled in the config file (<code>Stats.NoCounters</code>)</div>
 <table width="100%" id="counters_table" style="display:none" border="0">
 <tr>
-<td valign="top" align="right" colspan="5">
-	<span onclick="cnts_type_gen.click()" class="hand">
+<td valign="top" align="left" colspan="2">
+	<span onclick="cnts_combine_groups.click()" class="hand" title="Combine similar counters">
+	<input type="checkbox" id="cnts_combine_groups" onchange="type_changed()"
+		onclick="event.stopPropagation()"> Combine
+	</span>
+</td>
+<td valign="top" align="right" colspan="3">
+	<span onclick="cnts_type_gen.click()" class="hand" title="Show Generic counters">
 	<input type="radio" name="cnts_type" id="cnts_type_gen" onchange="type_changed()" checked
 		onclick="event.stopPropagation()"> Generic
 	</span>
-	<span onclick="cnts_type_net.click()" class="hand">
+	<span onclick="cnts_type_net.click()" class="hand" title="Show Network counters">
 	<input type="radio" name="cnts_type" id="cnts_type_net" onchange="type_changed()"
 		onclick="event.stopPropagation()"> Network
 	</span>
@@ -99,24 +105,97 @@ function type_changed() {
 		net_stats_row.style.display = 'none'
 		gen_stats_row.style.display = 'table-row'
 		localStorage.setItem("counters_view_type", "gen")
+		
+		cnts_combine_groups.disabled = false
+		localStorage.setItem("counters_combine_groups", cnts_combine_groups.checked)
+		css('tr.cnt_combined', 'display', cnts_combine_groups.checked?'table-row':'none')
+		css('tr.cnt_expanded', 'display', cnts_combine_groups.checked?'none':'table-row')
 	} else {
 		net_stats_row.style.display = 'table-row'
 		gen_stats_row.style.display = 'none'
 		localStorage.setItem("counters_view_type", "net")
+		cnts_combine_groups.disabled = true
+	}
+
+}
+
+function group_only(s) {
+	var dashpos = s.indexOf("-")
+	if (dashpos > 0) {
+		return s.substr(0, dashpos+1)
+	}
+	return s
+}
+
+function make_clickable(el, prefix='') {
+	var s = el.innerText
+	el.title = 'Click to Copy'
+	el.classList.add('hand')
+	el["text2copy"] = prefix+group_only(s)
+	el.addEventListener("click", copyonclick)
+}
+
+function do_one_table(output_table, data, prefix='') {
+	for (i=0; i<data.length; i++) {
+		var row
+		if (i < output_table.rows.length-1) {
+			row = output_table.rows[i+1]
+		} else {
+			row = output_table.insertRow(-1)
+			row.insertCell(-1)
+			row.insertCell(-1)
+			row.cells[0].className = 'gennam'
+			row.cells[1].className = 'genval'
+		}
+		row.cells[0].innerText = data[i][0]
+		row.cells[1].innerText = data[i][1]
+		if (data[i][2]==1) {
+			row.classList.add('cnt_expanded')
+		} else if (data[i][2]==2) {
+			row.classList.add('cnt_combined')
+		}
+		make_clickable(row.cells[0], prefix)
+	}
+	while (output_table.rows.length > data.length + 1) {
+		output_table.deleteRow(output_table.rows.length-1)
 	}
 }
 
-function make_clickable(el, t2c='') {
-	var s = t2c=='' ? el.innerText : t2c
-	var dashpos = s.indexOf("-")
-	if (dashpos > 0) {
-		s = s.substr(0, dashpos+1)
+
+function prepare_arrays(cnts, cback_fn) {
+	if (cnts==null) return
+	var lgr_val = ''
+	var lgr_cnt, lgr_arr
+
+	for (i=0; i<cnts.length; i++) {
+		var arr = cback_fn(cnts[i].var)
+		var gr_val = group_only(cnts[i].var)
+		var group = gr_val != cnts[i].var
+
+		if (group) {
+			if (gr_val==lgr_val) {
+				lgr_cnt += cnts[i].cnt
+			} else {
+				if (lgr_val!='')  lgr_arr.push([lgr_val+"*", lgr_cnt, 2])
+				lgr_val = gr_val
+				lgr_arr = arr
+				lgr_cnt = cnts[i].cnt
+			}
+			arr.push([cnts[i].var, cnts[i].cnt, 1])
+		} else {
+			// non-groupable counter
+			if (lgr_val!='') {
+				lgr_arr.push([lgr_val+"*", lgr_cnt, 2])
+				lgr_val = ''
+			}
+			arr.push([cnts[i].var, cnts[i].cnt, 0])
+		}
 	}
-	el.title = 'Click to Copy'
-	el.classList.add('hand')
-	el["text2copy"] = s
-	el.addEventListener("click", copyonclick)
+	if (lgr_val!='') {
+		lgr_arr.push([lgr_val+"*", lgr_cnt, 2])
+	}
 }
+
 
 function ref_counters() {
 	var aj = ajax()
@@ -134,52 +213,25 @@ function ref_counters() {
 				return
 			}
 
-			function do_one_table(output_table, data, prefix='') {
-				for (i=0; i<data.length; i++) {
-					var row
-					if (i < output_table.rows.length-1) {
-						row = output_table.rows[i+1]
-					} else {
-						row = output_table.insertRow(-1)
-						row.insertCell(-1)
-						row.insertCell(-1)
-						row.cells[0].className = 'gennam'
-						row.cells[1].className = 'genval'
-					}
-					row.cells[0].innerText = data[i].var
-					row.cells[1].innerText = data[i].cnt
-					make_clickable(row.cells[0], prefix+data[i].var)
-				}
-				while (output_table.rows.length > data.length + 1) {
-					output_table.deleteRow(output_table.rows.length-1)
-				}
-			}
-
 			var gen_a = new Array()
 			var gen_b = new Array()
-			if (cts.gen!=null) for (i=0; i<cts.gen.length; i++) {
-				if (cts.gen[i].var[0]>='M' || cts.gen[i].var.substr(0,3)=='Ban') {
-					gen_b.push(cts.gen[i])
-				} else {
-					gen_a.push(cts.gen[i])
-				}
+			function bc_gen(val) {
+				return (val[0]>='M' || val.substr(0,3)=='Ban') ? gen_b : gen_a
 			}
+			prepare_arrays(cts.gen, bc_gen)
 			do_one_table(tab_gen_a, gen_a)
 			do_one_table(tab_gen_b, gen_b)
 
 			var txs_a = new Array()
 			var txs_b = new Array()
 			var txs_c = new Array()
-			if (cts.txs!=null) for (i=0; i<cts.txs.length; i++) {
-				var prefix = cts.txs[i].var.substr(0,4)
-				if (prefix=='Sort') {
-					txs_c.push(cts.txs[i])
-				} else if (prefix=='Pkgs') {
-					txs_b.push(cts.txs[i])
-				} else {
-					txs_a.push(cts.txs[i])
-				}
+			function bc_txs(val) {
+				var prefix = val.substr(0,4)
+				if (prefix=='Sort')  return txs_c
+				if (prefix=='Pkgs')  return txs_b
+				return txs_a
 			}
+			prepare_arrays(cts.txs, bc_txs)
 			do_one_table(tab_txs_a, txs_a, "Tx")
 			do_one_table(tab_txs_b, txs_b, "Tx")
 			do_one_table(tab_txs_c, txs_c, "Tx")
@@ -227,6 +279,11 @@ function ref_counters() {
 }
 ref_counters()
 
-if (localStorage.getItem("counters_view_type") == "net")  cnts_type_net.click()
+function load_settings() {
+	if (localStorage.getItem("counters_view_type") == "net")  cnts_type_net.click()
+	cnts_combine_groups.checked = localStorage.getItem("counters_combine_groups") !== 'false'
+	type_changed()
+}
+load_settings()
 
 </script>
