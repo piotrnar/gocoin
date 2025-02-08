@@ -50,21 +50,11 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	for _, inp := range t2s.TxIn {
 		SpentOutputs[inp.Input.UIdx()] = bidx
 	}
-	if t2s.Footprint != 0 || t2s.inPackages != nil {
-		println("aaa", t2s.Footprint, t2s.inPackages)
-		panic("pipa 1")
-	}
 	t2s.Footprint = uint32(t2s.SysSize())
 	TransactionsToSend[bidx] = t2s
 	TransactionsToSendWeight += uint64(t2s.Weight())
 	TransactionsToSendSize += uint64(t2s.Footprint)
-	if t2s.Footprint != uint32(t2s.SysSize()) {
-		panic("pipa A")
-	}
 	t2s.AddToSort()
-	if t2s.Footprint != uint32(t2s.SysSize()) {
-		panic("pipa A")
-	}
 
 	if !FeePackagesDirty && CheckForErrors() {
 		if t2s.inPackages != nil {
@@ -88,9 +78,6 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 			}
 			parent.addToPackages(t2s)
 		}
-	}
-	if t2s.Footprint != uint32(t2s.SysSize()) {
-		panic("pipa A")
 	}
 
 	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
@@ -124,14 +111,6 @@ func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
 // If reason is not zero, add the deleted txs to the rejected list.
 // Make sure to call it with locked TxMutex.
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
-	defer func() {
-		if tx.Footprint != uint32(tx.SysSize()) {
-			panic("pipa B")
-		}
-	}()
-	if tx.Footprint != uint32(tx.SysSize()) {
-		panic("pipa 2")
-	}
 	if common.Get(&common.CFG.TXPool.CheckErrors) {
 		if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
 			println("ERROR: Trying to delete already deleted tx", tx.Hash.String())
