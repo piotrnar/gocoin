@@ -30,41 +30,20 @@ var (
 
 type OneTxToSend struct {
 	better, worse                 *OneTxToSend
-	inPackages                    []*OneTxsPackage
+	inPackages                    []*OneTxsPackage // only use inPackagesSet() to set this field
 	Invsentcnt, SentCnt           uint32
 	Firstseen, Lastseen, Lastsent time.Time
 	Volume, Fee                   uint64
 	*btc.Tx
-	MemInputs   []bool // transaction is spending inputs from other unconfirmed tx(s)
-	MemInputCnt int
+	MemInputs   []bool // only use memInputsSet() to set this field
 	SigopsCost  uint64
 	VerifyTime  time.Duration
 	SortRank    uint64
+	MemInputCnt uint32
 	Footprint   uint32
 	Local       bool
-	Blocked     byte // if non-zero, it gives you the reason why this tx nas not been routed
+	Blocked     byte // if non-zero, it gives you the reason why this tx has not been routed
 	Final       bool // if true RFB will not work on it
-}
-
-func (t2s *OneTxToSend) inPackagesSet(newval []*OneTxsPackage) {
-	if cap(newval) == cap(t2s.inPackages) {
-		t2s.inPackages = newval
-		return
-	}
-	var old_size, new_size int
-	if t2s.inPackages != nil {
-		old_size = 8 * cap(t2s.inPackages)
-	}
-	t2s.inPackages = newval
-	if t2s.inPackages != nil {
-		new_size = 8 * cap(t2s.inPackages)
-	}
-	if old_size != new_size {
-		t2s.Footprint -= uint32(old_size)
-		t2s.Footprint += uint32(new_size)
-		TransactionsToSendSize -= uint64(old_size)
-		TransactionsToSendSize += uint64(new_size)
-	}
 }
 
 func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
@@ -139,8 +118,6 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		}
 	}
 
-	fprint2remove := uint64(tx.Footprint)
-
 	if with_children {
 		// remove all the children that are spending from tx
 		for vout := range tx.TxOut {
@@ -202,21 +179,14 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	if !FeePackagesDirty {
 		tx.delFromPackages() // remove it from FeePackages
 	}
-	tx.inPackagesSet(nil)
+	tx.inPackagesSet(nil) // this one will update tx.Footprint
 
-	if fprint2remove != uint64(tx.Footprint) {
-		// TODO: check if it ever prints
-		println("footprint mismatch:", fprint2remove, tx.Footprint)
-	}
-	TransactionsToSendSize -= fprint2remove
+	TransactionsToSendSize -= uint64(tx.Footprint)
 	tx.DelFromSort()
-
-	//cfl("middle del")
 
 	if reason != 0 {
 		rejectTx(tx.Tx, reason, nil)
 	}
-	//cfl("end of del")
 }
 
 func removeExcessiveTxs() (cnt int) {

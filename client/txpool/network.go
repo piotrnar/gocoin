@@ -70,7 +70,7 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 
 	var totinp, totout uint64
 	var frommem []bool
-	var frommemcnt int
+	var frommemcnt uint32
 
 	common.CountSafe("Tx Procesed")
 
@@ -343,4 +343,5 @@ func CheckForErrorsNow() {
 func Tick() {
 	ExpireOldTxs()
 	LimitRejected()
+	CheckForErrorsNow()
 }

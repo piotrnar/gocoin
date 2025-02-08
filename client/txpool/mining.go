@@ -44,10 +44,7 @@ func (tx *OneTxToSend) outputsMined() {
 				common.CountSafe("TxMinedMeminCnt")
 				if rec.MemInputCnt == 0 {
 					common.CountSafe("TxMinedMeminTx")
-					reduced_size := (cap(rec.MemInputs) + 7) & ^7
-					rec.MemInputs = nil
-					rec.Footprint -= uint32(reduced_size)
-					TransactionsToSendSize -= uint64(reduced_size)
+					rec.memInputsSet(nil)
 				}
 				rec.resortWithChildren()
 			} else if CheckForErrors() {
@@ -171,10 +168,7 @@ func outputsUnmined(tx *btc.Tx) {
 		if val, ok := SpentOutputs[uidx]; ok {
 			if rec := TransactionsToSend[val]; rec != nil {
 				if rec.MemInputs == nil {
-					rec.MemInputs = make([]bool, len(rec.TxIn))
-					extra_size := (cap(rec.MemInputs) + 7) & ^7
-					rec.Footprint += uint32(extra_size)
-					TransactionsToSendSize += uint64(extra_size)
+					rec.memInputsSet(make([]bool, len(rec.TxIn)))
 				}
 				idx := rec.IIdx(uidx)
 				rec.MemInputs[idx] = true

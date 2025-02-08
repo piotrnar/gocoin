@@ -428,7 +428,7 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 		if tx.MemInputs == nil {
 			return
 		}
-		var cnt_ok int
+		var cnt_ok uint32
 		for idx, inp := range tx.TxIn {
 			if tx.MemInputs[idx] {
 				txk := btc.BIdx(inp.Input.Hash[:])
@@ -742,9 +742,6 @@ func GetSortedMempool() (result []*OneTxToSend) {
 func buildSortedList() {
 	if SortingSupressed {
 		common.CountSafePar("TxSortBuildInSusp-", SortListDirty)
-		println("SortingSupressed in buildSortedList():")
-		debug.PrintStack()
-		println()
 	}
 	if !SortListDirty {
 		common.CountSafe("TxSortBuildSkept")

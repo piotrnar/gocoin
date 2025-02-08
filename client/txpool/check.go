@@ -357,7 +357,7 @@ func MempoolCheck() bool {
 
 	// First check if t2s.MemInputs fields are properly set
 	for _, t2s := range TransactionsToSend {
-		var micnt int
+		var micnt uint32
 
 		totsize += uint64(t2s.Footprint)
 

@@ -136,14 +136,16 @@ func sort_test(par string) {
 	}
 	println("All lists have", len(tx1), "txs each")
 
-	if !txpool.VerifyMempoolSort(tx1) {
-		println("1st TX list verified OK")
-	}
-	if !txpool.VerifyMempoolSort(tx2) {
-		println("2nd TX list verified OK")
-	}
-	if !txpool.VerifyMempoolSort(tx3) {
-		println("3rd TX list verified OK")
+	v1 := txpool.VerifyMempoolSort(tx1)
+	v2 := txpool.VerifyMempoolSort(tx1)
+	v3 := txpool.VerifyMempoolSort(tx1)
+	if v1 || v2 || v3 {
+		println("1st list verify error:", v1)
+		println("2nd list verify error:", v2)
+		println("3rd list verify error:", v3)
+		return
+	} else {
+		println("All lists verified OK")
 	}
 
 	for i := range tx1 {

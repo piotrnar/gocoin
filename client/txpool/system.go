@@ -26,3 +26,45 @@ func (t *OneTxRejected) SysSize() (size int) {
 	}
 	return
 }
+
+func (t2s *OneTxToSend) memInputsSet(newval []bool) {
+	if cap(newval) == cap(t2s.inPackages) {
+		t2s.MemInputs = newval
+		return
+	}
+	var old_size, new_size int
+	if t2s.inPackages != nil {
+		old_size = (cap(t2s.MemInputs) + 7) & ^7 // round the size up to the nearest 8 bytes
+	}
+	t2s.MemInputs = newval
+	if t2s.inPackages != nil {
+		new_size = (cap(t2s.MemInputs) + 7) & ^7 // round the size up to the nearest 8 bytes
+	}
+	if old_size != new_size {
+		t2s.Footprint -= uint32(old_size)
+		t2s.Footprint += uint32(new_size)
+		TransactionsToSendSize -= uint64(old_size)
+		TransactionsToSendSize += uint64(new_size)
+	}
+}
+
+func (t2s *OneTxToSend) inPackagesSet(newval []*OneTxsPackage) {
+	if cap(newval) == cap(t2s.inPackages) {
+		t2s.inPackages = newval
+		return
+	}
+	var old_size, new_size int
+	if t2s.inPackages != nil {
+		old_size = 8 * cap(t2s.inPackages)
+	}
+	t2s.inPackages = newval
+	if t2s.inPackages != nil {
+		new_size = 8 * cap(t2s.inPackages)
+	}
+	if old_size != new_size {
+		t2s.Footprint -= uint32(old_size)
+		t2s.Footprint += uint32(new_size)
+		TransactionsToSendSize -= uint64(old_size)
+		TransactionsToSendSize += uint64(new_size)
+	}
+}
