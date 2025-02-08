@@ -334,7 +334,7 @@ func ReasonToString(reason byte) string {
 
 func limitRejectedSizeIfNeeded() {
 	if len(GetMPInProgressTicket) != 0 {
-		return // don't do it during mpget as there always are many short lived NO_TXOU
+		return // don't do it during mpget as there may be many short lived NO_TXOU
 	}
 
 	max := atomic.LoadUint64(&common.MaxNoUtxoSizeBytes)
