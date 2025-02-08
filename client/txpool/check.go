@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"runtime/debug"
 	"slices"
@@ -25,6 +26,26 @@ func (t *OneTxToSend) isInMap() (yes bool) {
 var donot bool
 var rdbg *bytes.Buffer
 var rd1, rd2 *bytes.Buffer
+
+func dumpPkgList(fn string) {
+	f, _ := os.Create(fn)
+	dumpPkgListHere(f)
+	f.Close()
+	println("pkg list stored in", fn)
+}
+
+func dumpPkgListHere(f io.Writer) {
+	for _, pkg := range FeePackages {
+		fmt.Fprintln(f, "package", pkg.String(), "with", len(pkg.Txs), "txs:")
+		for _, t := range pkg.Txs {
+			fmt.Fprintln(f, "   *", t.Hash.String(), "  mic:", t.MemInputCnt, "  inpkgs:", len(t.InPackages))
+			for idx, pkg := range t.InPackages {
+				fmt.Fprintln(f, "   ", idx, pkg.String())
+			}
+		}
+		fmt.Fprintln(f)
+	}
+}
 
 func cfl(label string) {
 	if donot {
@@ -290,6 +311,38 @@ func checkRejectedUsedUTXOs() (dupa int) {
 		}
 	}
 	return
+}
+
+func VerifyMempoolSort(txs []*OneTxToSend) bool {
+	idxs := make(map[btc.BIDX]int, len(txs))
+	for i, t2s := range txs {
+		if t2s == nil {
+			println("tx at idx", i, len(txs), len(TransactionsToSend), "is nil")
+			return true
+		}
+		idxs[t2s.Hash.BIdx()] = i
+	}
+	var oks int
+	for i, t2s := range txs {
+		if t2s.Weight() == 0 {
+			println("ERROR: in mempool sorting:", i, "has weight 0", t2s.Hash.String())
+			return true
+		}
+		for _, txin := range t2s.TxIn {
+			if idx, ok := idxs[btc.BIdx(txin.Input.Hash[:])]; ok {
+				if idx > i {
+					println("ERROR: in mempool sorting:", i, "points to", idx, "\n",
+						"    ", i, t2s.Hash.String(), "\n",
+						" -> ", idx, btc.NewUint256(txin.Input.Hash[:]).String())
+					return true
+				} else {
+					oks++
+				}
+			}
+		}
+	}
+	//println("mempool sorting OK", oks, len(txs))
+	return false
 }
 
 // MempoolCheck verifies the Mempool for consistency.

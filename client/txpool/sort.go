@@ -2,9 +2,7 @@ package txpool
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
-	"io"
 	"os"
 	"runtime/debug"
 	"sort"
@@ -180,7 +178,6 @@ func (t2s *OneTxToSend) resortWithChildren() {
 			if val, ok := SpentOutputs[uidx]; ok {
 				if rec, ok := TransactionsToSend[val]; ok {
 					rec.resortWithChildren()
-					//println("Resorted", btc.BIdxString(val), "becase of", btc.BIdxString(t2s.Hash.BIdx()))
 				}
 			}
 		}
@@ -262,38 +259,6 @@ func (t2s *OneTxToSend) DelFromSort() {
 	t2s.Better.Worse = t2s.Worse
 }
 
-func VerifyMempoolSort(txs []*OneTxToSend) bool {
-	idxs := make(map[btc.BIDX]int, len(txs))
-	for i, t2s := range txs {
-		if t2s == nil {
-			println("tx at idx", i, len(txs), len(TransactionsToSend), "is nil")
-			return true
-		}
-		idxs[t2s.Hash.BIdx()] = i
-	}
-	var oks int
-	for i, t2s := range txs {
-		if t2s.Weight() == 0 {
-			println("ERROR: in mempool sorting:", i, "has weight 0", t2s.Hash.String())
-			return true
-		}
-		for _, txin := range t2s.TxIn {
-			if idx, ok := idxs[btc.BIdx(txin.Input.Hash[:])]; ok {
-				if idx > i {
-					println("ERROR: in mempool sorting:", i, "points to", idx, "\n",
-						"    ", i, t2s.Hash.String(), "\n",
-						" -> ", idx, btc.NewUint256(txin.Input.Hash[:]).String())
-					return true
-				} else {
-					oks++
-				}
-			}
-		}
-	}
-	//println("mempool sorting OK", oks, len(txs))
-	return false
-}
-
 func (t2s *OneTxToSend) findWorstParent() (wpr *OneTxToSend) {
 	for i, mi := range t2s.MemInputs {
 		if mi {
@@ -325,7 +290,7 @@ func (t2s *OneTxToSend) insertBefore(wpr *OneTxToSend) {
 	updateSortWidthStats()
 }
 
-/*
+/* leave it - may be useful for debugging
 func (t2s *OneTxToSend) idx() (cnt int) {
 	for t := BestT2S; t != nil; t = t.Worse {
 		if t == t2s {
@@ -341,17 +306,17 @@ func (t2s *OneTxToSend) fixIndex() {
 	if t2s.Better == nil {
 		if t2s.Worse == nil {
 			t2s.SortRank = SORT_START_INDEX
-			common.CountSafe("TxSortHadLotA1")
+			common.CountSafe("TxSortHadLot-A1")
 			return
 		}
 		if t2s.Worse.SortRank > SortIndexStep {
 			t2s.SortRank = t2s.Worse.SortRank - SortIndexStep
-			common.CountSafe("TxSortHadLotA2")
+			common.CountSafe("TxSortHadLot-A2")
 			return
 		}
 		t2s.SortRank = t2s.Worse.SortRank / 2
 		if t2s.SortRank == t2s.Worse.SortRank {
-			common.CountSafe("TxSortHNoLotA3")
+			common.CountSafe("TxSortHNoLot-A3")
 			reindexEverything()
 			return
 		}
@@ -360,14 +325,14 @@ func (t2s *OneTxToSend) fixIndex() {
 	better_idx := t2s.Better.SortRank
 	if t2s.Worse == nil {
 		t2s.SortRank = better_idx + SortIndexStep
-		common.CountSafe("TxSortHadLotB")
+		common.CountSafe("TxSortHadLot-B")
 		return
 	}
 
 	diff := t2s.Worse.SortRank - better_idx
 	if diff >= 2 {
 		t2s.SortRank = better_idx + diff/2
-		//common.CountSafe("TxSortHadLotC")
+		//common.CountSafe("TxSortHadLot-C")  <-- there would be too many of them
 		return
 	}
 
@@ -379,29 +344,23 @@ func (t *OneTxToSend) reindexDown(step uint64) {
 	var toend, overflow bool
 	defer func() {
 		if overflow {
-			println("reindexDown SortIndex overflow")
+			common.CountSafe("TxSortReinCnt-OFW")
+			common.CountSafeAdd("TxSortReindex-OFW", cnt)
 			reindexEverything()
 			return
 		}
-		//println("   ... results", cnt, toend, overflow)
-		common.CountSafe("TxSortReinCnt")
-		if overflow {
-			common.CountSafe("TxSortReinCntOFW")
-			common.CountSafeAdd("TxSortReindexOFW", cnt)
-		}
 		if toend {
-			common.CountSafe("TxSortReinCntEnd")
-			common.CountSafeAdd("TxSortReindexEnd", cnt)
+			common.CountSafe("TxSortReinCnt-End")
+			common.CountSafeAdd("TxSortReindex-End", cnt)
 		} else {
-			common.CountSafe("TxSortReinCntMid")
-			common.CountSafeAdd("TxSortReindexMid", cnt)
+			common.CountSafe("TxSortReinCnt-Mid")
+			common.CountSafeAdd("TxSortReindex-Mid", cnt)
 		}
 	}()
 	index := t.SortRank
 	for t = t.Worse; t != nil; t = t.Worse {
 		new_index := index + step
 		if new_index < index {
-			println("reindexDown: index overflow")
 			overflow = true
 			return
 		}
@@ -418,7 +377,6 @@ func (t *OneTxToSend) reindexDown(step uint64) {
 func reindexEverything() {
 	common.CountSafe("TxSortREINDEX")
 	adjustSortIndexStep()
-	println("reindex", SORT_START_INDEX, SortIndexStep)
 	index := uint64(SORT_START_INDEX)
 	for t := BestT2S; t != nil; t = t.Worse {
 		t.SortRank = index
@@ -427,21 +385,20 @@ func reindexEverything() {
 }
 
 func isFirstTxBetter(rec_i, rec_j *OneTxToSend) bool {
-	if true {
-		// this method of sorting is faster, but harder for debugging
-		return rec_i.Fee*uint64(rec_j.Weight()) > rec_j.Fee*uint64(rec_i.Weight())
-	} else {
-		rate_i := rec_i.Fee * uint64(rec_j.Weight())
-		rate_j := rec_j.Fee * uint64(rec_i.Weight())
-		if rate_i != rate_j {
-			return rate_i > rate_j
-		}
-		if rec_i.MemInputCnt != rec_j.MemInputCnt {
-			return rec_i.MemInputCnt < rec_j.MemInputCnt
-		}
-		return binary.LittleEndian.Uint64(rec_i.Hash.Hash[:btc.Uint256IdxLen]) >
-			binary.LittleEndian.Uint64(rec_j.Hash.Hash[:btc.Uint256IdxLen])
+	// this method of sorting is faster, but harder for debugging
+	return rec_i.Fee*uint64(rec_j.Weight()) > rec_j.Fee*uint64(rec_i.Weight())
+	/* this one is slower but may be useful for debugging
+	rate_i := rec_i.Fee * uint64(rec_j.Weight())
+	rate_j := rec_j.Fee * uint64(rec_i.Weight())
+	if rate_i != rate_j {
+		return rate_i > rate_j
 	}
+	if rec_i.MemInputCnt != rec_j.MemInputCnt {
+		return rec_i.MemInputCnt < rec_j.MemInputCnt
+	}
+	return binary.LittleEndian.Uint64(rec_i.Hash.Hash[:btc.Uint256IdxLen]) >
+		binary.LittleEndian.Uint64(rec_j.Hash.Hash[:btc.Uint256IdxLen])
+	*/
 }
 
 // GetSortedMempool returns txs sorted by SPB, but with parents first.
@@ -609,26 +566,6 @@ func sortFeePackages() {
 		SortFeePackagesCount++
 	} else {
 		common.CountSafe("TxPkgsSortSkip")
-	}
-}
-
-func dumpPkgList(fn string) {
-	f, _ := os.Create(fn)
-	dumpPkgListHere(f)
-	f.Close()
-	println("pkg list stored in", fn)
-}
-
-func dumpPkgListHere(f io.Writer) {
-	for _, pkg := range FeePackages {
-		fmt.Fprintln(f, "package", pkg.String(), "with", len(pkg.Txs), "txs:")
-		for _, t := range pkg.Txs {
-			fmt.Fprintln(f, "   *", t.Hash.String(), "  mic:", t.MemInputCnt, "  inpkgs:", len(t.InPackages))
-			for idx, pkg := range t.InPackages {
-				fmt.Fprintln(f, "   ", idx, pkg.String())
-			}
-		}
-		fmt.Fprintln(f)
 	}
 }
 
