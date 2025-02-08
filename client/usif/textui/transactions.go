@@ -513,7 +513,6 @@ func push_old_txs(par string) {
 }
 
 func tx_pool_stats(par string) {
-	txpool.CheckPoolSizes()
 	txpool.TxMutex.Lock()
 	defer txpool.TxMutex.Unlock()
 
