@@ -211,7 +211,7 @@ func checkRejectedTxs() (dupa int) {
 	return
 }
 
-func checkSortIndex() (dupa int) {
+func checkTRSortIndex() (dupa int) {
 	seen := make(map[btc.BIDX]int)
 	for idx := TRIdxTail; ; idx = TRIdxNext(idx) {
 		bidx := TRIdxArray[idx]
@@ -403,19 +403,23 @@ func MempoolCheck() bool {
 	dupa += checkFootprints()
 	dupa += checkMempoolTxs()
 	dupa += checkRejectedTxs()
-	dupa += checkSortIndex()
+	dupa += checkTRSortIndex()
 	dupa += checkRejectedUsedUTXOs()
 	if checkFeeList() {
 		dupa++
 		fmt.Println(dupa, "checkFeeList failed")
 	}
-	if VerifyMempoolSort(GetSortedMempool()) {
-		dupa++
-		fmt.Println(dupa, "GetSortedMempool() sorting broken")
-	}
-	if VerifyMempoolSort(GetSortedMempoolRBF()) {
-		dupa++
-		fmt.Println(dupa, "GetSortedMempoolRBF() sorting broken")
+	if !SortListDirty {
+		if VerifyMempoolSort(GetSortedMempool()) {
+			dupa++
+			fmt.Println(dupa, "GetSortedMempool() sorting broken")
+		}
+		if !FeePackagesDirty {
+			if VerifyMempoolSort(GetSortedMempoolRBF()) {
+				dupa++
+				fmt.Println(dupa, "GetSortedMempoolRBF() sorting broken")
+			}
+		}
 	}
 	if dupa == 0 {
 		common.CountSafe("Tx MPCheckOK")

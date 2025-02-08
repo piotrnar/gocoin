@@ -380,7 +380,6 @@ func MempoolLoad() bool {
 			if t2s.MemInputCnt == 0 {
 				println("ERROR: MemInputs not nil but nothing found")
 				t2s.memInputsSet(nil)
-				t2s.Footprint = uint32(t2s.SysSize())
 			}
 		}
 	}
@@ -393,7 +392,7 @@ func MempoolLoad() bool {
 
 	FeePackagesDirty = true
 	SortListDirty = true
-	lookForPackages()
+	//lookForPackages() <- not now, it will get called automatically when first needed
 
 	if CheckForErrors() {
 		if MempoolCheck() {

@@ -439,7 +439,7 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 		return isFirstTxBetter(rec_i, rec_j)
 	})
 
-	// now put the childrer after the parents
+	// now put the children after the parents
 	result = make([]*OneTxToSend, len(all_txs))
 	already_in := make(map[btc.BIDX]bool, len(all_txs))
 	parent_of := make(map[btc.BIDX][]btc.BIDX)
