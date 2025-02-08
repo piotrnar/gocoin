@@ -308,7 +308,6 @@ func checkRejectedUsedUTXOs() (dupa int) {
 
 func checkFeeList() bool {
 	if FeePackagesDirty {
-		common.CountSafe("TxPkgsCheckDirty")
 		return false
 	}
 
@@ -359,7 +358,6 @@ func checkFeeList() bool {
 		return true
 	}
 
-	common.CountSafe("TxPkgsCheckOK")
 	return false
 }
 

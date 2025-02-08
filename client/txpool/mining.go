@@ -132,7 +132,6 @@ func txMined(tx *btc.Tx) {
 
 // BlockMined removes all the block's tx from the mempool.
 func BlockMined(bl *btc.Block) {
-	common.CountSafe("TxPkgsBlockMined")
 	if len(bl.Txs) < 2 {
 		return
 	}
