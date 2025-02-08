@@ -52,7 +52,7 @@ func (c *OneConnection) SendGetMP() error {
 
 // TxInvNotify handles tx-inv notifications.
 func (c *OneConnection) TxInvNotify(hash []byte) {
-	if txpool.NeedThisTx(btc.NewUint256(hash), nil) {
+	if txpool.NeedThisTxExt(btc.NewUint256(hash), nil) == 0 {
 		var b [1 + 4 + 32]byte
 		b[0] = 1                                              // One inv
 		binary.LittleEndian.PutUint32(b[1:5], MSG_WITNESS_TX) // SegWit Tx
@@ -147,7 +147,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 
 	tx.SetHash(pl)
 
-	txpool.NeedThisTx(&tx.Hash, func() {
+	txpool.NeedThisTxExt(&tx.Hash, func() {
 		// This body is called with a locked TxMutex
 		tx.Raw = pl
 		select {
