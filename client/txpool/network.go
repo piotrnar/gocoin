@@ -27,12 +27,9 @@ type TxRcvd struct {
 	Unmined    bool
 }
 
-// NeedThisTx returns false if we do not want to receive a data for this tx.
-func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
-	return NeedThisTxExt(id, cb) == 0
-}
-
-// make sure to call it with TxMutex Locked
+// NeedThisTx returns 0 if mempool wants this tx.
+// Before that, the given function is called (if not nil)
+// Otherwise, it returns the reason why the tx is not wanted and no callback is called.
 func NeedThisTxExt(id *btc.Uint256, cb func()) (why_not int) {
 	TxMutex.Lock()
 	why_not = needThisTxExt(id, cb)
@@ -40,7 +37,8 @@ func NeedThisTxExt(id *btc.Uint256, cb func()) (why_not int) {
 	return
 }
 
-// make sure to call it with TxMutex Locked
+// See description to NeedThisTxExt
+// make sure to call this one with TxMutex Locked
 func needThisTxExt(id *btc.Uint256, cb func()) (why_not int) {
 	if tx, present := TransactionsToSend[id.BIdx()]; present {
 		tx.Lastseen = time.Now()
