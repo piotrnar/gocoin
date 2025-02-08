@@ -278,7 +278,6 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
 	rec.Clean()
-	rec.Footprint = uint32(rec.SysSize())
 	rec.Add(bidx)
 
 	if ntx.Unmined {
@@ -343,5 +342,4 @@ func CheckForErrorsNow() {
 func Tick() {
 	ExpireOldTxs()
 	LimitRejected()
-	CheckForErrorsNow()
 }

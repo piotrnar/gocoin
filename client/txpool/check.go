@@ -13,6 +13,8 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
+var MPCheckUTXO bool = true
+
 func (t *OneTxToSend) isInMap() (yes bool) {
 	var tt *OneTxToSend
 	tt, yes = TransactionsToSend[t.Hash.BIdx()]
@@ -398,7 +400,7 @@ func MempoolCheck() bool {
 					check_utxo_db = true
 				}
 			}
-			if check_utxo_db {
+			if MPCheckUTXO && check_utxo_db {
 				if ok {
 					dupa++
 					fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInput NOT set but input IS in mempool", i, inp.Input.String())
@@ -496,7 +498,7 @@ func MempoolCheck() bool {
 	}
 
 	dupa += checkSortIndex(dupa)
-	dupa += checkPoolSizes()
+	// dupa += checkPoolSizes()  this we already do above
 	dupa += checkRejectedUsedUTXOs()
 
 	if checkFeeList() {

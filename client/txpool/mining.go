@@ -157,7 +157,6 @@ func BlockMined(bl *btc.Block) {
 		}
 	}
 	TxMutex.Unlock()
-
 }
 
 // outputsUnmined sets the MemInput flag of all the children (used when a tx is unmined / block undone).

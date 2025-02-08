@@ -553,7 +553,7 @@ func tx_pool_stats(par string) {
 		return t / time.Duration(cnt)
 	}
 
-	fmt.Printf("Mempool: %d in %d txs, carrying total weight of %d (~%d blocks)\n", txpool.TransactionsToSendSize, len(txpool.TransactionsToSend), txpool.TransactionsToSendWeight, txpool.TransactionsToSendWeight/4e6)
+	fmt.Printf("Mempool: %d in %d txs, carrying total weight of %d (~%.1f blocks)\n", txpool.TransactionsToSendSize, len(txpool.TransactionsToSend), txpool.TransactionsToSendWeight, float64(txpool.TransactionsToSendWeight)/4e6)
 	fmt.Printf("  SegWit-txs: %d (%d%%) in %d (%d%%) txs, carrying weight %d (%d%%)\n", sw_siz, sw_perc_size, sw_cnt, sw_perc_cnt, sw_wgt, sw_perc_weight)
 	fmt.Printf("  Number of Spent Outputs: %d\n", len(txpool.SpentOutputs))
 	fmt.Printf("Rejected: %d in %d txs\n", txpool.TransactionsRejectedSize, len(txpool.TransactionsRejected))

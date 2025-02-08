@@ -128,7 +128,7 @@ func sort_test(par string) {
 	tim3 := time.Since(sta)
 
 	println("Three sorted txs lists acquired.")
-	println("Execution times  1) Slow:", tim1.String(), "  2) New:", tim2.String(), "  3) RBF:", tim3.String())
+	println("Execution times  1-Slow:", tim1.String(), "  2-Fast:", tim2.String(), "  3-RBF:", tim3.String())
 
 	if len(tx1) != len(tx2) || len(tx1) != len(tx3) {
 		println("Transaction count mismatch:", len(tx1), len(tx2), len(tx3))

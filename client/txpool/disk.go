@@ -208,7 +208,7 @@ func newOneTxToSendFromFile(rd io.Reader, file_version int) (t2s *OneTxToSend, e
 	t2s.Local = tmp[0] != 0
 	t2s.Blocked = tmp[1]
 	if tmp[2] != 0 {
-		t2s.MemInputs = make([]bool, len(t2s.TxIn))
+		t2s.MemInputs = make([]bool, len(t2s.TxIn)) // do not use memInputsSet() here as we calc footprint later
 	}
 	t2s.Final = tmp[3] != 0
 	return
@@ -379,7 +379,7 @@ func MempoolLoad() bool {
 			}
 			if t2s.MemInputCnt == 0 {
 				println("ERROR: MemInputs not nil but nothing found")
-				t2s.MemInputs = nil
+				t2s.memInputsSet(nil)
 				t2s.Footprint = uint32(t2s.SysSize())
 			}
 		}

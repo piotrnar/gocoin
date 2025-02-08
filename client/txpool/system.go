@@ -4,13 +4,18 @@ import (
 	"unsafe"
 )
 
+const (
+	SYSIZE_COUNT_MEMINPUTS = false
+	SYSIZE_COUNT_PACKAGES  = true
+)
+
 func (t *OneTxToSend) SysSize() (size int) {
 	size = int(unsafe.Sizeof(*t))
 	size += t.Tx.SysSize()
-	if t.inPackages != nil {
+	if SYSIZE_COUNT_PACKAGES && t.inPackages != nil {
 		size += 8 * cap(t.inPackages)
 	}
-	if t.MemInputs != nil {
+	if SYSIZE_COUNT_MEMINPUTS && t.MemInputs != nil {
 		size += (cap(t.MemInputs) + 7) & ^7 // round the size up to the nearest 8 bytes
 	}
 	return
@@ -28,7 +33,7 @@ func (t *OneTxRejected) SysSize() (size int) {
 }
 
 func (t2s *OneTxToSend) memInputsSet(newval []bool) {
-	if cap(newval) == cap(t2s.inPackages) {
+	if !SYSIZE_COUNT_MEMINPUTS || cap(newval) == cap(t2s.inPackages) {
 		t2s.MemInputs = newval
 		return
 	}
@@ -49,7 +54,7 @@ func (t2s *OneTxToSend) memInputsSet(newval []bool) {
 }
 
 func (t2s *OneTxToSend) inPackagesSet(newval []*OneTxsPackage) {
-	if cap(newval) == cap(t2s.inPackages) {
+	if !SYSIZE_COUNT_PACKAGES || cap(newval) == cap(t2s.inPackages) {
 		t2s.inPackages = newval
 		return
 	}
