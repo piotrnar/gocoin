@@ -22,8 +22,7 @@ var (
 	nextTxsPoolExpire time.Time = time.Now().Add(POOL_EXPIRE_INTERVAL)
 	BestT2S, WorstT2S *OneTxToSend
 	SortIndexStep     uint64 = 1e12 // this should be enough for 1 million txs - TODO: make it dynamic
-	commitingBlock    bool
-	SortingSupressed  bool
+	sortingSupressed  bool
 	lastSortingDone   time.Time
 	SortListDirty     bool // means the BestT2S <--> WorstT2S list is useless and needs rebuilding
 
@@ -47,37 +46,25 @@ func adjustSortIndexStep() {
 	SortIndexStep = (1 << 60) / uint64(2*cnt)
 }
 
-func checkAutoSorting() {
-	TxMutex.Lock()
-	if !SortingSupressed && time.Since(lastSortingDone) > STOP_AUTO_SORT_AFTER {
-		SortingSupressed = false
-		common.CountSafe("TxSortTurnOff")
-	}
-	TxMutex.Unlock()
-
+// make sure to call it with thr mutex locked
+func SortingDisabled() bool {
+	return sortingSupressed || time.Since(lastSortingDone) > STOP_AUTO_SORT_AFTER
 }
 
 // call it with false to restore sorting
 func BlockCommitInProgress(yes bool) {
 	TxMutex.Lock()
-	commitingBlock = yes
-	if yes {
-		SortingSupressed = yes
-	} else if SortingSupressed {
-		// we will only enable sorting here if a sorting was done recently
-		if time.Since(lastSortingDone) < STOP_AUTO_SORT_AFTER {
-			SortingSupressed = false
-		} else {
-			common.CountSafe("TxSortTurnOffKeep")
-		}
-	}
+	sortingSupressed = yes
 	TxMutex.Unlock()
 }
 
 // insertes given tx into sorted list at its proper position
 func (t2s *OneTxToSend) AddToSort() {
-	if SortingSupressed {
+	if SortingDisabled() {
 		SortListDirty = true
+		return
+	}
+	if SortListDirty {
 		return
 	}
 	//fmt.Printf("adding %p / %s with spb %.2f  %p/%p\n", t2s, btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), BestT2S, WorstT2S)
@@ -118,90 +105,78 @@ func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 	WorstT2S = t2s
 }
 
-var resortWithChildrenWarningLastDone time.Time
-
 // this function is only called from withing BlockChain.CommitBlock()
 func (t2s *OneTxToSend) resortWithChildren() {
-	// ... same for keeping mempool sorted, so we always suppress sorting before comitting a block
-	if SortingSupressed { // But this check is here just in case
+	if SortingDisabled() {
 		SortListDirty = true
 		return
 	}
+	if SortListDirty {
+		return
+	}
 
-	// Normally we should not get here as blocks are precessed with SortingSupressed
-	// So the code below is pretty much unused, although it has been seen working fine (but slow).
-	common.CountSafe("TxMined**Resort")
+	common.CountSafe("TxMinedResort")
 
-	if false {
-		// The code below seems to be broken and does not work well during block undone
-		// TODO: maybe fix it (although it is not worth using it during a block sumission/undoing)
-		if time.Since(resortWithChildrenWarningLastDone) > time.Minute {
-			println("Warninign: ResortWithChildren() called with SortingSupressed not set - fixing it")
-			resortWithChildrenWarningLastDone = time.Now()
-		}
-		SortListDirty = true
+	// now get the new worst parent
+	wpr := t2s.findWorstParent()
+	if wpr == t2s.better {
+		goto do_the_children
+	}
+	// we may have to move it. first let's remove it from the index
+	if wpr == nil {
+		wpr = BestT2S // if there is no parent, we can go all the way to the top
+	} else if wpr.worse != nil {
+		wpr = wpr.worse // we must insert it after the worst parent (not before it)
+	}
+	if wpr.SortRank > t2s.SortRank {
+		// we have to move it down the list as our parent is now below us
+		t2s.DelFromSort()
+		t2s.insertDownFromHere(wpr)
+		common.CountSafe("TxSortDonwgr")
 	} else {
-		// now get the new worst parent
-		wpr := t2s.findWorstParent()
-		if wpr == t2s.better {
+		// our parent is above us - we can only move up the list
+		// first check if we can move it at all
+		one_above_us := t2s.better
+		if CheckForErrors() && one_above_us == nil {
+			println("ERROR: we have a parent but we are on top")
 			goto do_the_children
 		}
-		// we may have to move it. first let's remove it from the index
-		if wpr == nil {
-			wpr = BestT2S // if there is no parent, we can go all the way to the top
-		} else if wpr.worse != nil {
-			wpr = wpr.worse // we must insert it after the worst parent (not before it)
-		}
-		if wpr.SortRank > t2s.SortRank {
-			// we have to move it down the list as our parent is now below us
-			t2s.DelFromSort()
-			t2s.insertDownFromHere(wpr)
-			common.CountSafe("TxSortDonwgr")
-		} else {
-			// our parent is above us - we can only move up the list
-			// first check if we can move it at all
-			one_above_us := t2s.better
-			if CheckForErrors() && one_above_us == nil {
-				println("ERROR: we have a parent but we are on top")
-				goto do_the_children
-			}
-			if !isFirstTxBetter(t2s, one_above_us) {
-				common.CountSafe("TxSortAdvNO")
-				goto do_the_children // we cannot move even by one, so stop trying
-			}
-
-			// we will move by at least one, so we can delete the record now
-			t2s.DelFromSort()
-			if CheckForErrors() && (BestT2S == nil || WorstT2S == nil) {
-				println("ERROR: we have a parent but the list is empty after we removed ourselves")
-				return // we dont need to check for children as there obviously arent any records left
-			}
-
-			// this is version 2 - from top to bottom:
-			common.CountSafe("TxSortAdvDOWN")
-			for wpr != one_above_us {
-				if isFirstTxBetter(t2s, wpr) {
-					t2s.insertBefore(wpr)
-					common.CountSafe("TxSortImporveA")
-					goto do_the_children // we cannot move even by one, so stop trying
-				}
-				wpr = wpr.worse
-			}
-			// we reached one above os which we already know that we can skip
-			common.CountSafe("TxSortImporveB")
-			t2s.insertBefore(wpr)
+		if !isFirstTxBetter(t2s, one_above_us) {
+			common.CountSafe("TxSortAdvNO")
 			goto do_the_children // we cannot move even by one, so stop trying
 		}
 
-	do_the_children:
-		common.CountSafe("TxSortDoChildren")
-		// now do the children
-		for vout := range t2s.TxOut {
-			uidx := btc.UIdx(t2s.Hash.Hash[:], uint32(vout))
-			if val, ok := SpentOutputs[uidx]; ok {
-				if rec, ok := TransactionsToSend[val]; ok {
-					rec.resortWithChildren()
-				}
+		// we will move by at least one, so we can delete the record now
+		t2s.DelFromSort()
+		if CheckForErrors() && (BestT2S == nil || WorstT2S == nil) {
+			println("ERROR: we have a parent but the list is empty after we removed ourselves")
+			return // we dont need to check for children as there obviously arent any records left
+		}
+
+		// this is version 2 - from top to bottom:
+		common.CountSafe("TxSortAdvDOWN")
+		for wpr != one_above_us {
+			if isFirstTxBetter(t2s, wpr) {
+				t2s.insertBefore(wpr)
+				common.CountSafe("TxSortImporveA")
+				goto do_the_children // we cannot move even by one, so stop trying
+			}
+			wpr = wpr.worse
+		}
+		// we reached one above os which we already know that we can skip
+		common.CountSafe("TxSortImporveB")
+		t2s.insertBefore(wpr)
+		goto do_the_children // we cannot move even by one, so stop trying
+	}
+
+do_the_children:
+	common.CountSafe("TxSortDoChildren")
+	// now do the children
+	for vout := range t2s.TxOut {
+		uidx := btc.UIdx(t2s.Hash.Hash[:], uint32(vout))
+		if val, ok := SpentOutputs[uidx]; ok {
+			if rec, ok := TransactionsToSend[val]; ok {
+				rec.resortWithChildren()
 			}
 		}
 	}
@@ -215,6 +190,9 @@ var (
 func updateSortWidthStats() {
 	if BestT2S == nil || WorstT2S == nil {
 		return
+	}
+	if !(BestT2S != nil && WorstT2S != nil) {
+		panic(fmt.Sprint("best worst fucked ", BestT2S != nil, " / ", WorstT2S != nil))
 	}
 	if !SortIndexValid {
 		SortIndexMin = BestT2S.SortRank
@@ -231,8 +209,11 @@ func updateSortWidthStats() {
 
 // removes given tx from the sorted list
 func (t2s *OneTxToSend) DelFromSort() {
-	if SortingSupressed {
+	if SortingDisabled() {
 		SortListDirty = true
+		return
+	}
+	if SortListDirty {
 		return
 	}
 	if t2s == BestT2S {
@@ -763,7 +744,7 @@ func GetSortedMempool() (result []*OneTxToSend) {
 
 // call it with the mutex locked
 func buildSortedList() {
-	if SortingSupressed {
+	if SortingDisabled() {
 		common.CountSafePar("TxSortBuildInSusp-", SortListDirty)
 	}
 	if !SortListDirty {
@@ -773,13 +754,7 @@ func buildSortedList() {
 	common.CountSafe("TxSortBuildNeeded")
 	SortListDirty = false
 
-	defer func() {
-		lastSortingDone = time.Now()
-		if !commitingBlock {
-			SortingSupressed = false
-			common.CountSafe("TxSortTurnOn")
-		}
-	}()
+	lastSortingDone = time.Now()
 
 	ts := GetSortedMempoolSlow()
 	if len(ts) == 0 {

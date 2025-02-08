@@ -80,7 +80,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		}
 	}
 
-	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
+	if removeExcessiveTxs() == 0 {
 		common.SetMinFeePerKB(0) // nothing removed so set the minimal fee
 	}
 }

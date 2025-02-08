@@ -339,6 +339,5 @@ func CheckForErrorsNow() {
 func Tick() {
 	expireOldTxs()
 	limitRejected()
-	checkAutoSorting()
 	CheckForErrorsNow()
 }
