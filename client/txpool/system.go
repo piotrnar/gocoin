@@ -36,7 +36,7 @@ func (t2s *OneTxToSend) memInputsSet(newval []bool) {
 	if t2s.Footprint == 0 {
 		panic("memInputsSet when Footprint is 0")
 	}
-	if !SYSIZE_COUNT_MEMINPUTS || cap(newval) == cap(t2s.inPackages) {
+	if !SYSIZE_COUNT_MEMINPUTS || cap(newval) == cap(t2s.MemInputs) {
 		t2s.MemInputs = newval
 		return
 	}
