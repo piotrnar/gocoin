@@ -399,8 +399,6 @@ func (tx *OneTxToSend) Id() string {
 // If t2s does not belong to any packages, we create a new 2-txs package for it and the child
 func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 	common.CountSafe("TxPkgsAdd")
-	//FeePackagesDirty = true
-	//return
 
 	sta := time.Now()
 	defer func() {
@@ -454,8 +452,6 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 // removes itself from any grup containing it
 func (t2s *OneTxToSend) delFromPackages() {
 	common.CountSafe("TxPkgsDel")
-	//FeePackagesDirty = true
-	//return
 
 	var records2remove int
 	if len(t2s.inPackages) == 0 {
