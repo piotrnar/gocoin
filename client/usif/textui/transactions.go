@@ -561,7 +561,13 @@ func tx_pool_stats(par string) {
 	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
 	fmt.Println()
 	fmt.Printf("SortingSupressed: %t,  SortIndexDirty: %t\n", txpool.SortingSupressed, txpool.SortListDirty)
-	fmt.Printf("SortIndexNow: %06d <-> %06d   SortIndexEver: %06d <-> %06d\n", get_perc(txpool.BestT2S.SortRank), get_perc(txpool.WorstT2S.SortRank), get_perc(txpool.SortIndexMin), get_perc(txpool.SortIndexMax))
+	var sort_index_now string
+	if txpool.BestT2S != nil && txpool.WorstT2S != nil {
+		sort_index_now = fmt.Sprintf("%06d <-> %06d", get_perc(txpool.BestT2S.SortRank), get_perc(txpool.WorstT2S.SortRank))
+	} else {
+		sort_index_now = "empty"
+	}
+	fmt.Printf("SortIndexNow: %s   SortIndexEver: %06d <-> %06d\n", sort_index_now, get_perc(txpool.SortIndexMin), get_perc(txpool.SortIndexMax))
 	fmt.Printf("AddToSort happened %d times, taking %s total  (%s avg)\n", txpool.AddToSortCount, txpool.AddToSortTime.String(), get_avg_time(txpool.AddToSortTime, txpool.AddToSortCount))
 	fmt.Println()
 	fmt.Printf("FeePackages Count: %d,  FeePackagesDirty: %t\n", len(txpool.FeePackages), txpool.FeePackagesDirty)
