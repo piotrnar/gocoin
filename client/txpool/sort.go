@@ -14,16 +14,16 @@ import (
 const (
 	SORT_START_INDEX     = uint64(1 << 62) // 1/4th of max uint64 value
 	POOL_EXPIRE_INTERVAL = time.Hour
-	STOP_AUTO_SORT_AFTER = 20 * time.Minute // stop auto sotring if more than this much time passed
+	STOP_AUTO_SORT_AFTER = 20 * time.Minute // stop auto sotring if more than this much time passed since last request
 )
 
 var (
-	nextTxsPoolExpire time.Time = time.Now().Add(POOL_EXPIRE_INTERVAL)
-	BestT2S, WorstT2S *OneTxToSend
-	SortIndexStep     uint64 = 1e12 // this should be enough for 1 million txs - TODO: make it dynamic
-	sortingSupressed  bool
-	lastSortingDone   time.Time
-	SortListDirty     bool // means the BestT2S <--> WorstT2S list is useless and needs rebuilding
+	nextTxsPoolExpire    time.Time = time.Now().Add(POOL_EXPIRE_INTERVAL)
+	BestT2S, WorstT2S    *OneTxToSend
+	SortIndexStep        uint64 = 1e12 // this should be enough for 1 million txs - TODO: make it dynamic
+	sortingSupressed     bool
+	lastSortingRequested time.Time
+	SortListDirty        bool // means the BestT2S <--> WorstT2S list is useless and needs rebuilding
 
 	AddToSortTime  time.Duration // findFirstWorse is the most time consuming bit
 	AddToSortCount uint
@@ -62,7 +62,7 @@ func adjustSortIndexStep() {
 
 // make sure to call it with thr mutex locked
 func SortingDisabled() bool {
-	return sortingSupressed || time.Since(lastSortingDone) > STOP_AUTO_SORT_AFTER
+	return sortingSupressed || time.Since(lastSortingRequested) > STOP_AUTO_SORT_AFTER
 }
 
 // call it with false to restore sorting
@@ -423,9 +423,6 @@ func buildSortedList() {
 	}
 	common.CountSafe("TxSortBuildNeeded")
 	SortListDirty = false
-
-	lastSortingDone = time.Now()
-
 	ts := GetSortedMempoolSlow()
 	if len(ts) == 0 {
 		BestT2S, WorstT2S = nil, nil

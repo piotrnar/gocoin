@@ -106,6 +106,7 @@ func sortFeePackages() {
 func lookForPackages() {
 	defer sortFeePackages()
 	buildSortedList()
+	lastSortingRequested = time.Now()
 	if !FeePackagesDirty {
 		common.CountSafe("TxPkgsHaveThem")
 		return
