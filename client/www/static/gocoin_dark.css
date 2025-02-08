@@ -592,3 +592,13 @@ img.warning {
 	content:url("warning-white.png");
 	height:20px;
 }
+
+img.sort_icon {
+	content:url("sort-white.png");
+	height:16px;
+}
+
+img.nosort_icon {
+	content:url("nosort-white.png");
+	height:16px;
+}
