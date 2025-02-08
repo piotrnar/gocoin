@@ -570,7 +570,7 @@ func tx_pool_stats(par string) {
 	if txpool.SortIndexValid {
 		si2 = fmt.Sprintf("%06d <-> %06d", get_perc(txpool.SortIndexMin), get_perc(txpool.SortIndexMax))
 	} else {
-		si1 = "never used"
+		si2 = "never used"
 	}
 	fmt.Printf("SortIndexNow: %s   SortIndexEver: %s\n", si1, si2)
 	fmt.Printf("AddToSort happened %d times, taking %s total  (%s avg)\n", txpool.AddToSortCount, txpool.AddToSortTime.String(), get_avg_time(txpool.AddToSortTime, txpool.AddToSortCount))
