@@ -345,16 +345,16 @@ func (t *OneTxToSend) reindexDown(step uint64) {
 	defer func() {
 		if overflow {
 			common.CountSafe("TxSortReinCnt-OFW")
-			common.CountSafeAdd("TxSortReindex-OFW", cnt)
+			common.CountSafeAdd("TxSortReinRec-OFW", cnt)
 			reindexEverything()
 			return
 		}
 		if toend {
 			common.CountSafe("TxSortReinCnt-End")
-			common.CountSafeAdd("TxSortReindex-End", cnt)
+			common.CountSafeAdd("TxSortReinRec-End", cnt)
 		} else {
 			common.CountSafe("TxSortReinCnt-Mid")
-			common.CountSafeAdd("TxSortReindex-Mid", cnt)
+			common.CountSafeAdd("TxSortReinRec-Mid", cnt)
 		}
 	}()
 	index := t.SortRank
@@ -375,7 +375,7 @@ func (t *OneTxToSend) reindexDown(step uint64) {
 }
 
 func reindexEverything() {
-	common.CountSafe("TxSortREINDEX")
+	common.CountSafe("TxSortReindexAll")
 	adjustSortIndexStep()
 	index := uint64(SORT_START_INDEX)
 	for t := BestT2S; t != nil; t = t.Worse {
@@ -740,7 +740,9 @@ func GetSortedMempool() (result []*OneTxToSend) {
 
 // call it with the mutex locked
 func buildSortedList() {
-	common.CountSafePar("TxSortBuild-", SortingSupressed)
+	if SortingSupressed {
+		common.CountSafePar("TxSortBuildInSusp-", SortListDirty)
+	}
 	if !SortListDirty {
 		common.CountSafe("TxSortBuildSkept")
 		return
