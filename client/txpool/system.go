@@ -41,11 +41,11 @@ func (t2s *OneTxToSend) memInputsSet(newval []bool) {
 		return
 	}
 	var old_size, new_size int
-	if t2s.inPackages != nil {
+	if t2s.MemInputs != nil {
 		old_size = (cap(t2s.MemInputs) + 7) & ^7 // round the size up to the nearest 8 bytes
 	}
 	t2s.MemInputs = newval
-	if t2s.inPackages != nil {
+	if t2s.MemInputs != nil {
 		new_size = (cap(t2s.MemInputs) + 7) & ^7 // round the size up to the nearest 8 bytes
 	}
 	if old_size != new_size {
