@@ -560,7 +560,7 @@ func tx_pool_stats(par string) {
 	fmt.Printf("  Rejected used UTXOs: %d\n", len(txpool.RejectedUsedUTXOs))
 	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
 	fmt.Println()
-	fmt.Printf("SortingDisabled: %t,  SortIndexDirty: %t\n", txpool.SortingDisabled(), txpool.SortListDirty)
+	fmt.Printf("SortingDisabled: %t,  SortListDirty: %t\n", txpool.SortingDisabled(), txpool.SortListDirty)
 	var si1, si2 string
 	if txpool.BestT2S != nil && txpool.WorstT2S != nil {
 		si1 = fmt.Sprintf("%06d <-> %06d", get_perc(txpool.BestT2S.SortRank), get_perc(txpool.WorstT2S.SortRank))
