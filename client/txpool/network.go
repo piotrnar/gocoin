@@ -327,7 +327,6 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 func CheckForErrorsNow() {
 	if CheckForErrors() {
 		TxMutex.Lock()
-		checkSortedOK("Tick")
 		if MempoolCheck() {
 			println("Mempool check error inside the tick")
 			debug.PrintStack()
@@ -338,6 +337,8 @@ func CheckForErrorsNow() {
 }
 
 func Tick() {
-	ExpireOldTxs()
-	LimitRejected()
+	expireOldTxs()
+	limitRejected()
+	checkAutoSorting()
+	CheckForErrorsNow()
 }

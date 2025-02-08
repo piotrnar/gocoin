@@ -15,13 +15,16 @@ import (
 const (
 	SORT_START_INDEX     = uint64(1 << 62) // 1/4th of max uint64 value
 	POOL_EXPIRE_INTERVAL = time.Hour
+	STOP_AUTO_SORT_AFTER = 20 * time.Minute // stop auto sotring if more than this much time passed
 )
 
 var (
 	nextTxsPoolExpire time.Time = time.Now().Add(POOL_EXPIRE_INTERVAL)
 	BestT2S, WorstT2S *OneTxToSend
 	SortIndexStep     uint64 = 1e12 // this should be enough for 1 million txs - TODO: make it dynamic
+	commitingBlock    bool
 	SortingSupressed  bool
+	lastSortingDone   time.Time
 	SortListDirty     bool // means the BestT2S <--> WorstT2S list is useless and needs rebuilding
 
 	AddToSortTime  time.Duration // findFirstWorse is the most time consuming bit
@@ -44,10 +47,30 @@ func adjustSortIndexStep() {
 	SortIndexStep = (1 << 60) / uint64(2*cnt)
 }
 
+func checkAutoSorting() {
+	TxMutex.Lock()
+	if !SortingSupressed && time.Since(lastSortingDone) > STOP_AUTO_SORT_AFTER {
+		SortingSupressed = false
+		common.CountSafe("TxSortTurnOff")
+	}
+	TxMutex.Unlock()
+
+}
+
 // call it with false to restore sorting
 func BlockCommitInProgress(yes bool) {
 	TxMutex.Lock()
-	SortingSupressed = yes
+	commitingBlock = yes
+	if yes {
+		SortingSupressed = yes
+	} else if SortingSupressed {
+		// we will only enable sorting here if a sorting was done recently
+		if time.Since(lastSortingDone) < STOP_AUTO_SORT_AFTER {
+			SortingSupressed = false
+		} else {
+			common.CountSafe("TxSortTurnOffKeep")
+		}
+	}
 	TxMutex.Unlock()
 }
 
@@ -676,7 +699,7 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 	return
 }
 
-func ExpireOldTxs() {
+func expireOldTxs() {
 	if time.Now().Before(nextTxsPoolExpire) {
 		return
 	}
@@ -749,6 +772,15 @@ func buildSortedList() {
 	}
 	common.CountSafe("TxSortBuildNeeded")
 	SortListDirty = false
+
+	defer func() {
+		lastSortingDone = time.Now()
+		if !commitingBlock {
+			SortingSupressed = false
+			common.CountSafe("TxSortTurnOn")
+		}
+	}()
+
 	ts := GetSortedMempoolSlow()
 	if len(ts) == 0 {
 		BestT2S, WorstT2S = nil, nil

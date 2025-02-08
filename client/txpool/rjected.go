@@ -423,7 +423,7 @@ func resizeTransactionsRejectedCount(newcnt int) {
 	}
 }
 
-func LimitRejected() {
+func limitRejected() {
 	TxMutex.Lock()
 	defer TxMutex.Unlock()
 	if cnt := int(common.Get(&common.CFG.TXPool.RejectRecCnt)); cnt != len(TRIdxArray) {
