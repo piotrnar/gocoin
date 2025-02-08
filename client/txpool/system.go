@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	SYSIZE_COUNT_MEMINPUTS = false
+	SYSIZE_COUNT_MEMINPUTS = true
 	SYSIZE_COUNT_PACKAGES  = true
 )
 
