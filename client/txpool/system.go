@@ -7,13 +7,11 @@ import (
 func (t *OneTxToSend) SysSize() (size int) {
 	size = int(unsafe.Sizeof(*t))
 	size += t.Tx.SysSize()
-	/*  exclude these for now, to not trigger mempool check errors.
-	if t.InPackages != nil {
-		size += 8 * len(t.InPackages)
+	if t.inPackages != nil {
+		size += 8 * cap(t.inPackages)
 	}
-	*/
 	if t.MemInputs != nil {
-		size += (len(t.MemInputs) + 7) & ^7 // round the size up to the nearest 8 bytes
+		size += (cap(t.MemInputs) + 7) & ^7 // round the size up to the nearest 8 bytes
 	}
 	return
 }

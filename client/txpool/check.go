@@ -38,8 +38,8 @@ func dumpPkgListHere(f io.Writer) {
 	for _, pkg := range FeePackages {
 		fmt.Fprintln(f, "package", pkg.String(), "with", len(pkg.Txs), "txs:")
 		for _, t := range pkg.Txs {
-			fmt.Fprintln(f, "   *", t.Hash.String(), "  mic:", t.MemInputCnt, "  inpkgs:", len(t.InPackages))
-			for idx, pkg := range t.InPackages {
+			fmt.Fprintln(f, "   *", t.Hash.String(), "  mic:", t.MemInputCnt, "  inpkgs:", len(t.inPackages))
+			for idx, pkg := range t.inPackages {
 				fmt.Fprintln(f, "   ", idx, pkg.String())
 			}
 		}
@@ -134,7 +134,7 @@ func checkFeeList() bool {
 				println("    ...", t.Hash.String())
 				return true
 			}
-			if !slices.Contains(t.InPackages, pkg) {
+			if !slices.Contains(t.inPackages, pkg) {
 				println("ERROR: tx", idx, t.Id(), "in pkg", pkg.String(), "does not point back to the package")
 				return true
 			}
@@ -143,8 +143,8 @@ func checkFeeList() bool {
 
 	found_pkgs := make(map[*OneTxsPackage]bool, len(valid_pkgs))
 	for _, t2s := range TransactionsToSend {
-		if t2s.InPackages != nil {
-			for _, pkg := range t2s.InPackages {
+		if t2s.inPackages != nil {
+			for _, pkg := range t2s.inPackages {
 				if !valid_pkgs[pkg] {
 					println("ERROR: pkg", pkg.String(), "from t2s", t2s.Id(), "is not on the pkg list")
 					return true

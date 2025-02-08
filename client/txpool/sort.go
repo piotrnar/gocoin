@@ -65,7 +65,7 @@ func (t2s *OneTxToSend) AddToSort() {
 			WorstT2S, BestT2S = nil, nil
 		}
 		WorstT2S, BestT2S = t2s, t2s
-		t2s.Better, t2s.Worse = nil, nil
+		t2s.better, t2s.worse = nil, nil
 		return
 	}
 
@@ -73,7 +73,7 @@ func (t2s *OneTxToSend) AddToSort() {
 	if wpr := t2s.findWorstParent(); wpr == nil {
 		t2s.insertDownFromHere(BestT2S)
 	} else {
-		t2s.insertDownFromHere(wpr.Worse)
+		t2s.insertDownFromHere(wpr.worse)
 	}
 	AddToSortTime += time.Since(sta)
 	AddToSortCount++
@@ -85,12 +85,12 @@ func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 			t2s.insertBefore(wpr)
 			return
 		}
-		wpr = wpr.Worse
+		wpr = wpr.worse
 	}
 	// we reached the worst element - append it at the end
-	WorstT2S.Worse = t2s
-	t2s.Better = WorstT2S
-	t2s.Worse = nil
+	WorstT2S.worse = t2s
+	t2s.better = WorstT2S
+	t2s.worse = nil
 	t2s.SortRank = WorstT2S.SortRank + SortIndexStep
 	WorstT2S = t2s
 }
@@ -120,14 +120,14 @@ func (t2s *OneTxToSend) resortWithChildren() {
 	} else {
 		// now get the new worst parent
 		wpr := t2s.findWorstParent()
-		if wpr == t2s.Better {
+		if wpr == t2s.better {
 			goto do_the_children
 		}
 		// we may have to move it. first let's remove it from the index
 		if wpr == nil {
 			wpr = BestT2S // if there is no parent, we can go all the way to the top
-		} else if wpr.Worse != nil {
-			wpr = wpr.Worse // we must insert it after the worst parent (not before it)
+		} else if wpr.worse != nil {
+			wpr = wpr.worse // we must insert it after the worst parent (not before it)
 		}
 		if wpr.SortRank > t2s.SortRank {
 			// we have to move it down the list as our parent is now below us
@@ -137,7 +137,7 @@ func (t2s *OneTxToSend) resortWithChildren() {
 		} else {
 			// our parent is above us - we can only move up the list
 			// first check if we can move it at all
-			one_above_us := t2s.Better
+			one_above_us := t2s.better
 			if CheckForErrors() && one_above_us == nil {
 				println("ERROR: we have a parent but we are on top")
 				goto do_the_children
@@ -162,7 +162,7 @@ func (t2s *OneTxToSend) resortWithChildren() {
 					common.CountSafe("TxSortImporveA")
 					goto do_the_children // we cannot move even by one, so stop trying
 				}
-				wpr = wpr.Worse
+				wpr = wpr.worse
 			}
 			// we reached one above os which we already know that we can skip
 			common.CountSafe("TxSortImporveB")
@@ -216,8 +216,8 @@ func (t2s *OneTxToSend) DelFromSort() {
 		if t2s == WorstT2S {
 			BestT2S, WorstT2S = nil, nil
 		} else {
-			BestT2S = BestT2S.Worse
-			BestT2S.Better = nil
+			BestT2S = BestT2S.worse
+			BestT2S.better = nil
 		}
 		return
 	}
@@ -225,38 +225,38 @@ func (t2s *OneTxToSend) DelFromSort() {
 		if t2s == BestT2S {
 			BestT2S, WorstT2S = nil, nil
 		} else {
-			WorstT2S = WorstT2S.Better
-			WorstT2S.Worse = nil
+			WorstT2S = WorstT2S.better
+			WorstT2S.worse = nil
 		}
 		return
 	}
 	if CheckForErrors() {
-		if t2s.Worse == nil {
-			println("ERROR: t2s.Worse is nil but t2s was not WorstT2S", WorstT2S, BestT2S, t2s.Worse)
+		if t2s.worse == nil {
+			println("ERROR: t2s.Worse is nil but t2s was not WorstT2S", WorstT2S, BestT2S, t2s.worse)
 			debug.PrintStack()
 			os.Exit(1)
 		}
-		if t2s.Worse.Better != t2s {
-			println("ERROR: t2s.Worse.Better is not pointing to t2s", WorstT2S, BestT2S, t2s, t2s.Worse, t2s.Worse.Better)
+		if t2s.worse.better != t2s {
+			println("ERROR: t2s.Worse.Better is not pointing to t2s", WorstT2S, BestT2S, t2s, t2s.worse, t2s.worse.better)
 			debug.PrintStack()
 			os.Exit(1)
 		}
 	}
-	t2s.Worse.Better = t2s.Better
+	t2s.worse.better = t2s.better
 
 	if CheckForErrors() {
-		if t2s.Better == nil {
-			println("ERROR: t2s.Better is nil but t2s was not BestT2S", WorstT2S, BestT2S, t2s.Better)
+		if t2s.better == nil {
+			println("ERROR: t2s.Better is nil but t2s was not BestT2S", WorstT2S, BestT2S, t2s.better)
 			debug.PrintStack()
 			os.Exit(1)
 		}
-		if t2s.Better.Worse != t2s {
-			println("ERROR: t2s.Better.Worse is not pointing to t2s", WorstT2S, BestT2S, t2s, t2s.Better, t2s.Better.Worse)
+		if t2s.better.worse != t2s {
+			println("ERROR: t2s.Better.Worse is not pointing to t2s", WorstT2S, BestT2S, t2s, t2s.better, t2s.better.worse)
 			debug.PrintStack()
 			os.Exit(1)
 		}
 	}
-	t2s.Better.Worse = t2s.Worse
+	t2s.better.worse = t2s.worse
 }
 
 func (t2s *OneTxToSend) findWorstParent() (wpr *OneTxToSend) {
@@ -279,13 +279,13 @@ func (t2s *OneTxToSend) findWorstParent() (wpr *OneTxToSend) {
 func (t2s *OneTxToSend) insertBefore(wpr *OneTxToSend) {
 	if wpr == BestT2S {
 		BestT2S = t2s
-		t2s.Better = nil
+		t2s.better = nil
 	} else {
-		wpr.Better.Worse = t2s
-		t2s.Better = wpr.Better
+		wpr.better.worse = t2s
+		t2s.better = wpr.better
 	}
-	t2s.Worse = wpr
-	wpr.Better = t2s
+	t2s.worse = wpr
+	wpr.better = t2s
 	t2s.fixIndex()
 	updateSortWidthStats()
 }
@@ -303,40 +303,40 @@ func (t2s *OneTxToSend) idx() (cnt int) {
 */
 
 func (t2s *OneTxToSend) fixIndex() {
-	if t2s.Better == nil {
-		if t2s.Worse == nil {
+	if t2s.better == nil {
+		if t2s.worse == nil {
 			t2s.SortRank = SORT_START_INDEX
 			common.CountSafe("TxSortHadLot-A1")
 			return
 		}
-		if t2s.Worse.SortRank > SortIndexStep {
-			t2s.SortRank = t2s.Worse.SortRank - SortIndexStep
+		if t2s.worse.SortRank > SortIndexStep {
+			t2s.SortRank = t2s.worse.SortRank - SortIndexStep
 			common.CountSafe("TxSortHadLot-A2")
 			return
 		}
-		t2s.SortRank = t2s.Worse.SortRank / 2
-		if t2s.SortRank == t2s.Worse.SortRank {
+		t2s.SortRank = t2s.worse.SortRank / 2
+		if t2s.SortRank == t2s.worse.SortRank {
 			common.CountSafe("TxSortHNoLot-A3")
 			reindexEverything()
 			return
 		}
 	}
 
-	better_idx := t2s.Better.SortRank
-	if t2s.Worse == nil {
+	better_idx := t2s.better.SortRank
+	if t2s.worse == nil {
 		t2s.SortRank = better_idx + SortIndexStep
 		common.CountSafe("TxSortHadLot-B")
 		return
 	}
 
-	diff := t2s.Worse.SortRank - better_idx
+	diff := t2s.worse.SortRank - better_idx
 	if diff >= 2 {
 		t2s.SortRank = better_idx + diff/2
 		//common.CountSafe("TxSortHadLot-C")  <-- there would be too many of them
 		return
 	}
 
-	t2s.Better.reindexDown(SortIndexStep / 16)
+	t2s.better.reindexDown(SortIndexStep / 16)
 }
 
 func (t *OneTxToSend) reindexDown(step uint64) {
@@ -358,7 +358,7 @@ func (t *OneTxToSend) reindexDown(step uint64) {
 		}
 	}()
 	index := t.SortRank
-	for t = t.Worse; t != nil; t = t.Worse {
+	for t = t.worse; t != nil; t = t.worse {
 		new_index := index + step
 		if new_index < index {
 			overflow = true
@@ -378,7 +378,7 @@ func reindexEverything() {
 	common.CountSafe("TxSortReindexAll")
 	adjustSortIndexStep()
 	index := uint64(SORT_START_INDEX)
-	for t := BestT2S; t != nil; t = t.Worse {
+	for t := BestT2S; t != nil; t = t.worse {
 		t.SortRank = index
 		index += SortIndexStep
 	}
@@ -580,10 +580,10 @@ func lookForPackages() {
 	common.CountSafe("TxPkgsNeedThem")
 	sta := time.Now()
 	FeePackages = FeePackages[:0] // to avoid unneeded memory allocation, just reuse the old buffer
-	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
-		t2s.InPackages = nil // we have to do this first run only to reset InPackages field
+	for t2s := BestT2S; t2s != nil; t2s = t2s.worse {
+		t2s.inPackagesSet(nil) // we have to do this first run only to reset InPackages field
 	}
-	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
+	for t2s := BestT2S; t2s != nil; t2s = t2s.worse {
 		if t2s.MemInputCnt > 0 {
 			continue
 		}
@@ -593,7 +593,7 @@ func lookForPackages() {
 			for _, t := range pandch {
 				pkg.Weight += t.Weight()
 				pkg.Fee += t.Fee
-				t.InPackages = append(t.InPackages, pkg)
+				t.inPackagesSet(append(t.inPackages, pkg))
 			}
 			FeePackages = append(FeePackages, pkg)
 		}
@@ -610,7 +610,7 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 	result = make([]*OneTxToSend, len(TransactionsToSend))
 	var pks_idx, res_idx, cnt int
 	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
-	for tx := BestT2S; tx != nil; tx = tx.Worse {
+	for tx := BestT2S; tx != nil; tx = tx.worse {
 		cnt++
 		for pks_idx < len(FeePackages) {
 			if pk := FeePackages[pks_idx]; pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
@@ -645,7 +645,7 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 	var weightsofar uint64
 	result = make([][2]uint64, len(TransactionsToSend))
 	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
-	for tx := BestT2S; tx != nil && weightsofar < maxweight; tx = tx.Worse {
+	for tx := BestT2S; tx != nil && weightsofar < maxweight; tx = tx.worse {
 		for pks_idx < len(FeePackages) {
 			pk := FeePackages[pks_idx]
 			if pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
@@ -728,7 +728,7 @@ func GetSortedMempool() (result []*OneTxToSend) {
 
 	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
 	var prv_idx uint64
-	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
+	for t2s := BestT2S; t2s != nil; t2s = t2s.worse {
 		if CheckForErrors() && (prv_idx != 0 && prv_idx >= t2s.SortRank) {
 			println("ERROR: GetSortedMempool corupt sort index", len(TransactionsToSend), prv_idx, t2s.SortRank)
 		}
@@ -742,6 +742,9 @@ func GetSortedMempool() (result []*OneTxToSend) {
 func buildSortedList() {
 	if SortingSupressed {
 		common.CountSafePar("TxSortBuildInSusp-", SortListDirty)
+		println("SortingSupressed in buildSortedList():")
+		debug.PrintStack()
+		println()
 	}
 	if !SortListDirty {
 		common.CountSafe("TxSortBuildSkept")
@@ -757,18 +760,18 @@ func buildSortedList() {
 	}
 	var SortIndex uint64
 	BestT2S, WorstT2S = ts[0], ts[0]
-	BestT2S.Better, BestT2S.Worse = nil, nil
-	WorstT2S.Better, WorstT2S.Worse = nil, nil
+	BestT2S.better, BestT2S.worse = nil, nil
+	WorstT2S.better, WorstT2S.worse = nil, nil
 	SortIndex = SORT_START_INDEX
 	BestT2S.SortRank = SortIndex
 	adjustSortIndexStep()
 	for _, t2s := range ts[1:] {
 		SortIndex += SortIndexStep
 		t2s.SortRank = SortIndex
-		t2s.Better = WorstT2S
-		WorstT2S.Worse = t2s
+		t2s.better = WorstT2S
+		WorstT2S.worse = t2s
 		WorstT2S = t2s
 	}
-	WorstT2S.Worse = nil
+	WorstT2S.worse = nil
 	updateSortWidthStats()
 }
