@@ -77,7 +77,7 @@ var (
 			Enabled        bool // Global on/off swicth
 			AllowMemInputs bool
 			FeePerByte     float64
-			MaxTxSize      uint32
+			MaxTxWeight    uint32
 			MaxSizeMB      uint
 			ExpireInDays   uint
 			MaxRejectMB    float64
@@ -85,13 +85,14 @@ var (
 			RejectRecCnt   uint16
 			SaveOnDisk     bool
 			NotFullRBF     bool
+			HoldSorting    bool // during block commit
 			CheckErrors    bool
 		}
 		TXRoute struct {
-			Enabled    bool // Global on/off swicth
-			FeePerByte float64
-			MaxTxSize  uint32
-			MemInputs  bool
+			Enabled     bool // Global on/off swicth
+			FeePerByte  float64
+			MaxTxWeight uint32
+			MemInputs   bool
 		}
 		Memory struct {
 			GCPercTrshold        int
@@ -183,18 +184,19 @@ func InitConfig() {
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
 	CFG.TXPool.FeePerByte = 1.0
-	CFG.TXPool.MaxTxSize = 100e3
+	CFG.TXPool.MaxTxWeight = 400e3
 	CFG.TXPool.MaxSizeMB = 300
 	CFG.TXPool.ExpireInDays = 14
 	CFG.TXPool.MaxRejectMB = 25.0
 	CFG.TXPool.MaxNoUtxoMB = 5.0
 	CFG.TXPool.RejectRecCnt = 20000
 	CFG.TXPool.SaveOnDisk = true
+	CFG.TXPool.HoldSorting = true
 
 	CFG.TXRoute.Enabled = true
 	CFG.TXRoute.FeePerByte = 0.0
-	CFG.TXRoute.MaxTxSize = 100e3
-	CFG.TXRoute.MemInputs = true
+	CFG.TXRoute.MaxTxWeight = 400e3
+	CFG.TXRoute.MemInputs = false
 
 	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)
 	CFG.Memory.MaxCachedBlks = 200
@@ -411,6 +413,7 @@ func Reset() {
 	}
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
 	atomic.StoreUint64(&cfgFeePerKB, MinFeePerKB())
+	CheckForMempoolErrors.Store(CFG.TXPool.CheckErrors)
 
 	atomic.StoreUint64(&cfgRouteMinFeePerKB, uint64(CFG.TXRoute.FeePerByte*1000))
 

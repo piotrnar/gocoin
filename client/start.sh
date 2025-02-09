@@ -2,7 +2,7 @@
 
 while true; do
 	./client
-	if [ $? -ne 2 ]; then
+	if [ $? -ne 66 ]; then
 		break
 	fi
 done

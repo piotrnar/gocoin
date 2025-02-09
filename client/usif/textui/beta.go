@@ -108,6 +108,13 @@ func sort_test(par string) {
 	txpool.TxMutex.Lock()
 	defer txpool.TxMutex.Unlock()
 
+	println("Doing mempool check first")
+	if txpool.MempoolCheck() {
+		println("Mempool check failed. Aborting.")
+		return
+	}
+	println("Mempool looks OK")
+
 	sta := time.Now()
 	tx1 := txpool.GetSortedMempoolSlow()
 	tim1 := time.Since(sta)
@@ -120,7 +127,8 @@ func sort_test(par string) {
 	tx3 := txpool.GetSortedMempoolRBF()
 	tim3 := time.Since(sta)
 
-	println("Execution times:", tim1.String(), tim2.String(), tim3.String())
+	println("Three sorted txs lists acquired.")
+	println("Execution times  1-Slow:", tim1.String(), "  2-Fast:", tim2.String(), "  3-RBF:", tim3.String())
 
 	if len(tx1) != len(tx2) || len(tx1) != len(tx3) {
 		println("Transaction count mismatch:", len(tx1), len(tx2), len(tx3))
@@ -128,28 +136,25 @@ func sort_test(par string) {
 	}
 	println("All lists have", len(tx1), "txs each")
 
-	txpool.VerifyMempoolSort(tx1)
-	txpool.VerifyMempoolSort(tx2)
-	txpool.VerifyMempoolSort(tx3)
-	println("Correct sorting verification complete")
+	v1 := txpool.VerifyMempoolSort(tx1)
+	v2 := txpool.VerifyMempoolSort(tx1)
+	v3 := txpool.VerifyMempoolSort(tx1)
+	if v1 || v2 || v3 {
+		println("1st list verify error:", v1)
+		println("2nd list verify error:", v2)
+		println("3rd list verify error:", v3)
+		return
+	} else {
+		println("All lists verified OK")
+	}
 
 	for i := range tx1 {
 		if tx1[i] != tx2[i] {
-			println("The two lists become different at index", i)
-			if par == "save" {
-				println("Saving both the lists")
-				DumpTxList("Old", "txs_old_sort.log", tx1)
-				DumpTxList("New", "txs_new_sort.log", tx2)
-			}
+			println("The first two lists become different at index", i, "(but that is normal)")
 			return
 		}
 	}
-	println("Both lists are identical")
-
-	if par == "save" {
-		println("Saving the sorted list")
-		DumpTxList("Good", "txs_sorted.log", tx1)
-	}
+	println("The first two lists are identical (confirms sort index OK)")
 }
 
 func show_tdepends(s string) {
@@ -185,7 +190,7 @@ func DumpTxList(label, fn string, txs []*txpool.OneTxToSend) {
 		fmt.Fprintln(f, label+" sorting:")
 		for i, t := range txs {
 			fmt.Fprintf(f, "%6d)  ptr:%p  spb:%.4f  memins:%d  bidx:%s  idx:%d\n", i+1, t,
-				t.SPB(), t.MemInputCnt, btc.BIdxString(t.Hash.BIdx()), t.SortIndex)
+				t.SPB(), t.MemInputCnt, btc.BIdxString(t.Hash.BIdx()), t.SortRank)
 			for i, yes := range t.MemInputs {
 				if yes {
 					bbi := btc.BIdx(t.TxIn[i].Input.Hash[:])
@@ -203,6 +208,6 @@ func DumpTxList(label, fn string, txs []*txpool.OneTxToSend) {
 func init() {
 	newUi("newblock nb", false, new_block, "Build a new block")
 	newUi("txchild ch", false, gettxchildren, "show all mempool children of the given: <txid>")
-	newUi("txsortest tt", false, sort_test, "Test the enw tx sprting functionality: [list]")
+	newUi("txsortest tt", false, sort_test, "Test the new tx sorting functionality")
 	newUi("txdepends tdep", false, show_tdepends, "Show txt dependant on this one")
 }

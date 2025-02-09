@@ -211,7 +211,7 @@ func newOneTxToSendFromFile(rd io.Reader, file_version int) (t2s *OneTxToSend, e
 	t2s.Local = tmp[0] != 0
 	t2s.Blocked = tmp[1]
 	if tmp[2] != 0 {
-		t2s.MemInputs = make([]bool, len(t2s.TxIn))
+		t2s.MemInputs = make([]bool, len(t2s.TxIn)) // do not use memInputsSet() here as we calc footprint later
 	}
 	t2s.Final = tmp[3] != 0
 	return
@@ -252,6 +252,7 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 			return
 		}
 		txr.SetHash(raw)
+		txr.SetHash(raw) // this will update the sizes and wtxid
 	} else if txr.Waiting4 != nil {
 		println("WARNING: RejectedTx", txr.Id.String(), "was waiting for inputs, but has no data")
 		txr.Waiting4 = nil
@@ -285,7 +286,7 @@ func MempoolLoad() bool {
 		goto fatal_error
 	}
 	if !bytes.Equal(tmp[:32], common.Last.Block.BlockHash.Hash[:]) {
-		er = errors.New(MEMPOOL_FILE_NAME + " is for different last block hash (try to load it with 'mpl' command)")
+		er = errors.New(MEMPOOL_FILE_NAME + " is for different last block hash")
 		goto fatal_error
 	}
 
@@ -382,8 +383,7 @@ func MempoolLoad() bool {
 			}
 			if t2s.MemInputCnt == 0 {
 				println("ERROR: MemInputs not nil but nothing found")
-				t2s.MemInputs = nil
-				t2s.Footprint = uint32(t2s.SysSize())
+				t2s.memInputsSet(nil)
 			}
 		}
 	}
@@ -394,10 +394,11 @@ func MempoolLoad() bool {
 		fmt.Println("Additionally loaded", len(TransactionsRejected), "rejected transactions taking", TransactionsRejectedSize, "bytes")
 	}
 
-	buildSortedList()
-	//println("***Remove this: Mempool error after loading:", MempoolCheck())
+	FeePackagesDirty = true
+	SortListDirty = true
+	//lookForPackages() <- not now, it will get called automatically when first needed
 
-	if common.Get(&common.CFG.TXPool.CheckErrors) {
+	if CheckForErrors() {
 		if MempoolCheck() {
 			println("ERROR: TXPool not OK after loading. Start the client with -mp0 to recover.")
 			os.Exit(1)

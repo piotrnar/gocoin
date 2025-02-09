@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/txpool"
@@ -51,7 +52,7 @@ func (c *OneConnection) SendGetMP() error {
 
 // TxInvNotify handles tx-inv notifications.
 func (c *OneConnection) TxInvNotify(hash []byte) {
-	if txpool.NeedThisTx(btc.NewUint256(hash), nil) {
+	if txpool.NeedThisTxExt(btc.NewUint256(hash), nil) == 0 {
 		var b [1 + 4 + 32]byte
 		b[0] = 1                                              // One inv
 		binary.LittleEndian.PutUint32(b[1:5], MSG_WITNESS_TX) // SegWit Tx
@@ -60,7 +61,41 @@ func (c *OneConnection) TxInvNotify(hash []byte) {
 	}
 }
 
-func txPoolCB(conid uint32, info int, par interface{}) (res int) {
+func isRoutable(rec *txpool.OneTxToSend) (yes bool, spkb uint64) {
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
+
+	if !common.CFG.TXRoute.Enabled {
+		common.CountSafe("TxRouteDisabled")
+		rec.Blocked = txpool.TX_REJECTED_DISABLED
+		return
+	}
+	if rec.Local {
+		common.CountSafe("TxRouteLocal")
+		return
+	}
+	if rec.MemInputCnt > 0 && !common.Get(&common.CFG.TXRoute.MemInputs) {
+		common.CountSafe("TxRouteNotMined")
+		rec.Blocked = txpool.TX_REJECTED_NOT_MINED
+		return
+	}
+
+	if rec.Weight() > int(common.Get(&common.CFG.TXRoute.MaxTxWeight)) {
+		common.CountSafe("TxRouteTooBig")
+		rec.Blocked = txpool.TX_REJECTED_TOO_BIG
+		return
+	}
+	spkb = 4000 * rec.Fee / uint64(rec.Weight())
+	if spkb < common.RouteMinFeePerKB() {
+		common.CountSafe("TxRouteLowFee")
+		rec.Blocked = txpool.TX_REJECTED_LOW_FEE
+		return
+	}
+	yes = true
+	return
+}
+
+func txPoolCB(conid uint32, result byte, t2s *txpool.OneTxToSend) {
 	Mutex_net.Lock()
 	c := GetConnFromID(conid)
 	Mutex_net.Unlock()
@@ -69,27 +104,29 @@ func txPoolCB(conid uint32, info int, par interface{}) (res int) {
 		return
 	}
 
-	if info == txpool.FEEDBACK_TX_ROUTABLE {
-		p := par.(*txpool.FeedbackRoutable)
-		res = int(NetRouteInvExt(MSG_TX, p.TxID, c, p.SPKB))
+	if result != 0 {
+		if result == txpool.TX_REJECTED_OVERSPEND {
+			c.DoS("TxOversend")
+		} else if result == txpool.TX_REJECTED_SCRIPT_FAIL {
+			c.DoS("TxScriptFail")
+		} else {
+			c.Mutex.Lock()
+			c.cntInc(fmt.Sprint("TxRej", result))
+			c.Mutex.Unlock()
+		}
 		return
 	}
 
-	if info == txpool.FEEDBACK_TX_ACCEPTED {
-		c.Mutex.Lock()
-		c.txsCha[c.txsCurIdx]++
-		c.X.TxsReceived++
-		c.Mutex.Unlock()
-		return
-	}
+	c.Mutex.Lock()
+	c.txsCha[c.txsCurIdx]++
+	c.X.TxsReceived++
+	c.Mutex.Unlock()
 
-	if info == txpool.FEEDBACK_TX_BAD {
-		c.DoS(par.(string))
-		return
+	if yes, spkb := isRoutable(t2s); yes {
+		if cnt := NetRouteInvExt(MSG_TX, &t2s.Hash, c, spkb); cnt > 0 {
+			atomic.AddUint32(&t2s.Invsentcnt, 1)
+		}
 	}
-
-	println("ERROR: unhandled txPoolCB command", info)
-	return
 }
 
 // ParseTxNet handles incoming "tx" messages.
@@ -110,12 +147,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 
 	tx.SetHash(pl)
 
-	if tx.Weight() > 4*int(common.Get(&common.CFG.TXPool.MaxTxSize)) {
-		txpool.RejectTx(tx, txpool.TX_REJECTED_TOO_BIG, nil)
-		return
-	}
-
-	txpool.NeedThisTx(&tx.Hash, func() {
+	txpool.NeedThisTxExt(&tx.Hash, func() {
 		// This body is called with a locked TxMutex
 		tx.Raw = pl
 		select {
@@ -153,7 +185,7 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 	var redo [1]byte
 
 	txpool.TxMutex.Lock()
-	txs := txpool.GetSortedMempool() // we want to send parent txs first, thus the sorting
+	txs := txpool.GetSortedMempoolRBF() // we want to send parent txs first, thus the sorting
 	for _, v := range txs {
 		c.Mutex.Lock()
 		bts := c.BytesToSent()

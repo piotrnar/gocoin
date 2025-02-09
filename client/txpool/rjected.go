@@ -46,17 +46,19 @@ type OneWaitingList struct {
 }
 
 const (
-	TX_REJECTED_DISABLED = 1 // Only used for transactions in TransactionsToSend for Blocked field
+	TX_REJECTED_DISABLED    = 1 // Only used for transactions in TransactionsToSend for Blocked field
+	TX_REJECTED_NOT_PENDING = 2
 
 	TX_REJECTED_TOO_BIG      = 101
 	TX_REJECTED_FORMAT       = 102
 	TX_REJECTED_LEN_MISMATCH = 103
 	TX_REJECTED_EMPTY_INPUT  = 104
 
-	TX_REJECTED_OVERSPEND = 154
-	TX_REJECTED_BAD_INPUT = 157
+	TX_REJECTED_OVERSPEND   = 154
+	TX_REJECTED_BAD_INPUT   = 157
+	TX_REJECTED_SCRIPT_FAIL = 158
 
-	TX_REJECTED_DATA_PURGED = 199
+	TX_REJECTED_DATA_PURGED = 200
 
 	// Anything from the list below might eventually get mined
 	TX_REJECTED_NO_TXOU     = 202
@@ -102,7 +104,7 @@ func TRIdIsZeroArrayRec(idx int) bool {
 // Make sure to call it with locked TxMutex.
 func AddRejectedTx(txr *OneTxRejected) {
 	bidx := txr.Id.BIdx()
-	if common.Get(&common.CFG.TXPool.CheckErrors) {
+	if CheckForErrors() {
 		if _, ok := TransactionsRejected[bidx]; ok {
 			println("ERROR: AddRejectedTx: TxR", txr.Id.String(), "is already on the list")
 			return
@@ -133,9 +135,8 @@ func AddRejectedTx(txr *OneTxRejected) {
 			WaitingForInputs[txr.Waiting4.BIdx()] = rec
 			WaitingForInputsSize += uint64(txr.Footprint)
 		}
-		TransactionsRejectedSize += uint64(txr.Footprint)
 	}
-
+	TransactionsRejectedSize += uint64(txr.Footprint)
 	limitRejectedSizeIfNeeded()
 }
 
@@ -190,7 +191,7 @@ func (tr *OneTxRejected) cleanup() {
 					RejectedUsedUTXOs[uidx] = newref
 					common.CountSafe("TxUsedUTXOrem")
 				}
-			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+			} else if CheckForErrors() {
 				println("ERROR: TxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
 			}
 		}
@@ -212,10 +213,10 @@ func (tr *OneTxRejected) cleanup() {
 				} else {
 					w4i.Ids = newlist
 				}
-			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+			} else if CheckForErrors() {
 				println("ERROR: WaitingForInputs record", tr.Waiting4.String(), "did not point back to txr", tr.Id.String())
 			}
-		} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+		} else if CheckForErrors() {
 			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String(), "from txr", tr.Id.String())
 		}
 		WaitingForInputsSize -= uint64(tr.Footprint)
@@ -253,17 +254,18 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 }
 
 // Make sure to call it with locked TxMutex
-func RetryWaitingForInput(wtg *OneWaitingList) {
+func retryWaitingForInput(wtg *OneWaitingList) {
 	for _, k := range wtg.Ids {
 		txr := TransactionsRejected[k]
 		if txr.Tx == nil {
 			println(fmt.Sprintf("ERROR: txr %s %d in w4i rec %16x, but data is nil (its w4prt:%p)", txr.Id.String(), txr.Reason, k, txr.Waiting4))
 			continue
 		}
+		DeleteRejectedByIdx(k)
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
-		if HandleNetTx(pendtxrcv, true) {
+		if res, _ := processTx(pendtxrcv); res == 0 {
 			common.CountSafe("TxRetryAccepted")
-			if common.Get(&common.CFG.TXPool.CheckErrors) {
+			if CheckForErrors() {
 				if txr, ok := TransactionsRejected[k]; ok {
 					println("ERROR: tx", txr.Id.String(), "accepted but still in rejected")
 				}
@@ -292,6 +294,8 @@ func ReasonToString(reason byte) string {
 		return ""
 	case TX_REJECTED_DISABLED:
 		return "RELAY_OFF"
+	case TX_REJECTED_NOT_PENDING:
+		return "NOT_PENDING"
 	case TX_REJECTED_TOO_BIG:
 		return "TOO_BIG"
 	case TX_REJECTED_FORMAT:
@@ -330,7 +334,7 @@ func ReasonToString(reason byte) string {
 
 func limitRejectedSizeIfNeeded() {
 	if len(GetMPInProgressTicket) != 0 {
-		return // don't do it during mpget as there always are many short lived NO_TXOU
+		return // don't do it during mpget as there may be many short lived NO_TXOU
 	}
 
 	max := atomic.LoadUint64(&common.MaxNoUtxoSizeBytes)
@@ -419,7 +423,7 @@ func resizeTransactionsRejectedCount(newcnt int) {
 	}
 }
 
-func LimitRejected() {
+func limitRejected() {
 	TxMutex.Lock()
 	defer TxMutex.Unlock()
 	if cnt := int(common.Get(&common.CFG.TXPool.RejectRecCnt)); cnt != len(TRIdxArray) {

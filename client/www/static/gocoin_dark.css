@@ -105,6 +105,14 @@ pre#rawdiv {
 	font-size:85%
 }
 
+div.rawdatalabel {
+	width:100%;
+	text-align:center;
+	font-size:12px;
+	font-weight:bold;
+	margin-bottom:5px;
+}
+
 textarea#txhexdump {
 	background-color:#222222;
 	color:#aaaaaa;
@@ -313,7 +321,8 @@ div.white_content {
 	left: 10%;
 	width: 80%;
 	height: 80%;
-	border: 5px solid #cccccc;
+	padding: 8px;
+	border: 5px solid #222222;
 	background-color: black;
 	z-index:1002;
 	overflow: auto;
@@ -582,4 +591,14 @@ img.qrcode {
 img.warning {
 	content:url("warning-white.png");
 	height:20px;
+}
+
+img.sort_icon {
+	content:url("sort-white.png");
+	height:16px;
+}
+
+img.nosort_icon {
+	content:url("nosort-white.png");
+	height:16px;
 }

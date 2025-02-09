@@ -29,9 +29,8 @@ import (
 )
 
 var (
-	retryCachedBlocks   bool
-	SaveBlockChain      *time.Timer = time.NewTimer(1<<63 - 1)
-	reenableMempoolSort *time.Timer = time.NewTimer(1<<63 - 1)
+	retryCachedBlocks bool
+	SaveBlockChain    *time.Timer = time.NewTimer(1<<63 - 1)
 
 	NetBlocksSize sys.SyncInt
 
@@ -101,10 +100,10 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl.LastKnownHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
 
-	reenableMempoolSort.Stop()
-	txpool.SupressMempooolSorting(true)
+	txpool.BlockCommitInProgress(common.Get(&common.CFG.TXPool.HoldSorting))
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
-	reenableMempoolSort.Reset(ReenableMempoolSorting) // if we receive no new block within the next second
+	txpool.CheckForErrorsNow()
+	txpool.BlockCommitInProgress(false)
 	if bl.LastKnownHeight-bl.Height > common.Get(&common.CFG.Memory.MaxCachedBlks) {
 		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused
 	}
@@ -454,7 +453,7 @@ func main() {
 		fmt.Println("WARNING: Gocoin client shall be build for 64-bit arch. It will likely crash now.")
 	}
 
-	fmt.Println("Gocoin client version", gocoin.Version)
+	fmt.Println("Gocoin client version", gocoin.Version, " PID", os.Getpid())
 
 	// Disable Ctrl+C
 	signal.Notify(common.KillChan, os.Interrupt, syscall.SIGTERM)
@@ -583,7 +582,7 @@ func main() {
 
 			case newtx := <-network.NetTxs:
 				common.CountSafe("DoMainNetTx")
-				txpool.HandleNetTx(newtx, false)
+				txpool.HandleNetTx(newtx)
 
 			case <-netTick:
 				common.CountSafe("DoMainNetTick")
@@ -681,15 +680,10 @@ func main() {
 					common.CountSafe("ChainIdleUsed")
 				}
 
-			case <-reenableMempoolSort.C:
-				common.Busy()
-				common.CountSafe("TxSortReEnable")
-				txpool.SupressMempooolSorting(false)
-
 			case newtx := <-network.NetTxs:
 				common.Busy()
 				common.CountSafe("MainNetTx")
-				txpool.HandleNetTx(newtx, false)
+				txpool.HandleNetTx(newtx)
 
 			case <-netTick:
 				common.Busy()
@@ -780,6 +774,6 @@ func main() {
 	os.RemoveAll(common.TempBlocksDir())
 
 	if usif.Restart.Get() {
-		os.Exit(2)
+		os.Exit(66)
 	}
 }

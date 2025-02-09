@@ -136,6 +136,10 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 		<b title="UTXOs spent in memory" id="outspent" style="font-weight:bold"></b>
 		&nbsp;&bull;&nbsp;
 		<b title="Minimum SPB" id="min_spb" style="font-weight:bold"></b> spb
+		&nbsp;
+		<span style="float:right;">
+			<img id="sorting_icon" class="sort_icon">
+		</span>
 	<tr><td>Pending Data:<td><b id="si_net_tx_qsize"></b> txs,
 		&nbsp;<b id="si_net_block_qsize"></b> blocks,
 		&nbsp;<b id="si_blocks_cached"></b> <span id="si_blocks_cached_label"></span>,
@@ -537,6 +541,16 @@ function refreshtxstat() {
 			ts_tre_size.innerText = bignum(ts.tre_size)+'B'
 			ts_tre_size.title = ts.tre_cnt + ' txs rejected'
 			min_spb.innerText = (ts.min_fee_per_kb/1000.0).toFixed(1)
+			var mpf = ''
+			if (ts.sorting_list_dirty) mpf += ' SD'
+			if (ts.fee_packages_dirty) mpf += ' PD'
+			if (ts.sorting_disabled) {
+				sorting_icon.className = "nosort_icon"
+				sorting_icon.title = "Auto sorting on hold" + mpf
+			} else {
+				sorting_icon.className = "sort_icon"
+				sorting_icon.title = "Auto sorting in progress" + mpf
+			}
 		} catch(e) {
 			console.log(e)
 		}

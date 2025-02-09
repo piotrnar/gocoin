@@ -18,6 +18,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/peersdb"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -417,7 +418,15 @@ func purge_utxo(par string) {
 }
 
 func undo_block(par string) {
+	println("Undoing block...")
+	if par == "slow" {
+		println("Slow mode ON")
+	} else {
+		txpool.BlockCommitInProgress(true)
+	}
 	common.BlockChain.UndoLastBlock()
+	txpool.BlockCommitInProgress(false)
+	println("Block un-DONE")
 	common.Last.Mutex.Lock()
 	common.Last.Block = common.BlockChain.LastBlock()
 	common.UpdateScriptFlags(0)
@@ -437,12 +446,12 @@ func redo_block(par string) {
 	sta := time.Now()
 	nxt := last.FindPathTo(end)
 	if nxt == nil {
-		println("ERROR: FindPathTo failed")
+		println("FindPathTo failed")
 		return
 	}
 
 	if nxt.BlockSize == 0 {
-		println("ERROR: BlockSize is zero - corrupt database")
+		println("BlockSize is zero - block not downloaded yet or corrupt database")
 		return
 	}
 
@@ -480,7 +489,7 @@ func redo_block(par string) {
 
 func kill_node(par string) {
 	if par != "" && par[0] == 'r' {
-		os.Exit(2)
+		os.Exit(66)
 	}
 	os.Exit(1)
 }
@@ -503,7 +512,7 @@ func init() {
 	newUi("redo", true, redo_block, "Redo last block")
 	newUi("savebl bls", false, dump_block, "Saves a block to disk: <hash>")
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
-	newUi("trust t", true, switch_trust, "Assume all downloaded blocks trusted: 0|1")
+	newUi("trust", true, switch_trust, "Assume all downloaded blocks trusted: 0|1")
 	newUi("undo", true, undo_block, "Undo one last block")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
 }

@@ -85,7 +85,8 @@ var (
 	Memory   memory.Allocator
 	MemMutex sync.Mutex
 
-	NoCounters sys.SyncBool
+	NoCounters            sys.SyncBool
+	CheckForMempoolErrors sys.SyncBool
 
 	SyncMaxCacheBytes sys.SyncInt
 )

@@ -1,4 +1,5 @@
 <style>
+td.gennam {}
 td.genval {text-align:right}
 td.txsval {text-align:right}
 td.netcnt {text-align:right}
@@ -11,8 +12,27 @@ div.tablab {
 <div id="nocounters_message" style="display:none">
 	<br>
 	Counters disabled in the config file (<code>Stats.NoCounters</code>)</div>
-<table width="100%" id="counters_table" style="display:none">
+<table width="100%" id="counters_table" style="display:none" border="0">
 <tr>
+<td valign="top" align="left" colspan="2">
+	<span onclick="cnts_combine_groups.click()" class="hand" title="Combine similar counters">
+	<input type="checkbox" id="cnts_combine_groups" onchange="type_changed()"
+		onclick="event.stopPropagation()"> Combine
+	</span>
+</td>
+<td valign="top" align="right" colspan="3">
+	<span onclick="cnts_type_gen.click()" class="hand" title="Show Generic counters">
+	<input type="radio" name="cnts_type" id="cnts_type_gen" onchange="type_changed()" checked
+		onclick="event.stopPropagation()"> Generic
+	</span>
+	<span onclick="cnts_type_net.click()" class="hand" title="Show Network counters">
+	<input type="radio" name="cnts_type" id="cnts_type_net" onchange="type_changed()"
+		onclick="event.stopPropagation()"> Network
+	</span>
+</tr>
+</tr>
+
+<tr id="gen_stats_row" style="display:table-row">
 <td valign="top" align="center">
 	<div class="tablab">Generic counters A</div>
 	<table class="mono bord" width="100%" id="tab_gen_a">
@@ -20,7 +40,6 @@ div.tablab {
 		<th>Counter
 		<th>Value
 	</tr>
-	<!--GEN_ROW-->
 	</table>
 </td>
 <td valign="top" align="center">
@@ -30,22 +49,41 @@ div.tablab {
 		<th>Counter
 		<th>Value
 	</tr>
-	<!--GEN_ROW-->
 	</table>
 </td>
 <td valign="top" align="center">
-	<div class="tablab">Transaction counters</div>
-	<table class="mono bord" width="100%" id="tab_txs">
+	<div class="tablab">Tx generic</div>
+	<table class="mono bord" width="100%" id="tab_txs_a">
 	<tr>
 		<th>Counter
 		<th>Value
 	</tr>
-	<!--TXS_ROW-->
 	</table>
 </td>
 <td valign="top" align="center">
-	<div class="tablab">Network counters</div>
-	<table class="mono bord" width="100%" id="tab_net">
+	<div class="tablab">Tx packages</div>
+	<table class="mono bord" width="100%" id="tab_txs_b">
+	<tr>
+		<th>Counter
+		<th>Value
+	</tr>
+	</table>
+</td>
+<td valign="top" align="center">
+	<div class="tablab">Tx sorting</div>
+	<table class="mono bord" width="100%" id="tab_txs_c">
+	<tr>
+		<th>Counter
+		<th>Value
+	</tr>
+	</table>
+</td>
+</tr>
+
+<tr id="net_stats_row" style="display:none">
+<td valign="top" align="center" colspan="5">
+	<div class="tablab">Network commands</div>
+	<table class="mono bord" width="400" id="tab_net">
 	<tr>
 		<th rowspan="2">Network Message
 		<th colspan="2">Received
@@ -57,23 +95,108 @@ div.tablab {
 		<th>Times
 		<th>Bytes
 	</tr>
-	<!--NET_ROW-->
     </table>
 </td>
 </tr>
 </table>
 <script>
-function make_clickable(el) {
-	var s = el.innerText
+function type_changed() {
+	if (cnts_type_gen.checked) {
+		net_stats_row.style.display = 'none'
+		gen_stats_row.style.display = 'table-row'
+		localStorage.setItem("counters_view_type", "gen")
+
+		cnts_combine_groups.disabled = false
+		localStorage.setItem("counters_combine_groups", cnts_combine_groups.checked)
+		css('tr.cnt_combined', 'display', cnts_combine_groups.checked?'table-row':'none')
+		css('tr.cnt_expanded', 'display', cnts_combine_groups.checked?'none':'table-row')
+	} else {
+		net_stats_row.style.display = 'table-row'
+		gen_stats_row.style.display = 'none'
+		localStorage.setItem("counters_view_type", "net")
+		cnts_combine_groups.disabled = true
+	}
+
+}
+
+function group_only(s) {
 	var dashpos = s.indexOf("-")
 	if (dashpos > 0) {
-		s = s.substr(0, dashpos+1)
+		return s.substr(0, dashpos+1)
 	}
+	return s
+}
+
+function make_clickable(el, prefix='') {
+	var s = el.innerText
 	el.title = 'Click to Copy'
-	el.className = 'hand'
-	el["text2copy"] = s
+	el.classList.add('hand')
+	el["text2copy"] = prefix+group_only(s)
 	el.addEventListener("click", copyonclick)
 }
+
+function do_one_table(output_table, data, prefix='') {
+	for (i=0; i<data.length; i++) {
+		var row
+		if (i < output_table.rows.length-1) {
+			row = output_table.rows[i+1]
+		} else {
+			row = output_table.insertRow(-1)
+			row.className = ''
+			row.insertCell(-1)
+			row.insertCell(-1)
+			row.cells[0].className = 'gennam'
+			row.cells[1].className = 'genval'
+		}
+		row.cells[0].innerText = data[i][0]
+		row.cells[1].innerText = data[i][1]
+		if (data[i][2]==1) {
+			row.classList.add('cnt_expanded')
+		} else if (data[i][2]==2) {
+			row.classList.add('cnt_combined')
+		}
+		make_clickable(row.cells[0], prefix)
+	}
+	while (output_table.rows.length > data.length + 1) {
+		output_table.deleteRow(output_table.rows.length-1)
+	}
+}
+
+
+function prepare_arrays(cnts, cback_fn) {
+	if (cnts==null) return
+	var lgr_val = ''
+	var lgr_cnt, lgr_arr
+
+	for (i=0; i<cnts.length; i++) {
+		var arr = cback_fn(cnts[i].var)
+		var gr_val = group_only(cnts[i].var)
+		var group = gr_val != cnts[i].var
+
+		if (group) {
+			if (gr_val==lgr_val) {
+				lgr_cnt += cnts[i].cnt
+			} else {
+				if (lgr_val!='')  lgr_arr.push([lgr_val+"*", lgr_cnt, 2])
+				lgr_val = gr_val
+				lgr_arr = arr
+				lgr_cnt = cnts[i].cnt
+			}
+			arr.push([cnts[i].var, cnts[i].cnt, 1])
+		} else {
+			// non-groupable counter
+			if (lgr_val!='') {
+				lgr_arr.push([lgr_val+"*", lgr_cnt, 2])
+				lgr_val = ''
+			}
+			arr.push([cnts[i].var, cnts[i].cnt, 0])
+		}
+	}
+	if (lgr_val!='') {
+		lgr_arr.push([lgr_val+"*", lgr_cnt, 2])
+	}
+}
+
 
 function ref_counters() {
 	var aj = ajax()
@@ -93,95 +216,57 @@ function ref_counters() {
 
 			var gen_a = new Array()
 			var gen_b = new Array()
-			
-			if (cts.gen!=null) for (i=0; i<cts.gen.length; i++) {
-				if (cts.gen[i].var[0]>='M' || cts.gen[i].var.substr(0,3)=='Ban') {
-					gen_b.push(cts.gen[i])
-				} else {
-					gen_a.push(cts.gen[i])
-				}
-				any_cnts = true
+			function bc_gen(val) {
+				return (val[0]>='M' || val.substr(0,3)=='Ban') ? gen_b : gen_a
 			}
+			prepare_arrays(cts.gen, bc_gen)
+			do_one_table(tab_gen_a, gen_a)
+			do_one_table(tab_gen_b, gen_b)
 
-			for (i=0; i<gen_a.length; i++) {
-				var row
-				if (i < tab_gen_a.rows.length-1) {
-					row = tab_gen_a.rows[i+1]
-				} else {
-					row = tab_gen_a.insertRow(-1)
-					row.insertCell(-1)
-					row.insertCell(-1)
-					row.cells[0].className = 'gennam'
-					row.cells[1].className = 'genval'
-				}
-				row.cells[0].innerText = gen_a[i].var
-				row.cells[1].innerText = gen_a[i].cnt
-				make_clickable(row.cells[0])
+			var txs_a = new Array()
+			var txs_b = new Array()
+			var txs_c = new Array()
+			function bc_txs(val) {
+				var prefix = val.substr(0,4)
+				if (prefix=='Sort')  return txs_c
+				if (prefix=='Pkgs')  return txs_b
+				return txs_a
 			}
-			while (tab_gen_a.rows.length > gen_a.length + 1) {
-				tab_gen_a.deleteRow(tab_gen_a.rows.length-1)
-			}
+			prepare_arrays(cts.txs, bc_txs)
+			do_one_table(tab_txs_a, txs_a, "Tx")
+			do_one_table(tab_txs_b, txs_b, "Tx")
+			do_one_table(tab_txs_c, txs_c, "Tx")
 
-			for (i=0; i<gen_b.length; i++) {
-				var row
-				if (i < tab_gen_b.rows.length-1) {
-					row = tab_gen_b.rows[i+1]
-				} else {
-					row = tab_gen_b.insertRow(-1)
-					row.insertCell(-1)
-					row.insertCell(-1)
-					row.cells[0].className = 'gennam'
-					row.cells[1].className = 'genval'
-				}
-				row.cells[0].innerText = gen_b[i].var
-				row.cells[1].innerText = gen_b[i].cnt
-				make_clickable(row.cells[0])
-			}
-			while (tab_gen_b.rows.length > gen_b.length + 1) {
-				tab_gen_b.deleteRow(tab_gen_b.rows.length-1)
-			}
-
-			while (tab_txs.rows.length>1) tab_txs.deleteRow(1)
-			if (cts.txs!=null) for (i=0; i<cts.txs.length; i++) {
-				var row
-				if (i < tab_txs.rows.length-1) {
-					row = tab_txs.rows[i+1]
-				} else {
-					row = tab_txs.insertRow(-1)
-					row.insertCell(-1)
-					row.insertCell(-1)
-					row.cells[0].className = 'txsnam'
-					row.cells[1].className = 'txsval'
-				}
-				row.cells[0].innerText = cts.txs[i].var
-				row.cells[1].innerText = cts.txs[i].cnt
-				make_clickable(row.cells[0])
-			}
 
 			while (tab_net.rows.length>2) tab_net.deleteRow(2)
-			if (cts.net!=null)  for (i=0; i<cts.net.length; i++) {
-				var row = tab_net.insertRow(-1)
-
-				var col = row.insertCell(-1)
-				col.className = 'netnam'
-				col.innerText = cts.net[i].var
-				make_clickable(col)
-
-				col = row.insertCell(-1)
-				col.className = 'netcnt'
-				col.innerText = cts.net[i].rcvd
-
-				col = row.insertCell(-1)
-				col.className = 'netcnt'
-				col.innerText = cts.net[i].rbts
-
-				col = row.insertCell(-1)
-				col.className = 'netbts'
-				col.innerText = cts.net[i].sent
-
-				col = row.insertCell(-1)
-				col.className = 'netcnt'
-				col.innerText = cts.net[i].sbts
+			if (cts.net!=null) {
+				for (i=0; i<cts.net.length; i++) {
+					var row
+					if (i < tab_net.rows.length-2) {
+						row = tab_net.rows[i+2]
+					} else {
+						row = tab_net.insertRow(-1)
+						row.insertCell(-1)
+						row.insertCell(-1)
+						row.insertCell(-1)
+						row.insertCell(-1)
+						row.insertCell(-1)
+						row.cells[0].className = 'netnam'
+						row.cells[1].className = 'netcnt'
+						row.cells[2].className = 'netbts'
+						row.cells[3].className = 'netcnt'
+						row.cells[4].className = 'netbts'
+					}
+					row.cells[0].innerText = cts.net[i].var
+					make_clickable(row.cells[0])
+					row.cells[1].innerText = cts.net[i].rcvd
+					row.cells[2].innerText = cts.net[i].rbts
+					row.cells[3].innerText = cts.net[i].sent
+					row.cells[4].innerText = cts.net[i].sbts
+				}
+			}
+			while (tab_net.rows.length > cts.net.length + 2) {
+				tab_net.deleteRow(tab_net.rows.length-2)
 			}
 			nocounters_message.style.display='none'
 			counters_table.style.display='table'
@@ -194,4 +279,12 @@ function ref_counters() {
 	aj.send(null)
 }
 ref_counters()
+
+function load_settings() {
+	if (localStorage.getItem("counters_view_type") == "net")  cnts_type_net.click()
+	cnts_combine_groups.checked = localStorage.getItem("counters_combine_groups") !== 'false'
+	type_changed()
+}
+load_settings()
+
 </script>

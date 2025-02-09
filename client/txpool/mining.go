@@ -1,8 +1,6 @@
 package txpool
 
 import (
-	"fmt"
-
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -16,25 +14,23 @@ func (rec *OneTxToSend) IIdx(key uint64) int {
 	return -1
 }
 
-// UnMarkChildrenForMem clears the MemInput flag of all the children (used when a tx is mined).
-func (tx *OneTxToSend) UnMarkChildrenForMem() {
+// outputsMined clears the MemInput flag of all the children (used when a tx is mined).
+func (tx *OneTxToSend) outputsMined() {
 	// Go through all the tx's outputs and unmark MemInputs in txs that have been spending it
-	var po btc.TxPrevOut
-	po.Hash = tx.Hash.Hash
-	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
-		uidx := po.UIdx()
+	for vout := range tx.TxOut {
+		uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
 		if val, ok := SpentOutputs[uidx]; ok {
-			if rec := TransactionsToSend[val]; rec != nil {
-				if common.Get(&common.CFG.TXPool.CheckErrors) && rec.MemInputs == nil {
+			if rec, ok := TransactionsToSend[val]; ok {
+				if CheckForErrors() && rec.MemInputs == nil {
 					common.CountSafe("TxMinedMeminER1")
-					println("ERROR: ", po.String(), "just mined in", rec.Hash.String(), "- not marked as mem")
+					println("ERROR: out just mined in", rec.Hash.String(), "- not marked as mem")
 					continue
 				}
 				idx := rec.IIdx(uidx)
-				if common.Get(&common.CFG.TXPool.CheckErrors) {
+				if CheckForErrors() {
 					if idx < 0 {
 						common.CountSafe("TxMinedMeminER2")
-						println("ERROR: ", po.String(), " just mined. Was in SpentOutputs & mempool, but DUPA")
+						println("ERROR: out just mined. Was in SpentOutputs & mempool, but DUPA")
 						continue
 					}
 					if !rec.MemInputs[idx] {
@@ -44,82 +40,108 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 				}
 				rec.MemInputs[idx] = false
 				rec.MemInputCnt--
-				common.CountSafe("TxMinedMeminOut")
+
+				common.CountSafe("TxMinedMeminCnt")
 				if rec.MemInputCnt == 0 {
 					common.CountSafe("TxMinedMeminTx")
-					reduced_size := (len(rec.MemInputs) + 7) & ^7
-					rec.MemInputs = nil
-					rec.Footprint -= uint32(reduced_size)
-					TransactionsToSendSize -= uint64(reduced_size)
+					rec.memInputsSet(nil)
 				}
-				rec.ResortWithChildren()
-			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+				rec.resortWithChildren()
+			} else if CheckForErrors() {
 				common.CountSafe("TxMinedMeminERR")
-				println("ERROR:", po.String(), " in SpentOutputs, but not in mempool")
+				println("ERROR: out in SpentOutputs, but not in mempool")
 			}
 		}
 	}
 }
 
-// tx_mined is called for each tx mined in a new block.
-func tx_mined(tx *btc.Tx) {
-	h := tx.Hash
-	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
+// txMined is called for each tx mined in a new block.
+func txMined(tx *btc.Tx) {
+	bidx := tx.Hash.BIdx()
+
+	if rec, ok := TransactionsToSend[bidx]; ok {
+		// if we have this tx in mempool, remove it and it should clean everything up nicely
 		common.CountSafe("TxMinedAccepted")
-		rec.UnMarkChildrenForMem()
-		rec.Delete(false, 0)
-	}
-	if mr, ok := TransactionsRejected[h.BIdx()]; ok {
-		common.CountSafePar("TxMinedRejected-", mr.Reason)
-		DeleteRejectedByTxr(mr)
-	}
-	if _, ok := TransactionsPending[h.BIdx()]; ok {
-		common.CountSafe("TxMinedPending")
-		delete(TransactionsPending, h.BIdx())
+		rec.outputsMined()
+		rec.Delete(false, 0) // this should take care of the RejectedUsedUTXOs stuff
+		return
 	}
 
-	// now do through all the spent inputs and...
+	// if this tx was not in mempool, maybe another one is, that was spending (any of) the outputs?
+	var was_rejected bool
 	for _, inp := range tx.TxIn {
 		idx := inp.Input.UIdx()
-
-		// 1. make sure we are not leaving them in SpentOutputs
 		if val, ok := SpentOutputs[idx]; ok {
+			// ... in such case, make sure to discard it, along with all its children
 			if rec := TransactionsToSend[val]; rec != nil {
-				// if we got here, the txs has been Malleabled
-				if rec.Local {
-					common.CountSafe("TxMinedMalleabled")
-					fmt.Println("Input from own ", rec.Tx.Hash.String(), " mined in ", tx.Hash.String())
-				} else {
-					common.CountSafe("TxMinedOtherSpend")
+				// there is this one...
+				common.CountSafePar("TxMinedUTXO-", rec.Local)
+				rec.Delete(true, 0) // this should remove relevant RejectedUsedUTXOs record as well
+				if CheckForErrors() {
+					if _, ok := SpentOutputs[idx]; ok {
+						println("ERROR: SpentOutput was supposed to be deleted, but still here\n  ", inp.Input.String())
+					}
 				}
-				rec.Delete(true, 0)
-			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
-				println("ERROR: Input from ", inp.Input.String(), " in SpentOutputs, but tx not in mempool")
+			} else {
+				println("ERROR: Input SpentOutputs, but tx not in mempool\n  ", inp.Input.String())
+				delete(SpentOutputs, idx)
 			}
-			delete(SpentOutputs, idx)
+			if CheckForErrors() {
+				if _, ok := RejectedUsedUTXOs[idx]; ok {
+					println("ERROR: we just removed t2s that was spending out, which is left in RejectedUsedUTXOs\n  ", inp.Input.String())
+				}
+			}
+			continue
 		}
 
-		// 2. remove data of any rejected txs that use this input
+		// if the input was not in SpentOutputs, then maybe it is still in RejectedUsedUTXOs
 		if lst, ok := RejectedUsedUTXOs[idx]; ok {
-			for _, bidx := range lst {
-				if txr, ok := TransactionsRejected[bidx]; ok {
-					common.CountSafePar("TxMinedRjctUTXO-", txr.Reason)
+			// it is - remove all rejected tx that would use any of just mined inputs
+			for _, rbidx := range lst {
+				if txr, ok := TransactionsRejected[rbidx]; ok {
 					DeleteRejectedByTxr(txr)
-				} else if common.Get(&common.CFG.TXPool.CheckErrors) {
-					println("ERROR: txr marked for removal but not present in TransactionsRejected")
+					if rbidx == bidx {
+						common.CountSafePar("TxMinedRjctdA-", txr.Reason)
+						was_rejected = true
+					} else {
+						common.CountSafePar("TxMinedRjctUTXO-", txr.Reason)
+					}
+				} else {
+					println("ERROR: UTXO present in RejectedUsedUTXOs, not in TransactionsRejected\n  ", inp.Input.String())
 				}
 			}
 			delete(RejectedUsedUTXOs, idx) // this record will not be needed anymore
 		}
 	}
+
+	if was_rejected {
+		return
+	}
+
+	if mr, ok := TransactionsRejected[bidx]; ok {
+		common.CountSafePar("TxMinedRjctd-", mr.Reason)
+		DeleteRejectedByTxr(mr)
+		return
+	}
+
+	if TransactionsPending[bidx] {
+		common.CountSafe("TxMinedPending")
+		delete(TransactionsPending, bidx)
+	}
 }
 
 // BlockMined removes all the block's tx from the mempool.
 func BlockMined(bl *btc.Block) {
+	if len(bl.Txs) < 2 {
+		return
+	}
+
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
-	for _, tx := range bl.Txs[1:] {
-		tx_mined(tx)
+	FeePackagesDirty = true                // this will spare us all the struggle with trying to re-package each tx
+	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
+		tx := bl.Txs[i]
+		txMined(tx)
 	}
 	for _, tx := range bl.Txs[1:] {
 		bidx := tx.Hash.BIdx()
@@ -127,42 +149,35 @@ func BlockMined(bl *btc.Block) {
 			wtgs = append(wtgs, wtg)
 		}
 	}
-	TxMutex.Unlock()
-
-	// Try to redo waiting txs
-	if len(wtgs) > 0 {
+	if len(wtgs) > 0 { // Try to redo waiting txs
 		common.CountSafeAdd("TxMinedGotInput", uint64(len(wtgs)))
 		for _, wtg := range wtgs {
-			RetryWaitingForInput(wtg)
+			retryWaitingForInput(wtg)
 		}
 	}
+	TxMutex.Unlock()
 }
 
-// MarkChildrenForMem sets the MemInput flag of all the children (used when a tx is mined).
-func MarkChildrenForMem(tx *btc.Tx) {
+// outputsUnmined sets the MemInput flag of all the children (used when a tx is unmined / block undone).
+func outputsUnmined(tx *btc.Tx) {
 	// Go through all the tx's outputs and mark MemInputs in txs that have been spending it
-	var po btc.TxPrevOut
-	po.Hash = tx.Hash.Hash
-	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
-		uidx := po.UIdx()
+	for vout := range tx.TxOut {
+		uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
 		if val, ok := SpentOutputs[uidx]; ok {
 			if rec := TransactionsToSend[val]; rec != nil {
 				if rec.MemInputs == nil {
-					rec.MemInputs = make([]bool, len(rec.TxIn))
-					extra_size := (len(rec.MemInputs) + 7) & ^7
-					rec.Footprint += uint32(extra_size)
-					TransactionsToSendSize += uint64(extra_size)
+					rec.memInputsSet(make([]bool, len(rec.TxIn)))
 				}
 				idx := rec.IIdx(uidx)
 				rec.MemInputs[idx] = true
 				rec.MemInputCnt++
-				rec.ResortWithChildren()
+				rec.resortWithChildren()
 				common.CountSafe("TxPutBackMemIn")
-				if common.Get(&common.CFG.TXPool.CheckErrors) && rec.Footprint != uint32(rec.SysSize()) {
+				if CheckForErrors() && rec.Footprint != uint32(rec.SysSize()) {
 					println("ERROR: MarkChildrenForMem footprint mismatch", rec.Footprint, uint32(rec.SysSize()))
 				}
-			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
-				println("ERROR: MarkChildrenForMem", po.String(), " in SpentOutputs, but not in mempool")
+			} else if CheckForErrors() {
+				println("ERROR: MarkChildrenForMem: in SpentOutputs, but not in mempool")
 				common.CountSafe("TxPutBackMeminERR")
 			}
 		}
@@ -170,27 +185,24 @@ func MarkChildrenForMem(tx *btc.Tx) {
 }
 
 func BlockUndone(bl *btc.Block) {
-	var cnt int
-	for _, tx := range bl.Txs[1:] {
-		// put it back into the mempool
-		ntx := &TxRcvd{Tx: tx, Trusted: true}
+	common.CountSafe("TxPkgsBlockUndo")
+	if len(bl.Txs) < 2 {
+		return
+	}
 
-		if NeedThisTx(&ntx.Hash, nil) {
-			if HandleNetTx(ntx, true) {
-				common.CountSafe("TxPutBackOK")
-				cnt++
+	TxMutex.Lock()
+	FeePackagesDirty = true // this will spare us all the struggle with trying to re-package each tx
+	for _, tx := range bl.Txs[1:] {
+		ntx := &TxRcvd{Tx: tx, Trusted: true, Unmined: true}
+		if need := needThisTxExt(&ntx.Hash, nil); need == 0 {
+			if res, _ := processTx(ntx); res == 0 {
+				common.CountSafe("TxUnmineOK")
 			} else {
-				common.CountSafe("TxPutBackFail")
+				common.CountSafePar("TxUnmineFail-", res)
 			}
 		} else {
-			common.CountSafe("TxPutBackNoNeed")
+			common.CountSafePar("TxUnmineNoNeed-", need)
 		}
-
-		TxMutex.Lock()
-		MarkChildrenForMem(tx)
-		TxMutex.Unlock()
 	}
-	if cnt != len(bl.Txs)-1 {
-		println("WARNING: network.BlockUndone("+bl.Hash.String()+") - ", cnt, "of", len(bl.Txs)-1, "txs put back")
-	}
+	TxMutex.Unlock()
 }

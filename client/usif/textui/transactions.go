@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -45,7 +46,7 @@ func send_tx(par string) {
 	if ptx, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
 		txpool.TxMutex.Unlock()
 		cnt := network.NetRouteInv(1, txid, nil)
-		ptx.Invsentcnt += cnt
+		atomic.AddUint32(&ptx.Invsentcnt, cnt)
 		fmt.Println("INV for TxID", txid.String(), "sent to", cnt, "node(s)")
 		fmt.Println("If it does not appear in the chain, you may want to redo it.")
 	} else {
@@ -65,7 +66,7 @@ func send1_tx(par string) {
 	if ptx, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
 		txpool.TxMutex.Unlock()
 		usif.SendInvToRandomPeer(1, txid)
-		ptx.Invsentcnt++
+		atomic.AddUint32(&ptx.Invsentcnt, 1)
 		fmt.Println("INV for TxID", txid.String(), "sent to a random node")
 		fmt.Println("If it does not appear in the chain, you may want to redo it.")
 	} else {
@@ -155,7 +156,7 @@ func decode_tx(pars string) {
 			fmt.Println()
 		}
 		if t2s != nil {
-			fmt.Println("Invs sent cnt:", t2s.Invsentcnt)
+			fmt.Println("Invs sent cnt:", atomic.LoadUint32(&t2s.Invsentcnt))
 			fmt.Println("Tx sent cnt:", t2s.SentCnt)
 			fmt.Println("Frst seen:", t2s.Firstseen.Format("2006-01-02 15:04:05"))
 			fmt.Println("Last seen:", t2s.Lastseen.Format("2006-01-02 15:04:05"))
@@ -230,7 +231,7 @@ func list_txs(par string) {
 	txpool.TxMutex.Lock()
 	defer txpool.TxMutex.Unlock()
 
-	sorted := txpool.GetSortedMempool()
+	sorted := txpool.GetSortedMempoolRBF()
 
 	var totlen, totweigth uint64
 	for cnt = 0; cnt < len(sorted); cnt++ {
@@ -254,7 +255,7 @@ func list_txs(par string) {
 		}
 
 		fmt.Printf("%5d) ...%7d/%7d %s %6d bytes / %4.1fspb - INV snt %d times, %s\n",
-			cnt, totlen, totweigth, v.Tx.Hash.String(), len(v.Raw), v.SPB(), v.Invsentcnt, snt)
+			cnt, totlen, totweigth, v.Tx.Hash.String(), len(v.Raw), v.SPB(), atomic.LoadUint32(&v.Invsentcnt), snt)
 
 	}
 }
@@ -412,7 +413,7 @@ func send_all_tx(par string) {
 	txpool.TxMutex.Unlock()
 	for _, v := range tmp {
 		cnt := network.NetRouteInv(1, &v.Tx.Hash, nil)
-		v.Invsentcnt += cnt
+		atomic.AddUint32(&v.Invsentcnt, cnt)
 		fmt.Println("INV for TxID", v.Tx.Hash.String(), "sent to", cnt, "node(s)")
 	}
 }
@@ -512,8 +513,9 @@ func push_old_txs(par string) {
 }
 
 func tx_pool_stats(par string) {
-	txpool.CheckPoolSizes()
 	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
+
 	var sw_cnt, sw_siz, sw_wgt uint64
 	for _, v := range txpool.TransactionsToSend {
 		if v.SegWit != nil {
@@ -534,16 +536,52 @@ func tx_pool_stats(par string) {
 		sw_perc_weight = 100 * sw_wgt / txpool.TransactionsToSendWeight
 	}
 
-	fmt.Printf("Mempool: %d in %d txs, carrying total weight of %d (~%d blocks)\n", txpool.TransactionsToSendSize, len(txpool.TransactionsToSend), txpool.TransactionsToSendWeight, txpool.TransactionsToSendWeight/4e6)
+	get_perc := func(v uint64) uint64 {
+		v >>= 20
+		max := uint64(0xffffffffffffffff>>20) + 1
+		if max == 0 {
+			return 999
+		}
+		return 1e6 * v / max
+	}
+
+	get_avg_time := func(t time.Duration, cnt uint) time.Duration {
+		if cnt == 0 {
+			return 0
+		}
+		return t / time.Duration(cnt)
+	}
+
+	fmt.Printf("Mempool: %d in %d txs, carrying total weight of %d (~%.1f blocks)\n", txpool.TransactionsToSendSize, len(txpool.TransactionsToSend), txpool.TransactionsToSendWeight, float64(txpool.TransactionsToSendWeight)/4e6)
 	fmt.Printf("  SegWit-txs: %d (%d%%) in %d (%d%%) txs, carrying weight %d (%d%%)\n", sw_siz, sw_perc_size, sw_cnt, sw_perc_cnt, sw_wgt, sw_perc_weight)
 	fmt.Printf("  Number of Spent Outputs: %d\n", len(txpool.SpentOutputs))
 	fmt.Printf("Rejected: %d in %d txs\n", txpool.TransactionsRejectedSize, len(txpool.TransactionsRejected))
 	fmt.Printf("  Waiting4Input: %d in %d txs\n", txpool.WaitingForInputsSize, len(txpool.WaitingForInputs))
 	fmt.Printf("  Rejected used UTXOs: %d\n", len(txpool.RejectedUsedUTXOs))
 	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
+	fmt.Println()
+	fmt.Printf("SortingDisabled: %t,  SortListDirty: %t\n", txpool.SortingDisabled(), txpool.SortListDirty)
+	var si1, si2 string
+	if txpool.BestT2S != nil && txpool.WorstT2S != nil {
+		si1 = fmt.Sprintf("%06d <-> %06d", get_perc(txpool.BestT2S.SortRank), get_perc(txpool.WorstT2S.SortRank))
+	} else {
+		si1 = "empty"
+	}
+	if txpool.SortIndexValid {
+		si2 = fmt.Sprintf("%06d <-> %06d", get_perc(txpool.SortIndexMin), get_perc(txpool.SortIndexMax))
+	} else {
+		si2 = "never used"
+	}
+	fmt.Printf("SortIndexNow: %s   SortIndexEver: %s\n", si1, si2)
+	fmt.Printf("AddToSort happened %d times, taking %s total  (%s avg)\n", txpool.AddToSortCount, txpool.AddToSortTime.String(), get_avg_time(txpool.AddToSortTime, txpool.AddToSortCount))
+	fmt.Println()
+	fmt.Printf("FeePackages Count: %d,  FeePackagesDirty: %t\n", len(txpool.FeePackages), txpool.FeePackagesDirty)
+	fmt.Printf("SortFeePackages happened %d times, taking %s total\n", txpool.SortFeePackagesCount, txpool.SortFeePackagesTime.String())
+	fmt.Printf("LookForPackages happened %d times, taking %s total\n", txpool.LookForPackagesCount, txpool.LookForPackagesTime.String())
+	fmt.Printf("AddToPackages happened %d times, taking %s total\n", txpool.AddToPackagesCount, txpool.AddToPackagesTime.String())
+	fmt.Printf("DelFromPackages happened %d times, taking %s total\n", txpool.DelFromPackagesCount, txpool.DelFromPackagesTime.String())
+	fmt.Println()
 	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
-	fmt.Printf("SortingSupressed: %t,  SortIndexDirty: %t\n", txpool.SortingSupressed, txpool.SortListDirty)
-	txpool.TxMutex.Unlock()
 }
 
 func init() {

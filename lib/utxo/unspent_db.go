@@ -430,10 +430,6 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 	fn := fmt.Sprint(db.dir_undo, db.LastBlockHeight)
 	var addback []*UtxoRec
 
-	if _, er := os.Stat(fn); er != nil {
-		fn += ".tmp"
-	}
-
 	dat, er := os.ReadFile(fn)
 	if er != nil {
 		panic(er.Error())
@@ -471,7 +467,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 		db.MapMutex[ind[0]].Unlock()
 	}
 
-	os.Remove(fn)
+	//os.Remove(fn) - it may crash while test-doing the undo, so we keep this file just in case
 	db.LastBlockHeight--
 	copy(db.LastBlockHash, newhash)
 	db.DirtyDB.Set()
