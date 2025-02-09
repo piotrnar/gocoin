@@ -1,7 +1,6 @@
 package txpool
 
 import (
-	"fmt"
 	"os"
 	"runtime/debug"
 	"sort"
@@ -14,16 +13,16 @@ import (
 const (
 	SORT_START_INDEX     = uint64(1 << 62) // 1/4th of max uint64 value
 	POOL_EXPIRE_INTERVAL = time.Hour
-	STOP_AUTO_SORT_AFTER = 2 * time.Minute // stop auto-sorting if so much time passed since last request
+	STOP_AUTO_SORT_AFTER = 5 * time.Minute // stop auto-sorting if so much time passed since last request
 )
 
 var (
-	nextTxsPoolExpire    time.Time = time.Now().Add(POOL_EXPIRE_INTERVAL)
-	BestT2S, WorstT2S    *OneTxToSend
-	SortListDirty        bool   // means the BestT2S <--> WorstT2S list is useless and needs rebuilding
-	sortIndexStep        uint64 // this is dynamically calculated in adjustSortIndexStep()
-	sortingSupressed     bool
-	lastSortingRequested time.Time
+	nextTxsPoolExpire time.Time = time.Now().Add(POOL_EXPIRE_INTERVAL)
+	BestT2S, WorstT2S *OneTxToSend
+	SortListDirty     bool   // means the BestT2S <--> WorstT2S list is useless and needs rebuilding
+	sortIndexStep     uint64 // this is dynamically calculated in adjustSortIndexStep()
+	sortingSupressed  bool
+	LastSortingDone   time.Time
 
 	AddToSortTime  time.Duration // findFirstWorse is the most time consuming bit
 	AddToSortCount uint
@@ -60,13 +59,16 @@ func adjustSortIndexStep() {
 
 // make sure to call it with thr mutex locked
 func SortingDisabled() bool {
-	return sortingSupressed || time.Since(lastSortingRequested) > STOP_AUTO_SORT_AFTER
+	return sortingSupressed || time.Since(LastSortingDone) > STOP_AUTO_SORT_AFTER
 }
 
 // call it with false to restore sorting
 func BlockCommitInProgress(yes bool) {
 	TxMutex.Lock()
 	sortingSupressed = yes
+	if !yes && FeePackagesDirty && SortingDisabled() {
+		emptyFeePackages() // this should free all the memory used by packages
+	}
 	TxMutex.Unlock()
 }
 
