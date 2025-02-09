@@ -278,9 +278,6 @@ func retryWaitingForInput(wtg *OneWaitingList) {
 
 // Make sure to call it with locked TxMutex
 func (tr *OneTxRejected) Discard() {
-	if tr.Tx == nil {
-		panic("OneTxRejected.Discard() called, but it's already empty")
-	}
 	TransactionsRejectedSize -= uint64(tr.Footprint)
 	tr.cleanup()
 	tr.Tx = nil

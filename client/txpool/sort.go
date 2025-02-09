@@ -14,7 +14,7 @@ import (
 const (
 	SORT_START_INDEX     = uint64(1 << 62) // 1/4th of max uint64 value
 	POOL_EXPIRE_INTERVAL = time.Hour
-	STOP_AUTO_SORT_AFTER = 20 * time.Minute // stop auto-sorting if so much time passed since last request
+	STOP_AUTO_SORT_AFTER = 2 * time.Minute // stop auto-sorting if so much time passed since last request
 )
 
 var (
@@ -36,9 +36,6 @@ var (
 func updateSortWidthStats() {
 	if BestT2S == nil || WorstT2S == nil {
 		return
-	}
-	if !(BestT2S != nil && WorstT2S != nil) {
-		panic(fmt.Sprint("best worst fucked ", BestT2S != nil, " / ", WorstT2S != nil))
 	}
 	if !SortRankRangeValid {
 		SortRankMin = BestT2S.SortRank
