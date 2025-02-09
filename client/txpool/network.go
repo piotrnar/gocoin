@@ -2,8 +2,6 @@ package txpool
 
 import (
 	"fmt"
-	"os"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -16,6 +14,10 @@ import (
 
 var (
 	GetMPInProgressTicket = make(chan bool, 1)
+
+	lastFeeAdjustedTime    time.Time
+	currentFeeAdjustedSPKB uint64
+	feeAdjustDecrementSPKB uint64
 )
 
 type TxRcvd struct {
@@ -324,20 +326,31 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 	return res == 0
 }
 
-func CheckForErrorsNow() {
-	if CheckForErrors() {
-		TxMutex.Lock()
-		if MempoolCheck() {
-			println("Mempool check error inside the tick")
-			debug.PrintStack()
-			os.Exit(1)
-		}
-		TxMutex.Unlock()
-	}
-}
-
 func Tick() {
+	TxMutex.Lock()
 	expireOldTxs()
 	limitRejected()
-	CheckForErrorsNow()
+	removeExcessiveTxs()
+
+	if currentFeeAdjustedSPKB != 0 && time.Since(lastFeeAdjustedTime) > time.Minute {
+		if TransactionsToSendSize < common.MaxMempoolSize() {
+			if currentFeeAdjustedSPKB > feeAdjustDecrementSPKB {
+				currentFeeAdjustedSPKB -= feeAdjustDecrementSPKB
+			} else {
+				currentFeeAdjustedSPKB = 0
+			}
+			if !common.SetMinFeePerKB(currentFeeAdjustedSPKB) {
+				currentFeeAdjustedSPKB = 0 // stop decreasing if we can't get any lower
+			}
+		}
+		lastFeeAdjustedTime = time.Now()
+	}
+
+	if FeePackagesDirty && !SortListDirty && SortingDisabled() {
+		emptyFeePackages() // this should free all the memory used by packages
+	}
+	if CheckForErrors() && MempoolCheck() {
+		panic("Mempool check error inside the tick")
+	}
+	TxMutex.Unlock()
 }

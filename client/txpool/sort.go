@@ -463,7 +463,6 @@ func expireOldTxs() {
 	//fmt.Print("ExpireOldTxs()... ")
 	expire_before := time.Now().Add(-dur)
 	var todel []*OneTxToSend
-	TxMutex.Lock()
 	for _, v := range TransactionsToSend {
 		if v.Lastseen.Before(expire_before) {
 			todel = append(todel, v)
@@ -488,7 +487,6 @@ func expireOldTxs() {
 		common.CountSafe("TxPoolExpireNone")
 		//fmt.Println("nothing expired\n> ")
 	}
-	TxMutex.Unlock()
 	common.CountSafe("TxPoolExpireTicks")
 }
 

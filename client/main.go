@@ -102,7 +102,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 
 	txpool.BlockCommitInProgress(common.Get(&common.CFG.TXPool.HoldSorting))
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
-	txpool.CheckForErrorsNow()
 	txpool.BlockCommitInProgress(false)
 	if bl.LastKnownHeight-bl.Height > common.Get(&common.CFG.Memory.MaxCachedBlks) {
 		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused

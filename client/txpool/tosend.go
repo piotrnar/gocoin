@@ -80,9 +80,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		}
 	}
 
-	if removeExcessiveTxs() == 0 {
-		common.SetMinFeePerKB(0) // nothing removed so set the minimal fee
-	}
+	removeExcessiveTxs()
 }
 
 func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
@@ -192,14 +190,15 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	}
 }
 
-func removeExcessiveTxs() (cnt int) {
+func removeExcessiveTxs() {
 	var worst_fee, worst_weight uint64
+	var cnt, bytes uint64
 	if TransactionsToSendSize >= common.MaxMempoolSize()+1e6 { // only remove txs when we are 1MB over the maximum size
 		sorted_txs := GetSortedMempoolRBF()
 		for idx := len(sorted_txs) - 1; idx >= 0; idx-- {
 			worst_tx := sorted_txs[idx]
-			common.CountSafe("TxPurgedSizCnt")
-			common.CountSafeAdd("TxPurgedSizBts", uint64(worst_tx.Footprint))
+			cnt++
+			bytes += uint64(worst_tx.Footprint)
 			worst_fee = worst_tx.Fee // we do not do the division here, as it may be more expensive
 			worst_weight = uint64(worst_tx.Weight())
 			worst_tx.Delete(true, 0)
@@ -210,10 +209,13 @@ func removeExcessiveTxs() (cnt int) {
 		}
 	}
 	if cnt > 0 {
-		newspkb := 4000 * worst_fee / worst_weight
-		common.SetMinFeePerKB(newspkb)
+		common.CountSafeAdd("TxPurgedSizCnt", cnt)
+		common.CountSafeAdd("TxPurgedSizBts", bytes)
+		currentFeeAdjustedSPKB = 4000 * worst_fee / worst_weight
+		common.SetMinFeePerKB(currentFeeAdjustedSPKB)
+		feeAdjustDecrementSPKB = currentFeeAdjustedSPKB / 20
+		lastFeeAdjustedTime = time.Now()
 	}
-	return
 }
 
 func txChecker(tx *btc.Tx) bool {
