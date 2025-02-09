@@ -14,10 +14,6 @@ var (
 	FeePackages       []*OneTxsPackage = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
 	FeePackagesDirty  bool
 	feePackagesReSort bool
-
-	// timing statistics:
-	LookForPackagesTime  time.Duration
-	LookForPackagesCount uint
 )
 
 type OneTxsPackage struct {
@@ -119,7 +115,6 @@ func lookForPackages() {
 		return
 	}
 	common.CountSafe("TxPkgsNeedThem")
-	sta := time.Now()
 	emptyFeePackages()
 	for t2s := BestT2S; t2s != nil; t2s = t2s.worse {
 		if t2s.MemInputCnt > 0 {
@@ -138,8 +133,7 @@ func lookForPackages() {
 	}
 	feePackagesReSort = true
 	FeePackagesDirty = false
-	LookForPackagesTime += time.Since(sta)
-	LookForPackagesCount++
+	RepackagingSinceLastRedoTime = 0
 }
 
 // GetSortedMempoolRBF is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.

@@ -26,6 +26,12 @@ var (
 
 	// Transactions that are received from network (via "tx"), but not yet processed:
 	TransactionsPending map[btc.BIDX]bool = make(map[btc.BIDX]bool)
+
+	RepackagingSinceLastRedoTime  time.Duration
+	RepackagingSinceLastRedoCount uint
+
+	ResortingSinceLastRedoTime  time.Duration
+	ResortingSinceLastRedoCount uint
 )
 
 type OneTxToSend struct {
@@ -54,7 +60,10 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	TransactionsToSend[bidx] = t2s
 	TransactionsToSendWeight += uint64(t2s.Weight())
 	TransactionsToSendSize += uint64(t2s.Footprint)
+	sta := time.Now()
 	t2s.AddToSort()
+	ResortingSinceLastRedoTime += time.Since(sta)
+	ResortingSinceLastRedoCount++
 
 	if !FeePackagesDirty && CheckForErrors() {
 		if t2s.inPackages != nil {
@@ -70,6 +79,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	}
 
 	if !FeePackagesDirty && t2s.MemInputCnt > 0 { // go through all the parents...
+		sta := time.Now()
 		parents := t2s.getAllTopParents()
 		for _, parent := range parents {
 			if parent.MemInputCnt != 0 {
@@ -78,6 +88,8 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 			}
 			parent.addToPackages(t2s)
 		}
+		RepackagingSinceLastRedoTime += time.Since(sta)
+		RepackagingSinceLastRedoCount++
 	}
 
 	removeExcessiveTxs()
@@ -175,11 +187,17 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	delete(TransactionsToSend, tx.Hash.BIdx())
 
 	if !FeePackagesDirty {
+		sta := time.Now()
 		tx.delFromPackages() // remove it from FeePackages
+		RepackagingSinceLastRedoTime += time.Since(sta)
+		RepackagingSinceLastRedoCount++
 	}
 	tx.inPackagesSet(nil) // this one will update tx.Footprint
 
+	sta := time.Now()
 	tx.DelFromSort()
+	ResortingSinceLastRedoTime += time.Since(sta)
+	ResortingSinceLastRedoCount++
 
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	TransactionsToSendSize -= uint64(tx.Footprint)
@@ -475,10 +493,6 @@ func (t2s *OneTxToSend) delFromPackages() {
 		} else {
 			common.CountSafe("TxPkgsDelTx")
 			pandch := pkg.Txs[0].GetItWithAllChildren()
-			/*not quite sure why this is happening, but seem to be a normal case so just ignore it
-			if len(pandch) >= len(pkg.Txs) {
-				println("ERROR: delFromPackages -> GetItWithAllChildren returned cnt", len(pandch), pkg.Txs)
-			}*/
 			// first unmark all txs using this pkg (we may mark them back later)
 			for _, t := range pkg.Txs {
 				if t != t2s {

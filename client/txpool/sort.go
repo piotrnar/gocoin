@@ -24,9 +24,6 @@ var (
 	sortingSupressed  bool
 	LastSortingDone   time.Time
 
-	AddToSortTime  time.Duration // findFirstWorse is the most time consuming bit
-	AddToSortCount uint
-
 	// statistics of how far the SortRank values have moved around the uint64 space:
 	SortRankRangeValid       bool
 	SortRankMin, SortRankMax uint64
@@ -93,14 +90,11 @@ func (t2s *OneTxToSend) AddToSort() {
 		return
 	}
 
-	sta := time.Now()
 	if wpr := t2s.findWorstParent(); wpr == nil {
 		t2s.insertDownFromHere(BestT2S)
 	} else {
 		t2s.insertDownFromHere(wpr.worse)
 	}
-	AddToSortTime += time.Since(sta)
-	AddToSortCount++
 }
 
 func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
@@ -423,6 +417,7 @@ func buildSortedList() {
 	}
 	common.CountSafe("TxSortBuildNeeded")
 	SortListDirty = false
+	ResortingSinceLastRedoTime = 0
 	ts := GetSortedMempoolSlow()
 	if len(ts) == 0 {
 		BestT2S, WorstT2S = nil, nil

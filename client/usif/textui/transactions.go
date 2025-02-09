@@ -516,6 +516,7 @@ func tx_pool_stats(par string) {
 	txpool.TxMutex.Lock()
 	defer txpool.TxMutex.Unlock()
 
+	var s1, s2 string
 	var sw_cnt, sw_siz, sw_wgt uint64
 	for _, v := range txpool.TransactionsToSend {
 		if v.SegWit != nil {
@@ -525,41 +526,34 @@ func tx_pool_stats(par string) {
 		}
 	}
 
-	var s1, s2 string
-	var sw_perc_cnt, sw_perc_size, sw_perc_weight uint64
-	if len(txpool.TransactionsToSend) > 0 { // to avoid division by zero
-		sw_perc_cnt = 100 * sw_cnt / uint64(len(txpool.TransactionsToSend))
-	}
-	if txpool.TransactionsToSendSize > 0 { // to avoid division by zero
-		sw_perc_size = 100 * sw_siz / txpool.TransactionsToSendSize
-	}
-	if txpool.TransactionsToSendWeight > 0 { // to avoid division by zero
-		sw_perc_weight = 100 * sw_wgt / txpool.TransactionsToSendWeight
+	get_perc_safe := func(v, m uint64) uint64 {
+		if m == 0 {
+			return 0
+		}
+		return 100 * v / m
 	}
 
-	get_perc := func(v uint64) uint64 {
+	get_range_mark := func(v uint64) uint64 {
 		v >>= 20
-		max := uint64(0xffffffffffffffff>>20) + 1
-		if max == 0 {
-			return 999
-		}
+		max := (^uint64(0) >> 20) + 1
 		return 1e6 * v / max
 	}
 
-	get_avg_time := func(t time.Duration, cnt uint) time.Duration {
-		if cnt == 0 {
-			return 0
-		}
-		return t / time.Duration(cnt)
-	}
-
-	fmt.Printf("Mempool: %d in %d txs, carrying total weight of %d (~%.1f blocks)\n", txpool.TransactionsToSendSize, len(txpool.TransactionsToSend), txpool.TransactionsToSendWeight, float64(txpool.TransactionsToSendWeight)/4e6)
-	fmt.Printf("  SegWit-txs: %d (%d%%) in %d (%d%%) txs, carrying weight %d (%d%%)\n", sw_siz, sw_perc_size, sw_cnt, sw_perc_cnt, sw_wgt, sw_perc_weight)
+	fmt.Printf("Mempool: %d in %d txs, carrying total weight of %d (~%.1f blocks)\n",
+		txpool.TransactionsToSendSize, len(txpool.TransactionsToSend),
+		txpool.TransactionsToSendWeight, float64(txpool.TransactionsToSendWeight)/4e6)
+	fmt.Printf("  SegWit-txs: %d (%d%%) in %d (%d%%) txs, carrying weight %d (%d%%)\n",
+		sw_siz, get_perc_safe(sw_siz, txpool.TransactionsToSendSize),
+		sw_cnt, get_perc_safe(sw_cnt, uint64(len(txpool.TransactionsToSend))),
+		sw_wgt, get_perc_safe(sw_wgt, txpool.TransactionsToSendWeight))
 	fmt.Printf("  Number of Spent Outputs: %d\n", len(txpool.SpentOutputs))
-	fmt.Printf("Rejected: %d in %d txs\n", txpool.TransactionsRejectedSize, len(txpool.TransactionsRejected))
-	fmt.Printf("  Waiting4Input: %d in %d txs\n", txpool.WaitingForInputsSize, len(txpool.WaitingForInputs))
+	fmt.Printf("Rejected: %d in %d txs\n", txpool.TransactionsRejectedSize,
+		len(txpool.TransactionsRejected))
+	fmt.Printf("  Waiting4Input: %d in %d txs\n", txpool.WaitingForInputsSize,
+		len(txpool.WaitingForInputs))
 	fmt.Printf("  Rejected used UTXOs: %d\n", len(txpool.RejectedUsedUTXOs))
-	fmt.Printf("Pending: %d txs, with %d inside net queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
+	fmt.Printf("Pending: %d txs, with %d inside net queue\n",
+		len(txpool.TransactionsPending), len(network.NetTxs))
 	fmt.Printf("  Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
 
 	// below are sorting stats (for new features added in gocoin 1.11)
@@ -568,21 +562,27 @@ func tx_pool_stats(par string) {
 	} else {
 		s1 = time.Since(txpool.LastSortingDone).String() + " ago"
 	}
-	fmt.Printf("SortingDisabled: %t,  ListDirty: %t,  Last: %s\n", txpool.SortingDisabled(), txpool.SortListDirty, s1)
+	fmt.Printf("SortingDisabled: %t,  ListDirty: %t,  Last: %s\n",
+		txpool.SortingDisabled(), txpool.SortListDirty, s1)
 	if txpool.BestT2S != nil && txpool.WorstT2S != nil {
-		s1 = fmt.Sprintf("%06d <-> %06d", get_perc(txpool.BestT2S.SortRank), get_perc(txpool.WorstT2S.SortRank))
+		s1 = fmt.Sprintf("%06d <-> %06d", get_range_mark(txpool.BestT2S.SortRank),
+			get_range_mark(txpool.WorstT2S.SortRank))
 	} else {
 		s1 = "empty"
 	}
 	if txpool.SortRankRangeValid {
-		s2 = fmt.Sprintf("%06d <-> %06d", get_perc(txpool.SortRankMin), get_perc(txpool.SortRankMax))
+		s2 = fmt.Sprintf("%06d <-> %06d", get_range_mark(txpool.SortRankMin),
+			get_range_mark(txpool.SortRankMax))
 	} else {
 		s2 = "never used"
 	}
 	fmt.Printf("  SortRankRange Now: %s   Ever: %s\n", s1, s2)
-	fmt.Printf("  AddToSort happened %d times, taking %s total  (%s avg)\n", txpool.AddToSortCount, txpool.AddToSortTime.String(), get_avg_time(txpool.AddToSortTime, txpool.AddToSortCount))
-	fmt.Printf("FeePackages Count: %d,  Dirty: %t,  MemSize: %d\n", len(txpool.FeePackages), txpool.FeePackagesDirty, txpool.FeePackagesSysSize())
-	fmt.Printf("  LookForPackages happened %d times, taking %s total  (%s avg)\n", txpool.LookForPackagesCount, txpool.LookForPackagesTime.String(), get_avg_time(txpool.LookForPackagesTime, txpool.LookForPackagesCount))
+	fmt.Printf("  Time spent on tx sorting since last rebuild: %s (%d ops)\n",
+		txpool.ResortingSinceLastRedoTime.String(), txpool.ResortingSinceLastRedoCount)
+	fmt.Printf("FeePackages Count: %d,  Dirty: %t,  MemSize: %d\n", len(txpool.FeePackages),
+		txpool.FeePackagesDirty, txpool.FeePackagesSysSize())
+	fmt.Printf("  Time spent on fee packages since last rebuild: %s (%d ops)\n",
+		txpool.RepackagingSinceLastRedoTime.String(), txpool.RepackagingSinceLastRedoCount)
 }
 
 func init() {
