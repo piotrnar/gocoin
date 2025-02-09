@@ -348,8 +348,17 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 func do_the_blocks(end *chain.BlockTreeNode) {
 	sta := time.Now()
 	last := common.BlockChain.LastBlock()
+
+	if _, er := last.FindPathTo(end); er != nil {
+		println("FindPathTo the best BlockDB node:", er.Error())
+		if last = last.FindFirstFather(end); last == nil {
+			panic("Cannot find a common father between best BlockDB node and current UTXO.db")
+		}
+		println("Updated the last block to:", last.Height, last.BlockHash.String())
+	}
+
 	for last != end {
-		nxt := last.FindPathTo(end)
+		nxt, _ := last.FindPathTo(end)
 		if nxt == nil {
 			break
 		}
