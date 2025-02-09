@@ -383,14 +383,6 @@ func (tx *OneTxToSend) GetAllParentsExcept(except *OneTxToSend) (result []*OneTx
 	return
 }
 
-var (
-	AddToPackagesTime  time.Duration
-	AddToPackagesCount uint
-
-	DelFromPackagesTime  time.Duration
-	DelFromPackagesCount uint
-)
-
 func (tx *OneTxToSend) Id() string {
 	return tx.Hash.String()
 }
@@ -399,12 +391,6 @@ func (tx *OneTxToSend) Id() string {
 // If t2s does not belong to any packages, we create a new 2-txs package for it and the child
 func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 	common.CountSafe("TxPkgsAdd")
-
-	sta := time.Now()
-	defer func() {
-		AddToPackagesTime += time.Since(sta)
-		AddToPackagesCount++
-	}()
 
 	if len(parent.inPackages) == 0 {
 		// we create a new package, like in lookForPackages()
@@ -416,7 +402,7 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 				t.inPackagesSet(append(t.inPackages, pkg))
 			}
 			FeePackages = append(FeePackages, pkg)
-			FeePackagesReSort = true
+			feePackagesReSort = true
 			common.CountSafe("TxPkgsAddNew")
 			if CheckForErrors() {
 				pkg.checkForDups()
@@ -440,7 +426,7 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 			pkg.Weight += new_child.Weight()
 			pkg.Fee += new_child.Fee
 			new_child.inPackagesSet(append(new_child.inPackages, pkg))
-			FeePackagesReSort = true
+			feePackagesReSort = true
 			common.CountSafe("TxPkgsAddAppend")
 			if CheckForErrors() {
 				pkg.checkForDups()
@@ -457,12 +443,6 @@ func (t2s *OneTxToSend) delFromPackages() {
 	if len(t2s.inPackages) == 0 {
 		return
 	}
-
-	sta := time.Now()
-	defer func() {
-		DelFromPackagesTime += time.Since(sta)
-		DelFromPackagesCount++
-	}()
 
 	for _, pkg := range t2s.inPackages {
 		common.CountSafe("TxPkgsDelTick")
@@ -511,7 +491,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 					pkg.Fee += t.Fee
 					t.inPackagesSet(append(t.inPackages, pkg)) // now mark back the tx using our pkg
 				}
-				FeePackagesReSort = true
+				feePackagesReSort = true
 				common.CountSafe("TxPkgsDelTx")
 				if CheckForErrors() {
 					pkg.checkForDups()
@@ -521,7 +501,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 				records2remove++
 				common.CountSafe("TxPkgsDelGrB")
 			}
-			FeePackagesReSort = true
+			feePackagesReSort = true
 		}
 	}
 
@@ -535,7 +515,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 			}
 		}
 		FeePackages = new_pkgs_list
-		FeePackagesReSort = true
+		feePackagesReSort = true
 	}
 }
 

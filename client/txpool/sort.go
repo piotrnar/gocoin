@@ -14,22 +14,23 @@ import (
 const (
 	SORT_START_INDEX     = uint64(1 << 62) // 1/4th of max uint64 value
 	POOL_EXPIRE_INTERVAL = time.Hour
-	STOP_AUTO_SORT_AFTER = 20 * time.Minute // stop auto sotring if more than this much time passed since last request
+	STOP_AUTO_SORT_AFTER = 20 * time.Minute // stop auto-sorting if so much time passed since last request
 )
 
 var (
 	nextTxsPoolExpire    time.Time = time.Now().Add(POOL_EXPIRE_INTERVAL)
 	BestT2S, WorstT2S    *OneTxToSend
-	SortIndexStep        uint64 = 1e12 // this should be enough for 1 million txs - TODO: make it dynamic
+	SortListDirty        bool   // means the BestT2S <--> WorstT2S list is useless and needs rebuilding
+	sortIndexStep        uint64 // this is dynamically calculated in adjustSortIndexStep()
 	sortingSupressed     bool
 	lastSortingRequested time.Time
-	SortListDirty        bool // means the BestT2S <--> WorstT2S list is useless and needs rebuilding
 
 	AddToSortTime  time.Duration // findFirstWorse is the most time consuming bit
 	AddToSortCount uint
 
-	SortIndexValid             bool
-	SortIndexMin, SortIndexMax uint64
+	// statistics of how far the SortRank values have moved around the uint64 space:
+	SortRankRangeValid       bool
+	SortRankMin, SortRankMax uint64
 )
 
 func updateSortWidthStats() {
@@ -39,16 +40,16 @@ func updateSortWidthStats() {
 	if !(BestT2S != nil && WorstT2S != nil) {
 		panic(fmt.Sprint("best worst fucked ", BestT2S != nil, " / ", WorstT2S != nil))
 	}
-	if !SortIndexValid {
-		SortIndexMin = BestT2S.SortRank
-		SortIndexMax = WorstT2S.SortRank
-		SortIndexValid = true
+	if !SortRankRangeValid {
+		SortRankMin = BestT2S.SortRank
+		SortRankMax = WorstT2S.SortRank
+		SortRankRangeValid = true
 		return
 	}
-	if BestT2S.SortRank < SortIndexMin {
-		SortIndexMin = BestT2S.SortRank
-	} else if WorstT2S.SortRank > SortIndexMax {
-		SortIndexMax = WorstT2S.SortRank
+	if BestT2S.SortRank < SortRankMin {
+		SortRankMin = BestT2S.SortRank
+	} else if WorstT2S.SortRank > SortRankMax {
+		SortRankMax = WorstT2S.SortRank
 	}
 }
 
@@ -57,7 +58,7 @@ func adjustSortIndexStep() {
 	if cnt < 100e3 {
 		cnt = 100e3
 	}
-	SortIndexStep = (1 << 60) / uint64(2*cnt)
+	sortIndexStep = (1 << 60) / uint64(2*cnt)
 }
 
 // make sure to call it with thr mutex locked
@@ -115,7 +116,7 @@ func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 	WorstT2S.worse = t2s
 	t2s.better = WorstT2S
 	t2s.worse = nil
-	t2s.SortRank = WorstT2S.SortRank + SortIndexStep
+	t2s.SortRank = WorstT2S.SortRank + sortIndexStep
 	WorstT2S = t2s
 }
 
@@ -302,8 +303,8 @@ func (t2s *OneTxToSend) fixIndex() {
 			common.CountSafe("TxSortHadLot-A1")
 			return
 		}
-		if t2s.worse.SortRank > SortIndexStep {
-			t2s.SortRank = t2s.worse.SortRank - SortIndexStep
+		if t2s.worse.SortRank > sortIndexStep {
+			t2s.SortRank = t2s.worse.SortRank - sortIndexStep
 			common.CountSafe("TxSortHadLot-A2")
 			return
 		}
@@ -317,7 +318,7 @@ func (t2s *OneTxToSend) fixIndex() {
 
 	better_idx := t2s.better.SortRank
 	if t2s.worse == nil {
-		t2s.SortRank = better_idx + SortIndexStep
+		t2s.SortRank = better_idx + sortIndexStep
 		common.CountSafe("TxSortHadLot-B")
 		return
 	}
@@ -329,7 +330,7 @@ func (t2s *OneTxToSend) fixIndex() {
 		return
 	}
 
-	t2s.better.reindexDown(SortIndexStep / 16)
+	t2s.better.reindexDown(sortIndexStep / 16)
 }
 
 func (t *OneTxToSend) reindexDown(step uint64) {
@@ -373,7 +374,7 @@ func reindexEverything() {
 	index := uint64(SORT_START_INDEX)
 	for t := BestT2S; t != nil; t = t.worse {
 		t.SortRank = index
-		index += SortIndexStep
+		index += sortIndexStep
 	}
 }
 
@@ -437,7 +438,7 @@ func buildSortedList() {
 	BestT2S.SortRank = SortIndex
 	adjustSortIndexStep()
 	for _, t2s := range ts[1:] {
-		SortIndex += SortIndexStep
+		SortIndex += sortIndexStep
 		t2s.SortRank = SortIndex
 		t2s.better = WorstT2S
 		WorstT2S.worse = t2s

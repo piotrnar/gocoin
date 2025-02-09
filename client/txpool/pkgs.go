@@ -11,9 +11,11 @@ import (
 )
 
 var (
-	FeePackages          []*OneTxsPackage = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
-	FeePackagesDirty     bool
-	FeePackagesReSort    bool
+	FeePackages       []*OneTxsPackage = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
+	FeePackagesDirty  bool
+	feePackagesReSort bool
+
+	// timing statistics:
 	SortFeePackagesTime  time.Duration
 	SortFeePackagesCount uint
 	LookForPackagesTime  time.Duration
@@ -79,8 +81,8 @@ func (pk *OneTxsPackage) hasAllTheParentsFor(child *OneTxToSend) bool {
 }
 
 func sortFeePackages() {
-	if FeePackagesReSort {
-		FeePackagesReSort = false
+	if feePackagesReSort {
+		feePackagesReSort = false
 		common.CountSafe("TxPkgsSortDo")
 		sta := time.Now()
 		sort.Slice(FeePackages, func(i, j int) bool {
@@ -132,7 +134,7 @@ func lookForPackages() {
 			FeePackages = append(FeePackages, pkg)
 		}
 	}
-	FeePackagesReSort = true
+	feePackagesReSort = true
 	FeePackagesDirty = false
 	LookForPackagesTime += time.Since(sta)
 	LookForPackagesCount++

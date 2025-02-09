@@ -567,19 +567,17 @@ func tx_pool_stats(par string) {
 	} else {
 		si1 = "empty"
 	}
-	if txpool.SortIndexValid {
-		si2 = fmt.Sprintf("%06d <-> %06d", get_perc(txpool.SortIndexMin), get_perc(txpool.SortIndexMax))
+	if txpool.SortRankRangeValid {
+		si2 = fmt.Sprintf("%06d <-> %06d", get_perc(txpool.SortRankMin), get_perc(txpool.SortRankMax))
 	} else {
 		si2 = "never used"
 	}
-	fmt.Printf("SortIndexNow: %s   SortIndexEver: %s\n", si1, si2)
+	fmt.Printf("SortRankRangeNow: %s   SortRankRangeEver: %s\n", si1, si2)
 	fmt.Printf("AddToSort happened %d times, taking %s total  (%s avg)\n", txpool.AddToSortCount, txpool.AddToSortTime.String(), get_avg_time(txpool.AddToSortTime, txpool.AddToSortCount))
 	fmt.Println()
 	fmt.Printf("FeePackages Count: %d,  FeePackagesDirty: %t\n", len(txpool.FeePackages), txpool.FeePackagesDirty)
 	fmt.Printf("SortFeePackages happened %d times, taking %s total\n", txpool.SortFeePackagesCount, txpool.SortFeePackagesTime.String())
 	fmt.Printf("LookForPackages happened %d times, taking %s total\n", txpool.LookForPackagesCount, txpool.LookForPackagesTime.String())
-	fmt.Printf("AddToPackages happened %d times, taking %s total\n", txpool.AddToPackagesCount, txpool.AddToPackagesTime.String())
-	fmt.Printf("DelFromPackages happened %d times, taking %s total\n", txpool.DelFromPackagesCount, txpool.DelFromPackagesTime.String())
 	fmt.Println()
 	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
 }
