@@ -246,7 +246,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 		if last_block.Height <= best_block.Height {
 			break
 		}
-		best_block = best_block.FindPathTo(last_block)
+		best_block, _ = best_block.FindPathTo(last_block)
 		if best_block == nil {
 			break
 		}
