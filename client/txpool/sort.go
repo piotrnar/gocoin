@@ -71,15 +71,19 @@ func BlockCommitInProgress(yes bool) {
 
 // insertes given tx into sorted list at its proper position
 func (t2s *OneTxToSend) AddToSort() {
+	if SortListDirty {
+		return
+	}
 	if SortingDisabled() {
 		SortListDirty = true
 		return
 	}
-	if SortListDirty {
-		return
-	}
 	//fmt.Printf("adding %p / %s with spb %.2f  %p/%p\n", t2s, btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), BestT2S, WorstT2S)
-
+	sta := time.Now()
+	defer func() {
+		ResortingSinceLastRedoTime += time.Since(sta)
+		ResortingSinceLastRedoCount++
+	}()
 	if WorstT2S == nil || BestT2S == nil {
 		if CheckForErrors() && (WorstT2S != nil || BestT2S != nil) {
 			println("ERROR: if WorstT2S is nil BestT2S should be nil too", WorstT2S, BestT2S)
@@ -192,13 +196,18 @@ do_the_children:
 
 // removes given tx from the sorted list
 func (t2s *OneTxToSend) DelFromSort() {
+	if SortListDirty {
+		return
+	}
 	if SortingDisabled() {
 		SortListDirty = true
 		return
 	}
-	if SortListDirty {
-		return
-	}
+	sta := time.Now()
+	defer func() {
+		ResortingSinceLastRedoTime += time.Since(sta)
+		ResortingSinceLastRedoCount++
+	}()
 	if t2s == BestT2S {
 		if t2s == WorstT2S {
 			BestT2S, WorstT2S = nil, nil

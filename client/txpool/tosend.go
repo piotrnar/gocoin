@@ -60,10 +60,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	TransactionsToSend[bidx] = t2s
 	TransactionsToSendWeight += uint64(t2s.Weight())
 	TransactionsToSendSize += uint64(t2s.Footprint)
-	sta := time.Now()
 	t2s.AddToSort()
-	ResortingSinceLastRedoTime += time.Since(sta)
-	ResortingSinceLastRedoCount++
 
 	if !FeePackagesDirty && CheckForErrors() {
 		if t2s.inPackages != nil {
@@ -194,10 +191,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	}
 	tx.inPackagesSet(nil) // this one will update tx.Footprint
 
-	sta := time.Now()
 	tx.DelFromSort()
-	ResortingSinceLastRedoTime += time.Since(sta)
-	ResortingSinceLastRedoCount++
 
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	TransactionsToSendSize -= uint64(tx.Footprint)
