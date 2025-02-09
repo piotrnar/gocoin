@@ -102,7 +102,7 @@ func sortFeePackages() {
 func emptyFeePackages() {
 	if len(FeePackages) > 0 {
 		FeePackages = FeePackages[:0] // to avoid unneeded memory allocation, just reuse the old buffer
-		for t2s := BestT2S; t2s != nil; t2s = t2s.worse {
+		for _, t2s := range TransactionsToSend {
 			t2s.inPackagesSet(nil) // we have to do this first run only to reset InPackages field
 		}
 		common.CountSafe("TxPkgsFreeMemory")
