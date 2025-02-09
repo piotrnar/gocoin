@@ -138,12 +138,11 @@ func buildListAndPackages() {
 
 // GetSortedMempoolRBF is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.
 func GetSortedMempoolRBF() (result []*OneTxToSend) {
-	var pks_idx, res_idx, cnt int
-	result = make([]*OneTxToSend, len(TransactionsToSend))
+	var pks_idx int
+	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
 	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
 	buildListAndPackages()
 	for tx := BestT2S; tx != nil; tx = tx.worse {
-		cnt++
 		for pks_idx < len(FeePackages) {
 			if pk := FeePackages[pks_idx]; pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
 				pks_idx++
@@ -153,17 +152,15 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 				for _, _t := range pk.Txs {
 					already_in[_t] = true
 				}
-				copy(result[res_idx:], pk.Txs)
-				res_idx += len(pk.Txs)
+				result = append(result, pk.Txs...)
 				continue
 			}
 			break
 		}
 
 		if _, ok := already_in[tx]; !ok {
-			result[res_idx] = tx
+			result = append(result, tx)
 			already_in[tx] = true
-			res_idx++
 		}
 	}
 	return
@@ -171,9 +168,9 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 
 // GetMempoolFees only takes tx/package weight and the fee.
 func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
-	var txs_idx, pks_idx, res_idx int
+	var pks_idx int
 	var weightsofar uint64
-	result = make([][2]uint64, len(TransactionsToSend))
+	result = make([][2]uint64, 0, len(TransactionsToSend))
 	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
 	buildListAndPackages()
 	for tx := BestT2S; tx != nil && weightsofar < maxweight; tx = tx.worse {
@@ -184,8 +181,7 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 				if pk.anyIn(already_in) {
 					continue
 				}
-				result[res_idx] = [2]uint64{uint64(pk.Weight), pk.Fee}
-				res_idx++
+				result = append(result, [2]uint64{uint64(pk.Weight), pk.Fee})
 				weightsofar += uint64(pk.Weight)
 				for _, _t := range pk.Txs {
 					already_in[_t] = true
@@ -194,15 +190,12 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 			}
 			break
 		}
-		txs_idx++
 		if _, ok := already_in[tx]; !ok {
 			wg := tx.Weight()
-			result[res_idx] = [2]uint64{uint64(wg), tx.Fee}
-			res_idx++
+			result = append(result, [2]uint64{uint64(wg), tx.Fee})
 			weightsofar += uint64(tx.Weight())
 			already_in[tx] = true
 		}
 	}
-	result = result[:res_idx]
 	return
 }
