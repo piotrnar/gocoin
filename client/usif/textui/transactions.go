@@ -558,7 +558,7 @@ func tx_pool_stats(par string) {
 	fmt.Printf("Rejected: %d in %d txs\n", txpool.TransactionsRejectedSize, len(txpool.TransactionsRejected))
 	fmt.Printf("  Waiting4Input: %d in %d txs\n", txpool.WaitingForInputsSize, len(txpool.WaitingForInputs))
 	fmt.Printf("  Rejected used UTXOs: %d\n", len(txpool.RejectedUsedUTXOs))
-	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
+	fmt.Printf("Pending: %d txs, with %d inside net queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
 	fmt.Println()
 	fmt.Printf("SortingDisabled: %t,  SortListDirty: %t\n", txpool.SortingDisabled(), txpool.SortListDirty)
 	var si1, si2 string
@@ -572,13 +572,11 @@ func tx_pool_stats(par string) {
 	} else {
 		si2 = "never used"
 	}
-	fmt.Printf("SortRankRangeNow: %s   SortRankRangeEver: %s\n", si1, si2)
-	fmt.Printf("AddToSort happened %d times, taking %s total  (%s avg)\n", txpool.AddToSortCount, txpool.AddToSortTime.String(), get_avg_time(txpool.AddToSortTime, txpool.AddToSortCount))
-	fmt.Println()
+	fmt.Printf("  SortRankRangeNow: %s   Ever: %s\n", si1, si2)
+	fmt.Printf("  AddToSort happened %d times, taking %s total  (%s avg)\n", txpool.AddToSortCount, txpool.AddToSortTime.String(), get_avg_time(txpool.AddToSortTime, txpool.AddToSortCount))
 	fmt.Printf("FeePackages Count: %d,  Dirty: %t   MemSize: %d\n", len(txpool.FeePackages), txpool.FeePackagesDirty, txpool.FeePackagesSysSize())
-	fmt.Printf("SortFeePackages happened %d times, taking %s total\n", txpool.SortFeePackagesCount, txpool.SortFeePackagesTime.String())
-	fmt.Printf("LookForPackages happened %d times, taking %s total\n", txpool.LookForPackagesCount, txpool.LookForPackagesTime.String())
-	fmt.Println()
+	fmt.Printf("  SortFeePackages happened %d times, taking %s total\n", txpool.SortFeePackagesCount, txpool.SortFeePackagesTime.String())
+	fmt.Printf("  LookForPackages happened %d times, taking %s total\n", txpool.LookForPackagesCount, txpool.LookForPackagesTime.String())
 	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
 }
 
