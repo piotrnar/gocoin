@@ -79,3 +79,14 @@ func (t2s *OneTxToSend) inPackagesSet(newval []*OneTxsPackage) {
 		TransactionsToSendSize += uint64(new_size)
 	}
 }
+
+func FeePackagesSysSize() (size int) {
+	size = int(unsafe.Sizeof(FeePackages)) + cap(FeePackages)*int(unsafe.Sizeof(FeePackages[0]))
+	if len(FeePackages) > 0 {
+		size += len(FeePackages) * int(unsafe.Sizeof(*FeePackages[0]))
+		for _, fp := range FeePackages {
+			size += cap(fp.Txs) * int(unsafe.Sizeof(fp.Txs[0]))
+		}
+	}
+	return
+}

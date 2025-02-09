@@ -575,7 +575,7 @@ func tx_pool_stats(par string) {
 	fmt.Printf("SortRankRangeNow: %s   SortRankRangeEver: %s\n", si1, si2)
 	fmt.Printf("AddToSort happened %d times, taking %s total  (%s avg)\n", txpool.AddToSortCount, txpool.AddToSortTime.String(), get_avg_time(txpool.AddToSortTime, txpool.AddToSortCount))
 	fmt.Println()
-	fmt.Printf("FeePackages Count: %d,  FeePackagesDirty: %t\n", len(txpool.FeePackages), txpool.FeePackagesDirty)
+	fmt.Printf("FeePackages Count: %d,  Dirty: %t   MemSize: %d\n", len(txpool.FeePackages), txpool.FeePackagesDirty, txpool.FeePackagesSysSize())
 	fmt.Printf("SortFeePackages happened %d times, taking %s total\n", txpool.SortFeePackagesCount, txpool.SortFeePackagesTime.String())
 	fmt.Printf("LookForPackages happened %d times, taking %s total\n", txpool.LookForPackagesCount, txpool.LookForPackagesTime.String())
 	fmt.Println()
