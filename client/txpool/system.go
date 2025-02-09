@@ -33,9 +33,6 @@ func (t *OneTxRejected) SysSize() (size int) {
 }
 
 func (t2s *OneTxToSend) memInputsSet(newval []bool) {
-	if t2s.Footprint == 0 {
-		panic("memInputsSet when Footprint is 0")
-	}
 	if !SYSIZE_COUNT_MEMINPUTS || cap(newval) == cap(t2s.MemInputs) {
 		t2s.MemInputs = newval
 		return
@@ -57,9 +54,6 @@ func (t2s *OneTxToSend) memInputsSet(newval []bool) {
 }
 
 func (t2s *OneTxToSend) inPackagesSet(newval []*OneTxsPackage) {
-	if t2s.Footprint == 0 {
-		panic("inPackagesSet when Footprint is 0")
-	}
 	if !SYSIZE_COUNT_PACKAGES || cap(newval) == cap(t2s.inPackages) {
 		t2s.inPackages = newval
 		return
