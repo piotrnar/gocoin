@@ -346,9 +346,8 @@ func Tick() {
 		lastFeeAdjustedTime = time.Now()
 	}
 
-	if FeePackagesDirty && SortListDirty && SortingDisabled() {
+	if FeePackagesDirty && SortingDisabled() {
 		emptyFeePackages() // this should free all the memory used by packages
-		common.CountSafe("TxPkgsFreeMemory")
 	}
 	if CheckForErrors() && MempoolCheck() {
 		panic("Mempool check error inside the tick")
