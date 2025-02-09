@@ -5,7 +5,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
-
 func nextBlock(ch *Chain, hash, header []byte, height, blen, txs uint32) {
 	bh := btc.NewUint256(hash[:])
 	if _, ok := ch.BlockIndex[bh.BIdx()]; ok {
@@ -21,15 +20,13 @@ func nextBlock(ch *Chain, hash, header []byte, height, blen, txs uint32) {
 	ch.BlockIndex[v.BlockHash.BIdx()] = v
 }
 
-
 // loadBlockIndex loads the block index from the disk.
-func (ch *Chain)loadBlockIndex() {
+func (ch *Chain) loadBlockIndex() {
 	ch.BlockIndex = make(map[[btc.Uint256IdxLen]byte]*BlockTreeNode, BlockMapInitLen)
 	ch.BlockTreeRoot = new(BlockTreeNode)
 	ch.BlockTreeRoot.BlockHash = ch.Genesis
 	ch.RebuildGenesisHeader()
 	ch.BlockIndex[ch.Genesis.BIdx()] = ch.BlockTreeRoot
-
 
 	ch.Blocks.LoadBlockIndex(ch, nextBlock)
 	tlb := ch.Unspent.LastBlockHash
@@ -38,7 +35,7 @@ func (ch *Chain)loadBlockIndex() {
 		if AbortNow {
 			return
 		}
-		if v==ch.BlockTreeRoot {
+		if v == ch.BlockTreeRoot {
 			// skip root block (should be only one)
 			continue
 		}

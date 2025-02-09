@@ -2,6 +2,7 @@ package chain
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -51,7 +52,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			prv = cur
 		}
 
-		nxt := last.FindPathTo(end)
+		nxt, _ := last.FindPathTo(end)
 		if nxt == nil {
 			break
 		}
@@ -168,27 +169,30 @@ func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, float64) {
 }
 
 // FindPathTo returns the next node that leads to the given destination.
-func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) *BlockTreeNode {
+func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) (res *BlockTreeNode, er error) {
 	if n == end {
-		return nil
+		return nil, nil
 	}
 
 	if end.Height <= n.Height {
-		panic("FindPathTo: End block is not higher then current")
+		return nil, errors.New("end block is not higher then current")
 	}
 
 	if len(n.Childs) == 0 {
-		panic("FindPathTo: Unknown path to block " + end.BlockHash.String())
+		return nil, errors.New("unknown path to block" + end.BlockHash.String())
 	}
 
-	if len(n.Childs) == 1 {
-		return n.Childs[0] // if there is only one child, do it fast
-	}
+	/* if len(n.Childs) == 1 { <- we won't be doing this, to not go down the wrong path
+		return n.Childs[0], nil // if there is only one child, do it fast
+	}*/
 
 	for {
 		// more then one children: go from the end until you reach the current node
 		if end.Parent == n {
-			return end
+			return end, nil
+		}
+		if end.Height <= n.Height {
+			return nil, errors.New("reached the starting node height, but no hit")
 		}
 		end = end.Parent
 	}
@@ -205,6 +209,28 @@ func (ch *Chain) HasAllParents(dst *BlockTreeNode) bool {
 			return false
 		}
 	}
+}
+
+// FindFirstFather returns the first (with highest block height) father of the two nodes
+func (us *BlockTreeNode) FindFirstFather(him *BlockTreeNode) *BlockTreeNode {
+	for us.Height > him.Height {
+		if us = us.Parent; us == nil {
+			return nil
+		}
+	}
+	for him.Height > us.Height {
+		if him = him.Parent; him == nil {
+			return nil
+		}
+	}
+	for him != us {
+		us = us.Parent
+		him = him.Parent
+		if us == nil || him == nil {
+			return nil
+		}
+	}
+	return him
 }
 
 // OnActiveBranch returns true if the given node is on the active branch.
