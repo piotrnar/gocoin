@@ -16,8 +16,6 @@ var (
 	feePackagesReSort bool
 
 	// timing statistics:
-	SortFeePackagesTime  time.Duration
-	SortFeePackagesCount uint
 	LookForPackagesTime  time.Duration
 	LookForPackagesCount uint
 )
@@ -84,7 +82,6 @@ func sortFeePackages() {
 	if feePackagesReSort {
 		feePackagesReSort = false
 		common.CountSafe("TxPkgsSortDo")
-		sta := time.Now()
 		sort.Slice(FeePackages, func(i, j int) bool {
 			/* use this one if you want to have them sorted in a predictible order (useful for debugging)
 			iv := FeePackages[i].Fee * uint64(FeePackages[j].Weight)
@@ -97,8 +94,6 @@ func sortFeePackages() {
 			*/
 			return FeePackages[i].Fee*uint64(FeePackages[j].Weight) > FeePackages[j].Fee*uint64(FeePackages[i].Weight)
 		})
-		SortFeePackagesTime += time.Since(sta)
-		SortFeePackagesCount++
 	} else {
 		common.CountSafe("TxPkgsSortSkip")
 	}
@@ -118,7 +113,7 @@ func emptyFeePackages() {
 func lookForPackages() {
 	defer sortFeePackages()
 	buildSortedList()
-	lastSortingRequested = time.Now()
+	LastSortingDone = time.Now()
 	if !FeePackagesDirty {
 		common.CountSafe("TxPkgsHaveThem")
 		return

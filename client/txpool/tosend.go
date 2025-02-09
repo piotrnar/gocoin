@@ -219,9 +219,10 @@ func removeExcessiveTxs() {
 }
 
 func txChecker(tx *btc.Tx) bool {
+	bidx := tx.Hash.BIdx()
 	TxMutex.Lock()
-	rec, ok := TransactionsToSend[tx.Hash.BIdx()]
-	TxMutex.Unlock()
+	rec, ok := TransactionsToSend[bidx]
+	defer TxMutex.Unlock()
 	if ok && rec.Local {
 		common.CountSafe("TxScrOwn")
 		return false // Assume own txs as non-trusted
@@ -234,9 +235,14 @@ func txChecker(tx *btc.Tx) bool {
 		}
 	}
 	if ok {
-		common.CountSafe("TxScrBoosted")
+		common.CountSafe("TxScrBoosted-T2S")
 	} else {
-		common.CountSafe("TxScrMissed")
+		if txr, ok := TransactionsRejected[bidx]; ok && txr.Reason == TX_REJECTED_REPLACED {
+			// Replaced transaction also had their scripts verified OK
+			common.CountSafe("TxScrBoosted-TxR")
+		} else {
+			common.CountSafe("TxScrMissed")
+		}
 	}
 	return ok
 }

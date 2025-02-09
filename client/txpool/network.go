@@ -326,12 +326,7 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 	return res == 0
 }
 
-func Tick() {
-	TxMutex.Lock()
-	expireOldTxs()
-	limitRejected()
-	removeExcessiveTxs()
-
+func adjustMinimalFee() {
 	if currentFeeAdjustedSPKB != 0 && time.Since(lastFeeAdjustedTime) > time.Minute {
 		if TransactionsToSendSize < common.MaxMempoolSize() {
 			if currentFeeAdjustedSPKB > feeAdjustDecrementSPKB {
@@ -345,10 +340,15 @@ func Tick() {
 		}
 		lastFeeAdjustedTime = time.Now()
 	}
+}
 
-	if FeePackagesDirty && SortingDisabled() {
-		emptyFeePackages() // this should free all the memory used by packages
-	}
+func Tick() {
+	TxMutex.Lock()
+	expireOldTxs()
+	limitRejected()
+	removeExcessiveTxs()
+	adjustMinimalFee()
+
 	if CheckForErrors() && MempoolCheck() {
 		panic("Mempool check error inside the tick")
 	}
