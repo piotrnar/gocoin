@@ -106,7 +106,7 @@ func emptyFeePackages() {
 }
 
 // builds FeePackages list, if neccessary
-func lookForPackages() {
+func buildListAndPackages() {
 	defer sortFeePackages()
 	buildSortedList()
 	LastSortingDone = time.Now()
@@ -138,10 +138,10 @@ func lookForPackages() {
 
 // GetSortedMempoolRBF is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.
 func GetSortedMempoolRBF() (result []*OneTxToSend) {
-	lookForPackages()
-	result = make([]*OneTxToSend, len(TransactionsToSend))
 	var pks_idx, res_idx, cnt int
+	result = make([]*OneTxToSend, len(TransactionsToSend))
 	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
+	buildListAndPackages()
 	for tx := BestT2S; tx != nil; tx = tx.worse {
 		cnt++
 		for pks_idx < len(FeePackages) {
@@ -171,12 +171,11 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 
 // GetMempoolFees only takes tx/package weight and the fee.
 func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
-	lookForPackages() // it will do buildSortedList() if needed
-
 	var txs_idx, pks_idx, res_idx int
 	var weightsofar uint64
 	result = make([][2]uint64, len(TransactionsToSend))
 	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
+	buildListAndPackages()
 	for tx := BestT2S; tx != nil && weightsofar < maxweight; tx = tx.worse {
 		for pks_idx < len(FeePackages) {
 			pk := FeePackages[pks_idx]

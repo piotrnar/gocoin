@@ -388,24 +388,6 @@ func isFirstTxBetter(rec_i, rec_j *OneTxToSend) bool {
 	*/
 }
 
-// Make sure to call it with TxMutex locked
-func GetSortedMempool() (result []*OneTxToSend) {
-	if SortListDirty {
-		return GetSortedMempoolSlow()
-	}
-
-	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
-	var prv_idx uint64
-	for t2s := BestT2S; t2s != nil; t2s = t2s.worse {
-		if CheckForErrors() && (prv_idx != 0 && prv_idx >= t2s.SortRank) {
-			println("ERROR: GetSortedMempool corupt sort index", len(TransactionsToSend), prv_idx, t2s.SortRank)
-		}
-		prv_idx = t2s.SortRank
-		result = append(result, t2s)
-	}
-	return
-}
-
 // call it with the mutex locked
 func buildSortedList() {
 	if SortingDisabled() {
@@ -484,44 +466,37 @@ func expireOldTxs() {
 	common.CountSafe("TxPoolExpireTicks")
 }
 
-// GetSortedMempool returns txs sorted by SPB, but with parents first.
+// GetSortedMempoolSlow returns txs sorted by SPB, but with parents first.
+// It does not use the sort list and does all the sorting inside the function.
 // Make sure to call it with TxMutex locked
 func GetSortedMempoolSlow() (result []*OneTxToSend) {
-	all_txs := make([]btc.BIDX, len(TransactionsToSend))
-	var idx int
-	for k := range TransactionsToSend {
-		all_txs[idx] = k
-		idx++
+	all_txs := make([]*OneTxToSend, 0, len(TransactionsToSend))
+	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
+	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
+	parent_of := make(map[*OneTxToSend][]*OneTxToSend)
+
+	for _, tx := range TransactionsToSend {
+		all_txs = append(all_txs, tx)
 	}
 	sort.Slice(all_txs, func(i, j int) bool {
-		rec_i := TransactionsToSend[all_txs[i]]
-		rec_j := TransactionsToSend[all_txs[j]]
-		return isFirstTxBetter(rec_i, rec_j)
+		return isFirstTxBetter(all_txs[i], all_txs[j])
 	})
 
 	// now put the children after the parents
-	result = make([]*OneTxToSend, len(all_txs))
-	already_in := make(map[btc.BIDX]bool, len(all_txs))
-	parent_of := make(map[btc.BIDX][]btc.BIDX)
-
-	idx = 0
-
-	var missing_parents = func(txkey btc.BIDX, is_any bool) (res []btc.BIDX, yes bool) {
-		tx := TransactionsToSend[txkey]
+	missing_parents := func(tx *OneTxToSend, is_any bool) (res []*OneTxToSend, yes bool) {
 		if tx.MemInputs == nil {
 			return
 		}
 		var cnt_ok uint32
 		for idx, inp := range tx.TxIn {
 			if tx.MemInputs[idx] {
-				txk := btc.BIdx(inp.Input.Hash[:])
-				if _, ok := already_in[txk]; ok {
-				} else {
+				txx := TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]
+				if _, ok := already_in[txx]; !ok {
 					yes = true
 					if is_any {
 						return
 					}
-					res = append(res, txk)
+					res = append(res, txx)
 				}
 
 				cnt_ok++
@@ -533,22 +508,21 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 		return
 	}
 
-	var append_txs func(txkey btc.BIDX)
-	append_txs = func(txkey btc.BIDX) {
-		result[idx] = TransactionsToSend[txkey]
-		idx++
-		already_in[txkey] = true
+	var append_txs func(txkey *OneTxToSend)
+	append_txs = func(t2s *OneTxToSend) {
+		result = append(result, t2s)
+		already_in[t2s] = true
 
-		if toretry, ok := parent_of[txkey]; ok {
-			for _, kv := range toretry {
-				if _, in := already_in[kv]; in {
+		if toretry, ok := parent_of[t2s]; ok {
+			for _, tx_ := range toretry {
+				if _, in := already_in[tx_]; in {
 					continue
 				}
-				if _, yes := missing_parents(kv, true); !yes {
-					append_txs(kv)
+				if _, yes := missing_parents(tx_, true); !yes {
+					append_txs(tx_)
 				}
 			}
-			delete(parent_of, txkey)
+			delete(parent_of, t2s)
 		}
 	}
 
@@ -562,10 +536,29 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 		append_txs(txkey)
 	}
 
-	if CheckForErrors() && (idx != len(result) || idx != len(already_in) || len(parent_of) != 0) {
-		println("ERROR: Get sorted mempool idx:", idx, " result:", len(result), " alreadyin:", len(already_in), " parents:", len(parent_of))
-		result = result[:idx]
+	if CheckForErrors() && (len(result) != cap(result) || len(result) != len(already_in) || len(parent_of) != 0) {
+		println("ERROR: Get sorted mempool cap:", cap(result), " result:", len(result), " alreadyin:", len(already_in), " parents:", len(parent_of))
 	}
 
+	return
+}
+
+// GetSortedMempool returns txs sorted by SPB, but with parents first.
+// It uses the sort list for speedin up the process
+// Make sure to call it with TxMutex locked
+func GetSortedMempool() (result []*OneTxToSend) {
+	if SortListDirty {
+		return GetSortedMempoolSlow()
+	}
+
+	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
+	var prv_idx uint64
+	for t2s := BestT2S; t2s != nil; t2s = t2s.worse {
+		if CheckForErrors() && (prv_idx != 0 && prv_idx >= t2s.SortRank) {
+			println("ERROR: GetSortedMempool corupt sort index", len(TransactionsToSend), prv_idx, t2s.SortRank)
+		}
+		prv_idx = t2s.SortRank
+		result = append(result, t2s)
+	}
 	return
 }
