@@ -249,11 +249,15 @@ func txChecker(tx *btc.Tx) bool {
 	if ok {
 		common.CountSafe("TxScrBoosted-T2S")
 	} else {
-		if txr, ok := TransactionsRejected[bidx]; ok && txr.Reason == TX_REJECTED_REPLACED {
+		if txr, ok := TransactionsRejected[bidx]; ok {
 			// Replaced transaction also had their scripts verified OK
-			common.CountSafe("TxScrBoosted-TxR")
+			if txr.Reason == TX_REJECTED_REPLACED {
+				common.CountSafe("TxScrBoosted-TxR")
+			} else {
+				common.CountSafePar("TxScrMissed-", txr.Reason)
+			}
 		} else {
-			common.CountSafe("TxScrMissed")
+			common.CountSafe("TxScrMissed-???")
 		}
 	}
 	return ok

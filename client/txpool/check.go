@@ -203,6 +203,23 @@ func checkRejectedTxs() (dupa int) {
 			fmt.Println(dupa, "WaitingForInputs", rec.TxID.String(), "has zero records")
 		}
 		spent_cnt += len(rec.Ids)
+		for _, k := range rec.Ids {
+			txr := TransactionsRejected[k]
+			if txr == nil {
+				dupa++
+				fmt.Println(dupa, "WaitingForInput not found in transactions rejected", hex.EncodeToString(k[:]))
+				continue
+			}
+			if txr.Tx == nil {
+				dupa++
+				fmt.Println(dupa, "ERROR: WaitingForInput found in transactions rejected but data is nil", txr.Id.String(), txr.Reason)
+			}
+			if txr.Reason != TX_REJECTED_NO_TXOU {
+				dupa++
+				fmt.Println(dupa, "ERROR: WaitingForInput found in transactions rejected but has wrong reason", txr.Id.String(), txr.Reason)
+				continue
+			}
+		}
 	}
 	if w4i_cnt != spent_cnt {
 		dupa++
