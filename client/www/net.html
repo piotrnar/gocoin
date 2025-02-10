@@ -289,79 +289,83 @@ function show_info(id) {
 function update_connection_info(ci) {
 	var s = 'Connection ID ' + ci.ID + ':\n'
 
-	s += ci.LocalAddr + (ci.Incomming ? ' <== ' : ' ==> ') + ci.RemoteAddr + '\n'
-	s += 'Connected at ' + tim2str(Date.parse(ci.ConnectedAt)/1000) + ' | Ticks: ' + ci.Ticks + '\n'
-	s += 'Node Version: ' + ci.Version + ' | Services: 0x' + ci.Services.toString(16) + ' | Chain Height: ' + ci.Height + '\n'
-	s += 'User Agent: ' + ci.Agent + ' | Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
-	s += 'SendHeaders: ' + ci.SendHeaders + ' | SendCmpctVer: ' + ci.SendCmpctVer + ' | HighBandwidth: ' + ci.HighBandwidth + '\n'
-	s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
-	s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
-
-	s += 'Total Received:' + ci.BytesReceived + ' / Sent:' + ci.BytesSent + '   Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
-
-	s += 'Invs:  Done=' + ci.InvsDone + '   Recieved=' + ci.InvsRecieved + '  Pending=' + ci.InvsToSend +  '\n'
-	s += 'Get Headers:' + '  InProgress=' + ci.GetHeadersInProgress + '  AllReceived=' + ci.AllHeadersReceived + '  LastEmpty=' + ci.LastHeadersEmpty + '\n'
-	s += 'Get Blocks:' + '  InProgress=' + ci.BlocksInProgress + '  GetDataNow=' + ci.GetBlocksDataNow + '\n'
-
-	s += 'Authorized:' + ci.Authorized + '  AuthAckGot:' + ci.AuthAckGot + '  ChainSynced:' + ci.ChainSynchronized + '  GetMPInProgress:' + ci.GetMPInProgress + '\n'
-	s += 'GetAddrDone:' + ci.GetAddrDone + ' / MinFeeSPKB:' + ci.MinFeeSPKB  + ' / LastMinFeeSent:' + ci.LastMinFeePerKByte + '\n'
-	s += 'Ping history:'
-
-	var idx = ci.PingHistoryIdx
-	for (var i=0; i<ci.PingHistory.length; i++) {
-		if (ci.PingHistory[idx]>0) {
-			s += ' ' + ci.PingHistory[idx]
-		}
-		idx = (idx+1)%ci.PingHistory.length
-	}
-	s += ' -> ' + ci.AveragePing + ' ms\n'
-
-	var cnts = ''
-	var msgs = new Array()
-	var has_counters = false
-
-	for (var k in ci.Counters) {
-		if (k[4]=='_') {
-			if (isNaN(msgs[k.substr(5)])) msgs[k.substr(5)] = new Array()
-			msgs[k.substr(5)][k.substr(0,4)] = ci.Counters[k]
-		} else {
-			if (cnts!='') cnts+=',  '
-			cnts += k + '=' + ci.Counters[k]
-		}
-		has_counters = true
-	}
-	if (!has_counters) {
-		s += 'No counters yet or counters disabled in config file (Stats.NoCounters)'
+	if (ci.LocalAddr == "") {
+		s += 'Connecting' + (ci.Incomming ? ' <== ' : ' ==> ') + ci.PeerIp + '\n'
 	} else {
-		if (cnts!='') {
-			s += 'Counters: ' + cnts + '\n'
+		s += ci.LocalAddr + (ci.Incomming ? ' <== ' : ' ==> ') + ci.RemoteAddr + '\n'
+		s += 'Connected at ' + tim2str(Date.parse(ci.ConnectedAt)/1000) + ' | Ticks: ' + ci.Ticks + '\n'
+		s += 'Node Version: ' + ci.Version + ' | Services: 0x' + ci.Services.toString(16) + ' | Chain Height: ' + ci.Height + '\n'
+		s += 'User Agent: ' + ci.Agent + ' | Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
+		s += 'SendHeaders: ' + ci.SendHeaders + ' | SendCmpctVer: ' + ci.SendCmpctVer + ' | HighBandwidth: ' + ci.HighBandwidth + '\n'
+		s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
+		s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
+
+		s += 'Total Received:' + ci.BytesReceived + ' / Sent:' + ci.BytesSent + '   Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
+
+		s += 'Invs:  Done=' + ci.InvsDone + '   Recieved=' + ci.InvsRecieved + '  Pending=' + ci.InvsToSend +  '\n'
+		s += 'Get Headers:' + '  InProgress=' + ci.GetHeadersInProgress + '  AllReceived=' + ci.AllHeadersReceived + '  LastEmpty=' + ci.LastHeadersEmpty + '\n'
+		s += 'Get Blocks:' + '  InProgress=' + ci.BlocksInProgress + '  GetDataNow=' + ci.GetBlocksDataNow + '\n'
+
+		s += 'Authorized:' + ci.Authorized + '  AuthAckGot:' + ci.AuthAckGot + '  ChainSynced:' + ci.ChainSynchronized + '  GetMPInProgress:' + ci.GetMPInProgress + '\n'
+		s += 'GetAddrDone:' + ci.GetAddrDone + ' / MinFeeSPKB:' + ci.MinFeeSPKB  + ' / LastMinFeeSent:' + ci.LastMinFeePerKByte + '\n'
+		s += 'Ping history:'
+
+		var idx = ci.PingHistoryIdx
+		for (var i=0; i<ci.PingHistory.length; i++) {
+			if (ci.PingHistory[idx]>0) {
+				s += ' ' + ci.PingHistory[idx]
+			}
+			idx = (idx+1)%ci.PingHistory.length
 		}
-		s += '----------------------------------------------------------------\n'
-		s += ' Network message     Received from peer          Sent to peer\n'
-		s += '----------------------------------------------------------------\n'
-		var kks = []
-		for (var k in msgs) {
-			kks.push(k)
+		s += ' -> ' + ci.AveragePing + ' ms\n'
+
+		var cnts = ''
+		var msgs = new Array()
+		var has_counters = false
+
+		for (var k in ci.Counters) {
+			if (k[4]=='_') {
+				if (isNaN(msgs[k.substr(5)])) msgs[k.substr(5)] = new Array()
+				msgs[k.substr(5)][k.substr(0,4)] = ci.Counters[k]
+			} else {
+				if (cnts!='') cnts+=',  '
+				cnts += k + '=' + ci.Counters[k]
+			}
+			has_counters = true
 		}
-		kks.sort()
-		for (var i=0; i<kks.length; i++) {
-			var v
-			var k = kks[i]
-			s += ' ' + rightpad(k,  ' ', 16) + ' '
-			v = msgs[k]["rcvd"]
-			s += leftpad(isNaN(v)?' ':v, ' ', 8)
-			v = msgs[k]["rbts"]
-			s += ' ' + leftpad(isNaN(v)?' ':v,  ' ', 12)
-			s += '   '
+		if (!has_counters) {
+			s += 'No counters yet or counters disabled in config file (Stats.NoCounters)'
+		} else {
+			if (cnts!='') {
+				s += 'Counters: ' + cnts + '\n'
+			}
+			s += '----------------------------------------------------------------\n'
+			s += ' Network message     Received from peer          Sent to peer\n'
+			s += '----------------------------------------------------------------\n'
+			var kks = []
+			for (var k in msgs) {
+				kks.push(k)
+			}
+			kks.sort()
+			for (var i=0; i<kks.length; i++) {
+				var v
+				var k = kks[i]
+				s += ' ' + rightpad(k,  ' ', 16) + ' '
+				v = msgs[k]["rcvd"]
+				s += leftpad(isNaN(v)?' ':v, ' ', 8)
+				v = msgs[k]["rbts"]
+				s += ' ' + leftpad(isNaN(v)?' ':v,  ' ', 12)
+				s += '   '
 
 
-			v = msgs[k]["sent"]
-			s += leftpad(isNaN(v)?' ':v, ' ', 8)
-			v = msgs[k]["sbts"]
-			s += ' ' + leftpad(isNaN(v)?' ':v,  ' ', 12)
-			s += '\n'
+				v = msgs[k]["sent"]
+				s += leftpad(isNaN(v)?' ':v, ' ', 8)
+				v = msgs[k]["sbts"]
+				s += ' ' + leftpad(isNaN(v)?' ':v,  ' ', 12)
+				s += '\n'
+			}
+			s += '----------------------------------------------------------------\n'
 		}
-		s += '----------------------------------------------------------------\n'
 	}
 
 	rawdiv.innerHTML = s
