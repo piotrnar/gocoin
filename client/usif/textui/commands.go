@@ -444,7 +444,7 @@ func redo_block(par string) {
 	}
 
 	sta := time.Now()
-	nxt, _ := last.FindPathTo(end)
+	nxt := last.FindPathTo(end)
 	if nxt == nil {
 		println("FindPathTo failed")
 		return

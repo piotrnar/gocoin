@@ -349,7 +349,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 	sta := time.Now()
 	last := common.BlockChain.LastBlock()
 
-	if _, er := last.FindPathTo(end); er != nil {
+	if _, er := last.FindPathToExt(end, false); er != nil {
 		println("FindPathTo the best BlockDB node:", er.Error())
 		if last = last.FindFirstFather(end); last == nil {
 			panic("Cannot find a common father between best BlockDB node and current UTXO.db")
@@ -358,7 +358,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 	}
 
 	for last != end {
-		nxt, _ := last.FindPathTo(end)
+		nxt := last.FindPathTo(end)
 		if nxt == nil {
 			break
 		}
