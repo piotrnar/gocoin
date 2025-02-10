@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"sync"
 	"time"
 
@@ -183,11 +183,14 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		return
 	}
 
+	chp1 := time.Now()
 	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
+	chp2 := time.Now()
 
 	sta, b2g := c.ProcessNewHeader(pl[:80])
 
+	chp3 := time.Now()
 	if b2g == nil {
 		common.CountSafe("CmpctBlockHdrNo")
 		if sta == PH_STATUS_ERROR {
@@ -286,7 +289,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	var cnt_found int
 
+	chp4 := time.Now()
 	txpool.TxMutex.Lock()
+	chp5 := time.Now()
 
 	for _, v := range txpool.TransactionsToSend {
 		var hash2take *btc.Uint256
@@ -307,6 +312,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 	}
 
+	chp6 := time.Now()
 	for _, v := range txpool.TransactionsRejected {
 		if v.Tx == nil {
 			continue
@@ -330,6 +336,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 	}
 
+	chp7 := time.Now()
 	var msg *bytes.Buffer
 
 	missing := len(shortids) - cnt_found
@@ -366,7 +373,19 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 	}
 	txpool.TxMutex.Unlock()
+	chp8 := time.Now()
 
+	if xx := time.Since(b2g.Started); xx > time.Second {
+		println("ERROR: too long processing time", xx.String())
+		println("  chp1:", chp1.Sub(b2g.Started))
+		println("  chp2:", chp2.Sub(b2g.Started))
+		println("  chp3:", chp3.Sub(b2g.Started))
+		println("  chp4:", chp4.Sub(b2g.Started))
+		println("  chp5:", chp5.Sub(b2g.Started))
+		println("  chp6:", chp6.Sub(b2g.Started))
+		println("  chp7:", chp7.Sub(b2g.Started))
+		println("  chp8:", chp8.Sub(b2g.Started))
+	}
 	if missing == 0 {
 		//sta := time.Now()
 		b2g.Block.UpdateContent(col.Assemble())
@@ -374,8 +393,8 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		bidx := b2g.Block.Hash.BIdx()
 		er := common.BlockChain.PostCheckBlock(b2g.Block)
 		if er != nil {
-			println(c.ConnID, "Corrupt CmpctBlkA")
-			ioutil.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
+			println("ERROR: ", c.ConnID, "Corrupt CmpctBlkA")
+			os.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
 
 			if b2g.Block.MerkleRootMatch() {
 				println("It was a wrongly mined one - clean it up")
@@ -503,9 +522,9 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	//sto := time.Now()
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er != nil {
-		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "Corrupt CmpctBlkB")
+		println("ERROR: ", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "Corrupt CmpctBlkB")
 		//c.DoS("BadCmpctBlockB")
-		ioutil.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
+		os.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
 
 		if b2g.Block.MerkleRootMatch() {
 			println("It was a wrongly mined one - clean it up")
