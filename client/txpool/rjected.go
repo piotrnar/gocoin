@@ -257,9 +257,15 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 func retryWaitingForInput(wtg *OneWaitingList) {
 	for _, k := range wtg.Ids {
 		txr := TransactionsRejected[k]
-		if txr.Tx == nil {
-			println(fmt.Sprintf("ERROR: txr %s %d in w4i rec %16x, but data is nil (its w4prt:%p)", txr.Id.String(), txr.Reason, k, txr.Waiting4))
-			continue
+		if CheckForErrors() {
+			if txr == nil {
+				println("ERROR: WaitingForInput not found in transactions rejected")
+				continue
+			}
+			if txr.Tx == nil {
+				println("ERROR: WaitingForInput found in transactions rejected but data is nil", txr.Id.String(), txr.Reason)
+				continue
+			}
 		}
 		DeleteRejectedByIdx(k)
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}

@@ -284,9 +284,8 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 		outputsUnmined(ntx.Tx)
 	}
 
-	wtg := WaitingForInputs[bidx]
-	if wtg != nil {
-		defer retryWaitingForInput(wtg) // Redo waiting txs when leaving this function
+	if wtg := WaitingForInputs[bidx]; wtg != nil {
+		retryWaitingForInput(wtg) // Redo waiting txs when leaving this function
 	}
 
 	common.CountSafe("TxAccepted")
