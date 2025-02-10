@@ -46,20 +46,12 @@ func node_info(par string) {
 		return
 	}
 
-	var r *network.ConnInfo
+	var r network.ConnInfo
 
-	network.Mutex_net.Lock()
-
-	for _, v := range network.OpenCons {
-		if uint32(conid) == v.ConnID {
-			r = new(network.ConnInfo)
-			v.GetStats(r)
-			break
-		}
-	}
-	network.Mutex_net.Unlock()
-
-	if r == nil {
+	if v := network.GetConnFromID(uint32(conid)); v != nil {
+		v.GetStats(&r)
+	} else {
+		fmt.Println("Connection ID", conid, "not found")
 		return
 	}
 

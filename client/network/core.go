@@ -59,6 +59,7 @@ const (
 var (
 	Mutex_net                   sync.Mutex
 	OpenCons                    map[uint64]*OneConnection = make(map[uint64]*OneConnection)
+	openConsByID                map[uint32]*OneConnection = make(map[uint32]*OneConnection)
 	InConsActive, OutConsActive uint32
 	LastConnId                  uint32
 	nonce                       [8]byte
@@ -257,6 +258,16 @@ func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c.InvDone.Map = make(map[uint64]uint32, MAX_INV_HISTORY)
 	c.GetMP = make(chan bool, 1)
 	return
+}
+
+func (conn *OneConnection) addToList() {
+	OpenCons[conn.PeerAddr.UniqID()] = conn
+	openConsByID[conn.ConnID] = conn
+}
+
+func (conn *OneConnection) delFromList() {
+	delete(OpenCons, conn.PeerAddr.UniqID())
+	delete(openConsByID, conn.ConnID)
 }
 
 func (v *OneConnection) cntLockInc(name string) {
@@ -737,26 +748,17 @@ func NetCloseAll() {
 	}
 }
 
-// Make sure to call it with Mutex_net locked
+// Return *OneConnection from given connection ID
 func GetConnFromID(conid uint32) (c *OneConnection) {
-	for _, v := range OpenCons {
-		if uint32(conid) == v.ConnID {
-			c = v
-			return
-		}
-	}
+	Mutex_net.Lock()
+	c = openConsByID[conid]
+	Mutex_net.Unlock()
 	return
 }
 
 func DropPeer(conid uint32) {
-	Mutex_net.Lock()
-	defer Mutex_net.Unlock()
 	if v := GetConnFromID(conid); v != nil {
-		if v.X.IsSpecial {
-			v.Disconnect(false, "FromUI")
-		} else {
-			v.DoS("FromUI")
-		}
+		v.Disconnect(false, "FromUI")
 	} else {
 		fmt.Println("DropPeer: There is no such an active connection", conid)
 	}
@@ -764,21 +766,16 @@ func DropPeer(conid uint32) {
 
 // GetMP() is called from UI, to force asking the given peer for its mempool
 func GetMP(conid uint32) {
-	Mutex_net.Lock()
-	for _, v := range OpenCons {
-		if uint32(conid) == v.ConnID {
-			Mutex_net.Unlock()
-			v.Mutex.Lock()
-			yes := v.X.AuthAckGot // don't bother if we are not authorized there
-			v.Mutex.Unlock()
-			if yes {
-				v.GetMPNow()
-			}
-			return
+	if v := GetConnFromID(uint32(conid)); v != nil {
+		v.Mutex.Lock()
+		yes := v.X.AuthAckGot // don't bother if we are not authorized there
+		v.Mutex.Unlock()
+		if yes {
+			v.GetMPNow()
 		}
+	} else {
+		fmt.Println("GetMP: There is no such an active connection", conid)
 	}
-	Mutex_net.Unlock()
-	fmt.Println("GetMP: There is no such an active connection", conid)
 }
 
 func GetMoreHeaders() {

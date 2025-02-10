@@ -96,9 +96,7 @@ func isRoutable(rec *txpool.OneTxToSend) (yes bool, spkb uint64) {
 }
 
 func txPoolCB(conid uint32, result byte, t2s *txpool.OneTxToSend) {
-	Mutex_net.Lock()
 	c := GetConnFromID(conid)
-	Mutex_net.Unlock()
 	if c == nil {
 		// the connection has been closed since
 		return

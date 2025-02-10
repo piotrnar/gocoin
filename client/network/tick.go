@@ -241,7 +241,7 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 	if ad.Friend || ad.Manual {
 		conn.MutexSetBool(&conn.X.IsSpecial, true)
 	}
-	OpenCons[ad.UniqID()] = conn
+	conn.addToList()
 	OutConsActive++
 	Mutex_net.Unlock()
 	go func() {
@@ -276,7 +276,7 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 		}
 
 		Mutex_net.Lock()
-		delete(OpenCons, ad.UniqID())
+		conn.delFromList()
 		OutConsActive--
 		Mutex_net.Unlock()
 		if conn.dead {
@@ -345,13 +345,13 @@ func tcp_server() {
 							Mutex_net.Unlock()
 							terminate = true
 						} else {
-							OpenCons[ad.UniqID()] = conn
+							conn.addToList()
 							InConsActive++
 							Mutex_net.Unlock()
 							go func() {
 								conn.Run()
 								Mutex_net.Lock()
-								delete(OpenCons, ad.UniqID())
+								conn.delFromList()
 								InConsActive--
 								Mutex_net.Unlock()
 							}()

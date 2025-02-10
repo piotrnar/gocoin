@@ -64,19 +64,9 @@ func json_peerst(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var res *network.ConnInfo
-
-	network.Mutex_net.Lock()
-	for _, v := range network.OpenCons {
-		if uint32(conid) == v.ConnID {
-			res = new(network.ConnInfo)
-			v.GetStats(res)
-			break
-		}
-	}
-	network.Mutex_net.Unlock()
-
-	if res != nil {
+	if v := network.GetConnFromID(uint32(conid)); v != nil {
+		var res network.ConnInfo
+		v.GetStats(&res)
 		bx, er := json.Marshal(&res)
 		if er == nil {
 			w.Header()["Content-Type"] = []string{"application/json"}
