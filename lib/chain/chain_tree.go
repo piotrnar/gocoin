@@ -2,7 +2,6 @@ package chain
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -170,37 +169,29 @@ func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, float64) {
 
 // FindPathTo returns the next node that leads to the given destination.
 func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) *BlockTreeNode {
-	if res, er := n.FindPathToExt(end, true); er != nil {
-		panic(er.Error)
-	} else {
-		return res
-	}
-}
-
-func (n *BlockTreeNode) FindPathToExt(end *BlockTreeNode, quick bool) (res *BlockTreeNode, er error) {
 	if n == end {
-		return nil, nil
+		return nil
 	}
 
 	if end.Height <= n.Height {
-		return nil, errors.New("end block is not higher then current")
+		panic("end block is not higher then current")
 	}
 
 	if len(n.Childs) == 0 {
-		return nil, errors.New("unknown path to block" + end.BlockHash.String())
+		panic("unknown path to block " + end.BlockHash.String())
 	}
 
-	if quick && len(n.Childs) == 1 {
-		return n.Childs[0], nil // if there is only one child, do it fast
+	if len(n.Childs) == 1 {
+		return n.Childs[0] // if there is only one child, do it fast
 	}
 
 	for {
 		// more then one children: go from the end until you reach the current node
 		if end.Parent == n {
-			return end, nil
+			return end
 		}
 		if end.Height <= n.Height {
-			return nil, errors.New("reached the starting node height, but no hit")
+			panic("reached the starting node height, but no hit")
 		}
 		end = end.Parent
 	}
