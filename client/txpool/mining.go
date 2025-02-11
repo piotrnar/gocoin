@@ -166,13 +166,6 @@ func BlockMined(bl *btc.Block) {
 }
 
 func BlockUndone(bl *btc.Block) {
-	if bl == nil {
-		if MempoolCheck() {
-			panic("Mempool check error before Unspent.UndoBlockTxs")
-		}
-		return
-	}
-
 	common.CountSafe("TxPkgsBlockUndo")
 	if len(bl.Txs) < 2 {
 		return
