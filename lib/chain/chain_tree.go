@@ -284,11 +284,14 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	}
 
 	// At this point "cur" is at the highest common block
-	for ch.LastBlock() != cur {
+
+	fmt.Println("Undoing", lastblock.Height-cur.Height, "block(s)")
+	for lastblock != cur {
 		if AbortNow {
 			return
 		}
 		ch.UndoLastBlock()
+		lastblock = lastblock.Parent
 	}
 	ch.ParseTillBlock(dst)
 }
