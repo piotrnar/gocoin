@@ -199,8 +199,7 @@ func removeExcessiveTxs() {
 	var cnt, bytes uint64
 	if TransactionsToSendSize >= common.MaxMempoolSize()+1e6 { // only remove txs when we are 1MB over the maximum size
 		sorted_txs := GetSortedMempoolRBF()
-		FeePackagesDirty = true // do not update sort list and fee packages while doing this, as it will take forever
-		SortListDirty = true
+		FeePackagesDirty = true // do not update fee packages while doing this, as it will take forever
 		for idx := len(sorted_txs) - 1; idx >= 0; idx-- {
 			worst_tx := sorted_txs[idx]
 			cnt++
