@@ -1,6 +1,8 @@
 package txpool
 
 import (
+	"os"
+
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -155,36 +157,22 @@ func BlockMined(bl *btc.Block) {
 			retryWaitingForInput(wtg)
 		}
 	}
+	if MempoolCheck() {
+		panic("Mempool check error after BlockMined()")
+	} else {
+		//println("Mempool check OK after BlockMined()")
+	}
 	TxMutex.Unlock()
 }
 
-// outputsUnmined sets the MemInput flag of all the children (used when a tx is unmined / block undone).
-func outputsUnmined(tx *btc.Tx) {
-	// Go through all the tx's outputs and mark MemInputs in txs that have been spending it
-	for vout := range tx.TxOut {
-		uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
-		if val, ok := SpentOutputs[uidx]; ok {
-			if rec := TransactionsToSend[val]; rec != nil {
-				if rec.MemInputs == nil {
-					rec.memInputsSet(make([]bool, len(rec.TxIn)))
-				}
-				idx := rec.IIdx(uidx)
-				rec.MemInputs[idx] = true
-				rec.MemInputCnt++
-				rec.resortWithChildren()
-				common.CountSafe("TxPutBackMemIn")
-				if CheckForErrors() && rec.Footprint != uint32(rec.SysSize()) {
-					println("ERROR: MarkChildrenForMem footprint mismatch", rec.Footprint, uint32(rec.SysSize()))
-				}
-			} else if CheckForErrors() {
-				println("ERROR: MarkChildrenForMem: in SpentOutputs, but not in mempool")
-				common.CountSafe("TxPutBackMeminERR")
-			}
-		}
-	}
-}
-
 func BlockUndone(bl *btc.Block) {
+	if bl == nil {
+		if MempoolCheck() {
+			panic("Mempool check error before Unspent.UndoBlockTxs")
+		}
+		return
+	}
+
 	common.CountSafe("TxPkgsBlockUndo")
 	if len(bl.Txs) < 2 {
 		return
@@ -192,17 +180,25 @@ func BlockUndone(bl *btc.Block) {
 
 	TxMutex.Lock()
 	FeePackagesDirty = true // this will spare us all the struggle with trying to re-package each tx
+
 	for _, tx := range bl.Txs[1:] {
-		ntx := &TxRcvd{Tx: tx, Trusted: true, Unmined: true}
-		if need := needThisTxExt(&ntx.Hash, nil); need == 0 {
-			if res, _ := processTx(ntx); res == 0 {
-				common.CountSafe("TxUnmineOK")
-			} else {
-				common.CountSafePar("TxUnmineFail-", res)
-			}
-		} else {
-			common.CountSafePar("TxUnmineNoNeed-", need)
+		if tr, ok := TransactionsRejected[tx.Hash.BIdx()]; ok {
+			println("Undoing rejected tx", tx.Hash.String(), tr.Reason)
+			DeleteRejectedByTxr(tr)
+			common.CountSafePar("TxUnmineRejected-", tr.Reason)
 		}
+
+		ntx := &TxRcvd{Tx: tx, Trusted: true, Unmined: true}
+		if res, _ := processTx(ntx); res == 0 {
+			common.CountSafe("TxUnmineOK")
+		} else {
+			println("ERROR: TxUnmineFail:", ntx.Hash.String(), res)
+			common.CountSafePar("TxUnmineFail-", res)
+			os.Exit(1)
+		}
+	}
+	if MempoolCheck() {
+		panic("Mempool check error after BlockUndone()")
 	}
 	TxMutex.Unlock()
 }

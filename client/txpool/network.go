@@ -74,7 +74,7 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 
 	common.CountSafe("Tx Procesed")
 
-	if ntx.Weight() > int(common.Get(&common.CFG.TXPool.MaxTxWeight)) {
+	if !ntx.Unmined && ntx.Weight() > int(common.Get(&common.CFG.TXPool.MaxTxWeight)) {
 		rejectTx(tx, TX_REJECTED_TOO_BIG, nil)
 		return TX_REJECTED_TOO_BIG, nil
 	}
@@ -102,27 +102,27 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 
 			ctx := TransactionsToSend[so]
 
-			if !ntx.Trusted && ctx.Final {
+			if !ntx.Unmined && !ntx.Trusted && ctx.Final {
 				rejectTx(ntx.Tx, TX_REJECTED_RBF_FINAL, nil)
 				return TX_REJECTED_RBF_FINAL, nil
 			}
 
 			rbf_tx_list[ctx] = true
-			if !ntx.Trusted && len(rbf_tx_list) > 100 {
+			if !ntx.Unmined && !ntx.Trusted && len(rbf_tx_list) > 100 {
 				rejectTx(ntx.Tx, TX_REJECTED_RBF_100, nil)
 				return TX_REJECTED_RBF_100, nil
 			}
 
 			chlds := ctx.GetAllChildren()
 			for _, ctx = range chlds {
-				if !ntx.Trusted && ctx.Final {
+				if !ntx.Unmined && !ntx.Trusted && ctx.Final {
 					rejectTx(ntx.Tx, TX_REJECTED_RBF_FINAL, nil)
 					return TX_REJECTED_RBF_FINAL, nil
 				}
 
 				rbf_tx_list[ctx] = true
 
-				if !ntx.Trusted && len(rbf_tx_list) > 100 {
+				if !ntx.Unmined && !ntx.Trusted && len(rbf_tx_list) > 100 {
 					rejectTx(ntx.Tx, TX_REJECTED_RBF_100, nil)
 					return TX_REJECTED_RBF_100, nil
 				}
@@ -150,7 +150,12 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 		} else {
 			pos[i] = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
-				if !common.CFG.TXPool.AllowMemInputs {
+				if ntx.Unmined {
+					println("ERROR: No UTXO for unmined tx", tx.TxIn[i].Input.String(), txinmem, ok)
+					return TX_REJECTED_NO_TXOU, nil
+				}
+
+				if !ntx.Trusted && !common.CFG.TXPool.AllowMemInputs {
 					rejectTx(ntx.Tx, TX_REJECTED_NOT_MINED, nil)
 					return TX_REJECTED_NOT_MINED, nil
 				}
@@ -169,7 +174,7 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 				// In this case, let's "save" it for later...
 				rejectTx(ntx.Tx, TX_REJECTED_NO_TXOU, btc.NewUint256(tx.TxIn[i].Input.Hash[:]))
 				return TX_REJECTED_NO_TXOU, nil
-			} else {
+			} else if !ntx.Unmined {
 				if pos[i].WasCoinbase {
 					if common.Last.BlockHeight()+1-pos[i].BlockHeight < chain.COINBASE_MATURITY {
 						rejectTx(ntx.Tx, TX_REJECTED_CB_INMATURE, nil)
@@ -194,24 +199,27 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 
 	// Check for a proper fee
 	fee := totinp - totout
-	if !ntx.Local && 4000*fee < uint64(tx.Weight())*common.MinFeePerKB() { // do not check minimum fee for locally loaded txs
-		//RejectTx(ntx.Tx, TX_REJECTED_LOW_FEE, nil)  - we do not store low fee txs in TransactionsRejected anymore
-		common.CountSafe("TxRejected-LowFee") // we count it here
-		return TX_REJECTED_LOW_FEE, nil
-	}
 
-	if rbf_tx_list != nil {
-		var totvsize int
-		var totfees uint64
-
-		for ctx := range rbf_tx_list {
-			totvsize += ctx.VSize()
-			totfees += ctx.Fee
+	if !ntx.Unmined { // ignore low fees when puting back txs from unmined blocks
+		if !ntx.Local && 4000*fee < uint64(tx.Weight())*common.MinFeePerKB() { // do not check minimum fee for locally loaded txs
+			//RejectTx(ntx.Tx, TX_REJECTED_LOW_FEE, nil)  - we do not store low fee txs in TransactionsRejected anymore
+			common.CountSafe("TxRejected-LowFee") // we count it here
+			return TX_REJECTED_LOW_FEE, nil
 		}
 
-		if !ntx.Local && totfees*uint64(tx.VSize()) >= fee*uint64(totvsize) {
-			rejectTx(ntx.Tx, TX_REJECTED_RBF_LOWFEE, nil)
-			return TX_REJECTED_RBF_LOWFEE, nil
+		if rbf_tx_list != nil {
+			var totvsize int
+			var totfees uint64
+
+			for ctx := range rbf_tx_list {
+				totvsize += ctx.VSize()
+				totfees += ctx.Fee
+			}
+
+			if !ntx.Local && totfees*uint64(tx.VSize()) >= fee*uint64(totvsize) {
+				rejectTx(ntx.Tx, TX_REJECTED_RBF_LOWFEE, nil)
+				return TX_REJECTED_RBF_LOWFEE, nil
+			}
 		}
 	}
 
@@ -278,14 +286,17 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
 	rec.Clean()
-	rec.Add(bidx)
-
 	if ntx.Unmined {
-		outputsUnmined(ntx.Tx)
+		rec.unmined() // this is for when we are un-mining a tx
 	}
+	rec.Add(bidx)
 
 	if wtg := WaitingForInputs[bidx]; wtg != nil {
 		retryWaitingForInput(wtg) // Redo waiting txs when leaving this function
+	}
+
+	if !ntx.Unmined { // do not limit mempool size during big reorgs
+		removeExcessiveTxs()
 	}
 
 	common.CountSafe("TxAccepted")

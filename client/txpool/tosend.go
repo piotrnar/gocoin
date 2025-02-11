@@ -65,13 +65,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	if !FeePackagesDirty && CheckForErrors() {
 		if t2s.inPackages != nil {
 			println("ERROR: Add to mempool called for tx that already has InPackages", len(t2s.inPackages))
-			FeePackagesDirty = true
-			return
-		}
-		if !t2s.HasNoChildren() {
-			println("ERROR: Add to mempool called for tx that already has some children", t2s.Hash.String())
-			FeePackagesDirty = true
-			return
+			panic("this should not happen")
 		}
 	}
 
@@ -88,8 +82,6 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		RepackagingSinceLastRedoTime += time.Since(sta)
 		RepackagingSinceLastRedoCount++
 	}
-
-	removeExcessiveTxs()
 }
 
 func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
@@ -261,6 +253,37 @@ func txChecker(tx *btc.Tx) bool {
 		}
 	}
 	return ok
+}
+
+// unmined sets the MemInput flag of all the children (used when a tx is unmined / block undone).
+func (tx *OneTxToSend) unmined() {
+	// Go through all the tx's outputs and mark MemInputs in txs that have been spending it
+	for vout := range tx.TxOut {
+		uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
+		if val, ok := SpentOutputs[uidx]; ok {
+			if rec := TransactionsToSend[val]; rec != nil {
+				if rec.MemInputs == nil {
+					rec.memInputsSet(make([]bool, len(rec.TxIn)))
+				}
+				idx := rec.IIdx(uidx)
+				if rec.MemInputs[idx] {
+					println("ERROR: out", btc.NewUint256(tx.Hash.Hash[:]).String(), "-", idx, "already marked as MI")
+				} else {
+					rec.MemInputs[idx] = true
+					rec.MemInputCnt++
+					rec.resortWithChildren()
+					common.CountSafe("TxPutBackMemIn")
+					//println(" out", btc.NewUint256(tx.Hash.Hash[:]).String(), "-", idx, "marked as MI")
+				}
+				if CheckForErrors() && rec.Footprint != uint32(rec.SysSize()) {
+					println("ERROR: MarkChildrenForMem footprint mismatch", rec.Footprint, uint32(rec.SysSize()))
+				}
+			} else if CheckForErrors() {
+				println("ERROR: MarkChildrenForMem: in SpentOutputs, but not in mempool")
+				common.CountSafe("TxPutBackMeminERR")
+			}
+		}
+	}
 }
 
 // GetChildren gets all first level children of the tx.
