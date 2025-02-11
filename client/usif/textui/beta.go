@@ -163,7 +163,7 @@ func show_tdepends(s string) {
 		println("Specify BIDX encoded as", 2*utxo.UtxoIdxLen, "hex digits")
 		return
 	}
-	var bidx [utxo.UtxoIdxLen]byte
+	var bidx btc.BIDX
 	for i := range bidx[:] {
 		bidx[i] = d[7-i]
 	}
