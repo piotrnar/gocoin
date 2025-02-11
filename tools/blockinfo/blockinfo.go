@@ -34,6 +34,12 @@ func main() {
 	var nul [32]byte
 	target := btc.SetCompact(bits)
 	bts := target.Bytes()
-	fmt.Printf("Bits: 0x%08x  =>  Diff:%.1f  / Target:%s", bits, btc.GetDifficulty(bits), hex.EncodeToString(append(nul[:32-len(bts)], bts...)))
+	fmt.Printf("Bits: 0x%08x  =>  Diff:%.1f  / Target:%s\n", bits, btc.GetDifficulty(bits), hex.EncodeToString(append(nul[:32-len(bts)], bts...)))
+
+	bl.BuildTxList()
+	fmt.Println("Transactions:", len(bl.Txs))
+	for _, tx := range bl.Txs {
+		fmt.Println(tx.Hash.String(), "-", len(tx.TxOut), "outs")
+	}
 
 }
