@@ -295,7 +295,7 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 		retryWaitingForInput(wtg) // Redo waiting txs when leaving this function
 	}
 
-	if !ntx.Unmined { // do not limit mempool size during big reorgs
+	if !ntx.Unmined { // do not remove any txs in the middle of block undo, to keep the mempool consistant
 		removeExcessiveTxs()
 	}
 

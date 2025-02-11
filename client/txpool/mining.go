@@ -173,7 +173,6 @@ func BlockUndone(bl *btc.Block) {
 
 	TxMutex.Lock()
 	FeePackagesDirty = true // this will spare us all the struggle with trying to re-package each tx
-
 	for _, tx := range bl.Txs[1:] {
 		if tr, ok := TransactionsRejected[tx.Hash.BIdx()]; ok {
 			println("Undoing rejected tx", tx.Hash.String(), tr.Reason)
@@ -190,6 +189,7 @@ func BlockUndone(bl *btc.Block) {
 			os.Exit(1)
 		}
 	}
+	removeExcessiveTxs() // now we can limit the mempool size, if it went too far
 	if MempoolCheck() {
 		panic("Mempool check error after BlockUndone()")
 	}
