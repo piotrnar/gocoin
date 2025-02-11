@@ -157,11 +157,6 @@ func BlockMined(bl *btc.Block) {
 			retryWaitingForInput(wtg)
 		}
 	}
-	if MempoolCheck() {
-		panic("Mempool check error after BlockMined()")
-	} else {
-		//println("Mempool check OK after BlockMined()")
-	}
 	TxMutex.Unlock()
 }
 
@@ -190,8 +185,5 @@ func BlockUndone(bl *btc.Block) {
 		}
 	}
 	removeExcessiveTxs() // now we can limit the mempool size, if it went too far
-	if MempoolCheck() {
-		panic("Mempool check error after BlockUndone()")
-	}
 	TxMutex.Unlock()
 }
