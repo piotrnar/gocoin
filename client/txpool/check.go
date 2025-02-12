@@ -207,7 +207,12 @@ func checkRejectedTxs() (dupa int) {
 			txr := TransactionsRejected[k]
 			if txr == nil {
 				dupa++
-				fmt.Println(dupa, "WaitingForInput not found in transactions rejected", hex.EncodeToString(k[:]))
+				fmt.Println(dupa, "WaitingForInput not found in transactions rejected", rec.TxID.String())
+				continue
+			}
+			if !txr.Id.Equal(rec.TxID) {
+				dupa++
+				fmt.Println(dupa, "ERROR: WaitingForInput found in rejected, but TxID mismatch", rec.TxID.String(), txr.Id.String(), txr.Reason)
 				continue
 			}
 			if txr.Tx == nil {
