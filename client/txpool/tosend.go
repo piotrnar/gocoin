@@ -601,8 +601,12 @@ func InitTransactionsToSend() {
 
 func InitMempool() {
 	TxMutex.Lock()
+	emptyFeePackages()
 	InitTransactionsToSend()
 	InitTransactionsRejected()
+	BestT2S, WorstT2S = nil, nil
+	SortListDirty = false
+	FeePackagesDirty = false
 	TxMutex.Unlock()
 }
 
