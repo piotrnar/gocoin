@@ -202,7 +202,7 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 
 	if !ntx.Unmined { // ignore low fees when puting back txs from unmined blocks
 		if !ntx.Local && 4000*fee < uint64(tx.Weight())*common.MinFeePerKB() { // do not check minimum fee for locally loaded txs
-			//RejectTx(ntx.Tx, TX_REJECTED_LOW_FEE, nil)  - we do not store low fee txs in TransactionsRejected anymore
+			//rejectTx(ntx.Tx, TX_REJECTED_LOW_FEE, nil) - we do not store low fee txs in TransactionsRejected anymore
 			common.CountSafe("TxRejected-LowFee") // we count it here
 			return TX_REJECTED_LOW_FEE, nil
 		}
