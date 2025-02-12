@@ -398,11 +398,17 @@ func limitRejectedSizeIfNeeded() {
 }
 
 func resizeTransactionsRejectedCount(newcnt int) {
+	if checkRejectedTxs() > 0 || checkRejectedUsedUTXOs() > 0 {
+		panic("failed  before resizeTransactionsRejectedCount")
+	}
 	old_txrs := make([]*OneTxRejected, 0, len(TransactionsRejected))
 	for {
-		if txr := TransactionsRejected[TRIdxArray[TRIdxTail]]; txr != nil {
-			old_txrs = append(old_txrs, txr)
-			DeleteRejectedByTxr(txr)
+		if !TRIdIsZeroArrayRec(TRIdxTail) {
+			if txr, ok := TransactionsRejected[TRIdxArray[TRIdxTail]]; ok {
+				old_txrs = append(old_txrs, txr)
+			} else {
+				println("ERROR: TRIdxArray cointains bad pointer on non-zero record", TRIdxTail)
+			}
 		}
 		if TRIdxTail == TRIdxHead {
 			break
@@ -410,7 +416,6 @@ func resizeTransactionsRejectedCount(newcnt int) {
 		TRIdxTail = TRIdxNext(TRIdxTail)
 	}
 
-	TransactionsRejected = make(map[btc.BIDX]*OneTxRejected, newcnt)
 	TRIdxArray = make([]btc.BIDX, newcnt)
 	TRIdxHead = 0
 	TRIdxTail = 0
@@ -420,8 +425,26 @@ func resizeTransactionsRejectedCount(newcnt int) {
 		from_idx = len(old_txrs) - newcnt
 	}
 
-	for _, txr := range old_txrs[from_idx:] {
-		AddRejectedTx(txr)
+	for idx, txr := range old_txrs {
+		bidx := txr.Id.BIdx()
+		if idx < from_idx {
+			TransactionsRejectedSize -= uint64(txr.Footprint)
+			if txr.Tx != nil {
+				txr.cleanup()
+			}
+			delete(TransactionsRejected, bidx)
+		} else {
+			txr.ArrIndex = uint16(TRIdxHead)
+			TRIdxArray[TRIdxHead] = bidx
+			TransactionsRejected[bidx] = txr
+			TRIdxHead = TRIdxNext(TRIdxHead)
+			if TRIdxHead == TRIdxTail {
+				TRIdxTail = TRIdxNext(TRIdxTail)
+			}
+		}
+	}
+	if checkRejectedTxs() > 0 || checkRejectedUsedUTXOs() > 0 {
+		panic("resizeTransactionsRejectedCount failed")
 	}
 }
 
