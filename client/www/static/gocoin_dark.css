@@ -252,7 +252,7 @@ td.nodeid { /*network table*/
 
 /*blocks page:*/
 td.blstatmissedtxs {
-	color:#ff00ff;
+	color:#bb00bb;
 	font-size:10px;
 }
 
@@ -275,7 +275,7 @@ td.blswsize {
 }
 
 td.blreward {
-	color:#00ff00;
+	color:#00bb00;
 	font-family: monospace;
 	text-align: right;
 	font-size:12px;
@@ -480,13 +480,13 @@ td.mi_bsize {
 }
 td.mi_tot {
 	text-align:right;
-	color:#d060ff;
+	color:#a040cc;
 	font-style:italic;
 	font-weight:bold;
 }
 td.mi_vers {
 	text-align:right;
-	color:#ff3030;
+	color:#bb2020;
 	font-style:italic;
 	font-weight:bold;
 }
@@ -509,7 +509,7 @@ caption {
 
 td.minblspb {
 	font-size:14px;
-	color:#3131bf;
+	color:#4141ef;
 	font-family: monospace;
 	text-align: right;
 }
