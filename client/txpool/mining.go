@@ -145,9 +145,6 @@ func BlockMined(bl *btc.Block) {
 		tx := bl.Txs[i]
 		txMined(tx)
 	}
-	if CheckForErrors() && MempoolCheck() {
-		println("MempoolCheck error in mid BlockMined()")
-	}
 	for _, tx := range bl.Txs[1:] {
 		bidx := tx.Hash.BIdx()
 		if wtg := WaitingForInputs[bidx]; wtg != nil {
