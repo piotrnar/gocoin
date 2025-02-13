@@ -200,7 +200,6 @@ func removeExcessiveTxs() {
 	if len(GetMPInProgressTicket) != 0 {
 		return // don't do it during mpget
 	}
-	var worst_fee, worst_weight uint64
 	var cnt, bytes uint64
 	if TransactionsToSendSize >= common.MaxMempoolSize()+1e6 { // only remove txs when we are 1MB over the maximum size
 		sorted_txs := GetSortedMempoolRBF()
@@ -209,8 +208,6 @@ func removeExcessiveTxs() {
 			worst_tx := sorted_txs[idx]
 			cnt++
 			bytes += uint64(worst_tx.Footprint)
-			worst_fee = worst_tx.Fee // we do not do the division here, as it may be more expensive
-			worst_weight = uint64(worst_tx.Weight())
 			worst_tx.Delete(false, 0)
 			cnt++
 			if TransactionsToSendSize <= common.MaxMempoolSize() {
@@ -221,9 +218,7 @@ func removeExcessiveTxs() {
 	if cnt > 0 {
 		common.CountSafeAdd("TxPurgedSizCnt", cnt)
 		common.CountSafeAdd("TxPurgedSizBts", bytes)
-		currentFeeAdjustedSPKB = 4000 * worst_fee / worst_weight
-		common.SetMinFeePerKB(currentFeeAdjustedSPKB)
-		feeAdjustDecrementSPKB = currentFeeAdjustedSPKB / 20
+		common.SetMinFeePerKB(CurrentFeeAdjustedSPKB)
 		lastFeeAdjustedTime = time.Now()
 	}
 }
