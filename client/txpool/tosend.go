@@ -500,15 +500,21 @@ func (t2s *OneTxToSend) delFromPackages() {
 			return
 		}
 
-		if len(pkg.Txs) == 2 {
-			// remove reference to this pkg from the other txs that owned it
-			if pkg.Txs[0] == t2s {
-				pkg.Txs[1].removePkg(pkg)
-				common.CountSafe("TxPkgsDelGrA-1")
-			} else {
-				pkg.Txs[0].removePkg(pkg)
-				common.CountSafe("TxPkgsDelGrA-0")
+		if pkg.Txs[0] == t2s {
+			// this may only happen during block submission, if we neglected to
+			// ... set FeePackagesDirty, before removing mined txs from mempool.
+			if FeePackagesDirty {
+				panic("Trying to delete the top parent of an existing package")
 			}
+			println("ERROR: looks like removing mined tx, but FeePackagesDirty not set", t2s.Hash.String())
+			FeePackagesDirty = true
+			return
+		}
+
+		if len(pkg.Txs) == 2 {
+			// Only two txs - remove reference to this pkg from the other tx that owned it.
+			pkg.Txs[0].removePkg(pkg) // ... which must be on Txs[0], as we just checked we were not there.
+			common.CountSafe("TxPkgsDelGrA")
 			pkg.Txs = nil
 			records2remove++
 		} else {
@@ -526,12 +532,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 				pkg.Fee = 0
 				for _, t := range pandch {
 					if CheckForErrors() && t == t2s {
-						println("ERROR: delFromPackages -> GetItWithAllChildren returned us", pkg.Txs[0].Hash.String())
-						for ii, tt := range pandch {
-							println(" ", ii, tt.Hash.String())
-						}
-						FeePackagesDirty = true
-						return
+						panic("ERROR: delFromPackages -> GetItWithAllChildren returned us " + pkg.Txs[0].Hash.String())
 					}
 					pkg.Weight += t.Weight()
 					pkg.Fee += t.Fee
