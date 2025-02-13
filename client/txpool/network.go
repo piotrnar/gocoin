@@ -339,6 +339,9 @@ func adjustMinimalFee() {
 	if CurrentFeeAdjustedSPKB != 0 && time.Since(lastFeeAdjustedTime) > time.Minute {
 		if TransactionsToSendSize < common.MaxMempoolSize() {
 			feeAdjustDecrementSPKB := CurrentFeeAdjustedSPKB / 20
+			if feeAdjustDecrementSPKB < 10 {
+				feeAdjustDecrementSPKB = 10
+			}
 			if CurrentFeeAdjustedSPKB > feeAdjustDecrementSPKB {
 				CurrentFeeAdjustedSPKB -= feeAdjustDecrementSPKB
 			} else {
