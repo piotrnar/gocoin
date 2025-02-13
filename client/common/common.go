@@ -87,6 +87,7 @@ var (
 
 	NoCounters            sys.SyncBool
 	CheckForMempoolErrors sys.SyncBool
+	StopAutoSortAfter     uint64
 
 	SyncMaxCacheBytes sys.SyncInt
 )

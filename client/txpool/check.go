@@ -86,11 +86,16 @@ func checkFootprints() (dupa int) {
 func checkMempoolTxs() (dupa int) {
 	var spent_cnt int
 
-	for _, t2s := range TransactionsToSend {
+	for bidx, t2s := range TransactionsToSend {
 		var micnt uint32
 		if t2s.NoWitSize == 0 || t2s.Size == 0 {
 			dupa++
 			fmt.Println(dupa, "Tx", t2s.Hash.String(), "has broken size:", t2s.NoWitSize, t2s.Size)
+		}
+
+		if _, ok := TransactionsRejected[bidx]; ok {
+			dupa++
+			fmt.Println(dupa, "T2S", t2s.Hash.String(), "also present in TransactionsRejected")
 		}
 
 		for i, inp := range t2s.TxIn {

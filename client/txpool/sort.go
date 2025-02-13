@@ -4,6 +4,7 @@ import (
 	"os"
 	"runtime/debug"
 	"sort"
+	"sync/atomic"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -13,7 +14,6 @@ import (
 const (
 	SORT_START_INDEX     = uint64(1 << 62) // 1/4th of max uint64 value
 	POOL_EXPIRE_INTERVAL = time.Hour
-	STOP_AUTO_SORT_AFTER = 60 * time.Minute // stop auto-sorting if so much time passed since last request
 )
 
 var (
@@ -54,9 +54,13 @@ func adjustSortIndexStep() {
 	sortIndexStep = (1 << 60) / uint64(2*cnt)
 }
 
-// make sure to call it with thr mutex locked
+// make sure to call it with the mutex locked
 func SortingDisabled() bool {
-	return sortingSupressed || time.Since(LastSortingDone) > STOP_AUTO_SORT_AFTER
+	if sortingSupressed {
+		return true
+	}
+	stopafter := atomic.LoadUint64(&common.StopAutoSortAfter)
+	return stopafter != 0 && time.Since(LastSortingDone) > time.Duration(stopafter)
 }
 
 // call it with false to restore sorting
