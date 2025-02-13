@@ -505,7 +505,8 @@ func (t2s *OneTxToSend) delFromPackages() {
 			if pkg.Txs[0] == t2s {
 				pkg.Txs[1].removePkg(pkg)
 				// TODO: check if it prints
-				println("ERROR: delFromPackages our tx if first on the two list!")
+				println("ERROR: delFromPackages our tx is first on the two list!")
+				checkMPC = true
 			} else {
 				pkg.Txs[0].removePkg(pkg)
 			}
@@ -528,8 +529,10 @@ func (t2s *OneTxToSend) delFromPackages() {
 				for _, t := range pandch {
 					if CheckForErrors() && t == t2s {
 						println("ERROR: delFromPackages -> GetItWithAllChildren returned us")
-						FeePackagesDirty = true
-						return
+						checkMPC = true
+						continue
+						//FeePackagesDirty = true
+						//return
 					}
 					pkg.Weight += t.Weight()
 					pkg.Fee += t.Fee

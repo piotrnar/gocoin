@@ -132,6 +132,8 @@ func txMined(tx *btc.Tx) {
 	}
 }
 
+var checkMPC bool
+
 // BlockMined removes all the block's tx from the mempool.
 func BlockMined(bl *btc.Block) {
 	if len(bl.Txs) < 2 {
@@ -140,6 +142,7 @@ func BlockMined(bl *btc.Block) {
 
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
+	checkMPC = false
 	if !SortingDisabled() {
 		FeePackagesDirty = true // this will spare us all the struggle with trying to re-package each tx
 	}
@@ -158,6 +161,9 @@ func BlockMined(bl *btc.Block) {
 		for _, wtg := range wtgs {
 			retryWaitingForInput(wtg)
 		}
+	}
+	if checkMPC {
+		println("there were problems. checking mpc for errors:", MempoolCheck())
 	}
 	TxMutex.Unlock()
 }
