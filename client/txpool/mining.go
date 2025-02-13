@@ -142,6 +142,9 @@ func BlockMined(bl *btc.Block) {
 
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
+	if CheckForErrors() && MempoolCheck() {
+		println("MempoolCheck error before BlockMined()")
+	}
 	checkMPC = false
 	if !SortingDisabled() {
 		FeePackagesDirty = true // this will spare us all the struggle with trying to re-package each tx
@@ -149,6 +152,9 @@ func BlockMined(bl *btc.Block) {
 	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
 		tx := bl.Txs[i]
 		txMined(tx)
+	}
+	if CheckForErrors() && MempoolCheck() {
+		println("MempoolCheck error in mid BlockMined()")
 	}
 	for _, tx := range bl.Txs[1:] {
 		bidx := tx.Hash.BIdx()
