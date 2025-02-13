@@ -258,6 +258,7 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 	return
 }
 
+// this must be done before mempool is being used (it is not mutex protected)
 func MempoolLoad() bool {
 	var t2s *OneTxToSend
 	var txr *OneTxRejected
@@ -306,8 +307,6 @@ func MempoolLoad() bool {
 	}
 
 	//println("TransactionsToSend cnt:", totcnt)
-	TxMutex.Lock() // this should not be needed in our application, but just to have everything consistant
-	defer TxMutex.Unlock()
 
 	TransactionsToSend = make(map[btc.BIDX]*OneTxToSend, int(totcnt))
 	for ; totcnt > 0; totcnt-- {
@@ -392,7 +391,6 @@ func MempoolLoad() bool {
 
 	FeePackagesDirty = true
 	SortListDirty = true
-	//lookForPackages() <- not now, it will get called automatically when first needed
 
 	if CheckForErrors() {
 		if MempoolCheck() {
@@ -406,9 +404,6 @@ func MempoolLoad() bool {
 
 fatal_error:
 	fmt.Println("Error loading", MEMPOOL_FILE_NAME, ":", er.Error())
-	TransactionsToSend = make(map[btc.BIDX]*OneTxToSend)
-	TransactionsToSendSize = 0
-	TransactionsToSendWeight = 0
-	SpentOutputs = make(map[uint64]btc.BIDX)
+	InitMempool()
 	return false
 }

@@ -132,8 +132,6 @@ func txMined(tx *btc.Tx) {
 	}
 }
 
-var checkMPC bool
-
 // BlockMined removes all the block's tx from the mempool.
 func BlockMined(bl *btc.Block) {
 	if len(bl.Txs) < 2 {
@@ -142,9 +140,7 @@ func BlockMined(bl *btc.Block) {
 
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
-	checkMPC = false
-
-	FeePackagesDirty = true                // this must be set or you will see errors in delFromPackages()
+	//FeePackagesDirty = true
 	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
 		tx := bl.Txs[i]
 		txMined(tx)
@@ -163,9 +159,6 @@ func BlockMined(bl *btc.Block) {
 		for _, wtg := range wtgs {
 			retryWaitingForInput(wtg)
 		}
-	}
-	if checkMPC {
-		println("there were problems. checking mpc for errors:", MempoolCheck())
 	}
 	TxMutex.Unlock()
 }

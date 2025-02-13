@@ -501,17 +501,17 @@ func (t2s *OneTxToSend) delFromPackages() {
 		}
 
 		if pkg.Txs[0] == t2s {
-			// this may only happen during block submission, if we neglected to
-			// ... set FeePackagesDirty, before removing mined txs from mempool.
-			if FeePackagesDirty {
-				panic("Trying to delete the top parent of an existing package")
+			// This may only happen during block submission.
+			// In such case, remove the entire package.
+			for _, t := range pkg.Txs {
+				if t != t2s {
+					t.removePkg(pkg)
+				}
 			}
-			println("ERROR: looks like removing mined tx, but FeePackagesDirty not set", t2s.Hash.String())
-			FeePackagesDirty = true
-			return
-		}
-
-		if len(pkg.Txs) == 2 {
+			common.CountSafe("TxPkgsDelGrP")
+			pkg.Txs = nil
+			records2remove++
+		} else if len(pkg.Txs) == 2 {
 			// Only two txs - remove reference to this pkg from the other tx that owned it.
 			pkg.Txs[0].removePkg(pkg) // ... which must be on Txs[0], as we just checked we were not there.
 			common.CountSafe("TxPkgsDelGrA")
@@ -610,6 +610,7 @@ func InitMempool() {
 	InitTransactionsRejected()
 
 	BestT2S, WorstT2S = nil, nil
+	adjustSortIndexStep()
 	SortListDirty = false
 	ResortingSinceLastRedoTime = 0
 	ResortingSinceLastRedoCount = 0

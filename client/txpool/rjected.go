@@ -271,7 +271,6 @@ func retryWaitingForInput(wtg *OneWaitingList) {
 		//if CheckForErrors() { // TODO: always check it, as it's not time consuming and there have been issues here
 		if txr == nil {
 			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String())
-			checkMPC = true
 			continue
 		}
 		if txr.Tx == nil || txr.Reason != TX_REJECTED_NO_TXOU {

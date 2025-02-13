@@ -93,6 +93,7 @@ func (t2s *OneTxToSend) AddToSort() {
 			println("ERROR: if WorstT2S is nil BestT2S should be nil too", WorstT2S, BestT2S)
 			WorstT2S, BestT2S = nil, nil
 		}
+		t2s.SortRank = SORT_START_INDEX
 		WorstT2S, BestT2S = t2s, t2s
 		t2s.better, t2s.worse = nil, nil
 		return
