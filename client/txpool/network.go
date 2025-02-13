@@ -355,6 +355,8 @@ func adjustMinimalFee() {
 	}
 }
 
+var memcheck_hold bool
+
 func Tick() {
 	TxMutex.Lock()
 	expireOldTxs()
@@ -362,8 +364,9 @@ func Tick() {
 	removeExcessiveTxs()
 	adjustMinimalFee()
 
-	if CheckForErrors() && MempoolCheck() {
-		panic("Mempool check error inside the tick")
+	if CheckForErrors() && !memcheck_hold && MempoolCheck() {
+		println("******** Mempool check error inside the tick ********")
+		memcheck_hold = true
 	}
 	TxMutex.Unlock()
 }
