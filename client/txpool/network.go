@@ -16,8 +16,7 @@ var (
 	GetMPInProgressTicket = make(chan bool, 1)
 
 	lastFeeAdjustedTime    time.Time
-	currentFeeAdjustedSPKB uint64
-	feeAdjustDecrementSPKB uint64
+	CurrentFeeAdjustedSPKB uint64
 )
 
 type TxRcvd struct {
@@ -337,15 +336,16 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 }
 
 func adjustMinimalFee() {
-	if currentFeeAdjustedSPKB != 0 && time.Since(lastFeeAdjustedTime) > time.Minute {
+	if CurrentFeeAdjustedSPKB != 0 && time.Since(lastFeeAdjustedTime) > time.Minute {
 		if TransactionsToSendSize < common.MaxMempoolSize() {
-			if currentFeeAdjustedSPKB > feeAdjustDecrementSPKB {
-				currentFeeAdjustedSPKB -= feeAdjustDecrementSPKB
+			feeAdjustDecrementSPKB := CurrentFeeAdjustedSPKB / 20
+			if CurrentFeeAdjustedSPKB > feeAdjustDecrementSPKB {
+				CurrentFeeAdjustedSPKB -= feeAdjustDecrementSPKB
 			} else {
-				currentFeeAdjustedSPKB = 0
+				CurrentFeeAdjustedSPKB = 0
 			}
-			if !common.SetMinFeePerKB(currentFeeAdjustedSPKB) {
-				currentFeeAdjustedSPKB = 0 // stop decreasing if we can't get any lower
+			if !common.SetMinFeePerKB(CurrentFeeAdjustedSPKB) {
+				CurrentFeeAdjustedSPKB = 0 // stop decreasing if we can't get any lower
 			}
 		}
 		lastFeeAdjustedTime = time.Now()

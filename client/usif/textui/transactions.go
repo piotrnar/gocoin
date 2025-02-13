@@ -546,7 +546,8 @@ func tx_pool_stats(par string) {
 		sw_siz, get_perc_safe(sw_siz, txpool.TransactionsToSendSize),
 		sw_cnt, get_perc_safe(sw_cnt, uint64(len(txpool.TransactionsToSend))),
 		sw_wgt, get_perc_safe(sw_wgt, txpool.TransactionsToSendWeight))
-	fmt.Printf("  Number of Spent Outputs: %d\n", len(txpool.SpentOutputs))
+	fmt.Printf("  Number of Spent Outputs: %d,    CurrentFeeAdjustedSPKB: %d\n",
+		len(txpool.SpentOutputs), txpool.CurrentFeeAdjustedSPKB)
 	fmt.Printf("Rejected: %d in %d txs\n", txpool.TransactionsRejectedSize,
 		len(txpool.TransactionsRejected))
 	fmt.Printf("  Waiting4Input: %d in %d txs\n", txpool.WaitingForInputsSize,

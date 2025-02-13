@@ -139,9 +139,11 @@ func buildListAndPackages() {
 // GetSortedMempoolRBF is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.
 func GetSortedMempoolRBF() (result []*OneTxToSend) {
 	var pks_idx int
+	var worst_fee, worst_weight, cursize uint64
 	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
 	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
 	buildListAndPackages()
+	maxsize := common.MaxMempoolSize()
 	for tx := BestT2S; tx != nil; tx = tx.worse {
 		for pks_idx < len(FeePackages) {
 			if pk := FeePackages[pks_idx]; pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
@@ -151,17 +153,30 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 				}
 				for _, _t := range pk.Txs {
 					already_in[_t] = true
+					cursize += uint64(_t.Footprint)
 				}
 				result = append(result, pk.Txs...)
+				if cursize < maxsize {
+					worst_fee = pk.Fee
+					worst_weight = uint64(pk.Weight)
+				}
 				continue
 			}
 			break
 		}
 
 		if _, ok := already_in[tx]; !ok {
+			cursize += uint64(tx.Footprint)
 			result = append(result, tx)
 			already_in[tx] = true
+			if cursize < maxsize {
+				worst_fee = tx.Fee
+				worst_weight = uint64(tx.Weight())
+			}
 		}
+	}
+	if worst_weight > 0 {
+		CurrentFeeAdjustedSPKB = 4000 * worst_fee / worst_weight
 	}
 	return
 }
