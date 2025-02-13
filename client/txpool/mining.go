@@ -143,9 +143,8 @@ func BlockMined(bl *btc.Block) {
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
 	checkMPC = false
-	/*if SortingDisabled() { TODO: this is just for debugging
-		FeePackagesDirty = true // this will spare us all the struggle with trying to re-package each tx
-	}*/
+
+	FeePackagesDirty = true                // this must be set or you will see errors in delFromPackages()
 	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
 		tx := bl.Txs[i]
 		txMined(tx)
