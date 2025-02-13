@@ -1,7 +1,7 @@
 #!/bin/bash
 
 while true; do
-	./client
+	./client $*
 	if [ $? -ne 66 ]; then
 		break
 	fi
