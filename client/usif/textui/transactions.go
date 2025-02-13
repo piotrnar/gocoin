@@ -2,8 +2,10 @@ package textui
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"sort"
 	"strconv"
@@ -16,6 +18,7 @@ import (
 	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/utils"
 )
 
 func load_tx(par string) {
@@ -596,6 +599,87 @@ func tx_pool_stats(par string) {
 	}
 }
 
+func fetch_mempool(par string) {
+	var url string
+	var getcnt int
+	if val, er := strconv.ParseUint(par, 10, 64); er == nil {
+		getcnt = int(val)
+	}
+	if common.Testnet {
+		url = "https://mempool.space/testnet4/api/mempool/txids"
+	} else {
+		url = "https://mempool.space/api/mempool/txids"
+	}
+	r, er := http.Get(url)
+	if er == nil {
+		if r.StatusCode == 200 {
+			c, _ := io.ReadAll(r.Body)
+			r.Body.Close()
+			var result []string
+			er = json.Unmarshal(c, &result)
+			if er != nil {
+				return
+			}
+			fmt.Println("Got", len(result), "txs")
+			var ts, tr, mis int
+			var txs2get []*btc.Uint256
+			txpool.TxMutex.Lock()
+			for _, txids := range result {
+				txid := btc.NewUint256FromString(txids)
+				bidx := txid.BIdx()
+				if _, ok := txpool.TransactionsToSend[bidx]; ok {
+					ts++
+				} else if _, ok := txpool.TransactionsRejected[bidx]; ok {
+					tr++
+				} else {
+					if len(txs2get) < getcnt {
+						txs2get = append(txs2get, txid)
+					}
+					mis++
+				}
+			}
+			txpool.TxMutex.Unlock()
+			fmt.Println("Have", ts, "in mempool, ", tr, "in rejected. Dont have", mis)
+
+			fmt.Println("Now getting", len(txs2get), "txs from web...")
+			for idx, txid := range txs2get {
+				var rawtx []byte
+				fmt.Print(" ", idx+1, " / ", len(txs2get), " ", txid.String(), " ... ")
+				if common.Testnet {
+					rawtx = utils.GetTestnet4TxFromWeb(txid)
+				} else {
+					rawtx = utils.GetTxFromWeb(txid)
+				}
+				if rawtx != nil {
+					if tx, _ := btc.NewTx(rawtx); tx != nil {
+						tx.SetHash(rawtx)
+						if txpool.NeedThisTxExt(&tx.Hash, func() {
+							// This body is called with a locked TxMutex
+							tx.Raw = rawtx
+							select {
+							case network.NetTxs <- &txpool.TxRcvd{Tx: tx}:
+								txpool.TransactionsPending[tx.Hash.BIdx()] = true
+							default:
+								common.CountSafe("TxChannelFULL")
+							}
+						}) == 0 {
+							fmt.Println("OK")
+						} else {
+							fmt.Println("not needed anymore")
+						}
+					} else {
+						println("tx decode error")
+					}
+				}
+			}
+		} else {
+			println("getMempoolTxs() http.Get StatusCode=", r.StatusCode)
+		}
+	} else {
+		println("getMempoolTxs() http.Get error", er.Error())
+	}
+}
+
 func init() {
 	newUi("mpcheck mpc", false, check_txs, "Verify consistency of mempool")
 	newUi("mpget mpg", false, get_mempool, "Send getmp message to the peer with the given ID")
@@ -616,4 +700,5 @@ func init() {
 	newUi("txsend stx", false, send_tx, "Broadcast tx from memory pool: <txid>")
 	newUi("txsendall stxa", false, send_all_tx, "Broadcast all the local txs (what you see after ltx)")
 	newUi("txstats ts", false, tx_pool_stats, "Mempool and other transaction related statistics")
+	newUi("fetchmp fmp", false, fetch_mempool, "Fetch missing txs from mempool.space")
 }
