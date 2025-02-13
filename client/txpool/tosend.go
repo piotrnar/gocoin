@@ -505,9 +505,6 @@ func (t2s *OneTxToSend) delFromPackages() {
 			if pkg.Txs[0] == t2s {
 				pkg.Txs[1].removePkg(pkg)
 				common.CountSafe("TxPkgsDelGrA-1")
-				println("ERROR: delFromPackages our tx if first on the two list!")
-				println("  1st:", pkg.Txs[0].Hash.String(), pkg.Txs[0] == t2s)
-				println("  2nd:", pkg.Txs[1].Hash.String(), pkg.Txs[1] == t2s)
 			} else {
 				pkg.Txs[0].removePkg(pkg)
 				common.CountSafe("TxPkgsDelGrA-0")
