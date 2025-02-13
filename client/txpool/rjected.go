@@ -163,6 +163,7 @@ func DeleteRejectedByTxr(txr *OneTxRejected) {
 	deleteTransactionsRejected(txr.Id.BIdx())
 }
 
+// TODO: get rid of it after debugging finished
 func deleteTransactionsRejected(bidx btc.BIDX) {
 	txr := TransactionsRejected[bidx]
 	if txr == nil {
