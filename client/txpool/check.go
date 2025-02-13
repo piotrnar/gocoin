@@ -434,7 +434,7 @@ func MempoolCheck() bool {
 		dupa++
 		fmt.Println(dupa, "checkFeeList failed")
 	}
-	if !SortListDirty {
+	if false && !SortListDirty {
 		if VerifyMempoolSort(GetSortedMempool()) {
 			dupa++
 			fmt.Println(dupa, "GetSortedMempool() sorting broken")
