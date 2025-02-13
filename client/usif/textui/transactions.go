@@ -588,7 +588,7 @@ func tx_pool_stats(par string) {
 	fmt.Printf("FeePackages Count: %d,  Dirty: %t,  MemSize: %d\n", len(txpool.FeePackages),
 		txpool.FeePackagesDirty, txpool.FeePackagesSysSize())
 	if txpool.RepackagingSinceLastRedoWhen.IsZero() {
-		fmt.Println("  Fee packaegs rebuild never done yet")
+		fmt.Println("  Fee packages rebuild never done yet")
 	} else {
 		fmt.Printf("  Last fee pkgs rebuild: %s ago,  on it since: %s (%d ops)\n",
 			time.Since(txpool.RepackagingSinceLastRedoWhen).String(),
