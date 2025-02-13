@@ -160,7 +160,18 @@ func DeleteRejectedByTxr(txr *OneTxRejected) {
 		}
 
 	}
-	delete(TransactionsRejected, txr.Id.BIdx())
+	deleteTransactionsRejected(txr.Id.BIdx())
+}
+
+func deleteTransactionsRejected(bidx btc.BIDX) {
+	txr := TransactionsRejected[bidx]
+	if txr == nil {
+		panic("trying to remove not existing TransactionsRejected")
+	}
+	if txr.Waiting4 != nil {
+		panic("trying to remove TransactionsRejected that still has Waiting4")
+	}
+	delete(TransactionsRejected, bidx)
 }
 
 // Make sure to call it with locked TxMutex
@@ -260,6 +271,7 @@ func retryWaitingForInput(wtg *OneWaitingList) {
 		//if CheckForErrors() { // TODO: always check it, as it's not time consuming and there have been issues here
 		if txr == nil {
 			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String())
+			checkMPC = true
 			continue
 		}
 		if txr.Tx == nil || txr.Reason != TX_REJECTED_NO_TXOU {
@@ -432,7 +444,7 @@ func resizeTransactionsRejectedCount(newcnt int) {
 			if txr.Tx != nil {
 				txr.cleanup()
 			}
-			delete(TransactionsRejected, bidx)
+			deleteTransactionsRejected(bidx)
 		} else {
 			txr.ArrIndex = uint16(TRIdxHead)
 			TRIdxArray[TRIdxHead] = bidx
