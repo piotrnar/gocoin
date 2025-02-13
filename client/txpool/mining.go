@@ -142,9 +142,6 @@ func BlockMined(bl *btc.Block) {
 
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
-	if CheckForErrors() && MempoolCheck() {
-		println("MempoolCheck error before BlockMined()")
-	}
 	checkMPC = false
 	if !SortingDisabled() {
 		FeePackagesDirty = true // this will spare us all the struggle with trying to re-package each tx

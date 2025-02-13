@@ -504,15 +504,13 @@ func (t2s *OneTxToSend) delFromPackages() {
 			// remove reference to this pkg from the other txs that owned it
 			if pkg.Txs[0] == t2s {
 				pkg.Txs[1].removePkg(pkg)
-				// TODO: check if it prints
-				println("ERROR: delFromPackages our tx is first on the two list!")
-				checkMPC = true
+				common.CountSafe("TxPkgsDelGrA-1")
 			} else {
 				pkg.Txs[0].removePkg(pkg)
+				common.CountSafe("TxPkgsDelGrA-0")
 			}
 			pkg.Txs = nil
 			records2remove++
-			common.CountSafe("TxPkgsDelGrA")
 		} else {
 			common.CountSafe("TxPkgsDelTx")
 			pandch := pkg.Txs[0].GetItWithAllChildren()
@@ -528,11 +526,12 @@ func (t2s *OneTxToSend) delFromPackages() {
 				pkg.Fee = 0
 				for _, t := range pandch {
 					if CheckForErrors() && t == t2s {
-						println("ERROR: delFromPackages -> GetItWithAllChildren returned us")
-						checkMPC = true
-						continue
-						//FeePackagesDirty = true
-						//return
+						println("ERROR: delFromPackages -> GetItWithAllChildren returned us", pkg.Txs[0].Hash.String())
+						for ii, tt := range pandch {
+							println(" ", ii, tt.Hash.String())
+						}
+						FeePackagesDirty = true
+						return
 					}
 					pkg.Weight += t.Weight()
 					pkg.Fee += t.Fee
