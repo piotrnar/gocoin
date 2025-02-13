@@ -20,7 +20,8 @@ td.agent {
 	<col width="360">
 </colgroup>
 <tr>
-<td align="left">Address: <b id="external_ip"></b></td>
+<td align="left">Address: <b id="external_ip"></b>
+<span id="get_mp_in_progress" style="display:none">&nbsp;&bull;&nbsp;<b>GetMPInProgress:<span id="get_mp_conn_id"></span></b></span></td>
 <td align="center">
 	Connections: <b id="out_connections"></b> <img title="outgoing" class="outgoing"> + <b id="in_connections"></b> <img title="incoming" class="incoming">
 </td>
@@ -66,7 +67,6 @@ Downloading at <b id="bw_dl_speed_now"></b> KB/s</span>
 &nbsp;&bull;&nbsp;
 <span id="bw_ul_speed_now_span">Uploading at
 <b id="bw_ul_speed_now"></b> KB/s</span>
-<span id="get_mp_in_progress" style="display:none">&nbsp;&bull;&nbsp;<b>GetMPInProgress:<span id="get_mp_conn_id"></span></b></span>
 </td>
 <td align="right">Listening for incoming connections:</td>
 <td><img id="listen_tcp_info" src="static/switch-off.png" height="24" valign="bottom"></td>

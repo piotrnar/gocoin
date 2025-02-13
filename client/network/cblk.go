@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"sync"
 	"time"
 
@@ -375,7 +375,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		er := common.BlockChain.PostCheckBlock(b2g.Block)
 		if er != nil {
 			println(c.ConnID, "Corrupt CmpctBlkA")
-			ioutil.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
+			os.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
 
 			if b2g.Block.MerkleRootMatch() {
 				println("It was a wrongly mined one - clean it up")
@@ -505,7 +505,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	if er != nil {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "Corrupt CmpctBlkB")
 		//c.DoS("BadCmpctBlockB")
-		ioutil.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
+		os.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
 
 		if b2g.Block.MerkleRootMatch() {
 			println("It was a wrongly mined one - clean it up")

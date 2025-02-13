@@ -577,12 +577,22 @@ func tx_pool_stats(par string) {
 		s2 = "never used"
 	}
 	fmt.Printf("  SortRankRange Now: %s   Ever: %s\n", s1, s2)
-	fmt.Printf("  Time spent on tx sorting since last rebuild: %s (%d ops)\n",
-		txpool.ResortingSinceLastRedoTime.String(), txpool.ResortingSinceLastRedoCount)
+	if txpool.ResortingSinceLastRedoWhen.IsZero() {
+		fmt.Println("  Sorting rebuild never done yet")
+	} else {
+		fmt.Printf("  Last sorting rebuild: %s ago,  on it since: %s (%d ops)\n",
+			time.Since(txpool.ResortingSinceLastRedoWhen).String(),
+			txpool.ResortingSinceLastRedoTime.String(), txpool.ResortingSinceLastRedoCount)
+	}
 	fmt.Printf("FeePackages Count: %d,  Dirty: %t,  MemSize: %d\n", len(txpool.FeePackages),
 		txpool.FeePackagesDirty, txpool.FeePackagesSysSize())
-	fmt.Printf("  Time spent on fee packages since last rebuild: %s (%d ops)\n",
-		txpool.RepackagingSinceLastRedoTime.String(), txpool.RepackagingSinceLastRedoCount)
+	if txpool.RepackagingSinceLastRedoWhen.IsZero() {
+		fmt.Println("  Fee packaegs rebuild never done yet")
+	} else {
+		fmt.Printf("  Last fee pkgs rebuild: %s ago,  on it since: %s (%d ops)\n",
+			time.Since(txpool.RepackagingSinceLastRedoWhen).String(),
+			txpool.RepackagingSinceLastRedoTime.String(), txpool.RepackagingSinceLastRedoCount)
+	}
 }
 
 func init() {

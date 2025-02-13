@@ -29,9 +29,11 @@ var (
 
 	RepackagingSinceLastRedoTime  time.Duration
 	RepackagingSinceLastRedoCount uint
+	RepackagingSinceLastRedoWhen  time.Time
 
 	ResortingSinceLastRedoTime  time.Duration
 	ResortingSinceLastRedoCount uint
+	ResortingSinceLastRedoWhen  time.Time
 )
 
 type OneTxToSend struct {
@@ -195,6 +197,9 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 }
 
 func removeExcessiveTxs() {
+	if len(GetMPInProgressTicket) != 0 {
+		return // don't do it during mpget
+	}
 	var worst_fee, worst_weight uint64
 	var cnt, bytes uint64
 	if TransactionsToSendSize >= common.MaxMempoolSize()+1e6 { // only remove txs when we are 1MB over the maximum size

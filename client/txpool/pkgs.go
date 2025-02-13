@@ -134,6 +134,8 @@ func buildListAndPackages() {
 	feePackagesReSort = true
 	FeePackagesDirty = false
 	RepackagingSinceLastRedoTime = 0
+	RepackagingSinceLastRedoCount = 0
+	RepackagingSinceLastRedoWhen = time.Now()
 }
 
 // GetSortedMempoolRBF is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.

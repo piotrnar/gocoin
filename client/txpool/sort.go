@@ -13,7 +13,7 @@ import (
 const (
 	SORT_START_INDEX     = uint64(1 << 62) // 1/4th of max uint64 value
 	POOL_EXPIRE_INTERVAL = time.Hour
-	STOP_AUTO_SORT_AFTER = 5 * time.Minute // stop auto-sorting if so much time passed since last request
+	STOP_AUTO_SORT_AFTER = 60 * time.Minute // stop auto-sorting if so much time passed since last request
 )
 
 var (
@@ -409,6 +409,8 @@ func buildSortedList() {
 	common.CountSafe("TxSortBuildNeeded")
 	SortListDirty = false
 	ResortingSinceLastRedoTime = 0
+	ResortingSinceLastRedoCount = 0
+	ResortingSinceLastRedoWhen = time.Now()
 	ts := GetSortedMempoolSlow()
 	if len(ts) == 0 {
 		BestT2S, WorstT2S = nil, nil
