@@ -3,8 +3,6 @@ package txpool
 import (
 	"encoding/hex"
 	"fmt"
-	"os"
-	"runtime/debug"
 	"slices"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -25,18 +23,6 @@ func (t *OneTxToSend) isInMap() (yes bool) {
 		yes = false
 	}
 	return
-}
-
-func (pk *OneTxsPackage) checkForDups() bool {
-	for i, t := range pk.Txs[:len(pk.Txs)-1] {
-		if slices.Contains(pk.Txs[i+1:], t) {
-			println("ERROR: pkg", pk.String(), "contains the same tx twice:", t.Hash.String())
-			debug.PrintStack()
-			os.Exit(1)
-			return true
-		}
-	}
-	return false
 }
 
 func checkFootprints() (dupa int) {
