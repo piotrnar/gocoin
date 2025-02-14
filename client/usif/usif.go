@@ -203,26 +203,19 @@ func MemoryPoolFees() (res string) {
 	txpool.TxMutex.Lock()
 	defer txpool.TxMutex.Unlock()
 
-	sorted := txpool.GetSortedMempoolRBF()
+	sorted := txpool.GetMempoolFees(txpool.TransactionsToSendWeight)
 
-	var totlen, rawlen uint64
-	for cnt := 0; cnt < len(sorted); cnt++ {
-		v := sorted[cnt]
-		newlen := totlen + uint64(v.VSize())
-		rawlen += uint64(len(v.Raw))
-
-		if cnt == 0 || cnt+1 == len(sorted) || (newlen/100e3) != (totlen/100e3) {
-			spb := float64(v.Fee) / float64(v.VSize())
-			toprint := newlen
-			if cnt != 0 && cnt+1 != len(sorted) {
-				toprint = newlen / 100e3 * 100e3
-			}
-			res += fmt.Sprintf(" %9d / %9d bytes, %6d txs @ fee %8.1f Satoshis / byte\n", toprint, rawlen, cnt+1, spb)
+	var totlen uint64
+	var txcnt int
+	for cnt, v := range sorted {
+		newlen := totlen + uint64(v.Weight)
+		txcnt += len(v.Txs)
+		if cnt == 0 || cnt+1 == len(sorted) || (newlen/400e3) != (totlen/400e3) {
+			res += fmt.Sprintf(" up to %9d weight: %6d txs @ %9d SPKB\n", newlen, txcnt, 4000*v.Fee/v.Weight)
 		}
-		if (newlen / 1e6) != (totlen / 1e6) {
-			res += "===========================================================\n"
+		if (newlen / 4e6) != (totlen / 4e6) {
+			res += "======================================================\n"
 		}
-
 		totlen = newlen
 	}
 	return
