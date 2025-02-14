@@ -203,7 +203,7 @@ func (tr *OneTxRejected) cleanup() {
 					RejectedUsedUTXOs[uidx] = newref
 					common.CountSafe("TxUsedUTXOrem")
 				}
-			} else if CheckForErrors() {
+			} else {
 				println("ERROR: TxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
 			}
 		}
@@ -225,10 +225,10 @@ func (tr *OneTxRejected) cleanup() {
 				} else {
 					w4i.Ids = newlist
 				}
-			} else if CheckForErrors() {
+			} else {
 				println("ERROR: WaitingForInputs record", tr.Waiting4.String(), "did not point back to txr", tr.Id.String())
 			}
-		} else if CheckForErrors() {
+		} else {
 			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String(), "from txr", tr.Id.String())
 		}
 		WaitingForInputsSize -= uint64(tr.Footprint)
