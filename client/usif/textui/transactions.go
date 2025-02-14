@@ -422,9 +422,7 @@ func send_all_tx(par string) {
 }
 
 func save_mempool(par string) {
-	txpool.TxMutex.Lock()
 	txpool.MempoolSave(true)
-	txpool.TxMutex.Unlock()
 }
 
 func check_txs(par string) {

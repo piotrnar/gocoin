@@ -81,14 +81,6 @@ func exit_now() {
 	os.Exit(0)
 }
 
-func checkTxPool() {
-	txpool.TxMutex.Lock()
-	if txpool.MempoolCheck() {
-		panic("Mempool check error")
-	}
-	txpool.TxMutex.Unlock()
-}
-
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
 	if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted.Get() {
@@ -111,9 +103,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	txpool.BlockCommitInProgress(true)
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	txpool.BlockCommitInProgress(false)
-	if txpool.CheckForErrors() {
-		checkTxPool()
-	}
 	if bl.LastKnownHeight-bl.Height > common.Get(&common.CFG.Memory.MaxCachedBlks) {
 		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused
 	}
