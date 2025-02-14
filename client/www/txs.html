@@ -63,41 +63,50 @@ X for
 
 <tr>
 <td valign="top">
-	<table border="0">
-	<colgroup>
-		<col width="200">
-		<col width="100">
-		<col width="100">
-	</colgroup>
-		<tr><td>Memory pool size:
-			<td colspan="2">
-			<input type="button" id="ts_t2s_size" onclick="show_mempool_fees()"
-				title="Click to see mempool fee statistics"
-				style="width:100%">
-		<tr><td>UTXOs spent in memory:
-			<td><b id="outspent"></b>
-			<td align="right" nowrap="nowrap" style="font-size:70%">avg. <b id="avgoutspertx"></b> / tx
-		<tr><td>Rejected transactions:
-			<td><input type="button" id="butre" value="" onclick="show_txsre()">
-			<td align="right" nowrap="nowrap"><b id="ts_tre_size"></b>
-		<tr><td>Waiting for inputs:<td><input type="button" id="butw4i" value="" onclick="show_txw4i()">
-			<td align="right" nowrap="nowrap" title="FeeFiler value"><b id="min_spb"></b> spb
-		<tr><td>Being processed:
-			<td><b id="ts_ptr1_cnt"></b> / <b id="ts_ptr2_cnt"></b>
-			<td><input type="button" onclick="show_txs2s('&ownonly=1')" value="Own TXs">
-		<tr><td>Estmated fees:
-			<td colspan="2"><b id="fees_from_first_block">...</b> BTC from 1st block
+	<table border="0" width="100%">
+		<tr>
+			<td>Mempool RAM used:</td>
+			<td align="center"><b id="ts_t2s_size"></b> in <b id="ts_t2s_cnt"></b> txs</td>
+			<td align="center" nowrap="nowrap" style="font-size:70%">avg. <b id="ts_t2s_avg"></b> / tx</td>
+		</tr>
+		<tr><td>Mempool weight:</td>
+			<td align="center"><b id="ts_t2s_weight"></b></td>
+			<td align="center" nowrap="nowrap" style="font-size:80%">~ <b id="ts_t2s_blks"></b> blocks</td>
+		</tr>
+		<tr><td>UTXOs spent in mem:</td>
+			<td align="center"><b id="outspent"></b></td>
+			<td align="center" nowrap="nowrap" style="font-size:70%">avg. <b id="avg_outsper_tx"></b> / tx</td>
+		</tr>
+		<tr><td>Rejected transactions:&nbsp;</td>
+			<td align="center"><input type="button" id="butre" value="" onclick="show_txsre()"></td>
+			<td align="center" nowrap="nowrap">
+				<input title="Waiting for inputs" type="button" id="butw4i" value="" onclick="show_txw4i()">
+			</td>
+		</tr>
+		<tr><td>Txs being processed:</td>
+			<td align="center">Pend: <b id="ts_ptr1_cnt"></b>
+				&nbsp;&bull;&nbsp;
+				Net: <b id="ts_ptr2_cnt"></b>
+			</td>
+			<td align="center" nowrap="nowrap" style="font-size:70%">
+				<b id="min_spb"></b> / <b id="cur_fee_spkb" title="Current fee SPKB"></b> SPKB
+			</td>
+		</tr>
+		<tr><td>Fees from 1st block:</td>
+			<td align="center"><b id="fees_from_first_block">...</b> BTC</td>
+			<td align="center"><input type="button" onclick="show_txs2s('&ownonly=1')" value="Own TXs"></td>
+		</tr>
 	</table>
 <td valign="top">
-	<table border="0">
+	<table border="0" cellpadding="0">
 		<col width="150">
 		<col width="*">
 		<tr>
 			<td>Memory pool:
-			<td><img id="switch_txp_pool" src="static/switch-off.png" height="32" valign="bottom">
+			<td><img id="switch_txp_pool" src="static/empty.png" height="32" valign="bottom">
 		<tr>
 			<td>Relaying transactions:
-			<td><img id="switch_txr_pool" src="static/switch-off.png" height="32" valign="bottom">
+			<td><img id="switch_txr_pool" src="static/empty.png" height="32" valign="bottom">
 		<tr>
 			<td colspan="2" class="uploadtx">
 				<b>Upload Transaction File:</b><br>
@@ -180,6 +189,7 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th>Rejected Transaction ID
 		<th onclick="sorttab('txsre', 2)" style="cursor:pointer" width="60" align="right">Maturity
 		<th onclick="sorttab('txsre', 3)" style="cursor:pointer" width="60" align="right">Size
+		<th width="80" align="right">Sys Size
 		<th width="100" align="right">Reason rejected
 </table>
 <table class="txs bord" id="txw4i" style="display:none" width="100%">
@@ -229,9 +239,17 @@ function set_pool_switch_icon(el, on) {
 
 function pool_on_off_click(e) {
 	var cmd, el = e.srcElement
+	var is_on = el.src.indexOf("switch-on.")!=-1
+	console.log(el.id, is_on)
+	function on2word(on) {
+		return on ? "Disable" : "Enable"
+	}
+
 	if (el.id == "switch_txp_pool") {
+		if (!confirm(on2word(is_on) + " placing new transactions in mempool?")) return
 		cmd = 'txponoff'
 	} else if (el.id == "switch_txr_pool") {
+		if (!confirm(on2word(is_on) + " routing new transactions to other peers?")) return
 		cmd = 'txronoff'
 	} else {
 		return
@@ -627,7 +645,6 @@ function show_txsre() {
 		if(aj.readyState==4) {
 			while (txsre.rows.length>1)  txsre.deleteRow(1)
 			txs = aj.responseXML.getElementsByTagName('tx')
-			butre.value = ' ' + txs.length + ' '
 			for (var i=0; i<txs.length; i++) {
 				var row = txsre.insertRow(-1)
 				var inmem = xval(txs[i], 'inmem')==='true'
@@ -652,6 +669,9 @@ function show_txsre() {
 				} else {
 					c.innerHTML = '<i style="font-size:75%">'+xval(txs[i], 'size')+'</i>'
 				}
+
+				c=row.insertCell(-1);c.align='right'
+				c.innerHTML = '<b>'+xval(txs[i], 'syssize')+'</b>'
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = xval(txs[i], 'reason')
@@ -909,7 +929,7 @@ function show_mempool_fees() {
 			}
 			$.plot($("#mempool_fees"), plot_data, plot_options)
 
-			fees_from_first_block.innerText = (feesfrom1stblock/1e8).toFixed(3)
+			fees_from_first_block.innerText = (feesfrom1stblock/1e8).toFixed(8)
 			loading_in_progress = false
 		}
 	}
@@ -952,21 +972,24 @@ function refreshtxstat() {
 		try {
 			var ts = JSON.parse(aj.responseText)
 
-			ts_t2s_size.value = (ts.t2s_size/1e6).toFixed(1)+' MB in ' + ts.t2s_cnt + ' txs'
-			ts_t2s_size.title = 'Avg size: ' + (ts.t2s_size/ts.t2s_cnt).toFixed(0) +
-				' bytes,  Total Weight: ' + (ts.t2s_weight/1e6).toFixed(1) + " M"
-			outspent.innerText = ts.spent_outs_cnt
+			ts_t2s_size.innerText = (ts.t2s_size/1e6).toFixed(1)+' MB'
+			ts_t2s_cnt.innerText = ts.t2s_cnt
+			ts_t2s_weight.innerText = ts.t2s_weight
+			ts_t2s_blks.innerText = (ts.t2s_weight/4e6).toFixed(2)
+			ts_t2s_avg.innerText = (ts.t2s_size/ts.t2s_cnt).toFixed(0)
+				outspent.innerText = ts.spent_outs_cnt
 			if (ts.t2s_cnt>0) {
-				avgoutspertx.innerText = (ts.spent_outs_cnt/ts.t2s_cnt).toFixed(2)
+				avg_outsper_tx.innerText = (ts.spent_outs_cnt/ts.t2s_cnt).toFixed(2)
 			} else {
-				avgoutspertx.innerText = '?'
+				avg_outsper_tx.innerText = '?'
 			}
-			butre.value = ts.tre_cnt
-			ts_tre_size.innerText = (ts.tre_size/1e3).toFixed(1)+' KB'
+			butre.value = (ts.tre_size/1e3).toFixed(1)+' KB in ' + ts.tre_cnt + ' txs'
 			butw4i.value = ts.awaiting_inputs + " / " + (ts.awaiting_inputs_size/1e3).toFixed(1) + " KB"
 			ts_ptr1_cnt.innerText = ts.ptr1_cnt
 			ts_ptr2_cnt.innerText = ts.ptr2_cnt
-			min_spb.innerText = (ts.min_fee_per_kb/1000.0).toFixed(3)
+			min_spb.innerText = ts.min_fee_per_kb
+
+			cur_fee_spkb.innerText = ts.current_fee_adjusted_spkb
 
 			set_pool_switch_icon(switch_txp_pool, ts.tx_pool_on)
 			set_pool_switch_icon(switch_txr_pool, ts.tx_routing_on)

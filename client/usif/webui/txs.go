@@ -382,6 +382,7 @@ func xml_txsre(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
 			fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
 			fmt.Fprint(w, "<size>", v.Size, "</size>")
+			fmt.Fprint(w, "<syssize>", v.Footprint, "</syssize>")
 			fmt.Fprint(w, "<inmem>", v.Tx != nil, "</inmem>")
 			fmt.Fprint(w, "<reason>", txpool.ReasonToString(v.Reason), "</reason>")
 			w.Write([]byte("</tx>"))
@@ -502,7 +503,8 @@ func json_txstat(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprint("\"tx_routing_on\":", common.Get(&common.CFG.TXRoute.Enabled), ",")))
 	w.Write([]byte(fmt.Sprint("\"sorting_disabled\":", txpool.SortingDisabled, ",")))
 	w.Write([]byte(fmt.Sprint("\"sorting_list_dirty\":", txpool.SortListDirty, ",")))
-	w.Write([]byte(fmt.Sprint("\"fee_packages_dirty\":", txpool.FeePackagesDirty, "")))
+	w.Write([]byte(fmt.Sprint("\"fee_packages_dirty\":", txpool.FeePackagesDirty, ",")))
+	w.Write([]byte(fmt.Sprint("\"current_fee_adjusted_spkb\":", txpool.CurrentFeeAdjustedSPKB, "")))
 
 	txpool.TxMutex.Unlock()
 

@@ -69,7 +69,7 @@ Downloading at <b id="bw_dl_speed_now"></b> KB/s</span>
 <b id="bw_ul_speed_now"></b> KB/s</span>
 </td>
 <td align="right">Listening for incoming connections:</td>
-<td><img id="listen_tcp_info" src="static/switch-off.png" height="24" valign="bottom"></td>
+<td><img id="listen_tcp_info" src="static/empty.png" height="24" valign="bottom"></td>
 <td><img id="tcp_server_running" valign="middle"></td>
 </td>
 <td></td>
@@ -194,6 +194,12 @@ function enable_server_switching(enable) {
 
 function server_on_off() {
 	var aj = ajax()
+	var is_on = listen_tcp_info.src.indexOf("switch-on.")!=-1
+	function on2word(on) {
+		return on ? "Disable" : "Enable"
+	}
+	if (!confirm(on2word(is_on) + " listening for incoming connections?")) return
+
 	aj.onerror=function() {
 		alert("Error contacting the server")
 	}
