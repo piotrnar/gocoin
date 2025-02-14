@@ -1,8 +1,6 @@
 package txpool
 
 import (
-	"os"
-	"runtime/debug"
 	"sort"
 	"time"
 
@@ -147,13 +145,11 @@ func (t2s *OneTxToSend) DelFromSort() {
 	if CheckForErrors() {
 		if t2s.worse == nil {
 			println("ERROR: t2s.Worse is nil but t2s was not WorstT2S", WorstT2S, BestT2S, t2s.worse)
-			debug.PrintStack()
-			os.Exit(1)
+			panic("This should not happen")
 		}
 		if t2s.worse.better != t2s {
 			println("ERROR: t2s.Worse.Better is not pointing to t2s", WorstT2S, BestT2S, t2s, t2s.worse, t2s.worse.better)
-			debug.PrintStack()
-			os.Exit(1)
+			panic("This should not happen")
 		}
 	}
 	t2s.worse.better = t2s.better
@@ -161,13 +157,11 @@ func (t2s *OneTxToSend) DelFromSort() {
 	if CheckForErrors() {
 		if t2s.better == nil {
 			println("ERROR: t2s.Better is nil but t2s was not BestT2S", WorstT2S, BestT2S, t2s.better)
-			debug.PrintStack()
-			os.Exit(1)
+			panic("This should not happen")
 		}
 		if t2s.better.worse != t2s {
 			println("ERROR: t2s.Better.Worse is not pointing to t2s", WorstT2S, BestT2S, t2s, t2s.better, t2s.better.worse)
-			debug.PrintStack()
-			os.Exit(1)
+			panic("This should not happen")
 		}
 	}
 	t2s.better.worse = t2s.worse
@@ -467,6 +461,7 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 
 	if CheckForErrors() && (len(result) != cap(result) || len(result) != len(already_in) || len(parent_of) != 0) {
 		println("ERROR: Get sorted mempool cap:", cap(result), " result:", len(result), " alreadyin:", len(already_in), " parents:", len(parent_of))
+		panic("This should not happen")
 	}
 
 	return
@@ -481,12 +476,7 @@ func GetSortedMempool() (result []*OneTxToSend) {
 	}
 
 	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
-	var prv_idx uint64
 	for t2s := BestT2S; t2s != nil; t2s = t2s.worse {
-		if CheckForErrors() && (prv_idx != 0 && prv_idx >= t2s.SortRank) {
-			println("ERROR: GetSortedMempool corupt sort index", len(TransactionsToSend), prv_idx, t2s.SortRank)
-		}
-		prv_idx = t2s.SortRank
 		result = append(result, t2s)
 	}
 	return
