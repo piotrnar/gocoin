@@ -108,7 +108,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl.LastKnownHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
 
-	txpool.BlockCommitInProgress(common.Get(&common.CFG.TXPool.HoldSorting))
+	txpool.BlockCommitInProgress(true)
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	txpool.BlockCommitInProgress(false)
 	if txpool.CheckForErrors() {

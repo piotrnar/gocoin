@@ -85,7 +85,6 @@ var (
 			RejectRecCnt   uint16
 			SaveOnDisk     bool
 			NotFullRBF     bool
-			HoldSorting    bool // during block commit
 			StopSortMin    uint16
 			CheckErrors    bool
 		}
@@ -192,7 +191,6 @@ func InitConfig() {
 	CFG.TXPool.MaxNoUtxoMB = 5.0
 	CFG.TXPool.RejectRecCnt = 20000
 	CFG.TXPool.SaveOnDisk = true
-	CFG.TXPool.HoldSorting = true
 	CFG.TXPool.StopSortMin = 5
 
 	CFG.TXRoute.Enabled = true

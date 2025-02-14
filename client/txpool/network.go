@@ -286,9 +286,7 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 
 	rec.Clean()
 	rec.Add(bidx)
-	if ntx.Unmined {
-		rec.unmined() // this is for when we are un-mining a tx
-	} else {
+	if !ntx.Unmined {
 		if wtg := WaitingForInputs[bidx]; wtg != nil {
 			retryWaitingForInput(wtg) // Redo waiting txs when leaving this function
 		}

@@ -16,8 +16,8 @@ func (rec *OneTxToSend) IIdx(key uint64) int {
 	return -1
 }
 
-// outputsMined clears the MemInput flag of all the children (used when a tx is mined).
-func (tx *OneTxToSend) outputsMined() {
+// mined clears the MemInput flag of all the children (used when a tx is mined).
+func (tx *OneTxToSend) mined() {
 	// Go through all the tx's outputs and unmark MemInputs in txs that have been spending it
 	for vout := range tx.TxOut {
 		uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
@@ -42,16 +42,45 @@ func (tx *OneTxToSend) outputsMined() {
 				}
 				rec.MemInputs[idx] = false
 				rec.MemInputCnt--
-
 				common.CountSafe("TxMinedMeminCnt")
 				if rec.MemInputCnt == 0 {
 					common.CountSafe("TxMinedMeminTx")
 					rec.memInputsSet(nil)
 				}
-				rec.resortWithChildren()
+				SortListDirty = true // will need to resort after
 			} else if CheckForErrors() {
 				common.CountSafe("TxMinedMeminERR")
 				println("ERROR: out in SpentOutputs, but not in mempool")
+			}
+		}
+	}
+}
+
+// unmined sets the MemInput flag of all the children (used when a tx is unmined / block undone).
+func (tx *OneTxToSend) unmined() {
+	// Go through all the tx's outputs and mark MemInputs in txs that have been spending it
+	for vout := range tx.TxOut {
+		uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
+		if val, ok := SpentOutputs[uidx]; ok {
+			if rec := TransactionsToSend[val]; rec != nil {
+				if rec.MemInputs == nil {
+					rec.memInputsSet(make([]bool, len(rec.TxIn)))
+				}
+				idx := rec.IIdx(uidx)
+				if rec.MemInputs[idx] {
+					println("ERROR: out", btc.NewUint256(tx.Hash.Hash[:]).String(), "-", idx, "already marked as MI")
+				} else {
+					rec.MemInputs[idx] = true
+					rec.MemInputCnt++
+					SortListDirty = true // will need to resort after
+					common.CountSafe("TxPutBackMemIn")
+				}
+				if CheckForErrors() && rec.Footprint != uint32(rec.SysSize()) {
+					println("ERROR: MarkChildrenForMem footprint mismatch", rec.Footprint, uint32(rec.SysSize()))
+				}
+			} else if CheckForErrors() {
+				println("ERROR: MarkChildrenForMem: in SpentOutputs, but not in mempool")
+				common.CountSafe("TxPutBackMeminERR")
 			}
 		}
 	}
@@ -64,7 +93,7 @@ func txMined(tx *btc.Tx) {
 	if rec, ok := TransactionsToSend[bidx]; ok {
 		// if we have this tx in mempool, remove it and it should clean everything up nicely
 		common.CountSafe("TxMinedAccepted")
-		rec.outputsMined()
+		rec.mined()
 		rec.Delete(false, 0) // this should take care of the RejectedUsedUTXOs stuff
 		return
 	}
@@ -167,16 +196,18 @@ func BlockUndone(bl *btc.Block) {
 	}
 
 	TxMutex.Lock()
-	FeePackagesDirty = true // this will spare us all the struggle with trying to re-package each tx
+	// this will spare us all the struggle with trying to re-package each tx
+	// .. plus repackaging and resorting of unmined txs is not implemented :)
+	FeePackagesDirty = true
 	for _, tx := range bl.Txs[1:] {
 		if tr, ok := TransactionsRejected[tx.Hash.BIdx()]; ok {
-			println("Undoing rejected tx", tx.Hash.String(), tr.Reason)
 			DeleteRejectedByTxr(tr)
 			common.CountSafePar("TxUnmineRejected-", tr.Reason)
 		}
 
 		ntx := &TxRcvd{Tx: tx, Trusted: true, Unmined: true}
-		if res, _ := processTx(ntx); res == 0 {
+		if res, t2s := processTx(ntx); res == 0 {
+			t2s.unmined()
 			common.CountSafe("TxUnmineOK")
 		} else {
 			println("ERROR: TxUnmineFail:", ntx.Hash.String(), res)
