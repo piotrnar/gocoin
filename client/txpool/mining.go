@@ -169,7 +169,7 @@ func BlockMined(bl *btc.Block) {
 
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
-	//FeePackagesDirty = true
+	//FeePackagesDirty = true <-- keep pkg list as maintaining it here should be fast
 	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
 		tx := bl.Txs[i]
 		txMined(tx)
