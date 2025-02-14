@@ -48,7 +48,7 @@ func (tx *OneTxToSend) mined() {
 					rec.memInputsSet(nil)
 				}
 				SortListDirty = true // will need to resort after
-			} else if CheckForErrors() {
+			} else {
 				common.CountSafe("TxMinedMeminERR")
 				println("ERROR: out in SpentOutputs, but not in mempool")
 			}
@@ -78,7 +78,7 @@ func (tx *OneTxToSend) unmined() {
 				if CheckForErrors() && rec.Footprint != uint32(rec.SysSize()) {
 					println("ERROR: MarkChildrenForMem footprint mismatch", rec.Footprint, uint32(rec.SysSize()))
 				}
-			} else if CheckForErrors() {
+			} else {
 				println("ERROR: MarkChildrenForMem: in SpentOutputs, but not in mempool")
 				common.CountSafe("TxPutBackMeminERR")
 			}
