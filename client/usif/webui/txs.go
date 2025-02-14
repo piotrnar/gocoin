@@ -517,101 +517,7 @@ func txt_mempool_fees(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(usif.MemoryPoolFees()))
 }
 
-func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
-	var division, maxweight uint64
-	var e error
-
-	if !ipchecker(r) {
-		return
-	}
-
-	txpool.TxMutex.Lock()
-	defer txpool.TxMutex.Unlock()
-
-	if len(r.Form["max"]) > 0 {
-		maxweight, e = strconv.ParseUint(r.Form["max"][0], 10, 64)
-		if e != nil {
-			maxweight = txpool.TransactionsToSendWeight
-		}
-	} else {
-		maxweight = txpool.TransactionsToSendWeight
-	}
-
-	if maxweight > txpool.TransactionsToSendWeight {
-		maxweight = txpool.TransactionsToSendWeight
-	}
-
-	if len(r.Form["div"]) > 0 {
-		division, e = strconv.ParseUint(r.Form["div"][0], 10, 64)
-		if e != nil {
-			division = maxweight / 100
-		}
-	} else {
-		division = maxweight / 100
-	}
-
-	if division < 100 {
-		division = 100
-	}
-
-	sorted := txpool.GetSortedMempoolRBF()
-
-	type one_stat_row struct {
-		Txs_so_far        uint
-		Real_len_so_far   uint
-		Weight_so_far     uint
-		Current_tx_weight uint
-		Current_tx_spb    float64
-		Current_tx_id     string
-		Time_received     uint
-		Fees_so_far       uint64
-		Ord_weight_so_far uint
-		Ord_fees_so_far   uint64
-	}
-	var mempool_stats []one_stat_row
-
-	var totweight, reallen, totfee, ordweight, ordfees uint64
-	for cnt := 0; cnt < len(sorted); cnt++ {
-		v := sorted[cnt]
-		newtotweight := totweight + uint64(v.Weight())
-		reallen += uint64(len(v.Raw))
-		totfee += v.Fee
-		if yes, _ := v.ContainsOrdFile(true); yes {
-			ordweight += uint64(v.Weight())
-			ordfees += v.Fee
-		}
-
-		if cnt == 0 || cnt+1 == len(sorted) || (newtotweight/division) != (totweight/division) {
-			cur_spb := float64(v.Fee) / (float64(v.Weight() / 4.0))
-			mempool_stats = append(mempool_stats, one_stat_row{
-				Txs_so_far:        uint(cnt),
-				Real_len_so_far:   uint(reallen),
-				Weight_so_far:     uint(totweight),
-				Current_tx_weight: uint(v.Weight()),
-				Current_tx_spb:    cur_spb,
-				Current_tx_id:     v.Hash.String(),
-				Fees_so_far:       totfee,
-				Time_received:     uint(v.Firstseen.Unix()),
-				Ord_weight_so_far: uint(ordweight),
-				Ord_fees_so_far:   ordfees,
-			})
-		}
-		totweight = newtotweight
-		if totweight >= maxweight {
-			break
-		}
-	}
-
-	bx, er := json.Marshal(mempool_stats)
-	if er == nil {
-		w.Header()["Content-Type"] = []string{"application/json"}
-		w.Write(bx)
-	} else {
-		println(er.Error())
-	}
-}
-
-func json_mempool_fees(w http.ResponseWriter, r *http.Request) {
+func json_mpfees(w http.ResponseWriter, r *http.Request) {
 	var division, maxweight uint64
 	var e error
 
@@ -650,22 +556,76 @@ func json_mempool_fees(w http.ResponseWriter, r *http.Request) {
 
 	sorted := txpool.GetMempoolFees(maxweight)
 
-	var mempool_stats [][3]uint64
-	var totweight uint64
-	var totfeessofar uint64
-	for cnt := range sorted {
-		wgh := sorted[cnt][0]
-		fee := sorted[cnt][1]
-		totfeessofar += fee
-		newtotweight := totweight + wgh
+	var bx []byte
+	var er error
 
-		if cnt == 0 || cnt+1 == len(sorted) || (newtotweight/division) != (totweight/division) {
-			mempool_stats = append(mempool_stats, [3]uint64{newtotweight, 4000 * fee / wgh, totfeessofar})
+	if len(r.Form["full"]) > 0 {
+		type one_stat_row struct {
+			Txs_so_far        uint
+			Txs_cnt_here      uint
+			Real_len_so_far   uint
+			Weight_so_far     uint
+			Current_tx_weight uint
+			Current_tx_spb    float64
+			Current_tx_id     string
+			Time_received     uint
+			Fees_so_far       uint64
+			Ord_weight_so_far uint
+			Ord_fees_so_far   uint64
 		}
-		totweight = newtotweight
-	}
+		var mempool_stats []one_stat_row
 
-	bx, er := json.Marshal(mempool_stats)
+		var totweight, totfee, ordweight, ordfees uint64
+		var txcntsofar int
+		for cnt, v := range sorted {
+			newtotweight := totweight + uint64(v.Weight)
+			totfee += v.Fee
+			for _, tx := range v.Txs {
+				if yes, _ := tx.ContainsOrdFile(true); yes {
+					ordweight += uint64(tx.Weight())
+					ordfees += v.Fee
+				}
+			}
+
+			if cnt == 0 || cnt+1 == len(sorted) || (newtotweight/division) != (totweight/division) {
+				cur_spb := 4.0 * float64(v.Fee) / float64(v.Weight)
+				mempool_stats = append(mempool_stats, one_stat_row{
+					Txs_so_far:        uint(txcntsofar),
+					Txs_cnt_here:      uint(len(v.Txs)),
+					Weight_so_far:     uint(newtotweight),
+					Current_tx_weight: uint(v.Weight),
+					Current_tx_spb:    cur_spb,
+					Current_tx_id:     v.Txs[0].Hash.String(),
+					Fees_so_far:       totfee,
+					Time_received:     uint(v.Txs[0].Firstseen.Unix()),
+					Ord_weight_so_far: uint(ordweight),
+					Ord_fees_so_far:   ordfees,
+				})
+			}
+			txcntsofar += len(v.Txs)
+			totweight = newtotweight
+			if totweight >= maxweight {
+				break
+			}
+		}
+		bx, er = json.Marshal(mempool_stats)
+	} else {
+		var mempool_stats [][3]uint64
+		var totweight uint64
+		var totfeessofar uint64
+		for cnt, r := range sorted {
+			wgh := r.Weight
+			fee := r.Fee
+			totfeessofar += fee
+			newtotweight := totweight + wgh
+
+			if cnt == 0 || cnt+1 == len(sorted) || (newtotweight/division) != (totweight/division) {
+				mempool_stats = append(mempool_stats, [3]uint64{newtotweight, 4000 * fee / wgh, totfeessofar})
+			}
+			totweight = newtotweight
+		}
+		bx, er = json.Marshal(mempool_stats)
+	}
 	if er == nil {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)

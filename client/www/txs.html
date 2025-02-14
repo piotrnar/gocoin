@@ -788,11 +788,12 @@ function handlehover(event, pos, item) {
 				str += (rec[1]/1000).toFixed(2) + ' SPB'
 				str += ' @ ' + (rec[0]/4e6).toFixed(2) + 'BL'
 			} else {
-				str += 'Tx #'+(rec.Txs_so_far+1) + ' - '
+
+				str += 'Tx #'+(rec.Txs_so_far+1) + ' (' + (rec.Txs_cnt_here) + ') - '
 				str += rec.Current_tx_spb.toFixed(2) + ' SPB<br>'
 				str += parseInt(rec.Current_tx_weight/4) + ' bytes'
 				str += ', ' + time2str(parseInt(new Date().getTime())/1000 - rec.Time_received) +' old<br>'
-				str += '' + (rec.Real_len_so_far/1e6).toFixed(2) + ' MB'
+				str += '' + (rec.Weight_so_far/1e6).toFixed(2) + ' MW'
 				str += ' &#8594; ' + (rec.Weight_so_far/4e6).toFixed(2) + ' Blocks<br>'
 				str += ' Fees: ' + val2str(rec.Fees_so_far) + ' BTC<br>'
 				str += ' Ord: ' + (100*rec.Ord_weight_so_far/rec.Weight_so_far).toFixed(0) + '% weight<br>'
@@ -825,6 +826,7 @@ function show_txid() {
 function show_mempool_fees() {
 	var aj = ajax()
 	var one_block = mempool_siz_range_1.checked
+	var quick_mode = mempool_quick_sort.checked
 
 	loading_in_progress = true
 
@@ -867,47 +869,34 @@ function show_mempool_fees() {
 			var max_spb_corrected = 0
 			var feesfrom1stblock = 0
 			var lenforfee = 0
-			var cr_spb, prv_spb = 21e14
+			var cur_wght, cur_spb, fees_sofar, lowest_seen_spb = 21e14
 
-			if (mempool_quick_sort.checked) {
-				for (var i=0; i < mp.length; i++) {
-					if (mp[i][1] > max_spb) {
-						max_spb = mp[i][1]
-					}
-					if (mp[i][0] < 4e6) {
-						feesfrom1stblock = mp[i][2]
-						lenforfee = mp[i][0]
-					}
-
+			for (var i=0; i < mp.length; i++) {
+				if (quick_mode) {
+					cur_wght = mp[i][0]
 					cur_spb = (mp[i][1])/1000
-					if (cur_spb > prv_spb) {
-						cur_spb = prv_spb
-					} else {
-						prv_spb = cur_spb
-					}
-					plot_data[0].data.push([mp[i][0], cur_spb])
-				}
-			} else {
-				for (var i=0; i<mp.length; i++) {
-					if (mp[i].Current_tx_spb>max_spb) {
-						max_spb = mp[i].Current_tx_spb
-					}
-					if (mp[i].Weight_so_far < 4e6) {
-						feesfrom1stblock = mp[i].Fees_so_far
-						lenforfee = mp[i].Weight_so_far
-					}
-
+					fees_sofar = mp[i][2]
+				} else {
+					cur_wght = mp[i].Weight_so_far
 					cur_spb = mp[i].Current_tx_spb
-					if (cur_spb > prv_spb) {
-						cur_spb = prv_spb
-					} else {
-						prv_spb = cur_spb
-					}
-					plot_data[0].data.push([mp[i].Weight_so_far+mp[i].Current_tx_weight, cur_spb])
+					fees_sofar = mp[i].Fees_so_far
+				}
+				if (cur_spb > max_spb) {
+					max_spb = cur_spb
+				}
+				if (cur_wght < 4e6) {
+					feesfrom1stblock = fees_sofar
+					lenforfee = cur_wght
 				}
 
+				// do not let spb to go down in the chart as then it will look weird
+				if (cur_spb > lowest_seen_spb) {
+					cur_spb = lowest_seen_spb
+				} else {
+					lowest_seen_spb = cur_spb
+				}
+				plot_data[0].data.push([cur_wght, cur_spb])
 			}
-
 			max_spb_corrected = 20*(feesfrom1stblock/lenforfee)
 			if (mempool_spb_range.checked && max_spb > max_spb_corrected) {
 				plot_options.yaxis.max = max_spb_corrected
@@ -925,21 +914,30 @@ function show_mempool_fees() {
 		}
 	}
 
-	var url = mempool_quick_sort.checked ? "mempool_fees.json" : "mempool_stats.json"
+	var params = ''
+	function add2param(s) {
+		if (params == '') {
+			params = '?'+s
+		} else {
+			params += '&'+s
+		}
+	}
+
+	if (!quick_mode) add2param('full')
 
 	localStorage.setItem("txs_chart_y_limit", mempool_spb_range.checked)
 	localStorage.setItem("txs_chart_new_sort", mempool_quick_sort.checked)
 
 	if (mempool_siz_range_1.checked) {
 		localStorage.setItem("txs_chart_x", "1")
-		url += "?max=4000000&div=1"
+		add2param('max=4000000&div=1')
 	} else if (mempool_siz_range_6.checked) {
 		localStorage.setItem("txs_chart_x", "6")
-		url += "?max=24000000"
+		add2param('max=24000000')
 	} else {
 		localStorage.setItem("txs_chart_x", "a")
 	}
-	aj.open("GET", url, true)
+	aj.open("GET", "mpfees.json"+params, true)
 	aj.send(null)
 }
 

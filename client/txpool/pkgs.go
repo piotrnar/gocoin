@@ -183,11 +183,16 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 	return
 }
 
-// GetMempoolFees only takes tx/package weight and the fee.
-func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
+type MPFeeRec struct {
+	Weight uint64
+	Fee    uint64
+	Txs    []*OneTxToSend
+}
+
+func GetMempoolFees(maxweight uint64) (result []*MPFeeRec) {
 	var pks_idx int
 	var weightsofar uint64
-	result = make([][2]uint64, 0, len(TransactionsToSend))
+	result = make([]*MPFeeRec, 0, len(TransactionsToSend))
 	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
 	buildListAndPackages()
 	for tx := BestT2S; tx != nil && weightsofar < maxweight; tx = tx.worse {
@@ -198,18 +203,22 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 				if pk.anyIn(already_in) {
 					continue
 				}
-				result = append(result, [2]uint64{uint64(pk.Weight), pk.Fee})
+				rec := &MPFeeRec{Weight: uint64(pk.Weight), Fee: pk.Fee}
+				rec.Txs = pk.Txs
 				weightsofar += uint64(pk.Weight)
 				for _, _t := range pk.Txs {
 					already_in[_t] = true
 				}
+				result = append(result, rec)
 				continue
 			}
 			break
 		}
 		if _, ok := already_in[tx]; !ok {
 			wg := tx.Weight()
-			result = append(result, [2]uint64{uint64(wg), tx.Fee})
+			rec := &MPFeeRec{Weight: uint64(wg), Fee: tx.Fee}
+			rec.Txs = []*OneTxToSend{tx}
+			result = append(result, rec)
 			weightsofar += uint64(tx.Weight())
 			already_in[tx] = true
 		}
