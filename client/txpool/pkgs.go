@@ -34,9 +34,6 @@ func (pk *OneTxsPackage) String() (res string) {
 }
 
 func (pk *OneTxsPackage) anyIn(list map[*OneTxToSend]bool) (ok bool) {
-	if CheckForErrors() {
-		pk.checkForDups()
-	}
 	for _, par := range pk.Txs {
 		if _, ok = list[par]; ok {
 			return
