@@ -285,16 +285,14 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
 	rec.Clean()
+	rec.Add(bidx)
 	if ntx.Unmined {
 		rec.unmined() // this is for when we are un-mining a tx
-	}
-	rec.Add(bidx)
-
-	if wtg := WaitingForInputs[bidx]; wtg != nil {
-		retryWaitingForInput(wtg) // Redo waiting txs when leaving this function
-	}
-
-	if !ntx.Unmined { // do not remove any txs in the middle of block undo, to keep the mempool consistant
+	} else {
+		if wtg := WaitingForInputs[bidx]; wtg != nil {
+			retryWaitingForInput(wtg) // Redo waiting txs when leaving this function
+		}
+		// do not remove any txs in the middle of block undo, to keep the mempool consistant
 		removeExcessiveTxs()
 	}
 
