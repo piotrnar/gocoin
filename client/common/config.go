@@ -85,7 +85,6 @@ var (
 			RejectRecCnt   uint16
 			SaveOnDisk     bool
 			NotFullRBF     bool
-			StopSortMin    uint16
 			CheckErrors    bool
 		}
 		TXRoute struct {
@@ -191,7 +190,6 @@ func InitConfig() {
 	CFG.TXPool.MaxNoUtxoMB = 5.0
 	CFG.TXPool.RejectRecCnt = 20000
 	CFG.TXPool.SaveOnDisk = true
-	CFG.TXPool.StopSortMin = 5
 
 	CFG.TXRoute.Enabled = true
 	CFG.TXRoute.FeePerByte = 0.0
@@ -414,7 +412,6 @@ func Reset() {
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
 	atomic.StoreUint64(&cfgFeePerKB, MinFeePerKB())
 	CheckForMempoolErrors.Store(CFG.TXPool.CheckErrors)
-	atomic.StoreUint64(&StopAutoSortAfter, uint64(CFG.TXPool.StopSortMin)*uint64(time.Minute))
 
 	atomic.StoreUint64(&cfgRouteMinFeePerKB, uint64(CFG.TXRoute.FeePerByte*1000))
 

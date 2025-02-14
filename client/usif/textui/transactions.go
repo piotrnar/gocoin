@@ -567,7 +567,7 @@ func tx_pool_stats(par string) {
 		s1 = time.Since(txpool.LastSortingDone).String() + " ago"
 	}
 	fmt.Printf("SortingDisabled: %t,  ListDirty: %t,  Last: %s\n",
-		txpool.SortingDisabled(), txpool.SortListDirty, s1)
+		txpool.SortingDisabled, txpool.SortListDirty, s1)
 	if txpool.BestT2S != nil && txpool.WorstT2S != nil {
 		s1 = fmt.Sprintf("%06d <-> %06d", get_range_mark(txpool.BestT2S.SortRank),
 			get_range_mark(txpool.WorstT2S.SortRank))

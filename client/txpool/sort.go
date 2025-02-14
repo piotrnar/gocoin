@@ -4,7 +4,6 @@ import (
 	"os"
 	"runtime/debug"
 	"sort"
-	"sync/atomic"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -21,7 +20,7 @@ var (
 	BestT2S, WorstT2S *OneTxToSend
 	SortListDirty     bool   // means the BestT2S <--> WorstT2S list is useless and needs rebuilding
 	sortIndexStep     uint64 // this is dynamically calculated in adjustSortIndexStep()
-	sortingSupressed  bool
+	SortingDisabled   bool
 	LastSortingDone   time.Time
 
 	// statistics of how far the SortRank values have moved around the uint64 space:
@@ -54,20 +53,11 @@ func adjustSortIndexStep() {
 	sortIndexStep = (1 << 60) / uint64(2*cnt)
 }
 
-// make sure to call it with the mutex locked
-func SortingDisabled() bool {
-	if sortingSupressed {
-		return true
-	}
-	stopafter := atomic.LoadUint64(&common.StopAutoSortAfter)
-	return stopafter != 0 && time.Since(LastSortingDone) > time.Duration(stopafter)
-}
-
 // call it with false to restore sorting
 func BlockCommitInProgress(yes bool) {
 	TxMutex.Lock()
-	sortingSupressed = yes
-	if !yes && FeePackagesDirty && SortingDisabled() {
+	SortingDisabled = yes
+	if !yes && FeePackagesDirty && SortingDisabled {
 		emptyFeePackages() // this should free all the memory used by packages
 	}
 	TxMutex.Unlock()
@@ -78,7 +68,7 @@ func (t2s *OneTxToSend) AddToSort() {
 	if SortListDirty {
 		return
 	}
-	if SortingDisabled() {
+	if SortingDisabled {
 		SortListDirty = true
 		return
 	}
@@ -127,7 +117,7 @@ func (t2s *OneTxToSend) DelFromSort() {
 	if SortListDirty {
 		return
 	}
-	if SortingDisabled() {
+	if SortingDisabled {
 		SortListDirty = true
 		return
 	}
@@ -327,7 +317,7 @@ func isFirstTxBetter(rec_i, rec_j *OneTxToSend) bool {
 
 // call it with the mutex locked
 func buildSortedList() {
-	if SortingDisabled() {
+	if SortingDisabled {
 		common.CountSafePar("TxSortBuildInSusp-", SortListDirty)
 	}
 	if !SortListDirty {

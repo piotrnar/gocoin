@@ -500,7 +500,7 @@ func json_txstat(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprint("\"min_fee_per_kb\":", common.MinFeePerKB(), ",")))
 	w.Write([]byte(fmt.Sprint("\"tx_pool_on\":", common.Get(&common.CFG.TXPool.Enabled), ",")))
 	w.Write([]byte(fmt.Sprint("\"tx_routing_on\":", common.Get(&common.CFG.TXRoute.Enabled), ",")))
-	w.Write([]byte(fmt.Sprint("\"sorting_disabled\":", txpool.SortingDisabled(), ",")))
+	w.Write([]byte(fmt.Sprint("\"sorting_disabled\":", txpool.SortingDisabled, ",")))
 	w.Write([]byte(fmt.Sprint("\"sorting_list_dirty\":", txpool.SortListDirty, ",")))
 	w.Write([]byte(fmt.Sprint("\"fee_packages_dirty\":", txpool.FeePackagesDirty, "")))
 
