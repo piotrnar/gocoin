@@ -66,7 +66,7 @@ X for
 	<table border="0" width="100%">
 		<tr>
 			<td>Mempool RAM used:</td>
-			<td align="center"><b id="ts_t2s_size"></b> in <b id="ts_t2s_cnt"></b> txs</td>
+			<td align="center"><b id="ts_t2s_size_mb"></b> MB / <b id="ts_t2s_cnt"></b> txs</td>
 			<td align="center" nowrap="nowrap" style="font-size:70%">avg. <b id="ts_t2s_avg"></b> / tx</td>
 		</tr>
 		<tr><td>Mempool weight:</td>
@@ -99,8 +99,10 @@ X for
 	</table>
 <td valign="top">
 	<table border="0" cellpadding="0">
+	<colset>
 		<col width="150">
 		<col width="*">
+	</colset>
 		<tr>
 			<td>Memory pool:
 			<td><img id="switch_txp_pool" src="static/empty.png" height="32" valign="bottom">
@@ -929,7 +931,7 @@ function show_mempool_fees() {
 			}
 			$.plot($("#mempool_fees"), plot_data, plot_options)
 
-			fees_from_first_block.innerText = (feesfrom1stblock/1e8).toFixed(8)
+			fees_from_first_block.innerText = (feesfrom1stblock/1e8).toFixed(4)
 			loading_in_progress = false
 		}
 	}
@@ -972,12 +974,13 @@ function refreshtxstat() {
 		try {
 			var ts = JSON.parse(aj.responseText)
 
-			ts_t2s_size.innerText = (ts.t2s_size/1e6).toFixed(1)+' MB'
+			ts_t2s_size_mb.innerText = (ts.t2s_size/1e6).toFixed(1)
 			ts_t2s_cnt.innerText = ts.t2s_cnt
-			ts_t2s_weight.innerText = ts.t2s_weight
+			ts_t2s_weight.innerText = ts.t2s_weight.toLocaleString()
+
 			ts_t2s_blks.innerText = (ts.t2s_weight/4e6).toFixed(2)
 			ts_t2s_avg.innerText = (ts.t2s_size/ts.t2s_cnt).toFixed(0)
-				outspent.innerText = ts.spent_outs_cnt
+			outspent.innerText = ts.spent_outs_cnt.toLocaleString()
 			if (ts.t2s_cnt>0) {
 				avg_outsper_tx.innerText = (ts.spent_outs_cnt/ts.t2s_cnt).toFixed(2)
 			} else {
