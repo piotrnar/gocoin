@@ -602,3 +602,18 @@ img.nosort_icon {
 	content:url("nosort-white.png");
 	height:16px;
 }
+
+img.pkgsort-off {
+	content:url("pkgsort-off-white.png");
+	height:16px;
+}
+
+img.pkgsort-on {
+	content:url("pkgsort-on-white.png");
+	height:16px;
+}
+
+img.empty_icon {
+	content:url("empty.png");
+	height:16px;
+}
