@@ -1,5 +1,5 @@
 <style>
-td.gennam {}
+td.gennam {text-align:left}
 td.genval {text-align:right}
 td.txsval {text-align:right}
 td.netcnt {text-align:right}
@@ -83,11 +83,18 @@ div.tablab {
 <tr id="net_stats_row" style="display:none">
 <td valign="top" align="center" colspan="5">
 	<div class="tablab">Network commands</div>
-	<table class="mono bord" width="400" id="tab_net">
+	<table class="mono bord" id="tab_net">
+	<colset>
+		<col width="110">
+		<col width="90">
+		<col width="120">
+		<col width="90">
+		<col width="120">
+	</colset>
 	<tr>
 		<th rowspan="2">Network Message
-		<th colspan="2">Received
-		<th colspan="2">Sent
+		<th colspan="2">Message Received
+		<th colspan="2">Message Sent
 	</tr>
 	<tr>
 		<th>Times
@@ -149,7 +156,7 @@ function do_one_table(output_table, data, prefix='') {
 			row.cells[1].className = 'genval'
 		}
 		row.cells[0].innerText = data[i][0]
-		row.cells[1].innerText = data[i][1]
+		row.cells[1].innerText = data[i][1].toLocaleString()
 		if (data[i][2]==1) {
 			row.classList.add('cnt_expanded')
 		} else if (data[i][2]==2) {
@@ -258,10 +265,10 @@ function ref_counters() {
 					}
 					row.cells[0].innerText = cts.net[i].var
 					make_clickable(row.cells[0])
-					row.cells[1].innerText = cts.net[i].rcvd
-					row.cells[2].innerText = cts.net[i].rbts
-					row.cells[3].innerText = cts.net[i].sent
-					row.cells[4].innerText = cts.net[i].sbts
+					row.cells[1].innerText = cts.net[i].rcvd.toLocaleString()
+					row.cells[2].innerText = cts.net[i].rbts.toLocaleString()
+					row.cells[3].innerText = cts.net[i].sent.toLocaleString()
+					row.cells[4].innerText = cts.net[i].sbts.toLocaleString()
 				}
 			}
 			while (tab_net.rows.length > cts.net.length + 2) {
