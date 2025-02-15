@@ -19,23 +19,22 @@ td.bordr {
 </div>
 <table class="blocks bord" id="blkstab">
 <tr>
-	<th colspan="7">Block info
+	<th colspan="8">Block info
 	<th class="stat0 hand" colspan="4" onclick="stats_type_pro.click()">Mining Information
 	<th class="stat1 hand" colspan="7" onclick="stats_type_min.click()">Block Processing <i>(ms)</i>
 <tr>
 	<th width="52">Height
 	<th class="time0" width="70" onclick="swap_time_mode()" style="cursor:pointer">Received
 	<th class="time1" width="70" onclick="swap_time_mode()" style="cursor:pointer;font-size:85%">Timestamp
-	<th width="480">Hash
+	<th width="430">Hash
 	<th width="35" align="right">TXs
-	<th width="40" align="right">SiOps
-	<th width="45" align="right">kByte
-	<th>
-	<th class="stat0" width="30">BTC
+	<th width="45" align="right" title="Block Weight in thousands">kWght
+	<th width="45" align="right" title="Block Size in thousands of bytes">kBytes
+	<th width="40" align="right">SOps
+	<th class="stat0" width="60">Fees BTC
 	<th class="stat0" width="30" align="right">SPB
-	<th class="stat0" width="20">Ver
 	<th class="stat0 bordr" align="left">Miner
-	<th class="stat1" width="10" title="Received from ConnID">Fro
+	<th class="stat1" title="Received from ConnID">From
 	<th class="stat1" width="10" title="Missing TXs in cmpctblk">Mis
 	<th class="stat1" width="20" title="Preprocessing time ms" align="right">Pre
 	<th class="stat1" width="20" title="Full download time ms" align="right">D/L
@@ -125,10 +124,6 @@ function refreshblocks() {
 		c.onclick = function() {hl_rows(MINER_ID_COLUMN, id)}
 	}
 
-	function onc_ver(c,id) {
-		c.onclick = function() {hl_rows(VERSION_COLUMN, id)}
-	}
-
 	function onc_stat(c,height,size,minedby) {
 		c.onclick = function() {
 			show_block_fees(height,size,minedby)
@@ -193,34 +188,28 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'blsigops'
-				if (cs[i].Sigops>0)  td.innerText = cs[i].Sigops
+				td.className = 'bold blsize'
+				td.innerText = (cs[i].Weight/1000.0).toFixed(1)
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'bold blsize'
+				td.className = 'bold blsize blswsize'
 				td.innerText = (cs[i].Size/1000.0).toFixed(1)
-				if (cs[i].NonWitnessSize>0 && cs[i].NonWitnessSize!=cs[i].Size) {
-					td.classList.add("blswsize")
-					td.title = cs[i].Size + ' -> ' + cs[i].Weight
-				}
+
 				td = row.insertCell(-1)
-				td.innerText = ''
+				td.style.textAlign = 'right'
+				td.className = 'blsigops'
+				td.innerText = cs[i].Sigops>0 ? cs[i].Sigops : ''
 
 				td = row.insertCell(-1)
 				td.className = 'blreward stat0'
-				td.innerText = (cs[i].Reward/1e8).toFixed(2)
+				td.title = "Block reward: " + (cs[i].Reward/1e8).toFixed(4) + " BTC"
+				var brew = BigInt(5000000000) >> BigInt(parseInt(cs[i].Height/210e3))
+				td.innerText = (Number(BigInt(cs[i].Reward) - brew) / 1e8).toFixed(8)
 
 				td = row.insertCell(-1)
 				td.className = 'blspb stat0'
 				td.innerText = cs[i].FeeSPB.toFixed(1)
-
-				td = row.insertCell(-1)
-				td.style.textAlign = 'center'
-				td.className = 'stat0 hand'
-				td.innerText = (cs[i].Version&15).toString(16)
-				td.title = '0x' + cs[i].Version.toString(16)
-				onc_ver(td, i)
 
 				var miner = cs[i].Miner.substr(0,11)
 				td = row.insertCell(-1)
