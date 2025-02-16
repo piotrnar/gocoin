@@ -19,7 +19,7 @@ the given block number, with comparision to Bitcoin Core 28.1:
 
 ![SyncChart](website/quick_sync_gocoin_vs_core_jan25.png)
 *The above data was collected using [Hetzner](https://hetzner.com) dedicated server
-with 3.2GHz Intel i7-8700 CPU, 128GB RAM, 2x512MB SSD and 1Gbit internet connection,
+with 3.2GHz Intel i7-8700 CPU, 128GB RAM, 2x1TB SSD and 1Gbit internet connection,
 running Debian 12 (bookworm).
 Clients using their default configuration, except for the second (blue) Bitcoin Core
 that is set to use **dbcache=32768**.
