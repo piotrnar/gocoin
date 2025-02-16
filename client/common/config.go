@@ -85,7 +85,6 @@ var (
 			RejectRecCnt   uint16
 			SaveOnDisk     bool
 			NotFullRBF     bool
-			CheckErrors    bool
 		}
 		TXRoute struct {
 			Enabled     bool // Global on/off swicth
@@ -411,7 +410,6 @@ func Reset() {
 	}
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
 	atomic.StoreUint64(&cfgFeePerKB, MinFeePerKB())
-	CheckForMempoolErrors.Store(CFG.TXPool.CheckErrors)
 
 	atomic.StoreUint64(&cfgRouteMinFeePerKB, uint64(CFG.TXRoute.FeePerByte*1000))
 

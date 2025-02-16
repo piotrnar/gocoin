@@ -116,7 +116,7 @@ func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
 // If reason is not zero, add the deleted txs to the rejected list.
 // Make sure to call it with locked TxMutex.
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
-	if common.Get(&common.CFG.TXPool.CheckErrors) {
+	if CheckForErrors() {
 		if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
 			println("ERROR: Trying to delete already deleted tx", tx.Hash.String())
 			debug.PrintStack()
@@ -534,19 +534,19 @@ func (t2s *OneTxToSend) delFromPackages() {
 
 // removes a reference to a given package from the t2s
 func (t2s *OneTxToSend) removePkg(pkg *OneTxsPackage) {
-	if common.Get(&common.CFG.TXPool.CheckErrors) && len(t2s.inPackages) == 0 {
+	if CheckForErrors() && len(t2s.inPackages) == 0 {
 		println("ERROR: removePkg called on txs with no InPackages", t2s.Hash.String())
 		return
 	}
 	if len(t2s.inPackages) == 1 {
-		if common.Get(&common.CFG.TXPool.CheckErrors) && t2s.inPackages[0] != pkg {
+		if CheckForErrors() && t2s.inPackages[0] != pkg {
 			println("ERROR: removePkg called on txs with one pkg, bot not the one")
 		}
 		t2s.inPackagesSet(nil)
 	} else {
 		if idx := slices.Index(t2s.inPackages, pkg); idx >= 0 {
 			t2s.inPackagesSet(slices.Delete(t2s.inPackages, idx, idx+1))
-		} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+		} else {
 			println("ERROR: removePkg cannot find the given pkg in t2s.InPackages", len(t2s.inPackages))
 			return
 		}
