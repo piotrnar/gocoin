@@ -106,7 +106,6 @@ func (t2s *OneTxToSend) delFromPackages() {
 	common.CountSafe("TxPkgsDel")
 
 	for _, pkg := range t2s.inPackages {
-		common.CountSafe("TxPkgsDelTick")
 		if CheckForErrors() && len(pkg.Txs) < 2 {
 			println("ERROR: delFromPackages called on t2s that has pkg with less than txs", pkg)
 			FeePackagesDirty = true
@@ -131,7 +130,6 @@ func (t2s *OneTxToSend) delFromPackages() {
 			pkg.Txs = nil
 			records2remove++
 		} else {
-			common.CountSafe("TxPkgsDelTx")
 			pandch := pkg.Txs[0].GetItWithAllChildren()
 			// first unmark all txs using this pkg (we may mark them back later)
 			for _, t := range pkg.Txs {
