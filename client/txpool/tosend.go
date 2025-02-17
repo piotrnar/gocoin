@@ -3,7 +3,6 @@ package txpool
 import (
 	"os"
 	"runtime/debug"
-	"slices"
 	"sync"
 	"time"
 
@@ -181,13 +180,13 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 
 	delete(TransactionsToSend, tx.Hash.BIdx())
 
-	if !FeePackagesDirty {
+	if !FeePackagesDirty && len(tx.inPackages) != 0 {
 		sta := time.Now()
 		tx.delFromPackages() // remove it from FeePackages
 		RepackagingSinceLastRedoTime += time.Since(sta)
 		RepackagingSinceLastRedoCount++
+		tx.inPackagesSet(nil) // this one will update tx.Footprint
 	}
-	tx.inPackagesSet(nil) // this one will update tx.Footprint
 
 	tx.DelFromSort()
 
@@ -406,151 +405,6 @@ func (tx *OneTxToSend) GetAllParentsExcept(except *OneTxToSend) (result []*OneTx
 
 func (tx *OneTxToSend) Id() string {
 	return tx.Hash.String()
-}
-
-// If t2s belongs to any packages, we add the child at the end of each of them
-// If t2s does not belong to any packages, we create a new 2-txs package for it and the child
-func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
-	common.CountSafe("TxPkgsAdd")
-
-	if len(parent.inPackages) == 0 {
-		// we create a new package, like in lookForPackages()
-		if pandch := parent.GetItWithAllChildren(); len(pandch) > 1 {
-			pkg := &OneTxsPackage{Txs: pandch}
-			for _, t := range pandch {
-				pkg.Weight += t.Weight()
-				pkg.Fee += t.Fee
-				t.inPackagesSet(append(t.inPackages, pkg))
-			}
-			FeePackages = append(FeePackages, pkg)
-			feePackagesReSort = true
-			common.CountSafe("TxPkgsAddNew")
-		} else {
-			println("ERROR: in addToPackages parent's GetItWithAllChildren returned only", len(pandch), "txs")
-		}
-	} else {
-		// here we go through all the packages and append the new_child at their ends
-		for _, pkg := range parent.inPackages {
-			if !pkg.hasAllTheParentsFor(new_child) {
-				// this is not our package
-				continue
-			}
-			if slices.Contains(pkg.Txs, new_child) {
-				// this can happen when a new child uses more than one vout from the parent
-				common.CountSafe("TxPkgsAddDupTx")
-				continue
-			}
-			pkg.Txs = append(pkg.Txs, new_child)
-			pkg.Weight += new_child.Weight()
-			pkg.Fee += new_child.Fee
-			new_child.inPackagesSet(append(new_child.inPackages, pkg))
-			feePackagesReSort = true
-			common.CountSafe("TxPkgsAddAppend")
-		}
-	}
-}
-
-// removes itself from any grup containing it
-func (t2s *OneTxToSend) delFromPackages() {
-	common.CountSafe("TxPkgsDel")
-
-	var records2remove int
-	if len(t2s.inPackages) == 0 {
-		return
-	}
-
-	for _, pkg := range t2s.inPackages {
-		common.CountSafe("TxPkgsDelTick")
-		if CheckForErrors() && len(pkg.Txs) < 2 {
-			println("ERROR: delFromPackages called on t2s that has pkg with less than txs", pkg)
-			FeePackagesDirty = true
-			return
-		}
-
-		if pkg.Txs[0] == t2s {
-			// This may only happen during block submission.
-			// In such case, remove the entire package.
-			for _, t := range pkg.Txs {
-				if t != t2s {
-					t.removePkg(pkg)
-				}
-			}
-			common.CountSafe("TxPkgsDelGrP")
-			pkg.Txs = nil
-			records2remove++
-		} else if len(pkg.Txs) == 2 {
-			// Only two txs - remove reference to this pkg from the other tx that owned it.
-			pkg.Txs[0].removePkg(pkg) // ... which must be on Txs[0], as we just checked we were not there.
-			common.CountSafe("TxPkgsDelGrA")
-			pkg.Txs = nil
-			records2remove++
-		} else {
-			common.CountSafe("TxPkgsDelTx")
-			pandch := pkg.Txs[0].GetItWithAllChildren()
-			// first unmark all txs using this pkg (we may mark them back later)
-			for _, t := range pkg.Txs {
-				if t != t2s {
-					t.removePkg(pkg)
-				}
-			}
-			if len(pandch) > 1 {
-				pkg.Txs = pandch
-				pkg.Weight = 0
-				pkg.Fee = 0
-				for _, t := range pandch {
-					if CheckForErrors() && t == t2s {
-						println("ERROR: delFromPackages -> GetItWithAllChildren returned us " + pkg.Txs[0].Hash.String())
-						FeePackagesDirty = true
-						return
-					}
-					pkg.Weight += t.Weight()
-					pkg.Fee += t.Fee
-					t.inPackagesSet(append(t.inPackages, pkg)) // now mark back the tx using our pkg
-				}
-				feePackagesReSort = true
-				common.CountSafe("TxPkgsDelTx")
-			} else {
-				pkg.Txs = nil
-				records2remove++
-				common.CountSafe("TxPkgsDelGrB")
-			}
-			feePackagesReSort = true
-		}
-	}
-
-	if records2remove > 0 {
-		common.CountSafe("TxPkgsDelGrCnt")
-		common.CountSafeAdd("TxPkgsDelGroup", uint64(records2remove))
-		new_pkgs_list := make([]*OneTxsPackage, 0, cap(FeePackages))
-		for _, pkg := range FeePackages {
-			if pkg.Txs != nil {
-				new_pkgs_list = append(new_pkgs_list, pkg)
-			}
-		}
-		FeePackages = new_pkgs_list
-		feePackagesReSort = true
-	}
-}
-
-// removes a reference to a given package from the t2s
-func (t2s *OneTxToSend) removePkg(pkg *OneTxsPackage) {
-	if CheckForErrors() && len(t2s.inPackages) == 0 {
-		println("ERROR: removePkg called on txs with no InPackages", t2s.Hash.String())
-		return
-	}
-	if len(t2s.inPackages) == 1 {
-		if CheckForErrors() && t2s.inPackages[0] != pkg {
-			println("ERROR: removePkg called on txs with one pkg, bot not the one")
-		}
-		t2s.inPackagesSet(nil)
-	} else {
-		if idx := slices.Index(t2s.inPackages, pkg); idx >= 0 {
-			t2s.inPackagesSet(slices.Delete(t2s.inPackages, idx, idx+1))
-		} else {
-			println("ERROR: removePkg cannot find the given pkg in t2s.InPackages", len(t2s.inPackages))
-			return
-		}
-	}
 }
 
 func (tx *OneTxToSend) SPW() float64 {
