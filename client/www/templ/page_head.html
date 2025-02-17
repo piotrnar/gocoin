@@ -129,8 +129,11 @@ function apply_wallet_on() {
 
 for (var i=0; i < webuimenu.length; i++) {
 	var a = document.createElement('a')
+	var akey = (i+1).toString()
 	a.href = webuimenu[i][0]
 	a.text = webuimenu[i][1]
+	a.accessKey = akey
+	a.title = "Alt+"+akey
 	a.className = 'topmenu'
 	if (document.location.pathname==webuimenu[i][0]) {
 		a.classList.add('menuat')
