@@ -61,17 +61,8 @@ div.tablab {
 	</table>
 </td>
 <td valign="top" align="center">
-	<div class="tablab">Tx packages</div>
-	<table class="mono bord" width="100%" id="tab_txs_b">
-	<tr>
-		<th>Counter
-		<th>Value
-	</tr>
-	</table>
-</td>
-<td valign="top" align="center">
 	<div class="tablab">Tx sorting</div>
-	<table class="mono bord" width="100%" id="tab_txs_c">
+	<table class="mono bord" width="100%" id="tab_txs_b">
 	<tr>
 		<th>Counter
 		<th>Value
@@ -232,17 +223,14 @@ function ref_counters() {
 
 			var txs_a = new Array()
 			var txs_b = new Array()
-			var txs_c = new Array()
 			function bc_txs(val) {
 				var prefix = val.substr(0,4)
-				if (prefix=='Sort')  return txs_c
-				if (prefix=='Pkgs')  return txs_b
+				if (prefix=='Pkgs' || prefix=='Sort')  return txs_b
 				return txs_a
 			}
 			prepare_arrays(cts.txs, bc_txs)
 			do_one_table(tab_txs_a, txs_a, "Tx")
 			do_one_table(tab_txs_b, txs_b, "Tx")
-			do_one_table(tab_txs_c, txs_c, "Tx")
 
 
 			if (cts.net!=null) {

@@ -432,11 +432,11 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 		// here we go through all the packages and append the new_child at their ends
 		for _, pkg := range parent.inPackages {
 			if !pkg.hasAllTheParentsFor(new_child) {
-				// this is not out package
+				// this is not our package
 				continue
 			}
 			if slices.Contains(pkg.Txs, new_child) {
-				// this can happen when a new child uses more tha one vout from the parent
+				// this can happen when a new child uses more than one vout from the parent
 				common.CountSafe("TxPkgsAddDupTx")
 				continue
 			}
