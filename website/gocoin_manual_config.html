@@ -8,6 +8,8 @@ The online node configuration file is named <b>gocoin.conf</b><br>
 Client application looks for this file in the folder where it is being launched from.<br>
 The config file is in JSON encoded format, so the order of the fields does not matter, but their types do.<br>
 <br>
+Note that changing some of the values (from their defaults) may result in the node crashing or becoming otherwise unusable.<br>
+<br>
 
 
 <table border="1" cellspacing="0" cellpadding="5">
@@ -454,7 +456,7 @@ Disabling this will make your node to require more RAM, but may be necessary for
 <td class="cfg_type"> uint</td>
 <td> 6</td>
 <td class="cfg_info"> Skip so many new blocks before auto saving a new UTXO.db to disk.<br>
-Note that UTXO.db has a size of a few GB - saving it more often may cause a solid state drive (SSD) to deplete faster.</td>
+Note that UTXO.db has a significant size and saving it more often may cause a solid state drive (SSD) to deplete faster.</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> UTXOSave.SecondsToTake</td>
@@ -466,8 +468,14 @@ New block arriving within this period will abort and restart the saving process.
 Note that setting this value too low may make your system sluggish while the database is being written.
 At the other hand, setting it too high may make the saving process unable to complete for long periods of time.</td>
 </tr>
-
-
+<tr class="even">
+<td class="cfg_name"> UTXOSave.CompressRecords</td>
+<td class="cfg_type"> bool</td>
+<td> false</td>
+<td class="cfg_info"> Choose whether UTXO records will be stored in a compressed form, while creating a new UTXO.db.<br>
+Note that this is ignored if UTXO.db is alerady on disk.
+For that (conversion) use <code>utxo</code> tool with <b>-compr</b> or <b>-decompr</b> option.</td>
+</tr>
 </tbody>
 </table>
 <br>
