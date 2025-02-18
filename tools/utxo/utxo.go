@@ -32,8 +32,8 @@ func main() {
 		print_help()
 	}
 
-	for _, arg := range os.Args[1:] {
-		arg = strings.ToLower(arg)
+	for _, _arg := range os.Args[1:] {
+		arg := strings.ToLower(_arg)
 		if strings.HasPrefix(arg, "-h") {
 			print_help()
 		} else if strings.HasPrefix(arg, "-b") {
@@ -81,7 +81,7 @@ func main() {
 				println("ERROR: db directory specified more than once")
 				print_help()
 			}
-			dir = arg
+			dir = _arg
 		}
 	}
 
