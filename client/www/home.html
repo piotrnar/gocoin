@@ -123,9 +123,10 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 		&nbsp;&bull;&nbsp;
 		<b title="ECDSA verify operations" id="si_ecdsa_verify_cnt"></b> ECs
 	<tr><td>Mem Used MB:<td>
+		<span style="float:right;">PID <b id="process_pid">???</b></span>
 		<b title="Total memory used" id="si_total_mem"></b>
 		(<b title="Native Go heap" id="si_heap_size"></b> +
-		<b title="QDB UTXO records" id="si_qdb_extramem"></b>)
+		<b title="UTXO records" id="si_qdb_extramem"></b>)
 		&nbsp;<span id="el_free_mem" style="display:none">[<a href="javascript:config('freemem')">FREE</a>]</span>
 
 	<tr><td nowrap="nowrap">TX Mempool:<td aligh="left">
@@ -442,6 +443,7 @@ function refreshsysinfo() {
 			el_free_mem.title = (si.Heap_sysmem/0x100000).toFixed(0)
 			si_heap_size.innerText = (si.Heap_size/0x100000).toFixed(0)
 			si_qdb_extramem.innerText = (si.Qdb_extramem/0x100000).toFixed(0)
+			si_qdb_extramem.title = "UTXO records cnt: " + si.Qdb_allocs
 			si_net_block_qsize.innerText = si.Net_block_qsize
 			si_net_tx_qsize.innerText = si.Net_tx_qsize
 			si_ecdsa_verify_cnt.innerText = si.Ecdsa_verify_cnt
@@ -459,6 +461,12 @@ function refreshsysinfo() {
 			si_last_hdr_height.innerText = si.LastHeaderHeight
 			si_network_hashrate.innerText = bignum(si.NetworkHashRate) +'H/s'
 			si_saving.style.display = si.SavingUTXO ? "block" : "none"
+			
+			process_pid.innerText = si.ProcessPID
+			process_pid.title = 'Click to Copy'
+			process_pid.className = 'hand'
+			process_pid["text2copy"] = si.ProcessPID
+			process_pid.addEventListener("click", copyonclick)
 		} catch(e) {
 			console.log(e)
 		}

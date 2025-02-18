@@ -3,6 +3,7 @@ package webui
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -82,13 +83,15 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 		Net_tx_qsize       int
 		Heap_size          uint64
 		Heap_sysmem        uint64
-		Qdb_extramem       int64
+		Qdb_extramem       int
+		Qdb_allocs         int
 		Ecdsa_verify_cnt   uint64
 		Average_block_size int
 		Average_fee        float64
 		LastHeaderHeight   uint32
 		NetworkHashRate    float64
 		SavingUTXO         bool
+		ProcessPID         int
 	}
 
 	out.Blocks_cached = network.CachedBlocksLen()
@@ -103,8 +106,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	out.Net_block_qsize = len(network.NetBlocks)
 	out.Net_tx_qsize = len(network.NetTxs)
 	out.Heap_size, out.Heap_sysmem = sys.MemUsed()
-	by, _ := common.MemUsed()
-	out.Qdb_extramem = int64(by)
+	out.Qdb_extramem, out.Qdb_allocs = common.MemUsed()
 	out.Ecdsa_verify_cnt = btc.EcdsaVerifyCnt()
 	out.Average_block_size = common.AverageBlockSize.Get()
 	out.Average_fee = usif.GetAverageFee()
@@ -121,6 +123,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	mutexHrate.Unlock()
 
 	out.SavingUTXO = common.BlockChain.Unspent.WritingInProgress.Get()
+	out.ProcessPID = os.Getpid()
 
 	bx, er := json.Marshal(out)
 	if er == nil {
