@@ -167,22 +167,16 @@ func BlockMined(bl *btc.Block) {
 		return
 	}
 
-	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
 	//FeePackagesDirty = true <-- keep pkg list as maintaining it here should be fast
 	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
 		tx := bl.Txs[i]
 		txMined(tx)
 	}
+	// now check if any mempool txs are waiting for inputs which were just mined
 	for _, tx := range bl.Txs[1:] {
-		bidx := tx.Hash.BIdx()
-		if wtg := WaitingForInputs[bidx]; wtg != nil {
-			wtgs = append(wtgs, wtg)
-		}
-	}
-	if len(wtgs) > 0 { // Try to redo waiting txs
-		common.CountSafeAdd("TxMinedGotInput", uint64(len(wtgs)))
-		for _, wtg := range wtgs {
+		if wtg := WaitingForInputs[tx.Hash.BIdx()]; wtg != nil {
+			common.CountSafe("TxMinedGotInput")
 			retryWaitingForInput(wtg)
 		}
 	}
