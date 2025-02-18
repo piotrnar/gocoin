@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var CNT int = 100e4
+var CNT int = 100e3
 
 func main() {
 	key, _ := hex.DecodeString("040eaebcd1df2df853d66ce0e1b0fda07f67d1cabefde98514aad795b86a6ea66dbeb26b67d7a00e2447baeccc8a4cef7cd3cad67376ac1c5785aeebb4f6441c16")
@@ -31,6 +31,6 @@ func main() {
 		}()
 	}
 	wg.Wait()
-	sto := time.Now()
-	println((sto.UnixNano()-sta.UnixNano())/int64(CNT), "ns per ECDSA_Verify")
+	tim := time.Since(sta)
+	println((tim/time.Duration(CNT)).String(), "per ECDSA_Verify")
 }
