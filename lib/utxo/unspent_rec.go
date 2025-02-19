@@ -35,7 +35,17 @@ type NewUtxoOutAllocCbs struct {
 	OneOut   func() *UtxoTxOut
 }
 
-const MAX_OUTS_SEEN = 13107 // this is the know max for BTC block #880000
+/*
+So far the highest number of tx outpts on BTC chain is 13107, tx
+dd9f6bbf80ab36b722ca95d93268667a3ea6938288e0d4cf0e7d2e28a7a91ab3
+from block number 391204.
+
+For testnet4 it is 32223, from block number 69603, in tx
+fefdc13fdb2e5e53d31549491cf133bee359c60b8d3d7fad97c971834b1ee6cc
+but we will use the mainnet's constant and adjust for testnet in
+runtime.
+*/
+const MAX_OUTS_SEEN = 13107
 
 var (
 	sta_rec  UtxoRec
