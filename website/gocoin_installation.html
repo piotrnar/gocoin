@@ -21,27 +21,8 @@ Note that you can purge blocks from disk, allowing you to run the node with a li
 See <a href="gocoin_manual_config.html">config file</a> values:
 <span class="cfg_name">Memory.MaxDataFileMB</span> and <span class="cfg_name">Memory.DataFilesKeep</span> (set this one to non-zero, e.g. 10)<br>
 <br>
-The node runs very well on Linux based virtual servers, as long as they have enough RAM.<br>
-<!--
-Find below a list of example providers. Most of them you can rent per-hour (estimated monthly cost in brackets).<br>
-<a target="_blank" href="https://www.scaleway.com/">Scaleway</a>
-&bull;
-<a target="_blank" href="https://upcloud.com/">UpCloud</a> ($80)
-&bull;
-<a target="_blank" href="https://www.vultr.com/">Vultr</a> ($80)
-&bull;
-<a target="_blank" href="https://www.digitalocean.com/">DigitalOcean</a> ($80)
-&bull;
-<a target="_blank" href="https://linode.com/">linode</a> ($80)
-&bull;
-<a target="_blank" href="https://aws.amazon.com/">Amazon AWS</a> ($100)
-&bull;
-<a target="_blank" href="https://cloud.google.com/">Google Cloud</a> ($100)
-<br>
-<i>Mind that some of the prices above may not include VAT.</i><br>
-<br>
--->
-To quickly assess a performance of a chosen platform, you can use the benchmark below (lower time = better performance).<br>
+The host OS is not important, as it runs equally well on Windows, Linux or Mac.<br>
+To briefly assess a performance of a chosen platform, you can use the benchmark below (lower time = better performance).<br>
 <pre>
 
 	package main
@@ -66,7 +47,7 @@ To quickly assess a performance of a chosen platform, you can use the benchmark 
 			rand.Read(k[:])
 			tm[k] = true
 		}
-		fmt.Printf("All %d records loaded in %s\n", RECNT, time.Now().Sub(sta).String())
+		fmt.Printf("All %d records loaded in %s\n", RECNT, time.Since(sta).String())
 	}
 
 </pre>
