@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"os"
+	"unsafe"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/utxo"
@@ -34,28 +35,26 @@ func LoadBalancesFromUtxo() {
 		return
 	}
 
-	var aborted bool
-
 	common.Set(&common.WalletProgress, 1)
 	common.ApplyBalMinVal()
 
 	InitMaps(false)
 
-	for _i := range common.BlockChain.Unspent.HashMap {
-		common.BlockChain.Unspent.MapMutex[_i].RLock()
-		for k, v := range common.BlockChain.Unspent.HashMap[_i] {
-			TxNotifyAdd(utxo.NewUtxoRecStatic(k, v))
-			if FetchingBalanceTick != nil && FetchingBalanceTick() {
-				aborted = true
-				break
-			}
+	var prv_key = -1
+	var aborted bool
+	common.BlockChain.Unspent.Browse(func(k, v []byte) bool {
+		TxNotifyAdd(utxo.NewUtxoRecStatic(*(*utxo.UtxoKeyType)(unsafe.Pointer(&k[0])), v))
+		if FetchingBalanceTick != nil && FetchingBalanceTick() {
+			aborted = true
+			return true
 		}
-		common.BlockChain.Unspent.MapMutex[_i].RUnlock()
-		if aborted {
-			break
+		if int(k[0]) != prv_key {
+			prv_key = int(k[0])
+			common.Set(&common.WalletProgress, uint32(1000*prv_key/256))
 		}
-		common.Set(&common.WalletProgress, 1000*(uint32(_i)+1)/256)
-	}
+		return aborted
+	})
+
 	if aborted {
 		InitMaps(true)
 	} else {

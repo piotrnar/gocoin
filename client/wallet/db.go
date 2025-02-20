@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"sync"
+	"unsafe"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -37,14 +38,9 @@ type OneAllAddrBal struct {
 }
 
 func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
-	var ind utxo.UtxoKeyType
-	copy(ind[:], ur[:])
-	common.BlockChain.Unspent.MapMutex[int(ind[0])].RLock()
-	v := common.BlockChain.Unspent.HashMap[int(ind[0])][ind]
-	common.BlockChain.Unspent.MapMutex[int(ind[0])].RUnlock()
-	if v != nil {
+	if v := common.BlockChain.Unspent.GetByKey(ur[:utxo.UtxoIdxLen]); v != nil {
 		vout = binary.LittleEndian.Uint32(ur[utxo.UtxoIdxLen:])
-		rec = utxo.NewUtxoRec(ind, v)
+		rec = utxo.NewUtxoRec(*(*utxo.UtxoKeyType)(unsafe.Pointer(&ur[0])), v)
 	}
 	return
 }
