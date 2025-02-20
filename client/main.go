@@ -422,7 +422,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 }
 
 func fetch_balances_now() {
-	var prev_progress uint32
+	var prev_progress uint32 = 0xffffffff
 	var abort bool
 	const info = "\rFetching all balances (Ctrl+C to skip) - "
 	__exit := make(chan bool)
@@ -451,7 +451,6 @@ func fetch_balances_now() {
 		return false
 	}
 	sta := time.Now()
-	fmt.Print(info)
 	wallet.LoadBalancesFromUtxo()
 	fmt.Print("\r                                                                 \r")
 	__exit <- true
@@ -572,16 +571,8 @@ func main() {
 		usif.LoadBlockFees()
 
 		if !common.FLAG.NoWallet {
-			sta := time.Now()
-			if er := wallet.LoadBalances(); er == nil {
-				common.Set(&common.WalletON, true)
-				common.Set(&common.WalletOnIn, 0)
-				fmt.Println("AllBalances loaded from", wallet.LAST_SAVED_FNAME, "in", time.Since(sta).String())
-			} else {
-				fmt.Println("wallet.LoadBalances:", er.Error())
-				if common.CFG.AllBalances.InstantWallet {
-					fetch_balances_now()
-				}
+			if common.CFG.AllBalances.InstantWallet {
+				fetch_balances_now()
 			}
 			if !common.Get(&common.WalletON) {
 				// snooze the timer to 10 seconds after startup_ticks goes down
@@ -764,7 +755,6 @@ func main() {
 		}
 
 		common.BlockChain.Unspent.HurryUp()
-		wallet.UpdateMapSizes()
 		fmt.Println("Shutting down PID", os.Getpid())
 		network.NetCloseAll()
 	}
@@ -778,12 +768,11 @@ func main() {
 	peersdb.ClosePeerDB()
 	usif.SaveBlockFees()
 
-	sta = time.Now()
 	if common.Get(&common.WalletON) {
 		if er := wallet.SaveBalances(); er != nil {
 			fmt.Println("SaveBalances:", er.Error())
 		} else {
-			fmt.Println(wallet.LAST_SAVED_FNAME, "saved in", time.Since(sta).String())
+			fmt.Println("SaveBalances OK")
 		}
 	}
 	sys.UnlockDatabaseDir()

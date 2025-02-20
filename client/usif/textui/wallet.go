@@ -5,9 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
-	"strconv"
-	"strings"
-	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/txpool"
@@ -51,117 +48,118 @@ func best_val(par string) {
 }
 
 func all_addrs(par string) {
-	var outs, vals [wallet.IDX_CNT]uint64
-	var best SortedWalletAddrs
-	var cnt int = 15
-	var mode int = wallet.IDX_CNT
+	/*
+		var outs, vals [wallet.IDX_CNT]uint64
+		var best SortedWalletAddrs
+		var cnt int = 15
+		var mode int = wallet.IDX_CNT
 
-	if !common.Get(&common.WalletON) {
-		fmt.Println("Wallet functionality is currently disabled.")
-		return
-	}
+		if !common.Get(&common.WalletON) {
+			fmt.Println("Wallet functionality is currently disabled.")
+			return
+		}
 
-	if par != "" {
-		prs := strings.SplitN(par, " ", 2)
-		if len(prs) > 0 {
-			c, e := strconv.ParseUint(prs[0], 10, 32)
-			if e != nil {
-				// first argument not a number
-				mode = -1
-				for idx, symb := range wallet.IDX2SYMB {
-					//if strings.ToLower(prs[0]) == strings.ToLower(symb) {
-					if strings.EqualFold(prs[0], symb) {
-						mode = idx
-						e = nil
-						break
+		if par != "" {
+			prs := strings.SplitN(par, " ", 2)
+			if len(prs) > 0 {
+				c, e := strconv.ParseUint(prs[0], 10, 32)
+				if e != nil {
+					// first argument not a number
+					mode = -1
+					for idx, symb := range wallet.IDX2SYMB {
+						//if strings.ToLower(prs[0]) == strings.ToLower(symb) {
+						if strings.EqualFold(prs[0], symb) {
+							mode = idx
+							e = nil
+							break
+						}
+					}
+					if mode >= 0 && len(prs) > 1 {
+						if c, e = strconv.ParseUint(prs[1], 10, 32); e == nil {
+							cnt = int(c)
+						}
+					}
+				} else {
+					cnt = int(c)
+				}
+
+				if e != nil || mode < 0 || cnt <= 0 {
+					fmt.Println("Specify the address type or/and number of top records to display")
+					fmt.Print("Valid address types:")
+					for _, symb := range wallet.IDX2SYMB {
+						fmt.Print(" ", symb)
+					}
+					fmt.Println()
+					return
+				}
+			}
+		}
+
+		var MIN_BTC uint64 = 100e8
+		var MIN_OUTS int = 1000
+
+		if mode != wallet.IDX_CNT {
+			MIN_BTC = 0
+			MIN_OUTS = 0
+		}
+
+		for idx := range wallet.AllBalances {
+			if mode == wallet.IDX_CNT || mode == idx {
+				for k, rec := range wallet.AllBalances[idx] {
+					vals[idx] += rec.Value
+					outs[idx] += uint64(rec.Count())
+					if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
+						best = append(best, OneWalletAddrs{Idx: idx, Key: k, rec: rec})
 					}
 				}
-				if mode >= 0 && len(prs) > 1 {
-					if c, e = strconv.ParseUint(prs[1], 10, 32); e == nil {
-						cnt = int(c)
-					}
-				}
-			} else {
-				cnt = int(c)
-			}
-
-			if e != nil || mode < 0 || cnt <= 0 {
-				fmt.Println("Specify the address type or/and number of top records to display")
-				fmt.Print("Valid address types:")
-				for _, symb := range wallet.IDX2SYMB {
-					fmt.Print(" ", symb)
-				}
-				fmt.Println()
-				return
+				fmt.Println(btc.UintToBtc(vals[idx]), "BTC in", outs[idx], "unspent recs from",
+					len(wallet.AllBalances[idx]), wallet.IDX2SYMB[idx], "addresses")
 			}
 		}
-	}
 
-	var MIN_BTC uint64 = 100e8
-	var MIN_OUTS int = 1000
+		if sort_by_cnt {
+			fmt.Println("Top addresses with at least", MIN_OUTS, "unspent outputs:", len(best))
+		} else {
+			fmt.Println("Top addresses with at least", btc.UintToBtc(MIN_BTC), "BTC:", len(best))
+		}
 
-	if mode != wallet.IDX_CNT {
-		MIN_BTC = 0
-		MIN_OUTS = 0
-	}
+		sort.Sort(best)
 
-	for idx := range wallet.AllBalances {
-		if mode == wallet.IDX_CNT || mode == idx {
-			for k, rec := range wallet.AllBalances[idx] {
-				vals[idx] += rec.Value
-				outs[idx] += uint64(rec.Count())
-				if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
-					best = append(best, OneWalletAddrs{Idx: idx, Key: k, rec: rec})
+		var pkscr_p2sk [23]byte
+		var pkscr_p2kh [25]byte
+		var ad *btc.BtcAddr
+
+		pkscr_p2sk[0] = 0xa9
+		pkscr_p2sk[1] = 20
+		pkscr_p2sk[22] = 0x87
+
+		pkscr_p2kh[0] = 0x76
+		pkscr_p2kh[1] = 0xa9
+		pkscr_p2kh[2] = 20
+		pkscr_p2kh[23] = 0x88
+		pkscr_p2kh[24] = 0xac
+
+		for i := 0; i < len(best) && i < cnt; i++ {
+			switch best[i].Idx {
+			case wallet.IDX_P2KH:
+				copy(pkscr_p2kh[3:23], best[i].Key)
+				ad = btc.NewAddrFromPkScript(pkscr_p2kh[:], common.CFG.Testnet)
+			case wallet.IDX_P2SH:
+				copy(pkscr_p2sk[2:22], best[i].Key)
+				ad = btc.NewAddrFromPkScript(pkscr_p2sk[:], common.CFG.Testnet)
+			case wallet.IDX_P2WKH, wallet.IDX_P2WSH, wallet.IDX_P2TAP:
+				ad = new(btc.BtcAddr)
+				ad.SegwitProg = new(btc.SegwitProg)
+				ad.SegwitProg.HRP = btc.GetSegwitHRP(common.CFG.Testnet)
+				ad.SegwitProg.Program = []byte(best[i].Key)
+				if best[i].Idx != wallet.IDX_P2TAP {
+					ad.SegwitProg.Version = 0
+				} else {
+					ad.SegwitProg.Version = 1
 				}
 			}
-			fmt.Println(btc.UintToBtc(vals[idx]), "BTC in", outs[idx], "unspent recs from",
-				len(wallet.AllBalances[idx]), wallet.IDX2SYMB[idx], "addresses")
-		}
-	}
-
-	if sort_by_cnt {
-		fmt.Println("Top addresses with at least", MIN_OUTS, "unspent outputs:", len(best))
-	} else {
-		fmt.Println("Top addresses with at least", btc.UintToBtc(MIN_BTC), "BTC:", len(best))
-	}
-
-	sort.Sort(best)
-
-	var pkscr_p2sk [23]byte
-	var pkscr_p2kh [25]byte
-	var ad *btc.BtcAddr
-
-	pkscr_p2sk[0] = 0xa9
-	pkscr_p2sk[1] = 20
-	pkscr_p2sk[22] = 0x87
-
-	pkscr_p2kh[0] = 0x76
-	pkscr_p2kh[1] = 0xa9
-	pkscr_p2kh[2] = 20
-	pkscr_p2kh[23] = 0x88
-	pkscr_p2kh[24] = 0xac
-
-	for i := 0; i < len(best) && i < cnt; i++ {
-		switch best[i].Idx {
-		case wallet.IDX_P2KH:
-			copy(pkscr_p2kh[3:23], best[i].Key)
-			ad = btc.NewAddrFromPkScript(pkscr_p2kh[:], common.CFG.Testnet)
-		case wallet.IDX_P2SH:
-			copy(pkscr_p2sk[2:22], best[i].Key)
-			ad = btc.NewAddrFromPkScript(pkscr_p2sk[:], common.CFG.Testnet)
-		case wallet.IDX_P2WKH, wallet.IDX_P2WSH, wallet.IDX_P2TAP:
-			ad = new(btc.BtcAddr)
-			ad.SegwitProg = new(btc.SegwitProg)
-			ad.SegwitProg.HRP = btc.GetSegwitHRP(common.CFG.Testnet)
-			ad.SegwitProg.Program = []byte(best[i].Key)
-			if best[i].Idx != wallet.IDX_P2TAP {
-				ad.SegwitProg.Version = 0
-			} else {
-				ad.SegwitProg.Version = 1
-			}
-		}
-		fmt.Println(i+1, ad.String(), btc.UintToBtc(best[i].rec.Value), "BTC in", best[i].rec.Count(), "inputs")
-	}
+			fmt.Println(i+1, ad.String(), btc.UintToBtc(best[i].rec.Value), "BTC in", best[i].rec.Count(), "inputs")
+		}*/
 }
 
 func list_unspent_addr(ad *btc.BtcAddr) {
@@ -293,23 +291,10 @@ func wallet_on_off(s string) {
 	}
 }
 
-func save_balances(s string) {
-	if s == "force" {
-		wallet.LAST_SAVED_FNAME = ""
-	}
-	sta := time.Now()
-	if er := wallet.SaveBalances(); er != nil {
-		fmt.Println("Error:", er.Error())
-	} else {
-		fmt.Println(wallet.LAST_SAVED_FNAME, "saved in", time.Since(sta).String())
-	}
-}
-
 func init() {
 	newUi("richest r", true, best_val, "Show addresses with most BTC: [[type] count]")
 	newUi("maxouts o", true, max_outs, "Show addresses with most UTXOs: [[type] count]")
 	newUi("balance a", true, list_unspent, "List UTXOs of BTC address or public key: <string>")
 	newUi("allbal ab", true, all_val_stats, "Show balances DB statistics")
-	newUi("savebal sb", true, save_balances, "Save balances DB to disk: [force]")
 	newUi("wallet w", false, wallet_on_off, "Enable or disable wallet functionality: on|off")
 }

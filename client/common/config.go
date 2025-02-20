@@ -109,7 +109,6 @@ var (
 			MinValue      uint64 // Do not keep balance records for values lower than this
 			UseMapCnt     int
 			AutoLoad      bool
-			SaveBalances  bool
 			InstantWallet bool
 		}
 		Stat struct {
@@ -210,7 +209,6 @@ func InitConfig() {
 	CFG.AllBalances.MinValue = 1e5 // 0.001 BTC
 	CFG.AllBalances.UseMapCnt = 5000
 	CFG.AllBalances.AutoLoad = true
-	CFG.AllBalances.SaveBalances = true
 	CFG.AllBalances.InstantWallet = false
 
 	CFG.DropPeers.DropEachMinutes = 5  // minutes
@@ -545,7 +543,7 @@ func AllBalMinVal() uint64 {
 }
 
 func ApplyBalMinVal() {
-	atomic.StoreUint64(&allBalMinVal, CFG.AllBalances.MinValue)
+	atomic.StoreUint64(&allBalMinVal, Get(&CFG.AllBalances.MinValue))
 }
 
 func MinFeePerKB() uint64 {
