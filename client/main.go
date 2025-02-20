@@ -574,8 +574,6 @@ func main() {
 		if !common.FLAG.NoWallet {
 			sta := time.Now()
 			if er := wallet.LoadBalances(); er == nil {
-				common.Set(&common.WalletON, true)
-				common.Set(&common.WalletOnIn, 0)
 				fmt.Println("AllBalances loaded from", wallet.LAST_SAVED_FNAME, "in", time.Since(sta).String())
 			} else {
 				fmt.Println("wallet.LoadBalances:", er.Error())

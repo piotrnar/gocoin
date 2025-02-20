@@ -144,6 +144,10 @@ func LoadBalances() (er error) {
 		}
 	}
 
+	common.BlockChain.Unspent.CB.NotifyTxAdd = TxNotifyAdd
+	common.BlockChain.Unspent.CB.NotifyTxDel = TxNotifyDel
+	common.Set(&common.WalletON, true)
+	common.Set(&common.WalletOnIn, 0)
 	LAST_SAVED_FNAME = fname
 	return
 
