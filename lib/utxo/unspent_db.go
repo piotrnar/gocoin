@@ -508,6 +508,23 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	return ""
 }
 
+func (db *UnspentDB) GetByKey(k []byte) (v []byte) {
+	v, _ = db.ldb.Get(k[:], nil)
+	return
+}
+
+func (db *UnspentDB) Browse(cb func(k, v []byte) bool) {
+	iter := db.ldb.NewIterator(nil, nil)
+	defer iter.Release()
+	for iter.Next() {
+		if k := iter.Key(); len(k) == UtxoIdxLen {
+			if cb(k, iter.Value()) {
+				return
+			}
+		}
+	}
+}
+
 // GetStats returns DB statistics.
 func (db *UnspentDB) GetStats() (s string) {
 	return fmt.Sprintf("UTXO: Cache max len: %d,  used: %d,  to save: %d\n", UTXO_CACHE_BLOCKS_BACK,
