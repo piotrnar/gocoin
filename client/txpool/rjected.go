@@ -266,12 +266,12 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 }
 
 // Make sure to call it with locked TxMutex
-func retryWaitingForInput(wtg *OneWaitingList) {
+func retryWaitingForInput(wtg *OneWaitingList, i int) {
 	for _, k := range wtg.Ids {
 		txr := TransactionsRejected[k]
 		//if CheckForErrors() { // TODO: always check it, as it's not time consuming and there have been issues here
 		if txr == nil {
-			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String())
+			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), i)
 			continue
 		}
 		if txr.Tx == nil || txr.Reason != TX_REJECTED_NO_TXOU {
