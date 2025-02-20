@@ -50,9 +50,6 @@ type BlockChanges struct {
 }
 
 type UnspentDB struct {
-	HashMap  [256](map[UtxoKeyType][]byte)
-	MapMutex [256]sync.RWMutex // used to access HashMap
-
 	LastBlockHash      []byte
 	LastBlockHeight    uint32
 	ComprssedUTXO      bool
@@ -104,9 +101,6 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	db.volatimemode = opts.VolatimeMode
 	db.UnwindBufLen = 256
 	db.CB = opts.CB
-	for i := range db.HashMap {
-		db.HashMap[i] = make(map[UtxoKeyType][]byte)
-	}
 	db.cache.utxos = make(map[UtxoKeyType][]byte)
 	db.cache.blocks = make(chan *cachedBlock, UTXO_CACHE_BLOCKS_BACK)
 	db.cache.tosave = make(chan *cachedBlock, UTXO_CACHE_BLOCKS_BACK)
