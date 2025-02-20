@@ -271,7 +271,7 @@ func retryWaitingForInput(wtg *OneWaitingList, i int) {
 		txr := TransactionsRejected[k]
 		//if CheckForErrors() { // TODO: always check it, as it's not time consuming and there have been issues here
 		if txr == nil {
-			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), i)
+			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), i, btc.BIdxString(k))
 			continue
 		}
 		if txr.Tx == nil || txr.Reason != TX_REJECTED_NO_TXOU {
