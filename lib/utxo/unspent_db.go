@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -281,17 +282,15 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 			db.CB.NotifyTxAdd(rec)
 		}
 
-		var ind UtxoKeyType
-		copy(ind[:], rec.TxID[:])
-		if v, _ := db.ldb.Get(ind[:], nil); v != nil {
-			oldrec := NewUtxoRec(ind, v)
+		if v, er := db.ldb.Get(rec.TxID[:UtxoIdxLen], nil); er == nil {
+			oldrec := NewUtxoRec(*(*UtxoKeyType)(unsafe.Pointer(&rec.TxID[0])), v)
 			for a := range rec.Outs {
 				if rec.Outs[a] == nil {
 					rec.Outs[a] = oldrec.Outs[a]
 				}
 			}
 		}
-		batch.Put(ind[:], Serialize(rec, false, nil))
+		batch.Put(rec.TxID[:UtxoIdxLen], Serialize(rec, false, nil))
 	}
 
 	os.Remove(fn)
@@ -349,8 +348,7 @@ func (db *UnspentDB) Close() {
 // UnspentGet gets the given unspent output.
 func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 
-	var ind UtxoKeyType
-	copy(ind[:], po.Hash[:])
+	ind := *(*UtxoKeyType)(unsafe.Pointer(&po.Hash[0]))
 	//fmt.Println("UnspentGet called", hex.EncodeToString(ind[:]))
 	if v, ok := db.cache.utxos[ind]; ok {
 		if len(v) != 1 {
@@ -359,7 +357,7 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 		return
 	}
 
-	v, err := db.ldb.Get(ind[:], nil)
+	v, err := db.ldb.Get(po.Hash[:UtxoIdxLen], nil)
 	if err != nil {
 		//fmt.Println("UnspentGet Failed to get record:", err, hex.EncodeToString(ind[:]), po.String())
 		//panic("aaa")
@@ -508,9 +506,11 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	return ""
 }
 
-func (db *UnspentDB) GetByKey(k []byte) (v []byte) {
-	v, _ = db.ldb.Get(k[:], nil)
-	return
+func (db *UnspentDB) GetByKey(k []byte) []byte {
+	if v, er := db.ldb.Get(k, nil); er == nil {
+		return v
+	}
+	return nil
 }
 
 func (db *UnspentDB) Browse(cb func(k, v []byte) bool) {
