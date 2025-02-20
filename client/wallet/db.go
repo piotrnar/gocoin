@@ -1,9 +1,9 @@
 package wallet
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
+	"slices"
 	"sync"
 	"unsafe"
 
@@ -118,31 +118,26 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 	var rec *OneAllAddrBal
 	var i, idx int
 	var nr OneAllAddrInp
+	var ok bool
 	copy(nr[:utxo.UtxoIdxLen], tx.TxID[:]) //RecIdx
-	for vout := uint32(0); vout < uint32(len(tx.Outs)); vout++ {
-		if !outs[vout] {
-			continue
-		}
-		out := tx.Outs[vout]
-		if out == nil {
+	for vout, out := range tx.Outs {
+		if !outs[vout] || out == nil || out.Value < common.AllBalMinVal() {
 			continue
 		}
 		if idx, uidx = Script2Idx(out.PKScr); uidx == nil {
 			continue
 		}
-		rec = AllBalances[idx][string(uidx)]
-
-		if rec == nil {
-			println("balance rec not found for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String(),
+		if rec, ok = AllBalances[idx][string(uidx)]; !ok {
+			println("ERROR: balance rec not found for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String(),
 				btc.NewUint256(tx.TxID[:]).String(), vout, btc.UintToBtc(out.Value))
 			continue
 		}
 
-		binary.LittleEndian.PutUint32(nr[utxo.UtxoIdxLen:], vout)
+		binary.LittleEndian.PutUint32(nr[utxo.UtxoIdxLen:], uint32(vout))
 
 		if rec.unspMap != nil {
 			if _, ok := rec.unspMap[nr]; !ok {
-				println("unspent rec not in map for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String())
+				println("ERROR: unspent rec not in map for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String())
 				continue
 			}
 			delete(rec.unspMap, nr)
@@ -154,13 +149,8 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 			continue
 		}
 
-		for i = 0; i < len(rec.unsp); i++ {
-			if bytes.Equal(rec.unsp[i][:], nr[:]) {
-				break
-			}
-		}
-		if i == len(rec.unsp) {
-			println("unspent rec not in list for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String())
+		if i = slices.Index(rec.unsp, nr); i < 0 {
+			println("ERROR: unspent rec not in list for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String())
 			continue
 		}
 		if len(rec.unsp) == 1 {
@@ -174,6 +164,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 
 // TxNotifyAdd is called while accepting the block (from the chain's thread).
 func TxNotifyAdd(tx *utxo.UtxoRec) {
+	common.CountSafe("BalNotifyAdd")
 	AccessMutex.Lock()
 	NewUTXO(tx)
 	AccessMutex.Unlock()
@@ -181,6 +172,7 @@ func TxNotifyAdd(tx *utxo.UtxoRec) {
 
 // TxNotifyDel is called while accepting the block (from the chain's thread).
 func TxNotifyDel(tx *utxo.UtxoRec, outs []bool) {
+	common.CountSafe("BalNotifyDel")
 	AccessMutex.Lock()
 	all_del_utxos(tx, outs)
 	AccessMutex.Unlock()
