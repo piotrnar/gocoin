@@ -326,21 +326,9 @@ func InitConfig() {
 		println("Stored default configuration in", ConfigFile)
 	}
 
-	if CFG.Memory.UseGoHeap {
-		fmt.Println("Using native Go heap with Garbage Collector for UTXO records")
-	} else {
-		fmt.Println("Using modernc.org/memory package to skip GC for UTXO records ")
-		utxo.Memory_Malloc = func(le int) (res []byte) {
-			MemMutex.Lock()
-			res, _ = Memory.Malloc(le)
-			MemMutex.Unlock()
-			return
-		}
-		utxo.Memory_Free = func(ptr []byte) {
-			MemMutex.Lock()
-			Memory.Free(ptr)
-			MemMutex.Unlock()
-		}
+	if !CFG.Memory.UseGoHeap {
+		fmt.Println("Forcing Memory.UseGoHeap, as it is required for the LevelDB version")
+		CFG.Memory.UseGoHeap = true
 	}
 
 	if CFG.Memory.DataFilesKeep == 0 {
