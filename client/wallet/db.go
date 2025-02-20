@@ -168,6 +168,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 
 // TxNotifyAdd is called while accepting the block (from the chain's thread).
 func TxNotifyAdd(tx *utxo.UtxoRec) {
+	common.CountSafe("BalNotifyAdd")
 	AccessMutex.Lock()
 	NewUTXO(tx)
 	AccessMutex.Unlock()
@@ -175,6 +176,7 @@ func TxNotifyAdd(tx *utxo.UtxoRec) {
 
 // TxNotifyDel is called while accepting the block (from the chain's thread).
 func TxNotifyDel(tx *utxo.UtxoRec, outs []bool) {
+	common.CountSafe("BalNotifyDel")
 	AccessMutex.Lock()
 	all_del_utxos(tx, outs)
 	AccessMutex.Unlock()
