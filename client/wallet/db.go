@@ -127,9 +127,6 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 		if out == nil {
 			continue
 		}
-		if out.Value < common.AllBalMinVal() {
-			continue
-		}
 		if idx, uidx = Script2Idx(out.PKScr); uidx == nil {
 			continue
 		}
