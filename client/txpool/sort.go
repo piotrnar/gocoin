@@ -55,7 +55,7 @@ func adjustSortIndexStep() {
 func BlockCommitInProgress(yes bool) {
 	TxMutex.Lock()
 	SortingDisabled = yes
-	if !yes && FeePackagesDirty && SortingDisabled {
+	if !yes && FeePackagesDirty && SortListDirty {
 		emptyFeePackages() // this should free all the memory used by packages
 	}
 	TxMutex.Unlock()
