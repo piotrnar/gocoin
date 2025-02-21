@@ -288,7 +288,7 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 	rec.Add(bidx)
 	if !ntx.Unmined {
 		if wtg := WaitingForInputs[bidx]; wtg != nil {
-			retryWaitingForInput(wtg, 0) // Redo waiting txs when leaving this function
+			retryWaitingForInput(wtg) // Redo waiting txs when leaving this function
 		}
 		// do not remove any txs in the middle of block undo, to keep the mempool consistant
 		removeExcessiveTxs()
