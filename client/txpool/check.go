@@ -233,6 +233,7 @@ func checkRejectedTxs() (dupa int) {
 	return
 }
 
+// TODO: remove this when finished testing
 func verTxrCnt() {
 	if len(TransactionsRejected) != TxrCnt() {
 		panic(fmt.Sprint(" bad count: ", len(TransactionsRejected), "  / ", TxrCnt(), "  h:", TRIdxHead, "  t:", TRIdxTail))
