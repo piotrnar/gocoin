@@ -283,12 +283,14 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 }
 
 // Make sure to call it with locked TxMutex
-func retryWaitingForInput(wtg *OneWaitingList, i int) {
+func retryWaitingForInput(wtg *OneWaitingList) {
 	wtg_ids := make([]btc.BIDX, len(wtg.Ids))
+	ids := make([]*btc.Uint256, len(wtg.Ids))
 	copy(wtg_ids, wtg.Ids) // wtg.Ids may get modified inside the loop, so we need to work on a copy
+	// TODO: just check that this does not print
 	for idx, k := range wtg_ids {
-		if _, ok := TransactionsRejected[k]; !ok {
-			println("ERROR: Pre-WaitingForInput not found in rejected", wtg.TxID.String(), i, btc.BIdxString(k), idx)
+		if ttt, ok := TransactionsRejected[k]; !ok {
+			println("ERROR: Pre-WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(k), idx)
 			println("all list:", len(wtg_ids))
 			for _idx, _k := range wtg_ids {
 				tt, ok := TransactionsRejected[_k]
@@ -297,21 +299,28 @@ func retryWaitingForInput(wtg *OneWaitingList, i int) {
 					println("   ->", tt.Id.String())
 				}
 			}
+		} else {
+			ids[idx] = &ttt.Id
 		}
 	}
 	for idx, k := range wtg_ids {
 		txr := TransactionsRejected[k]
-		//if CheckForErrors() { // TODO: always check it, as it's not time consuming and there have been issues here
 		if txr == nil {
-			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), i, btc.BIdxString(k), idx)
+			common.CountSafe("Tx**W4InMissing") // this happens if processTx() in this loop removed the tx from our wtg_ids
+			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(k), idx)
 			println("all list:", len(wtg_ids))
 			for _idx, _k := range wtg_ids {
 				_, ok := TransactionsRejected[_k]
 				println(" ", _idx, btc.BIdxString(_k), ok)
+				if ids[_idx] != nil {
+					println("   ->", ids[_idx].String())
+				}
 			}
 			continue
 		}
+		//if CheckForErrors() { // TODO: always check it, as it's not time consuming and there have been issues here
 		if txr.Tx == nil || txr.Reason != TX_REJECTED_NO_TXOU {
+			// this should never happen
 			println("ERROR: WaitingForInput found in rejected, but bad data or reason:", txr.Id.String(), txr.Tx, txr.Reason)
 			continue
 		}
