@@ -276,7 +276,7 @@ func baned_txs(par string) {
 	fmt.Println("Listing Rejected transactions", reason, ":")
 	cnt := 0
 	txpool.TxMutex.Lock()
-	for idx := txpool.TRIdxTail; idx != txpool.TRIdxHead; idx = txpool.TRIdxPrev(idx) {
+	for idx := txpool.TRIdxHead; idx != txpool.TRIdxTail; idx = txpool.TRIdxPrev(idx) {
 		if v := txpool.TransactionsRejected[txpool.TRIdxArray[idx]]; v != nil {
 			if reason != 0 && reason != v.Reason {
 				continue
