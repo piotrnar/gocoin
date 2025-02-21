@@ -451,8 +451,8 @@ func resizeTransactionsRejectedCount(newcnt int) {
 	TRIdxTail = 0
 
 	var from_idx int
-	if newcnt < len(old_txrs) {
-		from_idx = len(old_txrs) - newcnt
+	if (newcnt - 1) < len(old_txrs) { // maximum number of txs we can fit is the array size minus 1
+		from_idx = len(old_txrs) - (newcnt - 1)
 	}
 
 	for idx, txr := range old_txrs {
