@@ -235,7 +235,7 @@ func checkRejectedTxs() (dupa int) {
 
 func verTxrCnt() {
 	if len(TransactionsRejected) != TxrCnt() {
-		panic(fmt.Sprint(" bad count: ", len(TransactionsRejected), "  / ", TxrCnt()))
+		panic(fmt.Sprint(" bad count: ", len(TransactionsRejected), "  / ", TxrCnt(), "  h:", TRIdxHead, "  t:", TRIdxTail))
 	}
 }
 
