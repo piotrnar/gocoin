@@ -425,21 +425,6 @@ func limitRejectedSizeIfNeeded() {
 	//fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:", TransactionsRejectedSize, "in", len(TransactionsRejected))
 }
 
-func verTxrCnt() {
-	if len(TransactionsRejected) != TxrCnt() {
-		panic(fmt.Sprint(" bad count: ", len(TransactionsRejected), "  / ", TxrCnt()))
-	}
-}
-
-func TxrCnt() (cnt int) {
-	for idx := TRIdxTail; idx != TRIdxHead; idx = TRIdxNext(idx) {
-		if !TRIdIsZeroArrayRec(idx) {
-			cnt++
-		}
-	}
-	return
-}
-
 func resizeTransactionsRejectedCount(newcnt int) {
 	if checkRejectedTxs() > 0 || checkRejectedUsedUTXOs() > 0 {
 		panic("failed  before resizeTransactionsRejectedCount")

@@ -154,6 +154,11 @@ func checkRejectedTxs() (dupa int) {
 	var w4i_cnt int
 	var spent_cnt int
 	for _, tr := range TransactionsRejected {
+		if TRIdxArray[tr.ArrIndex] != tr.Id.BIdx() {
+			dupa++
+			fmt.Println(dupa, "TxR", tr.Id.String(), "points to a bad TRIdxArray", tr.ArrIndex)
+		}
+
 		if tr.Tx != nil {
 			if tr.Tx.Raw == nil {
 				dupa++
@@ -220,6 +225,25 @@ func checkRejectedTxs() (dupa int) {
 	if w4i_cnt != spent_cnt {
 		dupa++
 		fmt.Println(dupa, "WaitingForInputs count mismatch", w4i_cnt, spent_cnt)
+	}
+	if cnt := TxrCnt(); cnt != len(TransactionsRejected) {
+		dupa++
+		fmt.Println(dupa, "TransactionsRejected count mismatch", cnt, len(TransactionsRejected))
+	}
+	return
+}
+
+func verTxrCnt() {
+	if len(TransactionsRejected) != TxrCnt() {
+		panic(fmt.Sprint(" bad count: ", len(TransactionsRejected), "  / ", TxrCnt()))
+	}
+}
+
+func TxrCnt() (cnt int) {
+	for idx := TRIdxTail; idx != TRIdxHead; idx = TRIdxNext(idx) {
+		if !TRIdIsZeroArrayRec(idx) {
+			cnt++
+		}
 	}
 	return
 }
