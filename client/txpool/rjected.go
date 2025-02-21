@@ -287,6 +287,19 @@ func retryWaitingForInput(wtg *OneWaitingList, i int) {
 	wtg_ids := make([]btc.BIDX, len(wtg.Ids))
 	copy(wtg_ids, wtg.Ids) // wtg.Ids may get modified inside the loop, so we need to work on a copy
 	for idx, k := range wtg_ids {
+		if _, ok := TransactionsRejected[k]; !ok {
+			println("ERROR: Pre-WaitingForInput not found in rejected", wtg.TxID.String(), i, btc.BIdxString(k), idx)
+			println("all list:", len(wtg_ids))
+			for _idx, _k := range wtg_ids {
+				tt, ok := TransactionsRejected[_k]
+				println(" ", _idx, btc.BIdxString(_k), ok)
+				if ok {
+					println("   ->", tt.Id.String())
+				}
+			}
+		}
+	}
+	for idx, k := range wtg_ids {
 		txr := TransactionsRejected[k]
 		//if CheckForErrors() { // TODO: always check it, as it's not time consuming and there have been issues here
 		if txr == nil {
