@@ -2,6 +2,7 @@ package txpool
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 
@@ -282,28 +283,17 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 	//return rec
 }
 
-// Make sure to call it with locked TxMutex
-func retryWaitingForInput(wtg *OneWaitingList) {
-	wtg_ids := make([]btc.BIDX, len(wtg.Ids))
-	ids := make([]*btc.Uint256, len(wtg.Ids))
-	copy(wtg_ids, wtg.Ids) // wtg.Ids may get modified inside the loop, so we need to work on a copy
-	// TODO: just check that this does not print
-	for idx, k := range wtg_ids {
-		if ttt, ok := TransactionsRejected[k]; !ok {
-			println("ERROR: Pre-WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(k), idx)
-			println("all list:", len(wtg_ids))
-			for _idx, _k := range wtg_ids {
-				tt, ok := TransactionsRejected[_k]
-				println(" ", _idx, btc.BIdxString(_k), ok)
-				if ok {
-					println("   ->", tt.Id.String())
-				}
-			}
-		} else {
-			ids[idx] = &ttt.Id
-		}
+// call this function after the tx has been txAccepted,
+// to re-submit all txs that had been waiting for it
+func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
+	var wtg *OneWaitingList
+	if wtg, ok = WaitingForInputs[bidx]; !ok {
+		return
 	}
-	for idx, k := range wtg_ids {
+	wtg_ids := make([]btc.BIDX, len(wtg.Ids), 4*len(wtg.Ids))
+	copy(wtg_ids, wtg.Ids)
+	for idx := 0; idx < len(wtg_ids); idx++ {
+		k := wtg_ids[idx]
 		txr := TransactionsRejected[k]
 		if txr == nil {
 			common.CountSafe("Tx**W4InMissing") // this happens if processTx() in this loop removed the tx from our wtg_ids
@@ -312,10 +302,8 @@ func retryWaitingForInput(wtg *OneWaitingList) {
 			for _idx, _k := range wtg_ids {
 				_, ok := TransactionsRejected[_k]
 				println(" ", _idx, btc.BIdxString(_k), ok)
-				if ids[_idx] != nil {
-					println("   ->", ids[_idx].String())
-				}
 			}
+			debug.PrintStack()
 			continue
 		}
 		//if CheckForErrors() { // TODO: always check it, as it's not time consuming and there have been issues here
@@ -326,17 +314,18 @@ func retryWaitingForInput(wtg *OneWaitingList) {
 		}
 		DeleteRejectedByTxr(txr)
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
-		if res, _ := processTx(pendtxrcv); res == 0 {
-			common.CountSafe("TxRetryAccepted")
-			if CheckForErrors() {
-				if txr, ok := TransactionsRejected[k]; ok {
-					println("ERROR: tx", txr.Id.String(), "accepted but still in rejected")
-				}
+		if res, t2s := processTx(pendtxrcv); res == 0 {
+			cnt++
+			// if res was 0, t2s is not nil
+			if wtg, ok := WaitingForInputs[t2s.Hash.BIdx()]; ok {
+				wtg_ids = append(wtg_ids, wtg.Ids...)
 			}
+			common.CountSafe("TxRetryAccepted")
 		} else {
-			common.CountSafe("TxRetryRejected")
+			common.CountSafePar("TxRetryRjctd-", res)
 		}
 	}
+	return
 }
 
 // Make sure to call it with locked TxMutex

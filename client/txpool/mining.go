@@ -175,9 +175,9 @@ func BlockMined(bl *btc.Block) {
 	}
 	// now check if any mempool txs are waiting for inputs which were just mined
 	for _, tx := range bl.Txs[1:] {
-		if wtg := WaitingForInputs[tx.Hash.BIdx()]; wtg != nil {
-			common.CountSafe("TxMinedGotInput")
-			retryWaitingForInput(wtg)
+		if ok, cnt := txAccepted(tx.Hash.BIdx()); ok {
+			common.CountSafe("TxMinedGotInputTimes")
+			common.CountSafeAdd("TxMinedGotInput", uint64(cnt))
 		}
 	}
 	TxMutex.Unlock()

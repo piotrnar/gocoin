@@ -286,14 +286,6 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 
 	rec.Clean()
 	rec.Add(bidx)
-	if !ntx.Unmined {
-		if wtg := WaitingForInputs[bidx]; wtg != nil {
-			retryWaitingForInput(wtg) // Redo waiting txs when leaving this function
-		}
-		// do not remove any txs in the middle of block undo, to keep the mempool consistant
-		removeExcessiveTxs()
-	}
-
 	common.CountSafe("TxAccepted")
 	return 0, rec
 }
@@ -312,6 +304,10 @@ func HandleNetTx(ntx *TxRcvd) bool {
 	} else {
 		delete(TransactionsPending, bidx)
 		result, t2s = processTx(ntx)
+		if t2s != nil {
+			txAccepted(bidx)
+			removeExcessiveTxs()
+		}
 	}
 	TxMutex.Unlock()
 
@@ -324,9 +320,14 @@ func HandleNetTx(ntx *TxRcvd) bool {
 
 func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 	TxMutex.Lock()
+	bidx := tx.Hash.BIdx()
 	// It may be on the rejected list, so remove it first
-	DeleteRejectedByIdx(tx.Hash.BIdx(), false)
-	res, _ := processTx(&TxRcvd{Tx: tx, Trusted: true, Local: true})
+	DeleteRejectedByIdx(bidx, false)
+	res, t2s := processTx(&TxRcvd{Tx: tx, Trusted: true, Local: true})
+	if t2s != nil {
+		txAccepted(bidx)
+		removeExcessiveTxs()
+	}
 	TxMutex.Unlock()
 	return res == 0
 }
