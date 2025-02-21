@@ -420,8 +420,10 @@ func limitRejectedSizeIfNeeded() {
 	}
 	common.CountSafeAdd("TxRLimSizBytes", start_siz-TransactionsRejectedSize)
 	common.CountSafeAdd("TxRLimSizCount", uint64(start_cnt-len(TransactionsRejected)))
-	fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:", TransactionsRejectedSize)
-	fmt.Println(" New count:", len(TransactionsRejected), "/", TxrCnt())
+	fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:", TransactionsRejectedSize, "in", len(TransactionsRejected))
+	if len(TransactionsRejected) != TxrCnt() {
+		panic(fmt.Sprint(" bad count: ", len(TransactionsRejected), "  / ", TxrCnt()))
+	}
 }
 
 func TxrCnt() (cnt int) {
