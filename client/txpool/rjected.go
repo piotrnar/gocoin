@@ -291,8 +291,8 @@ func retryWaitingForInput(wtg *OneWaitingList, i int) {
 		//if CheckForErrors() { // TODO: always check it, as it's not time consuming and there have been issues here
 		if txr == nil {
 			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), i, btc.BIdxString(k), idx)
-			println("all list:", len(wtg.Ids))
-			for _idx, _k := range wtg.Ids {
+			println("all list:", len(wtg_ids))
+			for _idx, _k := range wtg_ids {
 				_, ok := TransactionsRejected[_k]
 				println(" ", _idx, btc.BIdxString(_k), ok)
 			}
