@@ -284,7 +284,9 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 
 // Make sure to call it with locked TxMutex
 func retryWaitingForInput(wtg *OneWaitingList, i int) {
-	for idx, k := range wtg.Ids {
+	wtg_ids := make([]btc.BIDX, len(wtg.Ids))
+	copy(wtg_ids, wtg.Ids) // wtg.Ids may get modified inside the loop, so we need to work on a copy
+	for idx, k := range wtg_ids {
 		txr := TransactionsRejected[k]
 		//if CheckForErrors() { // TODO: always check it, as it's not time consuming and there have been issues here
 		if txr == nil {
