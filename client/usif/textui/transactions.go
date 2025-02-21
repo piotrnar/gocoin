@@ -263,7 +263,7 @@ func list_txs(par string) {
 	}
 }
 
-func baned_txs(par string) {
+func list_rtxs(par string) {
 	var reason byte
 	if par != "" {
 		if val, er := strconv.ParseUint(par, 10, 64); er != nil || val < 1 || val > 255 {
@@ -273,11 +273,14 @@ func baned_txs(par string) {
 			reason = byte(val)
 		}
 	}
-	fmt.Println("Listing Rejected transactions", reason, ":")
-	cnt := 0
+	fmt.Println("Listing Rejected transactions", reason, ":", txpool.TRIdxHead, "->", txpool.TRIdxTail)
+	var cnt, cnta, cntb int
 	txpool.TxMutex.Lock()
-	for idx := txpool.TRIdxHead; idx != txpool.TRIdxTail; idx = txpool.TRIdxPrev(idx) {
+	for idx := txpool.TRIdxHead; idx != txpool.TRIdxTail; {
+		idx = txpool.TRIdxPrev(idx)
+		cnta++
 		if v := txpool.TransactionsRejected[txpool.TRIdxArray[idx]]; v != nil {
+			cntb++
 			if reason != 0 && reason != v.Reason {
 				continue
 			}
@@ -286,8 +289,8 @@ func baned_txs(par string) {
 			if v.Tx == nil {
 				bts = "v-bts"
 			}
-			fmt.Println("", cnt, v.Id.String(), "-", v.Size, bts,
-				"-", txpool.ReasonToString(v.Reason), "-", time.Since(v.Time).String(), "ago")
+			fmt.Println("", cnt, "@", idx, v.Id.String(), "-", v.Size, bts,
+				"-", txpool.ReasonToString(v.Reason), "-", time.Since(v.Time).String(), "ago", cnta, cntb)
 		}
 	}
 	txpool.TxMutex.Unlock()
@@ -331,7 +334,7 @@ func txr_purge(par string) {
 	if len(todo) > 0 {
 		if commit {
 			for _, k := range todo {
-				txpool.DeleteRejectedByIdx(k)
+				txpool.DeleteRejectedByIdx(k, true)
 			}
 			fmt.Println(len(todo), "rejected txs deleted")
 			common.CountSafeAdd("TxRDelUiTot", uint64(len(todo)))
@@ -357,11 +360,8 @@ func txr_stats(par string) {
 	if idx_use < 0 {
 		idx_use += len(txpool.TRIdxArray)
 	}
-	if _, ok := txpool.TransactionsRejected[txpool.TRIdxArray[txpool.TRIdxHead]]; ok {
-		idx_use++
-	}
 
-	fmt.Println(len(txpool.TransactionsRejected), "/", idx_use, "/", len(txpool.TRIdxArray),
+	fmt.Println(len(txpool.TransactionsRejected), "/", txpool.TxrCnt(), "/", idx_use, "/", len(txpool.TRIdxArray),
 		"txs with total in-memory size of", txpool.TransactionsRejectedSize, "  head:",
 		txpool.TRIdxHead, "  tail:", txpool.TRIdxTail)
 
@@ -692,7 +692,7 @@ func init() {
 	newUi("txload txl", false, load_tx, "Load tx data from the given file, decode it and store in memory")
 	newUi("txlocal txloc", false, local_tx, "Mark tx as local: <txid> [0|1]")
 	newUi("txold to", false, push_old_txs, "Push or delete txs not seen for 1+ day: <SPB> [push|purge]")
-	newUi("txrlist rtl", false, baned_txs, "List the tx that we have rejected: [<reason>]")
+	newUi("txrlist rtl", false, list_rtxs, "List the tx that we have rejected: [<reason>]")
 	newUi("txrpurge rtp", false, txr_purge, "Purge txs from rejected list: [<min_age_in_minutes>] [commit]")
 	newUi("txrstat rts", false, txr_stats, "Show stats of the rejected txs")
 	newUi("txsend stx", false, send_tx, "Broadcast tx from memory pool: <txid>")

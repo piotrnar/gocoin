@@ -111,13 +111,13 @@ func AddRejectedTx(txr *OneTxRejected) {
 		}
 	}
 	txr.ArrIndex = uint16(TRIdxHead)
-	if !TRIdIsZeroArrayRec(TRIdxHead) {
-		DeleteRejectedByIdx(TRIdxArray[TRIdxHead])
-	}
 	TRIdxArray[TRIdxHead] = bidx
 	TransactionsRejected[bidx] = txr
 	TRIdxHead = TRIdxNext(TRIdxHead)
 	if TRIdxHead == TRIdxTail {
+		if !TRIdIsZeroArrayRec(TRIdxHead) {
+			DeleteRejectedByIdx(TRIdxArray[TRIdxHead], true)
+		}
 		TRIdxTail = TRIdxNext(TRIdxTail)
 	}
 	if txr.Tx != nil {
@@ -176,9 +176,11 @@ func deleteTransactionsRejected(bidx btc.BIDX) {
 }
 
 // Make sure to call it with locked TxMutex
-func DeleteRejectedByIdx(bidx btc.BIDX) {
+func DeleteRejectedByIdx(bidx btc.BIDX, musthave bool) {
 	if txr, ok := TransactionsRejected[bidx]; ok {
 		DeleteRejectedByTxr(txr)
+	} else if musthave {
+		panic("DeleteRejectedByIdx " + btc.BIdxString(bidx) + " not found in TransactionsRejected")
 	}
 }
 
@@ -283,7 +285,7 @@ func retryWaitingForInput(wtg *OneWaitingList, i int) {
 			println("ERROR: WaitingForInput found in rejected, but bad data or reason:", txr.Id.String(), txr.Tx, txr.Reason)
 			continue
 		}
-		DeleteRejectedByIdx(k)
+		DeleteRejectedByTxr(txr)
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if res, _ := processTx(pendtxrcv); res == 0 {
 			common.CountSafe("TxRetryAccepted")
@@ -396,22 +398,39 @@ func limitRejectedSizeIfNeeded() {
 	if TransactionsRejectedSize <= max {
 		return
 	}
-	//fmt.Println("Limiting rejected size from", TransactionsRejectedSize, "to", max)
+	fmt.Println("Limiting rejected size from", TransactionsRejectedSize, "to", max)
 	start_cnt := len(TransactionsRejected)
 	start_siz := TransactionsRejectedSize
 	for TRIdxTail != TRIdxHead {
 		if !TRIdIsZeroArrayRec(TRIdxTail) {
-			DeleteRejectedByIdx(TRIdxArray[TRIdxTail])
-		}
-		TRIdZeroArrayRec(TRIdxTail)
-		TRIdxTail = TRIdxNext(TRIdxTail)
-		if TransactionsRejectedSize <= max {
-			break
+			if txr, ok := TransactionsRejected[TRIdxArray[TRIdxTail]]; ok {
+				if TRIdxTail != int(txr.ArrIndex) {
+					panic("trx's ArrIndex does not point to the tail")
+				}
+				DeleteRejectedByTxr(txr) // this should do TRIdZeroArrayRec and advance TRIdxTail
+			} else {
+				panic(fmt.Sprint("TRIdxArray[", TRIdxTail, "] not found in TransactionsRejected"))
+			}
+			if TransactionsRejectedSize <= max {
+				break
+			}
+		} else {
+			TRIdxTail = TRIdxNext(TRIdxTail) // advance TRIdxTail manually
 		}
 	}
 	common.CountSafeAdd("TxRLimSizBytes", start_siz-TransactionsRejectedSize)
 	common.CountSafeAdd("TxRLimSizCount", uint64(start_cnt-len(TransactionsRejected)))
-	//fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:", TransactionsRejectedSize)
+	fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:", TransactionsRejectedSize)
+	fmt.Println(" New count:", len(TransactionsRejected), "/", TxrCnt())
+}
+
+func TxrCnt() (cnt int) {
+	for idx := TRIdxTail; idx != TRIdxHead; idx = TRIdxNext(idx) {
+		if !TRIdIsZeroArrayRec(idx) {
+			cnt++
+		}
+	}
+	return
 }
 
 func resizeTransactionsRejectedCount(newcnt int) {

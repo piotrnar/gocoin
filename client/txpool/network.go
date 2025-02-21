@@ -325,7 +325,7 @@ func HandleNetTx(ntx *TxRcvd) bool {
 func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 	TxMutex.Lock()
 	// It may be on the rejected list, so remove it first
-	DeleteRejectedByIdx(tx.Hash.BIdx())
+	DeleteRejectedByIdx(tx.Hash.BIdx(), false)
 	res, _ := processTx(&TxRcvd{Tx: tx, Trusted: true, Local: true})
 	TxMutex.Unlock()
 	return res == 0

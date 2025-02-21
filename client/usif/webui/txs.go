@@ -376,7 +376,8 @@ func xml_txsre(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<txbanned>"))
 	txpool.TxMutex.Lock()
-	for idx := txpool.TRIdxHead; idx != txpool.TRIdxTail; idx = txpool.TRIdxPrev(idx) {
+	for idx := txpool.TRIdxHead; idx != txpool.TRIdxTail; {
+		idx = txpool.TRIdxPrev(idx)
 		if v := txpool.TransactionsRejected[txpool.TRIdxArray[idx]]; v != nil {
 			w.Write([]byte("<tx>"))
 			fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
