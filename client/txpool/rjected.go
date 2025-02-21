@@ -115,10 +115,24 @@ func AddRejectedTx(txr *OneTxRejected) {
 	TransactionsRejected[bidx] = txr
 	TRIdxHead = TRIdxNext(TRIdxHead)
 	if TRIdxHead == TRIdxTail {
-		if !TRIdIsZeroArrayRec(TRIdxHead) {
-			DeleteRejectedByIdx(TRIdxArray[TRIdxHead], true)
+		// we're touching the tail
+		if !TRIdIsZeroArrayRec(TRIdxHead) { // remove the oldest record
+			if txr, ok := TransactionsRejected[bidx]; ok {
+				if int(txr.ArrIndex) != TRIdxTail {
+					panic("txr.ArrIndex != TRIdxTail")
+				}
+				DeleteRejectedByTxr(txr) // this should zero the record and advance the tail to the 1st non-empty slot
+			} else {
+				panic(fmt.Sprint("TRIdxArray[", TRIdxHead, "] not found in TransactionsRejected"))
+			}
+		} else {
+			for {
+				TRIdxTail = TRIdxNext(TRIdxTail) // advance the tail as far as empty records go
+				if !TRIdIsZeroArrayRec(TRIdxHead) {
+					break
+				}
+			}
 		}
-		TRIdxTail = TRIdxNext(TRIdxTail)
 	}
 	if txr.Tx != nil {
 		for _, inp := range txr.TxIn {
@@ -137,6 +151,7 @@ func AddRejectedTx(txr *OneTxRejected) {
 		}
 	}
 	TransactionsRejectedSize += uint64(txr.Footprint)
+	verTxrCnt()
 	limitRejectedSizeIfNeeded()
 }
 
@@ -363,49 +378,35 @@ func limitRejectedSizeIfNeeded() {
 		//fmt.Println("Limiting NoUtxo cached txs from", WaitingForInputsSize, "to", max, TRIdxTail, TRIdxHead)
 		start_cnt := len(WaitingForInputs)
 		start_siz := WaitingForInputsSize
-		first_valid_tail := -1
-		var stop_moving_tail bool
 		for idx := TRIdxTail; idx != TRIdxHead; idx = TRIdxNext(idx) {
-			if txr, ok := TransactionsRejected[TRIdxArray[idx]]; ok {
-				if txr.Waiting4 != nil {
-					DeleteRejectedByTxr(txr)
-					TRIdZeroArrayRec(idx)
-					if !stop_moving_tail {
-						first_valid_tail = idx
-					}
-				} else {
-					stop_moving_tail = true
-				}
+			if TRIdIsZeroArrayRec(idx) {
+				continue
 			}
-			if WaitingForInputsSize <= max {
-				break
+			if txr, ok := TransactionsRejected[TRIdxArray[idx]]; ok && txr.Waiting4 != nil {
+				DeleteRejectedByTxr(txr) // this should do TRIdZeroArrayRec and (may) advance TRIdxTail
+				if WaitingForInputsSize <= max {
+					break
+				}
 			}
 		}
 		common.CountSafeAdd("TxRLimNoUtxoBytes", start_siz-WaitingForInputsSize)
 		common.CountSafeAdd("TxRLimNoUtxoCount", uint64(start_cnt-len(WaitingForInputs)))
-		if first_valid_tail >= 0 {
-			cnt := first_valid_tail - TRIdxTail
-			if cnt < 0 {
-				cnt += len(TRIdxArray)
-			}
-			common.CountSafeAdd("TxRLimNoUtxoMoveTail", uint64(cnt))
-			TRIdxTail = first_valid_tail
-		}
 		//fmt.Println("Deleted", start_cnt-len(WaitingForInputs), "NoUtxo.  New size:", WaitingForInputsSize, "  new_tail:", first_valid_tail)
+		verTxrCnt()
 	}
 
 	max = atomic.LoadUint64(&common.MaxRejectedSizeBytes)
 	if TransactionsRejectedSize <= max {
 		return
 	}
-	fmt.Println("Limiting rejected size from", TransactionsRejectedSize, "to", max)
+	//fmt.Println("Limiting rejected size from", TransactionsRejectedSize, "to", max)
 	start_cnt := len(TransactionsRejected)
 	start_siz := TransactionsRejectedSize
 	for TRIdxTail != TRIdxHead {
 		if !TRIdIsZeroArrayRec(TRIdxTail) {
 			if txr, ok := TransactionsRejected[TRIdxArray[TRIdxTail]]; ok {
 				if TRIdxTail != int(txr.ArrIndex) {
-					panic("trx's ArrIndex does not point to the tail")
+					panic("txr's ArrIndex does not point to the tail")
 				}
 				DeleteRejectedByTxr(txr) // this should do TRIdZeroArrayRec and advance TRIdxTail
 			} else {
@@ -418,9 +419,13 @@ func limitRejectedSizeIfNeeded() {
 			TRIdxTail = TRIdxNext(TRIdxTail) // advance TRIdxTail manually
 		}
 	}
+	verTxrCnt()
 	common.CountSafeAdd("TxRLimSizBytes", start_siz-TransactionsRejectedSize)
 	common.CountSafeAdd("TxRLimSizCount", uint64(start_cnt-len(TransactionsRejected)))
-	fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:", TransactionsRejectedSize, "in", len(TransactionsRejected))
+	//fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:", TransactionsRejectedSize, "in", len(TransactionsRejected))
+}
+
+func verTxrCnt() {
 	if len(TransactionsRejected) != TxrCnt() {
 		panic(fmt.Sprint(" bad count: ", len(TransactionsRejected), "  / ", TxrCnt()))
 	}
@@ -491,6 +496,7 @@ func limitRejected() {
 		resizeTransactionsRejectedCount(cnt)
 		return
 	}
+	verTxrCnt()
 	limitRejectedSizeIfNeeded()
 }
 
