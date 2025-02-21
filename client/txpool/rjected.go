@@ -119,7 +119,7 @@ func AddRejectedTx(txr *OneTxRejected) {
 		if !TRIdIsZeroArrayRec(TRIdxHead) { // remove the oldest record
 			if txr, ok := TransactionsRejected[bidx]; ok {
 				if int(txr.ArrIndex) != TRIdxTail {
-					panic("txr.ArrIndex != TRIdxTail")
+					println("ERROR: txr.ArrIndex != TRIdxTail", int(txr.ArrIndex), TRIdxTail)
 				}
 				DeleteRejectedByTxr(txr) // this should zero the record and advance the tail to the 1st non-empty slot
 			} else {
