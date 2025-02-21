@@ -177,7 +177,7 @@ func BlockMined(bl *btc.Block) {
 	for _, tx := range bl.Txs[1:] {
 		if wtg := WaitingForInputs[tx.Hash.BIdx()]; wtg != nil {
 			common.CountSafe("TxMinedGotInput")
-			retryWaitingForInput(wtg, 1)
+			retryWaitingForInput(wtg)
 		}
 	}
 	TxMutex.Unlock()
