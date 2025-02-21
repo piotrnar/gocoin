@@ -51,7 +51,7 @@ func best_val(par string) {
 }
 
 func all_addrs(par string) {
-	var outs, vals [wallet.IDX_CNT]uint64
+	var outs, vals, cnts [wallet.IDX_CNT]uint64
 	var best SortedWalletAddrs
 	var cnt int = 15
 	var mode int = wallet.IDX_CNT
@@ -105,18 +105,17 @@ func all_addrs(par string) {
 		MIN_OUTS = 0
 	}
 
-	for idx := range wallet.AllBalances {
-		if mode == wallet.IDX_CNT || mode == idx {
-			for k, rec := range wallet.AllBalances[idx] {
-				vals[idx] += rec.Value
-				outs[idx] += uint64(rec.Count())
-				if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
-					best = append(best, OneWalletAddrs{Idx: idx, Key: k, rec: rec})
-				}
-			}
-			fmt.Println(btc.UintToBtc(vals[idx]), "BTC in", outs[idx], "unspent recs from",
-				len(wallet.AllBalances[idx]), wallet.IDX2SYMB[idx], "addresses")
+	wallet.Browse(func(idx int, k string, rec *wallet.OneAllAddrBal) {
+		cnts[idx]++
+		vals[idx] += rec.Value
+		outs[idx] += uint64(rec.Count())
+		if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
+			best = append(best, OneWalletAddrs{Idx: idx, Key: k, rec: rec})
 		}
+	})
+	for idx := range outs {
+		fmt.Println(btc.UintToBtc(vals[idx]), "BTC in", outs[idx], "unspent recs from",
+			cnts[idx], wallet.IDX2SYMB[idx], "addresses")
 	}
 
 	if sort_by_cnt {

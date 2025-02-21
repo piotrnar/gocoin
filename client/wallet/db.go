@@ -22,10 +22,8 @@ const (
 )
 
 var (
-	AllBalances [IDX_CNT]map[string]*OneAllAddrBal
-	AccessMutex sync.Mutex
-	IDX2SYMB    [IDX_CNT]string = [IDX_CNT]string{"P2KH", "P2SH", "P2WKH", "P2WSH", "P2TAP"}
-	IDX2SIZE    [IDX_CNT]int    = [IDX_CNT]int{20, 20, 20, 32, 32}
+	IDX2SYMB [IDX_CNT]string = [IDX_CNT]string{"P2KH", "P2SH", "P2WKH", "P2WSH", "P2TAP"}
+	IDX2SIZE [IDX_CNT]int    = [IDX_CNT]int{20, 20, 20, 32, 32}
 )
 
 type OneAllAddrInp [utxo.UtxoIdxLen + 4]byte
@@ -35,6 +33,12 @@ type OneAllAddrBal struct {
 	unsp    []OneAllAddrInp
 	unspMap map[OneAllAddrInp]bool
 }
+
+var (
+	allBalances [IDX_CNT]map[string]*OneAllAddrBal
+	accessMutex sync.Mutex
+	useMapCnt   int
+)
 
 func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 	var ind utxo.UtxoKeyType
@@ -88,10 +92,10 @@ func NewUTXO(tx *utxo.UtxoRec) {
 		if idx, uidx = Script2Idx(out.PKScr); uidx == nil {
 			continue
 		}
-		rec = AllBalances[idx][string(uidx)]
+		rec = allBalances[idx][string(uidx)]
 		if rec == nil {
 			rec = &OneAllAddrBal{}
-			AllBalances[idx][string(uidx)] = rec
+			allBalances[idx][string(uidx)] = rec
 		}
 
 		binary.LittleEndian.PutUint32(nr[utxo.UtxoIdxLen:], vout)
@@ -102,9 +106,9 @@ func NewUTXO(tx *utxo.UtxoRec) {
 			rec.unspMap[nr] = true
 			continue
 		}
-		if len(rec.unsp) >= common.CFG.AllBalances.UseMapCnt-1 {
+		if len(rec.unsp) >= useMapCnt-1 {
 			// Switch to using map
-			rec.unspMap = make(map[OneAllAddrInp]bool, 2*common.CFG.AllBalances.UseMapCnt)
+			rec.unspMap = make(map[OneAllAddrInp]bool, 2*useMapCnt)
 			for _, v := range rec.unsp {
 				rec.unspMap[v] = true
 			}
@@ -131,7 +135,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 		if idx, uidx = Script2Idx(out.PKScr); uidx == nil {
 			continue
 		}
-		if rec, ok = AllBalances[idx][string(uidx)]; !ok {
+		if rec, ok = allBalances[idx][string(uidx)]; !ok {
 			println("ERROR: balance rec not found for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String(),
 				btc.NewUint256(tx.TxID[:]).String(), vout, btc.UintToBtc(out.Value))
 			continue
@@ -146,7 +150,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 			}
 			delete(rec.unspMap, nr)
 			if len(rec.unspMap) == 0 {
-				delete(AllBalances[idx], string(uidx))
+				delete(allBalances[idx], string(uidx))
 			} else {
 				rec.Value -= out.Value
 			}
@@ -158,7 +162,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 			continue
 		}
 		if len(rec.unsp) == 1 {
-			delete(AllBalances[idx], string(uidx))
+			delete(allBalances[idx], string(uidx))
 		} else {
 			rec.Value -= out.Value
 			rec.unsp = append(rec.unsp[:i], rec.unsp[i+1:]...)
@@ -168,18 +172,16 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 
 // TxNotifyAdd is called while accepting the block (from the chain's thread).
 func TxNotifyAdd(tx *utxo.UtxoRec) {
-	common.CountSafe("BalNotifyAdd")
-	AccessMutex.Lock()
+	accessMutex.Lock()
 	NewUTXO(tx)
-	AccessMutex.Unlock()
+	accessMutex.Unlock()
 }
 
 // TxNotifyDel is called while accepting the block (from the chain's thread).
 func TxNotifyDel(tx *utxo.UtxoRec, outs []bool) {
-	common.CountSafe("BalNotifyDel")
-	AccessMutex.Lock()
+	accessMutex.Lock()
 	all_del_utxos(tx, outs)
-	AccessMutex.Unlock()
+	accessMutex.Unlock()
 }
 
 // Call the cb function for each unspent record
@@ -206,9 +208,12 @@ func (r *OneAllAddrBal) Count() int {
 func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	var rec *OneAllAddrBal
 
+	accessMutex.Lock() // in case this function was not called from the main thread
+	defer accessMutex.Unlock()
+
 	if aa.SegwitProg != nil {
 		if aa.SegwitProg.Version == 1 && len(aa.SegwitProg.Program) == 32 {
-			rec = AllBalances[IDX_P2TAP][string(aa.SegwitProg.Program)]
+			rec = allBalances[IDX_P2TAP][string(aa.SegwitProg.Program)]
 		} else {
 			if aa.SegwitProg.Version != 0 {
 				return
@@ -216,17 +221,17 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 			switch len(aa.SegwitProg.Program) {
 			case 20:
 				copy(aa.Hash160[:], aa.SegwitProg.Program)
-				rec = AllBalances[IDX_P2WKH][string(aa.Hash160[:])]
+				rec = allBalances[IDX_P2WKH][string(aa.Hash160[:])]
 			case 32:
-				rec = AllBalances[IDX_P2WSH][string(aa.SegwitProg.Program)]
+				rec = allBalances[IDX_P2WSH][string(aa.SegwitProg.Program)]
 			default:
 				return
 			}
 		}
 	} else if aa.Version == btc.AddrVerPubkey(common.Testnet) {
-		rec = AllBalances[IDX_P2KH][string(aa.Hash160[:])]
+		rec = allBalances[IDX_P2KH][string(aa.Hash160[:])]
 	} else if aa.Version == btc.AddrVerScript(common.Testnet) {
-		rec = AllBalances[IDX_P2SH][string(aa.Hash160[:])]
+		rec = allBalances[IDX_P2SH][string(aa.Hash160[:])]
 	} else {
 		return
 	}
@@ -257,23 +262,39 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	return
 }
 
+func browse(cb func(addr_type int, addr_hash string, coins *OneAllAddrBal)) {
+	for idx := range allBalances {
+		for k, r := range allBalances[idx] {
+			cb(idx, k, r)
+		}
+	}
+}
+
+func Browse(cb func(addr_type int, addr_hash string, coins *OneAllAddrBal)) {
+	accessMutex.Lock()
+	browse(cb)
+	accessMutex.Unlock()
+}
+
 func PrintStat() {
 	var maps, outs, vals [IDX_CNT]uint64
 
+	accessMutex.Lock()
 	fmt.Println("AllBalMinVal:", btc.UintToBtc(common.AllBalMinVal()),
-		"  UseMapCnt:", common.CFG.AllBalances.UseMapCnt, "  Saved As:", LAST_SAVED_FNAME)
+		"  UseMapCnt:", useMapCnt, "  Saved As:", LAST_SAVED_FNAME)
 
-	for idx := range AllBalances {
-		for _, r := range AllBalances[idx] {
-			vals[idx] += r.Value
-			if r.unspMap != nil {
-				maps[idx]++
-				outs[idx] += uint64(len(r.unspMap))
-			} else {
-				outs[idx] += uint64(len(r.unsp))
-			}
+	browse(func(idx int, k string, r *OneAllAddrBal) {
+		vals[idx] += r.Value
+		if r.unspMap != nil {
+			maps[idx]++
+			outs[idx] += uint64(len(r.unspMap))
+		} else {
+			outs[idx] += uint64(len(r.unsp))
 		}
-		fmt.Println("AllBalances", IDX2SYMB[idx], ":", len(AllBalances[idx]), "records,",
+	})
+	for idx := range outs {
+		fmt.Println("AllBalances", IDX2SYMB[idx], ":", len(allBalances[idx]), "records,",
 			outs[idx], "outputs,", btc.UintToBtc(vals[idx]), "BTC,", maps[idx], "maps")
 	}
+	accessMutex.Unlock()
 }

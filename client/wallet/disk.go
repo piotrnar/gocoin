@@ -62,7 +62,7 @@ func newAddrBal(rd *bufio.Reader) (res *OneAllAddrBal) {
 		println("ERROR: newAddrBal - this should not happen")
 		return
 	}
-	if int(le) >= common.CFG.AllBalances.UseMapCnt {
+	if int(le) >= useMapCnt {
 		var k OneAllAddrInp
 		b.unspMap = make(map[OneAllAddrInp]bool, int(le))
 		for ; le > 0; le-- {
@@ -103,7 +103,7 @@ func load_map(dir string, idx int, wg *sync.WaitGroup) {
 			themap[string(ke)] = newAddrBal(rd)
 		}
 		f.Close()
-		AllBalances[idx] = themap
+		allBalances[idx] = themap
 	}
 }
 
@@ -131,14 +131,14 @@ func LoadBalances() (er error) {
 	dir += string(os.PathSeparator)
 
 	var wg sync.WaitGroup
-	for i := range AllBalances {
+	for i := range allBalances {
 		wg.Add(1)
 		go load_map(dir, i, &wg)
 	}
 	wg.Wait()
 
-	for i := range AllBalances {
-		if AllBalances[i] == nil {
+	for i := range allBalances {
+		if allBalances[i] == nil {
 			er = errors.New(IDX2SYMB[i] + " balances could not be restored from " + dir)
 			return
 		}
@@ -179,9 +179,9 @@ func SaveBalances() (er error) {
 	dir += string(os.PathSeparator)
 
 	var wg sync.WaitGroup
-	for i := range AllBalances {
+	for i := range allBalances {
 		wg.Add(1)
-		go save_map(dir+IDX2SYMB[i], AllBalances[i], &wg)
+		go save_map(dir+IDX2SYMB[i], allBalances[i], &wg)
 	}
 	wg.Wait()
 	LAST_SAVED_FNAME = fname

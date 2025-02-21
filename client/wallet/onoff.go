@@ -23,9 +23,10 @@ func InitMaps(empty bool) {
 		// If yet unknown, just continue with zero size maps
 	}
 
-	for i := range AllBalances {
-		AllBalances[i] = make(map[string]*OneAllAddrBal, szs[i])
+	for i := range allBalances {
+		allBalances[i] = make(map[string]*OneAllAddrBal, szs[i])
 	}
+	useMapCnt = int(common.Get(&common.CFG.AllBalances.UseMapCnt))
 }
 
 func LoadBalancesFromUtxo() {
@@ -89,7 +90,7 @@ var (
 func UpdateMapSizes() {
 	var tmp [IDX_CNT]int
 	for i := range tmp {
-		tmp[i] = len(AllBalances[i])
+		tmp[i] = len(allBalances[i])
 	}
 	WalletAddrsCount[common.AllBalMinVal()] = tmp
 	buf := new(bytes.Buffer)
