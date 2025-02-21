@@ -107,7 +107,7 @@ var (
 		}
 		AllBalances struct {
 			MinValue      uint64 // Do not keep balance records for values lower than this
-			UseMapCnt     int
+			UseMapCnt     uint32
 			AutoLoad      bool
 			SaveBalances  bool
 			InstantWallet bool
