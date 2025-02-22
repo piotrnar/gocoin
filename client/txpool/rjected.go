@@ -1,8 +1,9 @@
 package txpool
 
 import (
+	"bytes"
 	"fmt"
-	"runtime/debug"
+	"runtime"
 	"sync/atomic"
 	"time"
 
@@ -292,18 +293,32 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 	}
 	wtg_ids := make([]btc.BIDX, len(wtg.Ids), 4*len(wtg.Ids))
 	copy(wtg_ids, wtg.Ids)
+
+	// save the entry conditions so we can print them later
+	e := bytes.NewBuffer(make([]byte, 0, 2048))
+	fmt.Fprintln(e, len(wtg_ids), "records at entry")
+	for ii, rr := range wtg_ids {
+		re, ok := TransactionsRejected[rr]
+		fmt.Fprintln(e, " ", ii, btc.BIdxString(rr), ok)
+		if ok {
+			fmt.Fprintln(e, "   txid:", re.Id.String())
+		}
+	}
+
 	for idx := 0; idx < len(wtg_ids); idx++ {
 		k := wtg_ids[idx]
 		txr := TransactionsRejected[k]
 		if txr == nil {
 			common.CountSafe("Tx**W4InMissing") // this happens if processTx() in this loop removed the tx from our wtg_ids
 			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(k), idx)
+			_, file, line, _ := runtime.Caller(1)
+			println("called from file", file, line)
 			println("all list:", len(wtg_ids))
 			for _idx, _k := range wtg_ids {
 				_, ok := TransactionsRejected[_k]
 				println(" ", _idx, btc.BIdxString(_k), ok)
 			}
-			debug.PrintStack()
+			print(e.String())
 			continue
 		}
 		//if CheckForErrors() { // TODO: always check it, as it's not time consuming and there have been issues here
