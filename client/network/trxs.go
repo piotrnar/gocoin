@@ -46,6 +46,8 @@ func (c *OneConnection) SendGetMP() error {
 			break
 		}
 	}
+	txpool.CurrentFeeAdjustedSPKB = 0
+	common.SetMinFeePerKB(0)
 	txpool.TxMutex.Unlock()
 	return c.SendRawMsg("getmp", b.Bytes())
 }
