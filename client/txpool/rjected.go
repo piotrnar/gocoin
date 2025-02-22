@@ -247,10 +247,10 @@ func (tr *OneTxRejected) cleanup() {
 					w4i.Ids = slices.Delete(w4i.Ids, idx, idx+1)
 				}
 			}
-			WaitingForInputsSize -= uint64(tr.Footprint)
 		} else {
 			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String(), "from txr", tr.Id.String())
 		}
+		WaitingForInputsSize -= uint64(tr.Footprint)
 		tr.Waiting4 = nil
 		// note that this will affect Footprint
 	}
@@ -291,17 +291,22 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 	if wtg, ok = WaitingForInputs[bidx]; !ok {
 		return
 	}
+
+	w4idone := []btc.BIDX{bidx}
 	wtg_ids := make([]btc.BIDX, len(wtg.Ids), 4*len(wtg.Ids))
 	copy(wtg_ids, wtg.Ids)
 
 	// save the entry conditions so we can print them later
 	e := bytes.NewBuffer(make([]byte, 0, 2048))
-	fmt.Fprintln(e, len(wtg_ids), "records at entry")
+	fmt.Fprintln(e, "W4Input txid:", btc.NewUint256(wtg.TxID.Hash[:]).String())
+	fmt.Fprintln(e, "", len(wtg_ids), "recs at entry")
+	_, file, line, _ := runtime.Caller(1)
+	fmt.Fprintln(e, " called from file:", file, "  line:", line)
 	for ii, rr := range wtg_ids {
 		re, ok := TransactionsRejected[rr]
-		fmt.Fprintln(e, " ", ii, btc.BIdxString(rr), ok)
+		fmt.Fprintln(e, "  - txr_idx", ii, "  bidx:", btc.BIdxString(rr), ok)
 		if ok {
-			fmt.Fprintln(e, "   txid:", re.Id.String())
+			fmt.Fprintln(e, "      ->", re.Id.String(), re.Reason, re.Tx)
 		}
 	}
 
@@ -311,8 +316,6 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 		if txr == nil {
 			common.CountSafe("Tx**W4InMissing") // this happens if processTx() in this loop removed the tx from our wtg_ids
 			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(k), idx)
-			_, file, line, _ := runtime.Caller(1)
-			println("called from file", file, line)
 			println("all list:", len(wtg_ids))
 			for _idx, _k := range wtg_ids {
 				_, ok := TransactionsRejected[_k]
@@ -334,10 +337,18 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 			// if res was 0, t2s is not nil
 			if wtg, ok := WaitingForInputs[t2s.Hash.BIdx()]; ok {
 				wtg_ids = append(wtg_ids, wtg.Ids...)
+				w4idone = append(w4idone, t2s.Hash.BIdx())
 			}
 			common.CountSafe("TxRetryAccepted")
 		} else {
 			common.CountSafePar("TxRetryRjctd-", res)
+		}
+	}
+	for id, wd := range w4idone {
+		if _, yes := WaitingForInputs[wd]; !yes {
+			println("ERROR: WaitingForInputs not completely removed -", id, "of", len(w4idone))
+			print(e.String())
+			return
 		}
 	}
 	return
