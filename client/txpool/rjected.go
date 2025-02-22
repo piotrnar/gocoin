@@ -321,8 +321,11 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 			// TODO: remove this when finished debugging
 			println("all list:", len(wtg_ids))
 			for _idx, _k := range wtg_ids {
-				_, ok := TransactionsRejected[_k]
-				println(" ", _idx, btc.BIdxString(_k), ok)
+				tr, ok := TransactionsRejected[_k]
+				print("  ", _idx, " ", btc.BIdxString(_k), " ", ok)
+				if ok {
+					print("  reason:", tr.Reason)
+				}
 			}
 			if e != nil {
 				print(e.String())
@@ -336,20 +339,20 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 			continue
 		}
 		DeleteRejectedByTxr(txr)
-		/*
-			if CheckForErrors() {
-				if w, ok := WaitingForInputs[bidx]; ok {
-					if slices.Contains(w.Ids, txr.Id.BIdx()) {
-						println("ERROR: txr has just been removed but is still in w4r record")
-						println("  txr:", txr.Id.String(), txr.Reason, txr.Tx != nil)
-						print("  w4i: ", w.TxID.String(), "  ids:")
-						for _, bb := range w.Ids {
-							println("  ", btc.BIdxString(bb))
-						}
-						println()
-					}
+
+		// TODO: remove this when finished debugging
+		if w, ok := WaitingForInputs[bidx]; ok {
+			if slices.Contains(w.Ids, txr.Id.BIdx()) {
+				println("ERROR: txr has just been removed but is still in w4r record")
+				println("  txr:", txr.Id.String(), txr.Reason, txr.Tx != nil)
+				print("  w4i: ", w.TxID.String(), "  ids:")
+				for _, bb := range w.Ids {
+					println("  ", btc.BIdxString(bb))
 				}
-			}*/
+				println()
+			}
+		}
+
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if res, t2s := processTx(pendtxrcv); res == 0 {
 			cnt++
@@ -359,8 +362,10 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 				w4idone = append(w4idone, t2s.Hash.BIdx())
 			}
 			common.CountSafe("TxRetryAccepted")
+			fmt.Fprintln(e, "*", txr.Id.String(), "accepted")
 		} else {
 			common.CountSafePar("TxRetryRjctd-", res)
+			fmt.Fprintln(e, "*", txr.Id.String(), "reejcted", res)
 		}
 	}
 
