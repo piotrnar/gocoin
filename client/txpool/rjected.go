@@ -341,7 +341,7 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 		if CheckForErrors() {
 			if w, ok := WaitingForInputs[bidx]; ok {
 				if slices.Contains(w.Ids, txr.Id.BIdx()) {
-					println("ERROR: txr has just been removed but it it still in w4r record")
+					println("ERROR: txr has just been removed but is still in w4r record")
 					println("  txr:", txr.Id.String(), txr.Reason, txr.Tx != nil)
 					print("  w4i: ", w.TxID.String(), "  ids:")
 					for _, bb := range w.Ids {
@@ -366,8 +366,19 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 	}
 	if CheckForErrors() {
 		for id, wd := range w4idone {
-			if _, yes := WaitingForInputs[wd]; !yes {
+			if w, yes := WaitingForInputs[wd]; !yes {
 				println("ERROR: WaitingForInputs not completely removed -", id+1, "of", len(w4idone))
+				print("  w4i: ", w.TxID.String(), "  ids:")
+				for x, bb := range w.Ids {
+					println("  ", x, btc.BIdxString(bb))
+					if txr, ok := TransactionsRejected[bb]; ok {
+						println("   points to txr", txr.Id.String(), txr.Reason, txr.Tx != nil)
+					} else {
+						println("   points to no txr")
+					}
+				}
+				println()
+
 				print(e.String())
 				return
 			}
