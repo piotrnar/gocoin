@@ -12,7 +12,7 @@ import (
 var MPCheckUTXO bool = true
 
 func CheckForErrors() bool {
-	return false
+	return true
 }
 
 func (t *OneTxToSend) isInMap() (yes bool) {
