@@ -326,6 +326,7 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 				if ok {
 					print("  reason:", tr.Reason)
 				}
+				println()
 			}
 			if e != nil {
 				print(e.String())
