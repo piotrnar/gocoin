@@ -366,7 +366,7 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 	}
 	if CheckForErrors() {
 		for id, wd := range w4idone {
-			if w, yes := WaitingForInputs[wd]; !yes {
+			if w, yes := WaitingForInputs[wd]; yes {
 				println("ERROR: WaitingForInputs not completely removed -", id+1, "of", len(w4idone))
 				print("  w4i: ", w.TxID.String(), "  ids:")
 				for x, bb := range w.Ids {
