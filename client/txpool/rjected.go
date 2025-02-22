@@ -124,6 +124,8 @@ func AddRejectedTx(txr *OneTxRejected) {
 				if int(txr.ArrIndex) != TRIdxTail {
 					println("ERROR: txr.ArrIndex != TRIdxTail", int(txr.ArrIndex), TRIdxTail)
 				}
+				common.CountSafe("TxRLimNumberCount")
+				common.CountSafeAdd("TxRLimNumberBytes", uint64(txr.Footprint))
 				DeleteRejectedByTxr(txr) // this should zero the record and advance the tail to the 1st non-empty slot
 			} else {
 				panic(fmt.Sprint("TRIdxArray[", TRIdxTail, "] not found in TransactionsRejected"))
