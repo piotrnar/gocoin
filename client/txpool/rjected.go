@@ -308,7 +308,7 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 			re, ok := TransactionsRejected[rr]
 			fmt.Fprintln(e, "  - txr_idx", ii, "  bidx:", btc.BIdxString(rr), ok)
 			if ok {
-				fmt.Fprintln(e, "      ->", re.Id.String(), re.Reason, re.Tx)
+				fmt.Fprintln(e, "      ->", re.Id.String(), re.Reason, re.Tx != nil)
 			}
 		}
 	}
