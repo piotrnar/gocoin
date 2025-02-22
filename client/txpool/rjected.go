@@ -154,7 +154,6 @@ func AddRejectedTx(txr *OneTxRejected) {
 		}
 	}
 	TransactionsRejectedSize += uint64(txr.Footprint)
-	verTxrCnt()
 	limitRejectedSizeIfNeeded()
 }
 
@@ -292,24 +291,22 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 		return
 	}
 
-	w4idone := []btc.BIDX{bidx}
 	wtg_ids := make([]btc.BIDX, len(wtg.Ids), 4*len(wtg.Ids))
 	copy(wtg_ids, wtg.Ids)
 
+	// TODO: remove this when finished debugging
 	// save the entry conditions so we can print them later
-	var e *bytes.Buffer
-	if CheckForErrors() {
-		e = bytes.NewBuffer(make([]byte, 0, 2048))
-		fmt.Fprintln(e, "W4Input txid:", wtg.TxID.String())
-		fmt.Fprintln(e, "", len(wtg_ids), "recs at entry")
-		_, file, line, _ := runtime.Caller(1)
-		fmt.Fprintln(e, " called from file:", file, "  line:", line)
-		for ii, rr := range wtg_ids {
-			re, ok := TransactionsRejected[rr]
-			fmt.Fprintln(e, "  - txr_idx", ii, "  bidx:", btc.BIdxString(rr), ok)
-			if ok {
-				fmt.Fprintln(e, "      ->", re.Id.String(), re.Reason, re.Tx != nil)
-			}
+	w4idone := []btc.BIDX{bidx}
+	e := bytes.NewBuffer(make([]byte, 0, 2048))
+	fmt.Fprintln(e, "W4Input txid:", wtg.TxID.String())
+	fmt.Fprintln(e, "", len(wtg_ids), "recs at entry")
+	_, file, line, _ := runtime.Caller(1)
+	fmt.Fprintln(e, " called from file:", file, "  line:", line)
+	for ii, rr := range wtg_ids {
+		re, ok := TransactionsRejected[rr]
+		fmt.Fprintln(e, "  - txr_idx", ii, "  bidx:", btc.BIdxString(rr), ok)
+		if ok {
+			fmt.Fprintln(e, "      ->", re.Id.String(), re.Reason, re.Tx != nil)
 		}
 	}
 
@@ -319,15 +316,14 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 		if txr == nil {
 			common.CountSafe("Tx**W4InMissing") // this happens if processTx() in this loop removed the tx from our wtg_ids
 			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(k), idx)
-			if CheckForErrors() {
-				println("all list:", len(wtg_ids))
-				for _idx, _k := range wtg_ids {
-					_, ok := TransactionsRejected[_k]
-					println(" ", _idx, btc.BIdxString(_k), ok)
-				}
-				if e != nil {
-					print(e.String())
-				}
+			// TODO: remove this when finished debugging
+			println("all list:", len(wtg_ids))
+			for _idx, _k := range wtg_ids {
+				_, ok := TransactionsRejected[_k]
+				println(" ", _idx, btc.BIdxString(_k), ok)
+			}
+			if e != nil {
+				print(e.String())
 			}
 			continue
 		}
@@ -338,19 +334,20 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 			continue
 		}
 		DeleteRejectedByTxr(txr)
-		if CheckForErrors() {
-			if w, ok := WaitingForInputs[bidx]; ok {
-				if slices.Contains(w.Ids, txr.Id.BIdx()) {
-					println("ERROR: txr has just been removed but is still in w4r record")
-					println("  txr:", txr.Id.String(), txr.Reason, txr.Tx != nil)
-					print("  w4i: ", w.TxID.String(), "  ids:")
-					for _, bb := range w.Ids {
-						println("  ", btc.BIdxString(bb))
+		/*
+			if CheckForErrors() {
+				if w, ok := WaitingForInputs[bidx]; ok {
+					if slices.Contains(w.Ids, txr.Id.BIdx()) {
+						println("ERROR: txr has just been removed but is still in w4r record")
+						println("  txr:", txr.Id.String(), txr.Reason, txr.Tx != nil)
+						print("  w4i: ", w.TxID.String(), "  ids:")
+						for _, bb := range w.Ids {
+							println("  ", btc.BIdxString(bb))
+						}
+						println()
 					}
-					println()
 				}
-			}
-		}
+			}*/
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if res, t2s := processTx(pendtxrcv); res == 0 {
 			cnt++
@@ -364,26 +361,27 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 			common.CountSafePar("TxRetryRjctd-", res)
 		}
 	}
-	if CheckForErrors() {
-		for id, wd := range w4idone {
-			if w, yes := WaitingForInputs[wd]; yes {
-				println("ERROR: WaitingForInputs not completely removed -", id+1, "of", len(w4idone))
-				print("  w4i: ", w.TxID.String(), "  ids:")
-				for x, bb := range w.Ids {
-					println("  ", x, btc.BIdxString(bb))
-					if txr, ok := TransactionsRejected[bb]; ok {
-						println("   points to txr", txr.Id.String(), txr.Reason, txr.Tx != nil)
-					} else {
-						println("   points to no txr")
-					}
-				}
-				println()
 
-				print(e.String())
-				return
+	// TODO: remove this when finished debugging
+	for id, wd := range w4idone {
+		if w, yes := WaitingForInputs[wd]; yes {
+			println("ERROR: WaitingForInputs not completely removed -", id+1, "of", len(w4idone))
+			print("  w4i: ", w.TxID.String(), "  ids:")
+			for x, bb := range w.Ids {
+				println("  ", x, btc.BIdxString(bb))
+				if txr, ok := TransactionsRejected[bb]; ok {
+					println("   points to txr", txr.Id.String(), txr.Reason, txr.Tx != nil)
+				} else {
+					println("   points to no txr")
+				}
 			}
+			println()
+
+			print(e.String())
+			return
 		}
 	}
+
 	return
 }
 
@@ -464,7 +462,6 @@ func limitRejectedSizeIfNeeded() {
 		common.CountSafeAdd("TxRLimNoUtxoBytes", start_siz-WaitingForInputsSize)
 		common.CountSafeAdd("TxRLimNoUtxoCount", uint64(start_cnt-len(WaitingForInputs)))
 		//fmt.Println("Deleted", start_cnt-len(WaitingForInputs), "NoUtxo.  New size:", WaitingForInputsSize, "  new_tail:", first_valid_tail)
-		verTxrCnt()
 	}
 
 	max = atomic.LoadUint64(&common.MaxRejectedSizeBytes)
@@ -491,7 +488,6 @@ func limitRejectedSizeIfNeeded() {
 			TRIdxTail = TRIdxNext(TRIdxTail) // advance TRIdxTail manually
 		}
 	}
-	verTxrCnt()
 	common.CountSafeAdd("TxRLimSizBytes", start_siz-TransactionsRejectedSize)
 	common.CountSafeAdd("TxRLimSizCount", uint64(start_cnt-len(TransactionsRejected)))
 	//fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:", TransactionsRejectedSize, "in", len(TransactionsRejected))
@@ -553,7 +549,6 @@ func limitRejected() {
 		resizeTransactionsRejectedCount(cnt)
 		return
 	}
-	verTxrCnt()
 	limitRejectedSizeIfNeeded()
 }
 

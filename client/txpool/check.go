@@ -12,7 +12,7 @@ import (
 var MPCheckUTXO bool = true
 
 func CheckForErrors() bool {
-	return true
+	return false
 }
 
 func (t *OneTxToSend) isInMap() (yes bool) {
@@ -231,13 +231,6 @@ func checkRejectedTxs() (dupa int) {
 		fmt.Println(dupa, "TransactionsRejected count mismatch", cnt, len(TransactionsRejected))
 	}
 	return
-}
-
-// TODO: remove this when finished testing
-func verTxrCnt() {
-	if len(TransactionsRejected) != TxrCnt() {
-		panic(fmt.Sprint(" bad count: ", len(TransactionsRejected), "  / ", TxrCnt(), "  h:", TRIdxHead, "  t:", TRIdxTail))
-	}
 }
 
 func TxrCnt() (cnt int) {
