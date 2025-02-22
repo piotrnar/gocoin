@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"runtime"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -232,25 +233,24 @@ func (tr *OneTxRejected) cleanup() {
 	if tr.Waiting4 != nil {
 		w4idx := tr.Waiting4.BIdx()
 		if w4i := WaitingForInputs[w4idx]; w4i != nil {
-			newlist := make([]btc.BIDX, 0, len(w4i.Ids)-1)
-			for _, x := range w4i.Ids {
-				if x != bidx {
-					newlist = append(newlist, x)
-				}
-			}
-			if len(newlist) != len(w4i.Ids) {
-				if len(newlist) == 0 {
-					delete(WaitingForInputs, w4idx)
+			if len(w4i.Ids) == 1 {
+				if w4i.Ids[0] != bidx {
+					println("ERROR: WaitingForInputs record does not have us at the only txr\n  txr:", tr.Waiting4.String(), tr.Id.String())
 				} else {
-					w4i.Ids = newlist
+					delete(WaitingForInputs, w4idx)
 				}
 			} else {
-				println("ERROR: WaitingForInputs record", tr.Waiting4.String(), "did not point back to txr", tr.Id.String())
+				idx := slices.Index(w4i.Ids, bidx)
+				if idx < 0 {
+					println("ERROR: WaitingForInputs record len", len(w4i.Ids), "does nnot have us\n  ", tr.Waiting4.String(), tr.Id.String())
+				} else {
+					w4i.Ids = slices.Delete(w4i.Ids, idx, idx+1)
+				}
 			}
+			WaitingForInputsSize -= uint64(tr.Footprint)
 		} else {
 			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String(), "from txr", tr.Id.String())
 		}
-		WaitingForInputsSize -= uint64(tr.Footprint)
 		tr.Waiting4 = nil
 		// note that this will affect Footprint
 	}
