@@ -287,6 +287,13 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 	//return rec
 }
 
+func cnts() (s string) {
+	common.CounterMutex.Lock()
+	s = fmt.Sprint(common.Counter["TxRLimNumberCount"], "/", common.Counter["TxRLimNoUtxoCount"], "/", common.Counter["TxRLimSizCount"])
+	common.CounterMutex.Unlock()
+	return
+}
+
 // call this function after the tx has been accepted,
 // to re-submit all txs that had been waiting for it
 func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
@@ -299,14 +306,19 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 	copy(wtg_ids, wtg.Ids)
 
 	// TODO: remove this when finished debugging
-	pr_list := func(e io.Writer, wtg_ids []btc.BIDX, lab string) {
+	pr_list := func(e io.Writer, wtg_ids []btc.BIDX, lab string, full bool) {
 		fmt.Fprintln(e, ">>>", lab, ":", len(wtg_ids), "records in the list <<<")
 		for ii, rr := range wtg_ids {
 			re, ok := TransactionsRejected[rr]
-			fmt.Fprintln(e, "  - txr_idx", ii, "  bidx:", btc.BIdxString(rr), ok)
+			var sx string
 			if ok {
-				fmt.Fprintln(e, "      ->", re.Id.String(), re.Reason, re.Tx != nil)
+				if full {
+					sx = fmt.Sprint("\n   txid:", re.Id.String(), "  reason:", re.Reason, "  has_data:", re.Tx != nil)
+				} else {
+					sx = fmt.Sprint("  reason:", re.Reason, "  has_data:", re.Tx != nil)
+				}
 			}
+			fmt.Fprintln(e, "  - txr_idx", ii, "  bidx:", btc.BIdxString(rr), ok, sx)
 		}
 	}
 
@@ -315,8 +327,8 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 	e := bytes.NewBuffer(make([]byte, 0, 2048))
 	fmt.Fprintln(e, "W4Input txid:", wtg.TxID.String())
 	_, file, line, _ := runtime.Caller(1)
-	fmt.Fprintln(e, " called from file:", file, "  line:", line)
-	pr_list(e, wtg_ids, "at entry")
+	fmt.Fprintln(e, " called from file:", file, "  line:", line, "  cnts:", cnts())
+	pr_list(e, wtg_ids, "at entry", true)
 
 	for idx := 0; idx < len(wtg_ids); idx++ {
 		k := wtg_ids[idx]
@@ -325,8 +337,8 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 			common.CountSafe("Tx**W4InMissing") // this happens if processTx() in this loop removed the tx from our wtg_ids
 			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(k), idx)
 			// TODO: remove this when finished debugging
-			pr_list(os.Stderr, wtg_ids, "when crashed A")
-			pr_list(os.Stderr, wtg.Ids, "when crashed B")
+			pr_list(os.Stderr, wtg_ids, "when crashed A", false)
+			pr_list(os.Stderr, wtg.Ids, "when crashed B", false)
 			if e != nil {
 				print(e.String())
 			}
@@ -362,12 +374,12 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 				w4idone = append(w4idone, t2s.Hash.BIdx())
 			}
 			common.CountSafe("TxRetryAccepted")
-			fmt.Fprintln(e, "*", txr.Id.String(), "accepted", len(wtg.Ids))
-			pr_list(e, wtg.Ids, "after accepted")
+			fmt.Fprintln(e, "*", txr.Id.String(), "accepted", len(wtg.Ids), cnts())
+			pr_list(e, wtg.Ids, "after accepted", false)
 		} else {
 			common.CountSafePar("TxRetryRjctd-", res)
-			fmt.Fprintln(e, "*", txr.Id.String(), "rejected", res, len(wtg.Ids))
-			pr_list(e, wtg.Ids, "after rejected")
+			fmt.Fprintln(e, "*", txr.Id.String(), "rejected", res, len(wtg.Ids), cnts())
+			pr_list(e, wtg.Ids, "after rejected", false)
 		}
 	}
 
