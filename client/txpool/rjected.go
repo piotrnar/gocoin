@@ -3,6 +3,8 @@ package txpool
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"runtime"
 	"slices"
 	"sync/atomic"
@@ -297,20 +299,24 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 	copy(wtg_ids, wtg.Ids)
 
 	// TODO: remove this when finished debugging
+	pr_list := func(e io.Writer, wtg_ids []btc.BIDX, lab string) {
+		fmt.Fprintln(e, ">>>", lab, ":", len(wtg_ids), "records in the list <<<")
+		for ii, rr := range wtg_ids {
+			re, ok := TransactionsRejected[rr]
+			fmt.Fprintln(e, "  - txr_idx", ii, "  bidx:", btc.BIdxString(rr), ok)
+			if ok {
+				fmt.Fprintln(e, "      ->", re.Id.String(), re.Reason, re.Tx != nil)
+			}
+		}
+	}
+
 	// save the entry conditions so we can print them later
 	w4idone := []btc.BIDX{bidx}
 	e := bytes.NewBuffer(make([]byte, 0, 2048))
 	fmt.Fprintln(e, "W4Input txid:", wtg.TxID.String())
-	fmt.Fprintln(e, "", len(wtg_ids), "recs at entry")
 	_, file, line, _ := runtime.Caller(1)
 	fmt.Fprintln(e, " called from file:", file, "  line:", line)
-	for ii, rr := range wtg_ids {
-		re, ok := TransactionsRejected[rr]
-		fmt.Fprintln(e, "  - txr_idx", ii, "  bidx:", btc.BIdxString(rr), ok)
-		if ok {
-			fmt.Fprintln(e, "      ->", re.Id.String(), re.Reason, re.Tx != nil)
-		}
-	}
+	pr_list(e, wtg_ids, "at entry")
 
 	for idx := 0; idx < len(wtg_ids); idx++ {
 		k := wtg_ids[idx]
@@ -319,15 +325,8 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 			common.CountSafe("Tx**W4InMissing") // this happens if processTx() in this loop removed the tx from our wtg_ids
 			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(k), idx)
 			// TODO: remove this when finished debugging
-			println("all list:", len(wtg_ids))
-			for _idx, _k := range wtg_ids {
-				tr, ok := TransactionsRejected[_k]
-				print("  ", _idx, " ", btc.BIdxString(_k), " ", ok)
-				if ok {
-					print("  reason:", tr.Reason)
-				}
-				println()
-			}
+			pr_list(os.Stderr, wtg_ids, "when crashed A")
+			pr_list(os.Stderr, wtg.Ids, "when crashed B")
 			if e != nil {
 				print(e.String())
 			}
@@ -358,15 +357,17 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 		if res, t2s := processTx(pendtxrcv); res == 0 {
 			cnt++
 			// if res was 0, t2s is not nil
-			if wtg, ok := WaitingForInputs[t2s.Hash.BIdx()]; ok {
-				wtg_ids = append(wtg_ids, wtg.Ids...)
+			if wtg2, ok := WaitingForInputs[t2s.Hash.BIdx()]; ok {
+				wtg_ids = append(wtg_ids, wtg2.Ids...)
 				w4idone = append(w4idone, t2s.Hash.BIdx())
 			}
 			common.CountSafe("TxRetryAccepted")
-			fmt.Fprintln(e, "*", txr.Id.String(), "accepted")
+			fmt.Fprintln(e, "*", txr.Id.String(), "accepted", len(wtg.Ids))
+			pr_list(e, wtg.Ids, "after accepted")
 		} else {
 			common.CountSafePar("TxRetryRjctd-", res)
-			fmt.Fprintln(e, "*", txr.Id.String(), "reejcted", res)
+			fmt.Fprintln(e, "*", txr.Id.String(), "rejected", res, len(wtg.Ids))
+			pr_list(e, wtg.Ids, "after rejected")
 		}
 	}
 
