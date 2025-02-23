@@ -313,10 +313,9 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 			var sx string
 			if ok {
 				if full {
-					sx = fmt.Sprint("\n   txid:", re.Id.String(), "  reason:", re.Reason, "  has_data:", re.Tx != nil)
-				} else {
-					sx = fmt.Sprint("  reason:", re.Reason, "  has_data:", re.Tx != nil)
+					sx = fmt.Sprint("\n   txid:", re.Id.String())
 				}
+				sx += fmt.Sprint("  reason:", re.Reason, "  has_data:", re.Tx != nil)
 			}
 			fmt.Fprintln(e, "  - txr_idx", ii, "  bidx:", btc.BIdxString(rr), ok, sx)
 		}
@@ -372,11 +371,13 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 				w4idone = append(w4idone, t2s.Hash.BIdx())
 			}
 			common.CountSafe("TxRetryAccepted")
-			fmt.Fprintln(e, "*", txr.Id.String(), "accepted", len(wtg.Ids), cnts())
+			_, ok2 := WaitingForInputs[bidx]
+			fmt.Fprintln(e, "*", txr.Id.String(), "accepted", len(wtg.Ids), cnts(), ok2)
 			pr_list(e, wtg.Ids, "after accepted", false)
 		} else {
 			common.CountSafePar("TxRetryRjctd-", res)
-			fmt.Fprintln(e, "*", txr.Id.String(), "rejected", res, len(wtg.Ids), cnts())
+			_, ok2 := WaitingForInputs[bidx]
+			fmt.Fprintln(e, "*", txr.Id.String(), "rejected", res, len(wtg.Ids), cnts(), ok2)
 			pr_list(e, wtg.Ids, "after rejected", false)
 		}
 	}
