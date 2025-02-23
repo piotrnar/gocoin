@@ -307,7 +307,7 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 
 	// TODO: remove this when finished debugging
 	pr_list := func(e io.Writer, wtg_ids []btc.BIDX, lab string, full bool) {
-		fmt.Fprintln(e, ">>>", lab, ":", len(wtg_ids), "records in the list <<<")
+		fmt.Fprintln(e, ">>>", lab, ":", len(wtg_ids), "records in the list <<<", cnts())
 		for ii, rr := range wtg_ids {
 			re, ok := TransactionsRejected[rr]
 			var sx string
@@ -357,10 +357,8 @@ func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
 			if slices.Contains(w.Ids, txr.Id.BIdx()) {
 				println("ERROR: txr has just been removed but is still in w4r record")
 				println("  txr:", txr.Id.String(), txr.Reason, txr.Tx != nil)
-				print("  w4i: ", w.TxID.String(), "  ids:")
-				for _, bb := range w.Ids {
-					println("  ", btc.BIdxString(bb))
-				}
+				print("  w4i: ", w.TxID.String())
+				pr_list(e, w.Ids, "at error", false)
 				println()
 			}
 		}
