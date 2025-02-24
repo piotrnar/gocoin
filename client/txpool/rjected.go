@@ -285,7 +285,7 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 
 // call this function after the tx has been accepted,
 // to re-submit all txs that had been waiting for it
-func txAccepted(bidx btc.BIDX) (done bool, cnt int) {
+func txAccepted(bidx btc.BIDX) {
 	var delidx int
 	var wtg *OneWaitingList
 	var found bool
@@ -316,11 +316,9 @@ func txAccepted(bidx btc.BIDX) (done bool, cnt int) {
 		}
 
 		DeleteRejectedByTxr(txr) // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
-		done = true
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if res, t2s := processTx(pendtxrcv); res == 0 {
 			// if res was 0, t2s is not nil
-			cnt++
 			recs2do = append(recs2do, t2s.Hash.BIdx())
 			common.CountSafe("TxRetryAccepted")
 		} else {
