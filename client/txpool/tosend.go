@@ -163,12 +163,12 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	for _, txin := range tx.TxIn {
 		uidx := txin.Input.UIdx()
 		delete(SpentOutputs, uidx)
-
+		/*  I dont think we want to do it - only later, if it is mined
 		//  remove data of any rejected txs that use this input
 		if lst, ok := RejectedUsedUTXOs[uidx]; ok {
 			for _, bidx := range lst {
 				if txr, ok := TransactionsRejected[bidx]; ok {
-					common.CountSafePar("TxPurgeRjctUTXO-", txr.Reason)
+					common.CountSafePar("TxDelSpentRUTXO-", txr.Reason)
 					DeleteRejectedByTxr(txr)
 				} else {
 					println("ERROR: txr marked for removal but not present in TransactionsRejected")
@@ -176,6 +176,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 			}
 			delete(RejectedUsedUTXOs, uidx) // this record will not be needed anymore
 		}
+		*/
 	}
 
 	delete(TransactionsToSend, tx.Hash.BIdx())
