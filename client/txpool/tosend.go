@@ -133,50 +133,13 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 				}
 			}
 		}
-	} /*else if CheckForErrors() {
-		for vout := range tx.TxOut {
-			uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
-			if so, ok := SpentOutputs[uidx]; ok {
-				child_missing := ""
-				if child, ok := TransactionsToSend[so]; ok {
-					// extra check to exclude children that use just-mined inputs
-					if child.MemInputCnt > 0 {
-						for vo, ti := range child.TxIn {
-							if ti.Input.UIdx() == uidx {
-								if child.MemInputs[vo] {
-									child_missing = child.Id()
-									break
-								}
-							}
-						}
-					}
-				} else {
-					println("ERROR: deleting t2s", tx.Id(), "but we have its spent_out that points nowhere!!")
-				}
-				if child_missing != "" {
-					println("ERROR: deleting t2s", tx.Id(), "but we still have it's child:", child_missing)
-				}
-			}
-		}
-	}*/
+	}
 
 	for _, txin := range tx.TxIn {
 		uidx := txin.Input.UIdx()
 		delete(SpentOutputs, uidx)
-		/*  I dont think we want to do it - only later, if it is mined
-		//  remove data of any rejected txs that use this input
-		if lst, ok := RejectedUsedUTXOs[uidx]; ok {
-			for _, bidx := range lst {
-				if txr, ok := TransactionsRejected[bidx]; ok {
-					common.CountSafePar("TxDelSpentRUTXO-", txr.Reason)
-					DeleteRejectedByTxr(txr)
-				} else {
-					println("ERROR: txr marked for removal but not present in TransactionsRejected")
-				}
-			}
-			delete(RejectedUsedUTXOs, uidx) // this record will not be needed anymore
-		}
-		*/
+		// Mind that we do not want to check RejectedUsedUTXOs and remove rejected txs
+		// ... refering to these iputs. We will do it only later, if this tx is mined.
 	}
 
 	delete(TransactionsToSend, tx.Hash.BIdx())

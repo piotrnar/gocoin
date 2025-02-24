@@ -1,11 +1,7 @@
 package txpool
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"os"
-	"runtime"
 	"slices"
 	"sync/atomic"
 	"time"
@@ -287,123 +283,51 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 	//return rec
 }
 
-func cnts() (s string) {
-	common.CounterMutex.Lock()
-	s = fmt.Sprint(common.Counter["TxRLimNumberCount"], "/", common.Counter["TxRLimNoUtxoCount"], "/",
-		common.Counter["TxRLimSizCount"], ":", common.Counter["TxUsedUTXOdel"], "/", common.Counter["TxUsedUTXOrem"])
-	common.CounterMutex.Unlock()
-	return
-}
-
 // call this function after the tx has been accepted,
 // to re-submit all txs that had been waiting for it
-func txAccepted(bidx btc.BIDX) (ok bool, cnt int) {
+func txAccepted(bidx btc.BIDX) (done bool, cnt int) {
+	var delidx int
 	var wtg *OneWaitingList
-	if wtg, ok = WaitingForInputs[bidx]; !ok {
-		return
-	}
+	var found bool
+	var txr *OneTxRejected
 
-	wtg_ids := make([]btc.BIDX, len(wtg.Ids), 4*len(wtg.Ids))
-	copy(wtg_ids, wtg.Ids)
-
-	// TODO: remove this when finished debugging
-	pr_list := func(e io.Writer, wtg_ids []btc.BIDX, lab string, full bool) {
-		fmt.Fprintln(e, ">>>", lab, ":", len(wtg_ids), "records in the list <<<", cnts())
-		for ii, rr := range wtg_ids {
-			re, ok := TransactionsRejected[rr]
-			var sx string
-			if ok {
-				if full {
-					sx = fmt.Sprint("\n   txid:", re.Id.String())
-				}
-				sx += fmt.Sprint("  reason:", re.Reason, "  has_data:", re.Tx != nil)
-			}
-			fmt.Fprintln(e, "  - txr_idx", ii, "  bidx:", btc.BIdxString(rr), ok, sx)
-		}
-	}
-
-	// save the entry conditions so we can print them later
-	w4idone := []btc.BIDX{bidx}
-	e := bytes.NewBuffer(make([]byte, 0, 2048))
-	fmt.Fprintln(e, "W4Input txid:", wtg.TxID.String())
-	_, file, line, _ := runtime.Caller(1)
-	fmt.Fprintln(e, " called from file:", file, "  line:", line, "  cnts:", cnts())
-	pr_list(e, wtg_ids, "at entry", true)
-
-	for idx := 0; idx < len(wtg_ids); idx++ {
-		k := wtg_ids[idx]
-		txr := TransactionsRejected[k]
-		if txr == nil {
-			common.CountSafe("Tx**W4InMissing") // this happens if processTx() in this loop removed the tx from our wtg_ids
-			println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(k), idx)
-			// TODO: remove this when finished debugging
-			pr_list(os.Stderr, wtg_ids, "when crashed A", false)
-			pr_list(os.Stderr, wtg.Ids, "when crashed B", false)
-			if e != nil {
-				print(e.String())
+	recs2do := []btc.BIDX{bidx}
+	for {
+		if wtg, found = WaitingForInputs[recs2do[delidx]]; !found {
+			delidx++
+			if delidx == len(recs2do) {
+				return
 			}
 			continue
+		} else if len(wtg.Ids) == 0 {
+			println("ERROR: WaitingForInput record has no Ids")
+			panic("This should not happen")
 		}
-		//if CheckForErrors() { // TODO: always check it, as it's not time consuming and there have been issues here
-		if txr.Tx == nil || txr.Reason != TX_REJECTED_NO_TXOU {
-			// this should never happen
-			println("ERROR: WaitingForInput found in rejected, but bad data or reason:", txr.Id.String(), txr.Tx, txr.Reason)
-			continue
-		}
-		DeleteRejectedByTxr(txr)
 
-		// TODO: remove this when finished debugging
-		if w, ok := WaitingForInputs[bidx]; ok {
-			if slices.Contains(w.Ids, txr.Id.BIdx()) {
-				println("ERROR: txr has just been removed but is still in w4r record")
-				println("  txr:", txr.Id.String(), txr.Reason, txr.Tx != nil)
-				print("  w4i: ", w.TxID.String())
-				pr_list(e, w.Ids, "at error", false)
-				println()
+		txr = TransactionsRejected[wtg.Ids[0]] // always remove the first one ...
+
+		if CheckForErrors() {
+			if txr == nil {
+				println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(wtg.Ids[0]), "/", len(wtg.Ids))
+				panic("This should not happen")
+			} else if txr.Tx == nil || txr.Reason != TX_REJECTED_NO_TXOU {
+				println("ERROR: WaitingForInput found in rejected, but bad data or reason:", txr.Id.String(), txr.Tx, txr.Reason)
+				panic("This should not happen")
 			}
 		}
 
+		DeleteRejectedByTxr(txr) // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
+		done = true
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if res, t2s := processTx(pendtxrcv); res == 0 {
-			cnt++
 			// if res was 0, t2s is not nil
-			if wtg2, ok := WaitingForInputs[t2s.Hash.BIdx()]; ok {
-				wtg_ids = append(wtg_ids, wtg2.Ids...)
-				w4idone = append(w4idone, t2s.Hash.BIdx())
-			}
+			cnt++
+			recs2do = append(recs2do, t2s.Hash.BIdx())
 			common.CountSafe("TxRetryAccepted")
-			_, ok2 := WaitingForInputs[bidx]
-			fmt.Fprintln(e, "*", txr.Id.String(), "accepted", len(wtg.Ids), cnts(), ok2)
-			pr_list(e, wtg.Ids, "after accepted", false)
 		} else {
 			common.CountSafePar("TxRetryRjctd-", res)
-			_, ok2 := WaitingForInputs[bidx]
-			fmt.Fprintln(e, "*", txr.Id.String(), "rejected", res, len(wtg.Ids), cnts(), ok2)
-			pr_list(e, wtg.Ids, "after rejected", false)
 		}
 	}
-
-	// TODO: remove this when finished debugging
-	for id, wd := range w4idone {
-		if w, yes := WaitingForInputs[wd]; yes {
-			println("ERROR: WaitingForInputs not completely removed -", id+1, "of", len(w4idone))
-			print("  w4i: ", w.TxID.String(), "  ids:")
-			for x, bb := range w.Ids {
-				println("  ", x, btc.BIdxString(bb))
-				if txr, ok := TransactionsRejected[bb]; ok {
-					println("   points to txr", txr.Id.String(), txr.Reason, txr.Tx != nil)
-				} else {
-					println("   points to no txr")
-				}
-			}
-			println()
-
-			print(e.String())
-			return
-		}
-	}
-
-	return
 }
 
 // Make sure to call it with locked TxMutex
