@@ -289,7 +289,9 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 
 func cnts() (s string) {
 	common.CounterMutex.Lock()
-	s = fmt.Sprint(common.Counter["TxRLimNumberCount"], "/", common.Counter["TxRLimNoUtxoCount"], "/", common.Counter["TxRLimSizCount"])
+	s = fmt.Sprint(common.Counter["TxRLimNumberCount"], "/", common.Counter["TxRLimNoUtxoCount"],
+		"/", common.Counter["TxRLimSizCount"], ":", common.Counter["TxUsedUTXOdel"], "/", common.Counter["TxUsedUTXOrem"],
+		":", common.Counter["TxPurgeRjctUTXO-202"])
 	common.CounterMutex.Unlock()
 	return
 }
