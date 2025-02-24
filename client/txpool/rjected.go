@@ -294,8 +294,7 @@ func txAccepted(bidx btc.BIDX) (done bool, cnt int) {
 	recs2do := []btc.BIDX{bidx}
 	for {
 		if wtg, found = WaitingForInputs[recs2do[delidx]]; !found {
-			delidx++
-			if delidx == len(recs2do) {
+			if delidx++; delidx == len(recs2do) {
 				return
 			}
 			continue
