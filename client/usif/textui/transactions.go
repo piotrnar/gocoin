@@ -94,7 +94,7 @@ func del_tx(par string) {
 		return
 	}
 	if txr, ok := txpool.TransactionsRejected[txid.BIdx()]; ok {
-		txpool.DeleteRejectedByTxr(txr)
+		txr.Delete()
 		fmt.Println("TxR", txid.String(), "removed from Rejected")
 		return
 	}

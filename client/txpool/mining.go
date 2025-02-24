@@ -130,7 +130,7 @@ func txMined(tx *btc.Tx) {
 			// it is - remove all rejected tx that would use any of just mined inputs
 			for _, rbidx := range lst {
 				if txr, ok := TransactionsRejected[rbidx]; ok {
-					DeleteRejectedByTxr(txr)
+					txr.Delete()
 					if rbidx == bidx {
 						common.CountSafePar("TxMinedRjctdA-", txr.Reason)
 						was_rejected = true
@@ -151,7 +151,7 @@ func txMined(tx *btc.Tx) {
 
 	if mr, ok := TransactionsRejected[bidx]; ok {
 		common.CountSafePar("TxMinedRjctd-", mr.Reason)
-		DeleteRejectedByTxr(mr)
+		mr.Delete()
 		return
 	}
 
@@ -192,7 +192,7 @@ func BlockUndone(bl *btc.Block) {
 	FeePackagesDirty = true
 	for _, tx := range bl.Txs[1:] {
 		if tr, ok := TransactionsRejected[tx.Hash.BIdx()]; ok {
-			DeleteRejectedByTxr(tr)
+			tr.Delete()
 			common.CountSafePar("TxUnmineRejected-", tr.Reason)
 		}
 

@@ -350,7 +350,7 @@ func MempoolLoad() bool {
 			if txr, er = newOneTxRejectedFromFile(rd); er != nil {
 				goto fatal_error
 			}
-			AddRejectedTx(txr)
+			txr.Add()
 		}
 	}
 

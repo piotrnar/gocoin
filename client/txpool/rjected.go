@@ -103,7 +103,7 @@ func TRIdIsZeroArrayRec(idx int) bool {
 }
 
 // Make sure to call it with locked TxMutex.
-func AddRejectedTx(txr *OneTxRejected) {
+func (txr *OneTxRejected) Add() {
 	bidx := txr.Id.BIdx()
 	if CheckForErrors() {
 		if _, ok := TransactionsRejected[bidx]; ok {
@@ -124,7 +124,7 @@ func AddRejectedTx(txr *OneTxRejected) {
 				}
 				common.CountSafe("TxRLimNumberCount")
 				common.CountSafeAdd("TxRLimNumberBytes", uint64(txr.Footprint))
-				DeleteRejectedByTxr(txr) // this should zero the record and advance the tail to the 1st non-empty slot
+				txr.Delete() // this should zero the record and advance the tail to the 1st non-empty slot
 			} else {
 				panic(fmt.Sprint("TRIdxArray[", TRIdxTail, "] not found in TransactionsRejected"))
 			}
@@ -158,10 +158,7 @@ func AddRejectedTx(txr *OneTxRejected) {
 }
 
 // Make sure to call it with locked TxMutex
-func DeleteRejectedByTxr(txr *OneTxRejected) {
-	/*if ns := uint32(txr.SysSize()); txr.Footprint != ns {
-		println("Footprint of txr", txr.Id.String(), "has been fucked up:", txr.Footprint, "=>", ns)
-	}*/
+func (txr *OneTxRejected) Delete() {
 	common.CountSafePar("TxRejectedDel-", txr.Reason)
 	TransactionsRejectedSize -= uint64(txr.Footprint)
 	if txr.Tx != nil {
@@ -177,25 +174,13 @@ func DeleteRejectedByTxr(txr *OneTxRejected) {
 		}
 
 	}
-	deleteTransactionsRejected(txr.Id.BIdx())
-}
-
-// TODO: get rid of it after debugging finished
-func deleteTransactionsRejected(bidx btc.BIDX) {
-	txr := TransactionsRejected[bidx]
-	if txr == nil {
-		panic("trying to remove not existing TransactionsRejected")
-	}
-	if txr.Waiting4 != nil {
-		panic("trying to remove TransactionsRejected that still has Waiting4")
-	}
-	delete(TransactionsRejected, bidx)
+	delete(TransactionsRejected, txr.Id.BIdx())
 }
 
 // Make sure to call it with locked TxMutex
 func DeleteRejectedByIdx(bidx btc.BIDX, musthave bool) {
 	if txr, ok := TransactionsRejected[bidx]; ok {
-		DeleteRejectedByTxr(txr)
+		txr.Delete()
 	} else if musthave {
 		panic("DeleteRejectedByIdx " + btc.BIdxString(bidx) + " not found in TransactionsRejected")
 	}
@@ -279,7 +264,7 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 	tx.Clean()
 	txr.Footprint = uint32(txr.SysSize())
 	common.CountSafePar("TxRejected-", txr.Reason)
-	AddRejectedTx(txr)
+	txr.Add()
 	//return rec
 }
 
@@ -315,7 +300,7 @@ func txAccepted(bidx btc.BIDX) {
 			}
 		}
 
-		DeleteRejectedByTxr(txr) // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
+		txr.Delete() // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if res, t2s := processTx(pendtxrcv); res == 0 {
 			// if res was 0, t2s is not nil
@@ -395,7 +380,7 @@ func limitRejectedSizeIfNeeded() {
 				continue
 			}
 			if txr, ok := TransactionsRejected[TRIdxArray[idx]]; ok && txr.Waiting4 != nil {
-				DeleteRejectedByTxr(txr) // this should do TRIdZeroArrayRec and (may) advance TRIdxTail
+				txr.Delete() // this should do TRIdZeroArrayRec and (may) advance TRIdxTail
 				if WaitingForInputsSize <= max {
 					break
 				}
@@ -419,7 +404,7 @@ func limitRejectedSizeIfNeeded() {
 				if TRIdxTail != int(txr.ArrIndex) {
 					panic("txr's ArrIndex does not point to the tail")
 				}
-				DeleteRejectedByTxr(txr) // this should do TRIdZeroArrayRec and advance TRIdxTail
+				txr.Delete() // this should do TRIdZeroArrayRec and advance TRIdxTail
 			} else {
 				panic(fmt.Sprint("TRIdxArray[", TRIdxTail, "] not found in TransactionsRejected"))
 			}
@@ -470,7 +455,7 @@ func resizeTransactionsRejectedCount(newcnt int) {
 			if txr.Tx != nil {
 				txr.cleanup()
 			}
-			deleteTransactionsRejected(bidx)
+			delete(TransactionsRejected, bidx)
 		} else {
 			txr.ArrIndex = uint16(TRIdxHead)
 			TRIdxArray[TRIdxHead] = bidx
