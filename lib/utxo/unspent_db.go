@@ -112,13 +112,25 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	}
 
 	// Load data from disk
-	var k UtxoKeyType
 	var cnt_dwn, cnt_dwn_from, perc int
 	var le uint64
 	var u64, tot_recs uint64
 	var info string
 	var rd *bufio.Reader
 	var of *os.File
+
+	const CHANNEL_SIZE = 4
+	const RECS_PACK_SIZE = 0x10000
+	var wg sync.WaitGroup
+	type one_rec struct {
+		k UtxoKeyType
+		b []byte
+	}
+	//var rec *one_rec
+	var rec_idx, pool_idx int
+	var recpool [CHANNEL_SIZE][RECS_PACK_SIZE]one_rec
+	var ch chan []one_rec
+	var recs []one_rec
 
 	fname := "UTXO.db"
 
@@ -162,6 +174,23 @@ redo:
 		info = fmt.Sprint("\rLoading ", u64, " plain txs from ", fname, " - ")
 	}
 
+	// use background routine for map updates
+	ch = make(chan []one_rec, CHANNEL_SIZE-1)
+	recs = recpool[pool_idx][:]
+	wg.Add(1)
+	go func() {
+		for {
+			if recs := <-ch; recs == nil {
+				wg.Done()
+				return
+			} else {
+				for _, r := range recs {
+					db.HashMap[r.k[0]][r.k] = r.b
+				}
+			}
+		}
+	}()
+
 	for tot_recs = 0; tot_recs < u64; tot_recs++ {
 		if opts.AbortNow != nil && *opts.AbortNow {
 			break
@@ -171,19 +200,24 @@ redo:
 			goto fatal_error
 		}
 
-		_, er = io.ReadFull(rd, k[:])
-		if er != nil {
+		rec := &recs[rec_idx]
+		if _, er = io.ReadFull(rd, rec.k[:]); er != nil {
 			goto fatal_error
 		}
 
-		b := Memory_Malloc(int(le) - UtxoIdxLen)
-		_, er = io.ReadFull(rd, b)
-		if er != nil {
+		rec.b = Memory_Malloc(int(le) - UtxoIdxLen)
+		if _, er = io.ReadFull(rd, rec.b); er != nil {
 			goto fatal_error
 		}
 
-		// we don't lock RWMutex here as this code is only used during init phase, when no other routines are running
-		db.HashMap[k[0]][k] = b
+		if rec_idx == len(recs)-1 {
+			ch <- recs
+			rec_idx = 0
+			pool_idx = (pool_idx + 1) % CHANNEL_SIZE
+			recs = recpool[pool_idx][:]
+		} else {
+			rec_idx++
+		}
 
 		if cnt_dwn == 0 {
 			fmt.Print(info, perc, "% complete ... ")
@@ -193,6 +227,11 @@ redo:
 			cnt_dwn--
 		}
 	}
+	if rec_idx > 0 {
+		ch <- recs[:rec_idx]
+	}
+	ch <- nil
+	wg.Wait()
 	of.Close()
 
 	fmt.Print("\r                                                                 \r")
