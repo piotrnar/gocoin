@@ -119,7 +119,8 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	var rd *bufio.Reader
 	var of *os.File
 
-	const CHANNEL_SIZE = 4
+	const BUFFERS_CNT = 6
+	const CHANNEL_SIZE = BUFFERS_CNT - 2
 	const RECS_PACK_SIZE = 0x10000
 	var wg sync.WaitGroup
 	type one_rec struct {
@@ -128,7 +129,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	}
 	//var rec *one_rec
 	var rec_idx, pool_idx int
-	var recpool [CHANNEL_SIZE][RECS_PACK_SIZE]one_rec
+	var recpool [BUFFERS_CNT][RECS_PACK_SIZE]one_rec
 	var ch chan []one_rec
 	var recs []one_rec
 
@@ -175,7 +176,7 @@ redo:
 	}
 
 	// use background routine for map updates
-	ch = make(chan []one_rec, CHANNEL_SIZE-1)
+	ch = make(chan []one_rec, CHANNEL_SIZE)
 	recs = recpool[pool_idx][:]
 	wg.Add(1)
 	go func() {
@@ -213,7 +214,7 @@ redo:
 		if rec_idx == len(recs)-1 {
 			ch <- recs
 			rec_idx = 0
-			pool_idx = (pool_idx + 1) % CHANNEL_SIZE
+			pool_idx = (pool_idx + 1) % BUFFERS_CNT
 			recs = recpool[pool_idx][:]
 		} else {
 			rec_idx++
