@@ -478,7 +478,9 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 				outs = append(outs, true)
 			}
 			copy(ind[:], tx.Hash.Hash[:])
+			db.MapMutex[ind[0]].Lock()
 			db.del(ind, outs[:len(tx.TxOut)])
+			db.MapMutex[ind[0]].Unlock()
 		}
 	}
 
@@ -598,10 +600,11 @@ func (db *UnspentDB) TxPresent(id *btc.Uint256) (res bool) {
 	return
 }
 
+// call it with locked mutex
 func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
-	db.MapMutex[ind[0]].RLock()
+	//db.MapMutex[ind[0]].RLock()
 	v := db.HashMap[ind[0]][ind]
-	db.MapMutex[ind[0]].RUnlock()
+	//db.MapMutex[ind[0]].RUnlock()
 	if v == nil {
 		return // no such txid in UTXO (just ignore delete request)
 	}
@@ -617,13 +620,13 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 			anyout = true
 		}
 	}
-	db.MapMutex[ind[0]].Lock()
+	//db.MapMutex[ind[0]].Lock()
 	if anyout {
 		db.HashMap[ind[0]][ind] = Serialize(rec, false, nil)
 	} else {
 		delete(db.HashMap[ind[0]], ind)
 	}
-	db.MapMutex[ind[0]].Unlock()
+	//db.MapMutex[ind[0]].Unlock()
 	Memory_Free(v)
 }
 
@@ -635,6 +638,7 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 	for idx := range changes.AddList {
 		wg.Add(1)
 		go func(idx int) {
+			db.MapMutex[idx].Lock()
 			for _, rec := range changes.AddList[idx] {
 				copy(ind[:], rec.TxID[:])
 				if db.CB.NotifyTxAdd != nil {
@@ -658,11 +662,11 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 					db.HashMap[idx][ind] = Serialize(rec, false, nil)
 				}
 			}
-
 			for k, v := range changes.DeledTxs[idx] {
 				copy(ind[:], k[:])
 				db.del(ind, v)
 			}
+			db.MapMutex[idx].Unlock()
 			wg.Done()
 		}(idx)
 	}
