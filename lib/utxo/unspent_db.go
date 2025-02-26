@@ -459,25 +459,12 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 	defer db.Mutex.Unlock()
 	db.abortWriting()
 
-	// first we have to delete all bl.Txs from our set
-	if db.CB.NotifyTxDel == nil {
-		// if we don't need to notify the wallet, we can do it quicker
-		for _, tx := range bl.Txs {
-			var ind UtxoKeyType
-			copy(ind[:], tx.Hash.Hash[:])
-			db.MapMutex[ind[0]].Lock()
-			delete(db.HashMap[ind[0]], ind)
-			db.MapMutex[ind[0]].Unlock()
+	for _, tx := range bl.Txs {
+		lst := make([]bool, len(tx.TxOut))
+		for i := range lst {
+			lst[i] = true
 		}
-	} else {
-		// otherwise do it the slow way, using db.del()
-		outs := make([]bool, 0, 0x10000)
-		for _, tx := range bl.Txs {
-			for len(outs) < len(tx.TxOut) {
-				outs = append(outs, true)
-			}
-			db.del(tx.Hash.Hash[:], outs[:len(tx.TxOut)])
-		}
+		db.del(tx.Hash.Hash[:], lst)
 	}
 
 	fn := fmt.Sprint(db.dir_undo, db.LastBlockHeight)
@@ -603,7 +590,7 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 	v := db.HashMap[ind[0]][ind]
 	db.MapMutex[ind[0]].RUnlock()
 	if v == nil {
-		return // no such txid in UTXO (just ignore delete request)
+		return // no such txid in UTXO (just ignorde delete request)
 	}
 	rec := NewUtxoRec(ind, v)
 	if db.CB.NotifyTxDel != nil {
@@ -663,10 +650,10 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 	}
 	for k, v := range changes.DeledTxs {
 		wg.Add(1)
-		go func(k []byte, v []bool) {
-			db.del(k, v)
+		go func(k [32]byte, v []bool) {
+			db.del(k[:], v)
 			wg.Done()
-		}(k[:], v)
+		}(k, v)
 	}
 	wg.Wait()
 }
