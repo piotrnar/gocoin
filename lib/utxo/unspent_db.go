@@ -632,12 +632,12 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 
 func (db *UnspentDB) commit(changes *BlockChanges) {
 	var wg sync.WaitGroup
-	var ind UtxoKeyType
 
 	// Now apply the unspent changes
-	for idx := range changes.AddList {
+	for idx := 0; idx != 256; idx++ {
 		wg.Add(1)
 		go func(idx int) {
+			var ind UtxoKeyType
 			db.MapMutex[idx].Lock()
 			for _, rec := range changes.AddList[idx] {
 				copy(ind[:], rec.TxID[:])
@@ -670,7 +670,6 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 			wg.Done()
 		}(idx)
 	}
-
 	wg.Wait()
 }
 
