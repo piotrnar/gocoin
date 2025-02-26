@@ -44,8 +44,8 @@ type CallbackFunctions struct {
 type BlockChanges struct {
 	Height          uint32
 	LastKnownHeight uint32 // put here zero to disable this feature
-	AddList         []*UtxoRec
-	DeledTxs        map[[32]byte][]bool
+	AddList         [256][]*UtxoRec
+	DeledTxs        [256]map[[32]byte][]bool
 	UndoData        map[[32]byte]*UtxoRec
 }
 
@@ -630,45 +630,43 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 func (db *UnspentDB) commit(changes *BlockChanges) {
 	var wg sync.WaitGroup
 	var ind UtxoKeyType
-	// Now aplly the unspent changes
-	for _, rec := range changes.AddList {
-		copy(ind[:], rec.TxID[:])
-		if db.CB.NotifyTxAdd != nil {
-			db.CB.NotifyTxAdd(rec)
-		}
-		var add_this_tx bool
-		if UTXO_PURGE_UNSPENDABLE {
-			for idx, r := range rec.Outs {
-				if r != nil {
-					if script.IsUnspendable(r.PKScr) {
-						rec.Outs[idx] = nil
-					} else {
-						add_this_tx = true
+
+	// Now apply the unspent changes
+	for idx := range changes.AddList {
+		wg.Add(1)
+		go func(idx int) {
+			for _, rec := range changes.AddList[idx] {
+				copy(ind[:], rec.TxID[:])
+				if db.CB.NotifyTxAdd != nil {
+					db.CB.NotifyTxAdd(rec)
+				}
+				var add_this_tx bool
+				if UTXO_PURGE_UNSPENDABLE {
+					for idx, r := range rec.Outs {
+						if r != nil {
+							if script.IsUnspendable(r.PKScr) {
+								rec.Outs[idx] = nil
+							} else {
+								add_this_tx = true
+							}
+						}
 					}
+				} else {
+					add_this_tx = true
+				}
+				if add_this_tx {
+					db.HashMap[idx][ind] = Serialize(rec, false, nil)
 				}
 			}
-		} else {
-			add_this_tx = true
-		}
-		if add_this_tx {
-			wg.Add(1)
-			go func(ind UtxoKeyType, rec *UtxoRec) {
-				v := Serialize(rec, false, nil)
-				db.MapMutex[ind[0]].Lock()
-				db.HashMap[ind[0]][ind] = v
-				db.MapMutex[ind[0]].Unlock()
-				wg.Done()
-			}(ind, rec)
-		}
-	}
-	for k, v := range changes.DeledTxs {
-		wg.Add(1)
-		copy(ind[:], k[:])
-		go func(ind UtxoKeyType, v []bool) {
-			db.del(ind, v)
+
+			for k, v := range changes.DeledTxs[idx] {
+				copy(ind[:], k[:])
+				db.del(ind, v)
+			}
 			wg.Done()
-		}(ind, v)
+		}(idx)
 	}
+
 	wg.Wait()
 }
 
