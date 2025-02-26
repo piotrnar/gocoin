@@ -3,6 +3,7 @@ package chain
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -268,9 +269,7 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 		}
 
 		// Add each tx outs from the currently executed TX to the temporary pool
-		outs := make([]*btc.TxOut, len(bl.Txs[i].TxOut))
-		copy(outs, bl.Txs[i].TxOut)
-		blUnsp[bl.Txs[i].Hash.Hash] = outs
+		blUnsp[bl.Txs[i].Hash.Hash] = slices.Clone(bl.Txs[i].TxOut)
 	}
 
 	if !bl.Trusted.Get() {
