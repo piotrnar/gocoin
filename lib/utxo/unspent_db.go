@@ -635,6 +635,9 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 
 	// Now apply the unspent changes
 	for idx := range changes.AddList {
+		if changes.DeledTxs[idx] == nil && changes.AddList[idx] == nil {
+			continue
+		}
 		wg.Add(1)
 		go func(idx int) {
 			db.MapMutex[idx].Lock()
