@@ -298,6 +298,7 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 	}
 
 	var rec *utxo.UtxoRec
+	changes.AddList = make([]*utxo.UtxoRec, 0, len(blUnsp))
 	for k, v := range blUnsp {
 		for i := range v {
 			if v[i] != nil {
