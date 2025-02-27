@@ -12,6 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -44,8 +45,8 @@ type CallbackFunctions struct {
 type BlockChanges struct {
 	Height          uint32
 	LastKnownHeight uint32 // put here zero to disable this feature
-	AddList         [][]*UtxoRec
-	DeledTxs        []map[[32]byte][]bool
+	AddList         []*UtxoRec
+	DeledTxs        map[[32]byte][]bool
 	UndoData        map[[32]byte]*UtxoRec
 }
 
@@ -478,9 +479,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 				outs = append(outs, true)
 			}
 			copy(ind[:], tx.Hash.Hash[:])
-			db.MapMutex[ind[0]].Lock()
 			db.del(ind, outs[:len(tx.TxOut)])
-			db.MapMutex[ind[0]].Unlock()
 		}
 	}
 
@@ -600,11 +599,10 @@ func (db *UnspentDB) TxPresent(id *btc.Uint256) (res bool) {
 	return
 }
 
-// call it with locked mutex
 func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
-	//db.MapMutex[ind[0]].RLock()
+	db.MapMutex[ind[0]].RLock()
 	v := db.HashMap[ind[0]][ind]
-	//db.MapMutex[ind[0]].RUnlock()
+	db.MapMutex[ind[0]].RUnlock()
 	if v == nil {
 		return // no such txid in UTXO (just ignore delete request)
 	}
@@ -620,61 +618,98 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 			anyout = true
 		}
 	}
-	//db.MapMutex[ind[0]].Lock()
+	db.MapMutex[ind[0]].Lock()
 	if anyout {
 		db.HashMap[ind[0]][ind] = Serialize(rec, false, nil)
 	} else {
 		delete(db.HashMap[ind[0]], ind)
 	}
-	//db.MapMutex[ind[0]].Unlock()
+	db.MapMutex[ind[0]].Unlock()
 	Memory_Free(v)
 }
 
 func (db *UnspentDB) commit(changes *BlockChanges) {
+	const OPS_AT_ONCE = 64
 	var wg sync.WaitGroup
 
-	// Now apply the unspent changes
-	for idx := range changes.AddList {
-		toadd := changes.AddList[idx]
-		todel := changes.DeledTxs[idx]
-		if toadd == nil && todel == nil {
-			continue
+	type one_del_rec struct {
+		k UtxoKeyType
+		v []bool
+	}
+	do_del := func(list []one_del_rec) {
+		for _, rec := range list {
+			db.del(rec.k, rec.v)
 		}
-		wg.Add(1)
-		go func(toadd []*UtxoRec, todel map[[32]byte][]bool) {
-			var ind UtxoKeyType
-			//db.MapMutex[idx].Lock()
-			for _, rec := range toadd {
-				copy(ind[:], rec.TxID[:])
-				if db.CB.NotifyTxAdd != nil {
-					db.CB.NotifyTxAdd(rec)
-				}
-				var add_this_tx bool
-				if UTXO_PURGE_UNSPENDABLE {
-					for idx2, r := range rec.Outs {
-						if r != nil {
-							if script.IsUnspendable(r.PKScr) {
-								rec.Outs[idx2] = nil
-							} else {
-								add_this_tx = true
-							}
+		wg.Done()
+	}
+
+	do_add := func(list []*UtxoRec) {
+		var ind UtxoKeyType
+		for _, rec := range list {
+			ind = *(*UtxoKeyType)(unsafe.Pointer(&rec.TxID[0]))
+			copy(ind[:], rec.TxID[:])
+			if db.CB.NotifyTxAdd != nil {
+				db.CB.NotifyTxAdd(rec)
+			}
+			var add_this_tx bool
+			if UTXO_PURGE_UNSPENDABLE {
+				for idx, r := range rec.Outs {
+					if r != nil {
+						if script.IsUnspendable(r.PKScr) {
+							rec.Outs[idx] = nil
+						} else {
+							add_this_tx = true
 						}
 					}
-				} else {
-					add_this_tx = true
 				}
-				if add_this_tx {
-					db.HashMap[ind[0]][ind] = Serialize(rec, false, nil)
-				}
+			} else {
+				add_this_tx = true
 			}
-			for k, v := range todel {
-				copy(ind[:], k[:])
-				db.del(ind, v)
+			if add_this_tx {
+				v := Serialize(rec, false, nil)
+				db.MapMutex[ind[0]].Lock()
+				db.HashMap[ind[0]][ind] = v
+				db.MapMutex[ind[0]].Unlock()
 			}
-			//db.MapMutex[idx].Unlock()
-			wg.Done()
-		}(toadd, todel)
+		}
+		wg.Done()
 	}
+
+	if len(changes.DeledTxs) > 0 {
+		thelist := make([]one_del_rec, 0, len(changes.DeledTxs))
+		var offs, cnt int
+		for k, v := range changes.DeledTxs {
+			ind := *(*UtxoKeyType)(unsafe.Pointer(&k[0]))
+			thelist = append(thelist, one_del_rec{k: ind, v: v})
+			if cnt == OPS_AT_ONCE-1 {
+				wg.Add(1)
+				go do_del(thelist[offs : offs+OPS_AT_ONCE])
+				offs += OPS_AT_ONCE
+				cnt = 0
+			} else {
+				cnt++
+			}
+		}
+		if cnt > 0 {
+			wg.Add(1)
+			go do_del(thelist[offs:])
+		}
+	}
+
+	if len(changes.AddList) != 0 {
+		var offs int
+		for {
+			wg.Add(1)
+			if offs+OPS_AT_ONCE >= len(changes.AddList) {
+				go do_add(changes.AddList[offs:])
+				break
+			} else {
+				go do_add(changes.AddList[offs : offs+OPS_AT_ONCE])
+				offs += OPS_AT_ONCE
+			}
+		}
+	}
+
 	wg.Wait()
 }
 
