@@ -644,10 +644,8 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 	}
 
 	do_add := func(list []*UtxoRec) {
-		var ind UtxoKeyType
 		for _, rec := range list {
-			ind = *(*UtxoKeyType)(unsafe.Pointer(&rec.TxID[0]))
-			copy(ind[:], rec.TxID[:])
+			ind := *(*UtxoKeyType)(unsafe.Pointer(&rec.TxID[0]))
 			if db.CB.NotifyTxAdd != nil {
 				db.CB.NotifyTxAdd(rec)
 			}
