@@ -3,6 +3,7 @@ package chain
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -20,6 +21,8 @@ func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) 
 	changes = new(utxo.BlockChanges)
 	changes.Height = height
 	changes.LastKnownHeight = lknown
+	changes.AddList = make([][]*utxo.UtxoRec, runtime.NumCPU())
+	changes.DeledTxs = make([]map[[32]byte][]bool, runtime.NumCPU())
 	sigopscost, e = ch.commitTxs(bl, changes)
 	return
 }
@@ -140,10 +143,11 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 			// first collect all the inputs, their amounts and spend scripts
 			for j := 0; j < len(bl.Txs[i].TxIn); j++ {
 				inp := &bl.Txs[i].TxIn[j].Input
+				del_list_idx := int(inp.Hash[0]) % len(changes.AddList)
 				var was_spent bool
 				var spent_map []bool
-				if changes.DeledTxs[inp.Hash[0]] != nil {
-					spent_map, was_spent = changes.DeledTxs[inp.Hash[0]][inp.Hash]
+				if changes.DeledTxs[del_list_idx] != nil {
+					spent_map, was_spent = changes.DeledTxs[del_list_idx][inp.Hash]
 					if was_spent {
 						if int(inp.Vout) >= len(spent_map) {
 							println("txin", inp.String(), "did not have vout", inp.Vout)
@@ -193,10 +197,10 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 					// it is confirmed already so delete it later
 					if !was_spent {
 						spent_map = make([]bool, tout.VoutCount)
-						if changes.DeledTxs[inp.Hash[0]] == nil {
-							changes.DeledTxs[inp.Hash[0]] = make(map[[32]byte][]bool)
+						if changes.DeledTxs[del_list_idx] == nil {
+							changes.DeledTxs[del_list_idx] = make(map[[32]byte][]bool)
 						}
-						changes.DeledTxs[inp.Hash[0]][inp.Hash] = spent_map
+						changes.DeledTxs[del_list_idx][inp.Hash] = spent_map
 					}
 					spent_map[inp.Vout] = true
 
@@ -312,7 +316,8 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 			}
 		}
 		if rec != nil {
-			changes.AddList[rec.TxID[0]] = append(changes.AddList[rec.TxID[0]], rec)
+			add_list_idx := int(rec.TxID[0]) % len(changes.AddList)
+			changes.AddList[add_list_idx] = append(changes.AddList[add_list_idx], rec)
 			rec = nil
 		}
 	}

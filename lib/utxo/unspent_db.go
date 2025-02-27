@@ -44,8 +44,8 @@ type CallbackFunctions struct {
 type BlockChanges struct {
 	Height          uint32
 	LastKnownHeight uint32 // put here zero to disable this feature
-	AddList         [256][]*UtxoRec
-	DeledTxs        [256]map[[32]byte][]bool
+	AddList         [][]*UtxoRec
+	DeledTxs        []map[[32]byte][]bool
 	UndoData        map[[32]byte]*UtxoRec
 }
 
@@ -634,22 +634,27 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 	var wg sync.WaitGroup
 
 	// Now apply the unspent changes
-	for idx := 0; idx != 256; idx++ {
+	for idx := range changes.AddList {
+		toadd := changes.AddList[idx]
+		todel := changes.DeledTxs[idx]
+		if toadd == nil && todel == nil {
+			continue
+		}
 		wg.Add(1)
-		go func(idx int) {
+		go func(toadd []*UtxoRec, todel map[[32]byte][]bool) {
 			var ind UtxoKeyType
-			db.MapMutex[idx].Lock()
-			for _, rec := range changes.AddList[idx] {
+			//db.MapMutex[idx].Lock()
+			for _, rec := range toadd {
 				copy(ind[:], rec.TxID[:])
 				if db.CB.NotifyTxAdd != nil {
 					db.CB.NotifyTxAdd(rec)
 				}
 				var add_this_tx bool
 				if UTXO_PURGE_UNSPENDABLE {
-					for idx, r := range rec.Outs {
+					for idx2, r := range rec.Outs {
 						if r != nil {
 							if script.IsUnspendable(r.PKScr) {
-								rec.Outs[idx] = nil
+								rec.Outs[idx2] = nil
 							} else {
 								add_this_tx = true
 							}
@@ -659,16 +664,16 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 					add_this_tx = true
 				}
 				if add_this_tx {
-					db.HashMap[idx][ind] = Serialize(rec, false, nil)
+					db.HashMap[ind[0]][ind] = Serialize(rec, false, nil)
 				}
 			}
-			for k, v := range changes.DeledTxs[idx] {
+			for k, v := range todel {
 				copy(ind[:], k[:])
 				db.del(ind, v)
 			}
-			db.MapMutex[idx].Unlock()
+			//db.MapMutex[idx].Unlock()
 			wg.Done()
-		}(idx)
+		}(toadd, todel)
 	}
 	wg.Wait()
 }
