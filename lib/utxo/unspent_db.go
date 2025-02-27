@@ -645,7 +645,6 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 
 	do_add := func(list []*UtxoRec) {
 		for _, rec := range list {
-			ind := *(*UtxoKeyType)(unsafe.Pointer(&rec.TxID[0]))
 			if db.CB.NotifyTxAdd != nil {
 				db.CB.NotifyTxAdd(rec)
 			}
@@ -664,6 +663,7 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 				add_this_tx = true
 			}
 			if add_this_tx {
+				ind := *(*UtxoKeyType)(unsafe.Pointer(&rec.TxID[0]))
 				v := Serialize(rec, false, nil)
 				db.MapMutex[ind[0]].Lock()
 				db.HashMap[ind[0]][ind] = v
