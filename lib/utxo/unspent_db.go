@@ -628,11 +628,10 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 }
 
 func (db *UnspentDB) commit(changes *BlockChanges) {
-	var wg sync.WaitGroup
 	var ind UtxoKeyType
+	var wg sync.WaitGroup
 	// Now aplly the unspent changes
 	for _, rec := range changes.AddList {
-		copy(ind[:], rec.TxID[:])
 		if db.CB.NotifyTxAdd != nil {
 			db.CB.NotifyTxAdd(rec)
 		}
@@ -652,6 +651,7 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 		}
 		if add_this_tx {
 			wg.Add(1)
+			copy(ind[:], rec.TxID[:])
 			go func(ind UtxoKeyType, rec *UtxoRec) {
 				v := Serialize(rec, false, nil)
 				db.MapMutex[ind[0]].Lock()
