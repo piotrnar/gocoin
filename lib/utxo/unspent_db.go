@@ -638,6 +638,11 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 		wg.Add(1)
 		go func(idx int) {
 			db.MapMutex[idx].Lock()
+			for k, v := range changes.DeledTxs[idx] {
+				var ind UtxoKeyType
+				copy(ind[:], k[:])
+				db.del(ind, v)
+			}
 			for _, rec := range changes.AddList[idx] {
 				if db.CB.NotifyTxAdd != nil {
 					db.CB.NotifyTxAdd(rec)
@@ -661,11 +666,6 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 					copy(ind[:], rec.TxID[:])
 					db.HashMap[idx][ind] = Serialize(rec, false, nil)
 				}
-			}
-			for k, v := range changes.DeledTxs[idx] {
-				var ind UtxoKeyType
-				copy(ind[:], k[:])
-				db.del(ind, v)
 			}
 			db.MapMutex[idx].Unlock()
 			wg.Done()

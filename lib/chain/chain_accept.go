@@ -140,10 +140,11 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 			// first collect all the inputs, their amounts and spend scripts
 			for j := 0; j < len(bl.Txs[i].TxIn); j++ {
 				inp := &bl.Txs[i].TxIn[j].Input
+				del_idx := int(inp.Hash[0])
 				var was_spent bool
 				var spent_map []bool
-				if changes.DeledTxs[inp.Hash[0]] != nil {
-					spent_map, was_spent = changes.DeledTxs[inp.Hash[0]][inp.Hash]
+				if changes.DeledTxs[del_idx] != nil {
+					spent_map, was_spent = changes.DeledTxs[del_idx][inp.Hash]
 					if was_spent {
 						if int(inp.Vout) >= len(spent_map) {
 							println("txin", inp.String(), "did not have vout", inp.Vout)
@@ -193,10 +194,10 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 					// it is confirmed already so delete it later
 					if !was_spent {
 						spent_map = make([]bool, tout.VoutCount)
-						if changes.DeledTxs[inp.Hash[0]] == nil {
-							changes.DeledTxs[inp.Hash[0]] = make(map[[32]byte][]bool)
+						if changes.DeledTxs[del_idx] == nil {
+							changes.DeledTxs[del_idx] = make(map[[32]byte][]bool)
 						}
-						changes.DeledTxs[inp.Hash[0]][inp.Hash] = spent_map
+						changes.DeledTxs[del_idx][inp.Hash] = spent_map
 					}
 					spent_map[inp.Vout] = true
 
@@ -298,7 +299,6 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 	}
 
 	var rec *utxo.UtxoRec
-	changes.AddList = make([]*utxo.UtxoRec, 0, len(blUnsp))
 	for k, v := range blUnsp {
 		for i := range v {
 			if v[i] != nil {
@@ -313,7 +313,11 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 			}
 		}
 		if rec != nil {
-			changes.AddList[rec.TxID[0]] = append(changes.AddList[rec.TxID[0]], rec)
+			add_idx := int(rec.TxID[0])
+			if len(changes.AddList[add_idx]) == 0 {
+				changes.AddList[add_idx] = make([]*utxo.UtxoRec, 0, len(blUnsp)/64)
+			}
+			changes.AddList[add_idx] = append(changes.AddList[add_idx], rec)
 			rec = nil
 		}
 	}
