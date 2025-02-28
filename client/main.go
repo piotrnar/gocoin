@@ -33,7 +33,6 @@ var (
 	SaveBlockChain    *time.Timer = time.NewTimer(1<<63 - 1)
 
 	NetBlocksSize sys.SyncInt
-	NetBlocksDone = make(chan bool)
 
 	exitat *uint = flag.Uint("exitat", 0, "Auto exit node after comitting block with the given height")
 )
@@ -235,7 +234,6 @@ func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 func HandleNetBlock(newbl *network.BlockRcvd) {
 	if common.Last.ParseTill != nil {
 		NetBlocksSize.Add(-len(newbl.Block.Raw))
-		NetBlocksDone <- true
 	}
 
 	defer func() {
@@ -402,19 +400,11 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 		network.ReceivedBlocks[bl.Hash.BIdx()] = rb
 		network.MutexRcv.Unlock()
 
-		network.NetBlocks <- &network.BlockRcvd{Conn: nil, Block: bl, BlockTreeNode: nxt,
-			OneReceivedBlock: rb, BlockExtraInfo: nil}
+		network.NetBlocks <- &network.BlockRcvd{Block: bl, BlockTreeNode: nxt, OneReceivedBlock: rb}
 
 		NetBlocksSize.Add(len(bl.Raw))
-		for {
-			select {
-			case <-NetBlocksDone:
-			default:
-			}
-			if NetBlocksSize.Get() <= 64*1024*1024 {
-				break
-			}
-			<-NetBlocksDone // wait for the size to change
+		for NetBlocksSize.Get() > 64*1024*1024 {
+			time.Sleep(10 * time.Millisecond)
 		}
 		last = nxt
 	}
