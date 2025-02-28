@@ -494,10 +494,6 @@ func kill_node(par string) {
 	os.Exit(1)
 }
 
-func do_z(par string) {
-	println("Max In:", common.WorkIn+1, "    Max Out:", common.WorkOut+1)
-}
-
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("cache", true, show_cached, "Show blocks cached in memory")
@@ -519,5 +515,4 @@ func init() {
 	newUi("trust", true, switch_trust, "Assume all downloaded blocks trusted: 0|1")
 	newUi("undo", true, undo_block, "Undo one last block")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
-	newUi("z", false, do_z, "dop the z thing")
 }
