@@ -351,7 +351,7 @@ type one_work struct {
 
 var (
 	tx_build_work = make(chan one_work, 8)
-	ready_blocks  = make(chan one_work, 8)
+	ready_blocks  = make(chan one_work, 4)
 )
 
 func do_the_blocks(end *chain.BlockTreeNode) {
