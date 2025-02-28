@@ -120,7 +120,8 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.UpdateScriptFlags(bl.VerifyFlags)
 
 		if common.Last.ParseTill != nil && (common.Last.Block.Height%100e3) == 0 {
-			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(), len(tx_build_work), len(ready_blocks))
+			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(),
+				"  Queues:", len(tx_build_work), len(ready_blocks), len(network.NetBlocks))
 		}
 
 		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
