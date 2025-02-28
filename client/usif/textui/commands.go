@@ -495,7 +495,7 @@ func kill_node(par string) {
 }
 
 func do_z(par string) {
-	println("Max In:", common.Max_in+1, "    Max Out:", common.Max_out+1)
+	println("Max In:", common.WorkIn+1, "    Max Out:", common.WorkOut+1)
 }
 
 func init() {

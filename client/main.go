@@ -119,7 +119,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.UpdateScriptFlags(bl.VerifyFlags)
 
 		if common.Last.ParseTill != nil && (common.Last.Block.Height%100e3) == 0 {
-			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(), common.Max_in, common.Max_out)
+			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(), common.WorkIn, common.WorkOut)
 		}
 
 		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
@@ -372,9 +372,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 	go func() {
 		for {
 			wrk := <-tx_build_work
-			if len(tx_build_work) > common.Max_in {
-				common.Max_in = len(tx_build_work)
-			}
+			common.WorkIn = len(tx_build_work)
 			if wrk.bl == nil {
 				wg.Done()
 				return
@@ -392,9 +390,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 	for last != end {
 		if len(ready_blocks) > 0 {
 			work_done := <-ready_blocks
-			if len(ready_blocks) > common.Max_out {
-				common.Max_out = len(ready_blocks)
-			}
+			common.WorkOut = len(ready_blocks)
 			work_done.rb.TmDownload = time.Now()
 			network.MutexRcv.Lock()
 			network.ReceivedBlocks[work_done.bl.Hash.BIdx()] = work_done.rb
