@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"sync"
+	"sync/atomic"
 
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
@@ -118,11 +119,62 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 	offs := bl.TxOffset
 
 	var wg sync.WaitGroup
-	var data2hash, witness2hash []byte
+	var bl_TotalInputs, bl_PaidTxsVSize uint64
+	var bl_OrbTxCnt, bl_OrbTxSize, bl_OrbTxWeight uint64
+	bl_NoWitnessSize := 80 + uint64(VLenSize(uint64(bl.TxCount)))
+	bl_BlockWeight := 4 * bl_NoWitnessSize
 
-	bl.NoWitnessSize = 80 + VLenSize(uint64(bl.TxCount))
-	bl.BlockWeight = 4 * uint(bl.NoWitnessSize)
+	do_txs := func(txlist []*Tx) {
+		var data2hash, witness2hash []byte
+		for _, tx := range txlist {
+			coinbase := tx == bl.Txs[0]
+			tx.Size = uint32(len(tx.Raw))
+			if coinbase {
+				for _, ou := range bl.Txs[0].TxOut {
+					ou.WasCoinbase = true
+				}
+			} else {
+				// Coinbase tx does not have an input
+				bl_TotalInputs += uint64(len(tx.TxIn))
+			}
+			if tx.SegWit != nil {
+				data2hash = tx.Serialize()
+				tx.NoWitSize = uint32(len(data2hash))
+				if !coinbase {
+					witness2hash = tx.Raw
+				}
+			} else {
+				data2hash = tx.Raw
+				tx.NoWitSize = tx.Size
+				witness2hash = nil
+			}
+			weight := uint64(3*tx.NoWitSize + tx.Size)
+			atomic.AddUint64(&bl_BlockWeight, weight)
+			if !coinbase {
+				atomic.AddUint64(&bl_PaidTxsVSize, uint64(tx.VSize()))
+			}
+			atomic.AddUint64(&bl_NoWitnessSize, uint64(len(data2hash)))
+			if !coinbase {
+				if yes, _ := tx.ContainsOrdFile(true); yes {
+					atomic.AddUint64(&bl_OrbTxCnt, 1)
+					atomic.AddUint64(&bl_OrbTxSize, uint64(tx.Size))
+					atomic.AddUint64(&bl_OrbTxWeight, weight)
+				}
+			}
 
+			if dohash {
+				tx.Hash.Calc(data2hash) // Calculate tx hash in a background
+				if witness2hash != nil {
+					tx.wTxID.Calc(witness2hash)
+				}
+			}
+		}
+		wg.Done()
+	}
+
+	const TXS_PACK_SIZE = 4096
+	var pack_start_idx int
+	pack_start_offs := offs
 	for i := 0; i < bl.TxCount; i++ {
 		var n int
 		bl.Txs[i], n = NewTx(bl.Raw[offs:])
@@ -132,55 +184,26 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 			break
 		}
 		bl.Txs[i].Raw = bl.Raw[offs : offs+n]
-		bl.Txs[i].Size = uint32(n)
-		if i == 0 {
-			for _, ou := range bl.Txs[0].TxOut {
-				ou.WasCoinbase = true
-			}
-		} else {
-			// Coinbase tx does not have an input
-			bl.TotalInputs += len(bl.Txs[i].TxIn)
-		}
-		if bl.Txs[i].SegWit != nil {
-			data2hash = bl.Txs[i].Serialize()
-			bl.Txs[i].NoWitSize = uint32(len(data2hash))
-			if i > 0 {
-				witness2hash = bl.Txs[i].Raw
-			}
-		} else {
-			data2hash = bl.Txs[i].Raw
-			bl.Txs[i].NoWitSize = bl.Txs[i].Size
-			witness2hash = nil
-		}
-		weight := uint(3*bl.Txs[i].NoWitSize + bl.Txs[i].Size)
-		bl.BlockWeight += weight
-		if i > 0 {
-			bl.PaidTxsVSize += uint(bl.Txs[i].VSize())
-		}
-		bl.NoWitnessSize += len(data2hash)
-		if i != 0 {
-			if yes, _ := bl.Txs[i].ContainsOrdFile(true); yes {
-				bl.OrbTxCnt++
-				bl.OrbTxSize += uint(n)
-				bl.OrbTxWeight += weight
-			}
-		}
-
-		if dohash {
-			wg.Add(1)
-			go func(tx *Tx, b, w []byte) {
-				tx.Hash.Calc(b) // Calculate tx hash in a background
-				if w != nil {
-					tx.wTxID.Calc(w)
-				}
-				wg.Done()
-			}(bl.Txs[i], data2hash, witness2hash)
-		}
 		offs += n
+		if offs-pack_start_offs >= TXS_PACK_SIZE {
+			wg.Add(1)
+			go do_txs(bl.Txs[pack_start_idx : i+1])
+			pack_start_offs = offs
+			pack_start_idx = i + 1
+		}
 	}
-
+	if offs > pack_start_offs {
+		wg.Add(1)
+		go do_txs(bl.Txs[pack_start_idx:])
+	}
 	wg.Wait()
-
+	bl.NoWitnessSize = int(bl_NoWitnessSize)
+	bl.BlockWeight = uint(bl_BlockWeight)
+	bl.TotalInputs = int(bl_TotalInputs)
+	bl.PaidTxsVSize = uint(bl_PaidTxsVSize)
+	bl.OrbTxCnt = uint(bl_OrbTxCnt)
+	bl.OrbTxSize = uint(bl_OrbTxSize)
+	bl.OrbTxWeight = uint(bl_OrbTxWeight)
 	return
 }
 

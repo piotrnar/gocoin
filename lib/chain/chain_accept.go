@@ -232,15 +232,16 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 
 			// second, verify the scrips:
 			if !tx_trusted { // run VerifyTxScript() in a parallel task
-				for j := 0; j < len(bl.Txs[i].TxIn); j++ {
-					wg.Add(1)
-					go func(i int, tx *btc.Tx) {
-						if !script.VerifyTxScript(tx.Spent_outputs[i].Pk_script, &script.SigChecker{Amount: tx.Spent_outputs[i].Value, Idx: i, Tx: tx}, bl.VerifyFlags) {
+				wg.Add(1)
+				go func(tx *btc.Tx) {
+					for i := range tx.TxIn {
+						if !script.VerifyTxScript(tx.Spent_outputs[i].Pk_script,
+							&script.SigChecker{Amount: tx.Spent_outputs[i].Value, Idx: i, Tx: tx}, bl.VerifyFlags) {
 							atomic.AddUint32(&ver_err_cnt, 1)
 						}
-						wg.Done()
-					}(j, bl.Txs[i])
-				}
+					}
+					wg.Done()
+				}(bl.Txs[i])
 			}
 
 		} else {

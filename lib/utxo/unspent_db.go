@@ -629,7 +629,7 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 }
 
 func (db *UnspentDB) commit(changes *BlockChanges) {
-	const OPS_AT_ONCE = 64
+	const OPS_AT_ONCE = 32
 	var wg sync.WaitGroup
 
 	type one_del_rec struct {
