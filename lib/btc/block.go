@@ -126,8 +126,6 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 		for _, tx := range txlist {
 			coinbase := tx == bl.Txs[0]
 			tx.Size = uint32(len(tx.Raw))
-			weight := uint64(3*tx.NoWitSize + tx.Size)
-			atomic.AddUint64(&block_weight, weight)
 			if coinbase {
 				for _, ou := range bl.Txs[0].TxOut {
 					ou.WasCoinbase = true
@@ -144,6 +142,8 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 				tx.NoWitSize = tx.Size
 				witness2hash = nil
 			}
+			weight := uint64(3*tx.NoWitSize + tx.Size)
+			atomic.AddUint64(&block_weight, weight)
 			if dohash {
 				tx.Hash.Calc(data2hash) // Calculate tx hash in a background
 				if witness2hash != nil {
