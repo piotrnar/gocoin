@@ -33,6 +33,7 @@ var (
 	SaveBlockChain    *time.Timer = time.NewTimer(1<<63 - 1)
 
 	NetBlocksSize sys.SyncInt
+	NetBlockDone  = make(chan bool)
 
 	exitat *uint = flag.Uint("exitat", 0, "Auto exit node after comitting block with the given height")
 )
@@ -119,7 +120,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.UpdateScriptFlags(bl.VerifyFlags)
 
 		if common.Last.ParseTill != nil && (common.Last.Block.Height%100e3) == 0 {
-			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(), workIn, workOut)
+			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(), len(tx_build_work), len(ready_blocks))
 		}
 
 		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
@@ -234,6 +235,10 @@ func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 func HandleNetBlock(newbl *network.BlockRcvd) {
 	if common.Last.ParseTill != nil {
 		NetBlocksSize.Add(-len(newbl.Block.Raw))
+		select {
+		case NetBlockDone <- true:
+		default:
+		}
 	}
 
 	defer func() {
@@ -338,11 +343,24 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	msg.Done.Done()
 }
 
-var workIn, workOut int
+type one_work struct {
+	bl  *btc.Block
+	nxt *chain.BlockTreeNode
+	rb  *network.OneReceivedBlock
+}
+
+var (
+	tx_build_work = make(chan one_work, 8)
+	ready_blocks  = make(chan one_work, 8)
+)
 
 func do_the_blocks(end *chain.BlockTreeNode) {
 	sta := time.Now()
 	last := common.BlockChain.LastBlock()
+	var work_todo, work_done one_work
+	var er error
+	var work_ready bool
+	var all_done bool
 
 	if last != end {
 		func() {
@@ -360,94 +378,83 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 
 	}
 
-	type one_work struct {
-		bl  *btc.Block
-		nxt *chain.BlockTreeNode
-		rb  *network.OneReceivedBlock
-	}
-	tx_build_work := make(chan one_work, 80)
-	ready_blocks := make(chan one_work, 80)
-	var wg sync.WaitGroup
-	var work one_work
-	var er error
-	wg.Add(1)
 	go func() {
 		for {
 			wrk := <-tx_build_work
-			workIn = len(tx_build_work)
 			if wrk.bl == nil {
-				wg.Done()
 				return
 			}
 			if er := wrk.bl.BuildTxList(); er != nil {
-				fmt.Println("bl.BuildTxList() error - corrupt database:", er.Error())
-				panic("This should not happen. Fix the database before restarting.")
+				panic("ERROR: bl.BuildTxList() error - corrupt database:" + er.Error())
 			}
 			ready_blocks <- wrk
 		}
 	}()
 
-	var work_ready bool
-
-	for last != end {
-		if len(ready_blocks) > 0 {
-			work_done := <-ready_blocks
-			workOut = len(ready_blocks)
-			work_done.rb.TmDownload = time.Now()
-			network.MutexRcv.Lock()
-			network.ReceivedBlocks[work_done.bl.Hash.BIdx()] = work_done.rb
-			network.MutexRcv.Unlock()
-			network.NetBlocks <- &network.BlockRcvd{Conn: nil, Block: work_done.bl,
-				BlockTreeNode: work_done.nxt, OneReceivedBlock: work_done.rb, BlockExtraInfo: nil}
+	handle_work_done := func(wrk *one_work) {
+		wrk.rb.TmDownload = time.Now()
+		network.MutexRcv.Lock()
+		network.ReceivedBlocks[wrk.bl.Hash.BIdx()] = wrk.rb
+		network.MutexRcv.Unlock()
+		network.NetBlocks <- &network.BlockRcvd{Block: wrk.bl, BlockTreeNode: wrk.nxt, OneReceivedBlock: wrk.rb}
+		if wrk.nxt == end {
+			all_done = true
 		}
+	}
 
+	for !all_done {
 		if work_ready {
-			if NetBlocksSize.Get() > 16*1024*1024 {
-				time.Sleep(10 * time.Millisecond)
-				continue
+			select {
+			case <-NetBlockDone:
+			default:
 			}
-			tx_build_work <- work
-			work_ready = false
+			if NetBlocksSize.Get() > 64*1024*1024 {
+				select {
+				case work_done = <-ready_blocks:
+					handle_work_done(&work_done)
+				case <-NetBlockDone:
+				}
+			} else {
+				select {
+				case work_done = <-ready_blocks:
+					handle_work_done(&work_done)
+				case tx_build_work <- work_todo:
+					work_ready = false
+				}
+			}
+		} else if len(ready_blocks) > 0 || last == end {
+			work_done = <-ready_blocks
+			handle_work_done(&work_done)
+		} else {
+			if work_todo.nxt = last.FindPathTo(end); work_todo.nxt == nil {
+				panic("ERROR: last.FindPathTo returned nil - corrupt database")
+			}
+			if work_todo.nxt.BlockSize == 0 {
+				panic("ERROR: BlockSize is zero - corrupt database")
+			}
+
+			work_todo.rb = &network.OneReceivedBlock{TmStart: sta, TmPreproc: time.Now()}
+			crec, trusted, _ := common.BlockChain.Blocks.BlockGetInternal(work_todo.nxt.BlockHash, true)
+			if crec == nil || crec.Data == nil {
+				panic(fmt.Sprint("ERROR: No data for block #", work_todo.nxt.Height, " ", work_todo.nxt.BlockHash.String()))
+			}
+
+			if work_todo.bl, er = btc.NewBlock(crec.Data); er != nil {
+				panic("btc.NewBlock() error - corrupt database:" + er.Error())
+			}
+			work_todo.bl.Height = work_todo.nxt.Height
+			work_todo.bl.Trusted.Store(trusted)
+
+			// Recover the flags to be used when verifying scripts for non-trusted blocks (stored orphaned blocks)
+			common.BlockChain.ApplyBlockFlags(work_todo.bl)
+
+			NetBlocksSize.Add(len(work_todo.bl.Raw))
+			work_ready = true
+
+			last = work_todo.nxt
 		}
-
-		if len(tx_build_work) == cap(tx_build_work) {
-			time.Sleep(10 * time.Millisecond)
-			continue
-		}
-
-		if work.nxt = last.FindPathTo(end); work.nxt == nil {
-			break
-		}
-		if work.nxt.BlockSize == 0 {
-			fmt.Println("BlockSize is zero - corrupt database")
-			panic("This should not happen. Fix the database before restarting.")
-		}
-
-		work.rb = &network.OneReceivedBlock{TmStart: sta}
-		work.rb.TmPreproc = time.Now()
-		crec, trusted, _ := common.BlockChain.Blocks.BlockGetInternal(work.nxt.BlockHash, true)
-		if crec == nil || crec.Data == nil {
-			panic(fmt.Sprint("No data for block #", work.nxt.Height, " ", work.nxt.BlockHash.String()))
-		}
-
-		if work.bl, er = btc.NewBlock(crec.Data); er != nil {
-			fmt.Println("btc.NewBlock() error - corrupt database")
-			panic("This should not happen. Fix the database before restarting.")
-		}
-		work.bl.Height = work.nxt.Height
-		work.bl.Trusted.Store(trusted)
-
-		// Recover the flags to be used when verifying scripts for non-trusted blocks (stored orphaned blocks)
-		common.BlockChain.ApplyBlockFlags(work.bl)
-
-		NetBlocksSize.Add(len(work.bl.Raw))
-		work_ready = true
-
-		last = work.nxt
 	}
 	tx_build_work <- one_work{}
-	wg.Wait()
-	//fmt.Println("all blocks queued", len(network.NetBlocks))
 }
 
 func fetch_balances_now() {
