@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
-	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 
@@ -214,15 +214,15 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	ReceivedBlocks[idx] = orb
 	DelB2G(idx) //remove it from BlocksToGet if no more pending downloads
 
-	store_on_disk := len(BlocksToGet) > 10 && common.Get(&common.CFG.Memory.CacheOnDisk) && len(b2g.Block.Raw) > 16*1024
-	// TODO: should not store on disk bocks with height close to the current top
+	store_on_disk := len(BlocksToGet) > 10 && common.Get(&common.CFG.Memory.CacheOnDisk) &&
+		len(b2g.Block.Raw) > 16*1024 && LastCommitedHeader.Height-b2g.BlockTreeNode.Height > 10
 	MutexRcv.Unlock()
 
 	var bei *btc.BlockExtraInfo
 
 	size := len(b2g.Block.Raw)
 	if store_on_disk {
-		if e := ioutil.WriteFile(common.TempBlocksDir()+hash.String(), b2g.Block.Raw, 0600); e == nil {
+		if e := os.WriteFile(common.TempBlocksDir()+hash.String(), b2g.Block.Raw, 0600); e == nil {
 			bei = new(btc.BlockExtraInfo)
 			*bei = b2g.Block.BlockExtraInfo
 			b2g.Block = nil

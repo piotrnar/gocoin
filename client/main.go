@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -186,7 +185,7 @@ func retry_cached_blocks() bool {
 
 			if newbl.Block == nil {
 				tmpfn := common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
-				dat, e := ioutil.ReadFile(tmpfn)
+				dat, e := os.ReadFile(tmpfn)
 				os.Remove(tmpfn)
 				if e != nil {
 					panic(e.Error())
@@ -261,7 +260,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 	if newbl.Block == nil {
 		tmpfn := common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
-		dat, e := ioutil.ReadFile(tmpfn)
+		dat, e := os.ReadFile(tmpfn)
 		os.Remove(tmpfn)
 		if e != nil {
 			panic(e.Error())
