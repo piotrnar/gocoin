@@ -215,6 +215,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	DelB2G(idx) //remove it from BlocksToGet if no more pending downloads
 
 	store_on_disk := len(BlocksToGet) > 10 && common.Get(&common.CFG.Memory.CacheOnDisk) && len(b2g.Block.Raw) > 16*1024
+	// TODO: should not store on disk bocks with height close to the current top
 	MutexRcv.Unlock()
 
 	var bei *btc.BlockExtraInfo
@@ -228,6 +229,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		} else {
 			println("write tmp block:", e.Error())
 		}
+		// TODO: also save tx_ids, so you dont have to rehash later
 	}
 
 	NetBlocks <- &BlockRcvd{Conn: conn, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode,
