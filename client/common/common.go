@@ -23,6 +23,8 @@ const (
 )
 
 var (
+	Max_in, Max_out int
+
 	Services uint64 = btc.SERVICE_SEGWIT | btc.SERVICE_NETWORK_LIMITED // It updates this value in InitConfig()
 
 	LogBuffer             = new(bytes.Buffer)
