@@ -115,7 +115,7 @@ func LoadBlockFees() {
 
 var (
 	AverageFeeMutex     sync.Mutex
-	AverageFeeBytes     uint64
+	AverageFeeWeight    uint64
 	AverageFeeTotal     uint64
 	AverageFee_SPB      float64
 	averageFeeLastBlock *chain.BlockTreeNode
@@ -144,7 +144,7 @@ func GetAverageFee() float64 {
 	averageFeeLastBlock = end
 	averageFeeLastCount = blocks
 
-	AverageFeeBytes = 0
+	AverageFeeWeight = 0
 	AverageFeeTotal = 0
 
 	for blocks > 0 {
@@ -168,18 +168,18 @@ func GetAverageFee() float64 {
 			AverageFeeTotal += uint64(fees_from_this_block)
 		}
 
-		AverageFeeBytes += uint64(rb.ThePaidVSize)
+		AverageFeeWeight += uint64(rb.PaidTxsWeight)
 
 		blocks--
 		end = end.Parent
 	}
-	if AverageFeeBytes == 0 {
+	if AverageFeeWeight == 0 {
 		if AverageFeeTotal != 0 {
 			panic("Impossible that miner gest a fee with no transactions in the block")
 		}
 		AverageFee_SPB = 0
 	} else {
-		AverageFee_SPB = float64(AverageFeeTotal) / float64(AverageFeeBytes)
+		AverageFee_SPB = float64(4*AverageFeeTotal) / float64(AverageFeeWeight)
 	}
 	return AverageFee_SPB
 }

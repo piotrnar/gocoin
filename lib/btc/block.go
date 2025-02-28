@@ -14,25 +14,23 @@ type Block struct {
 	Raw               []byte
 	Hash              *Uint256
 	Txs               []*Tx
-	TxCount, TxOffset int          // Number of transactions and byte offset to the first one
+	TxCount, TxOffset int // Number of transactions and byte offset to the first one
+	TotalInputs       int
+	BlockWeight       uint
 	Trusted           sys.SyncBool // if the block is trusted, we do not check signatures and some other things...
+	BlockExtraInfo                 // If we cache block on disk (between downloading and comitting), this data has to be preserved
 	LastKnownHeight   uint32
+	MedianPastTime    uint32 // Set in PreCheckBlock() .. last used in PostCheckBlock()
+}
 
-	BlockExtraInfo // If we cache block on disk (between downloading and comitting), this data has to be preserved
-
-	MedianPastTime uint32 // Set in PreCheckBlock() .. last used in PostCheckBlock()
-
+type BlockUserInfo struct {
 	// These flags are set in BuildTxList() used later (e.g. by script.VerifyTxScript):
 	NoWitnessSize int
-	BlockWeight   uint
-	PaidTxsVSize  uint
-	TotalInputs   int
+	PaidTxsWeight uint
 
 	OrbTxCnt    uint
 	OrbTxSize   uint
 	OrbTxWeight uint
-
-	NoWitnessData []byte // This is set by BuildNoWitnessData()
 }
 
 type BlockExtraInfo struct {
@@ -117,25 +115,21 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 
 	// It would be more elegant to use bytes.Reader here, but this solution is ~20% faster.
 	offs := bl.TxOffset
-
 	var wg sync.WaitGroup
-	var bl_TotalInputs, bl_PaidTxsVSize uint64
-	var bl_OrbTxCnt, bl_OrbTxSize, bl_OrbTxWeight uint64
-	bl_NoWitnessSize := 80 + uint64(VLenSize(uint64(bl.TxCount)))
-	bl_BlockWeight := 4 * bl_NoWitnessSize
+
+	block_weight := 4 * (80 + uint64(VLenSize(uint64(bl.TxCount))))
 
 	do_txs := func(txlist []*Tx) {
 		var data2hash, witness2hash []byte
 		for _, tx := range txlist {
 			coinbase := tx == bl.Txs[0]
 			tx.Size = uint32(len(tx.Raw))
+			weight := uint64(3*tx.NoWitSize + tx.Size)
+			atomic.AddUint64(&block_weight, weight)
 			if coinbase {
 				for _, ou := range bl.Txs[0].TxOut {
 					ou.WasCoinbase = true
 				}
-			} else {
-				// Coinbase tx does not have an input
-				bl_TotalInputs += uint64(len(tx.TxIn))
 			}
 			if tx.SegWit != nil {
 				data2hash = tx.Serialize()
@@ -148,20 +142,6 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 				tx.NoWitSize = tx.Size
 				witness2hash = nil
 			}
-			weight := uint64(3*tx.NoWitSize + tx.Size)
-			atomic.AddUint64(&bl_BlockWeight, weight)
-			if !coinbase {
-				atomic.AddUint64(&bl_PaidTxsVSize, uint64(tx.VSize()))
-			}
-			atomic.AddUint64(&bl_NoWitnessSize, uint64(len(data2hash)))
-			if !coinbase {
-				if yes, _ := tx.ContainsOrdFile(true); yes {
-					atomic.AddUint64(&bl_OrbTxCnt, 1)
-					atomic.AddUint64(&bl_OrbTxSize, uint64(tx.Size))
-					atomic.AddUint64(&bl_OrbTxWeight, weight)
-				}
-			}
-
 			if dohash {
 				tx.Hash.Calc(data2hash) // Calculate tx hash in a background
 				if witness2hash != nil {
@@ -176,14 +156,15 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 	var pack_start_idx int
 	pack_start_offs := offs
 	for i := 0; i < bl.TxCount; i++ {
-		var n int
-		bl.Txs[i], n = NewTx(bl.Raw[offs:])
-		if bl.Txs[i] == nil || n == 0 {
+		tx, n := NewTx(bl.Raw[offs:])
+		if tx == nil || n == 0 {
 			e = errors.New("NewTx failed")
 			bl.Txs = bl.Txs[:i] // make sure we don't leave any nil pointers in bl.Txs
 			break
 		}
-		bl.Txs[i].Raw = bl.Raw[offs : offs+n]
+		tx.Raw = bl.Raw[offs : offs+n]
+		bl.TotalInputs += len(tx.TxIn)
+		bl.Txs[i] = tx
 		offs += n
 		if offs-pack_start_offs >= TXS_PACK_SIZE {
 			wg.Add(1)
@@ -197,42 +178,33 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 		go do_txs(bl.Txs[pack_start_idx:])
 	}
 	wg.Wait()
-	bl.NoWitnessSize = int(bl_NoWitnessSize)
-	bl.BlockWeight = uint(bl_BlockWeight)
-	bl.TotalInputs = int(bl_TotalInputs)
-	bl.PaidTxsVSize = uint(bl_PaidTxsVSize)
-	bl.OrbTxCnt = uint(bl_OrbTxCnt)
-	bl.OrbTxSize = uint(bl_OrbTxSize)
-	bl.OrbTxWeight = uint(bl_OrbTxWeight)
+	bl.BlockWeight = uint(block_weight)
+	return
+}
+
+func (bl *Block) GetUserInfo() (res *BlockUserInfo) {
+	res = new(BlockUserInfo)
+	res.NoWitnessSize = 80 + VLenSize(uint64(bl.TxCount))
+	for idx, tx := range bl.Txs {
+		coinbase := idx == 0
+		tx.Size = uint32(len(tx.Raw))
+		res.NoWitnessSize += int(tx.NoWitSize)
+		if !coinbase {
+			weight := uint64(3*tx.NoWitSize + tx.Size)
+			res.PaidTxsWeight += uint(weight)
+			if yes, _ := tx.ContainsOrdFile(true); yes {
+				res.OrbTxCnt++
+				res.OrbTxSize += uint(tx.Size)
+				res.OrbTxWeight += uint(weight)
+			}
+		}
+	}
 	return
 }
 
 // BuildTxList parses a block's transactions and adds them to the structure, always calculating TX IDs.
 func (bl *Block) BuildTxList() (e error) {
 	return bl.BuildTxListExt(true)
-}
-
-// The block data in non-segwit format
-func (bl *Block) BuildNoWitnessData() (e error) {
-	if bl.TxCount == 0 {
-		e = bl.BuildTxList()
-		if e != nil {
-			return
-		}
-	}
-	old_format_block := new(bytes.Buffer)
-	old_format_block.Write(bl.Raw[:80])
-	WriteVlen(old_format_block, uint64(bl.TxCount))
-	for _, tx := range bl.Txs {
-		tx.WriteSerialized(old_format_block)
-	}
-	bl.NoWitnessData = old_format_block.Bytes()
-	if bl.NoWitnessSize == 0 {
-		bl.NoWitnessSize = len(bl.NoWitnessData)
-	} else if bl.NoWitnessSize != len(bl.NoWitnessData) {
-		panic("NoWitnessSize corrupt")
-	}
-	return
 }
 
 func GetBlockReward(height uint32) uint64 {

@@ -111,13 +111,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		// new block accepted
 		newbl.TmAccepted = time.Now()
 
-		newbl.NonWitnessSize = bl.NoWitnessSize
-		newbl.TheWeight = bl.BlockWeight
-		newbl.ThePaidVSize = bl.PaidTxsVSize
-		newbl.TheOrdCnt = bl.OrbTxCnt
-		newbl.TheOrdSize = bl.OrbTxSize
-		newbl.TheOrdWeight = bl.OrbTxWeight
-
 		common.RecalcAverageBlockSize()
 
 		common.Last.Mutex.Lock()

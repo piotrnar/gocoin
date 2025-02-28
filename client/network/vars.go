@@ -22,12 +22,7 @@ type OneReceivedBlock struct {
 	NonWitnessSize int
 	DoInvs         bool
 
-	TheWeight    uint
-	ThePaidVSize uint
-
-	TheOrdCnt    uint
-	TheOrdSize   uint
-	TheOrdWeight uint
+	*btc.BlockUserInfo
 }
 
 type BlockRcvd struct {

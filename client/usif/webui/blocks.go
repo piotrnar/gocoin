@@ -44,8 +44,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 
 		HaveFeeStats bool
 
-		PaidTxVSize uint
-		TotalFees   uint64
+		TotalFees uint64
 	}
 
 	var blks []*one_block
@@ -77,23 +76,22 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.Hash = end.BlockHash.String()
 		b.TxCnt = block.TxCount
 		b.Size = len(bl)
-		b.Weight = rb.TheWeight
+		b.Weight = block.BlockWeight
 		b.NonWitnessSize = rb.NonWitnessSize
 		b.Version = block.Version()
 
-		b.OrdCnt = rb.TheOrdCnt
-		b.OrdSize = rb.TheOrdSize
-		b.OrdWeight = rb.TheOrdWeight
+		b.OrdCnt = rb.OrbTxCnt
+		b.OrdSize = rb.OrbTxSize
+		b.OrdWeight = rb.OrbTxWeight
 
 		for o := range cbasetx.TxOut {
 			b.Reward += cbasetx.TxOut[o].Value
 		}
 
 		b.Miner, _ = common.TxMiner(cbasetx)
-		b.PaidTxVSize = rb.ThePaidVSize
 		b.TotalFees = b.Reward - btc.GetBlockReward(end.Height)
-		if rb.ThePaidVSize > 0 {
-			b.FeeSPB = float64(b.TotalFees) / float64(rb.ThePaidVSize)
+		if rb.PaidTxsWeight > 0 {
+			b.FeeSPB = float64(4*b.TotalFees) / float64(rb.PaidTxsWeight)
 		}
 
 		b.Received = uint32(rb.TmStart.Unix())
