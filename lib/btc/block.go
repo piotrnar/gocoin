@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -116,6 +117,7 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 	// It would be more elegant to use bytes.Reader here, but this solution is ~20% faster.
 	offs := bl.TxOffset
 	var wg sync.WaitGroup
+	tickets := make(chan bool, runtime.NumCPU())
 
 	block_weight := 4 * (80 + uint64(VLenSize(uint64(bl.TxCount))))
 
@@ -149,6 +151,7 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 				}
 			}
 		}
+		<-tickets
 		wg.Done()
 	}
 
@@ -167,6 +170,7 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 		bl.Txs[i] = tx
 		offs += n
 		if offs-pack_start_offs >= TXS_PACK_SIZE {
+			tickets <- true
 			wg.Add(1)
 			go do_txs(bl.Txs[pack_start_idx : i+1])
 			pack_start_offs = offs
@@ -174,6 +178,7 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 		}
 	}
 	if offs > pack_start_offs {
+		tickets <- true
 		wg.Add(1)
 		go do_txs(bl.Txs[pack_start_idx:])
 	}
