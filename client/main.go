@@ -403,7 +403,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 
 		NetBlocksSize.Add(len(bl.Raw))
 		for NetBlocksSize.Get() > 64*1024*1024 {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(10 * time.Millisecond)
 		}
 		last = nxt
 	}
