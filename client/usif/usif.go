@@ -268,13 +268,13 @@ func UnbanPeer(par string) (s string) {
 func GetReceivedBlockX(block *btc.Block) (rb *network.OneReceivedBlock, cbasetx *btc.Tx) {
 	network.MutexRcv.Lock()
 	rb = network.ReceivedBlocks[block.Hash.BIdx()]
-	if rb.BlockUserInfo == nil {
+	if len(block.Txs) == 0 {
 		block.BuildTxListExt(false) // we will not need txId's here
-		rb.BlockUserInfo = block.GetUserInfo()
-		cbasetx = block.Txs[0]
-	} else {
-		cbasetx, _ = btc.NewTx(block.Raw[block.TxOffset:])
 	}
+	if rb.BlockUserInfo == nil {
+		rb.BlockUserInfo = block.GetUserInfo()
+	}
+	cbasetx = block.Txs[0]
 	network.MutexRcv.Unlock()
 	return
 }
