@@ -503,9 +503,11 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 		offs += n
 		tx.TxOut[i] = to
 	}
-	tx.NoWitSize = uint32(offs + 4) // add 4 bytes for the lock time at the end
 
-	if segwit {
+	if !segwit {
+		tx.NoWitSize = uint32(offs + 4) // +4 bytes for the lock time at the end
+	} else {
+		tx.NoWitSize = uint32(offs - 2 + 4) // -2 bytes for segwit marker and +4 bytes for the lock time at the end
 		tx.SegWit = make([][][]byte, len(tx.TxIn))
 		for i := range tx.TxIn {
 			le, n = VLen(b[offs:])
