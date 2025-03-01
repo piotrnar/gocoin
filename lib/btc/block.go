@@ -2,6 +2,7 @@ package btc
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"sync"
@@ -149,25 +150,21 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 					ou.WasCoinbase = true
 				}
 			}
-			var data2hash, witness2hash []byte
 			if tx.SegWit != nil {
-				data2hash = tx.Serialize()
-				if tx.NoWitSize != uint32(len(data2hash)) {
-					panic("tx.NoWitSize != len(data2hash)")
-				}
+				s := sha256.New()
+				tx.WriteSerialized(s)
+				tmp := s.Sum(nil)
+				s.Reset()
+				s.Write(tmp)
+				copy(tx.Hash.Hash[:], s.Sum(nil))
 				if !coinbase {
-					witness2hash = tx.Raw
+					tx.wTxID.Calc(tx.Raw)
 				}
 			} else {
-				data2hash = tx.Raw
+				tx.Hash.Calc(tx.Raw)
 				if tx.NoWitSize != tx.Size {
 					panic("tx.NoWitSize != tx.Size")
 				}
-				witness2hash = nil
-			}
-			tx.Hash.Calc(data2hash) // Calculate tx hash in a background
-			if witness2hash != nil {
-				tx.wTxID.Calc(witness2hash)
 			}
 			weight := uint64(3*tx.NoWitSize + tx.Size)
 			atomic.AddUint64(&block_weight, weight)
