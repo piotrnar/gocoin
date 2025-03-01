@@ -250,7 +250,6 @@ func (ch *Chain) OnActiveBranch(dst *BlockTreeNode) bool {
 func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	cur := dst
 	lastblock := ch.LastBlock()
-
 	for cur.Height > lastblock.Height {
 		cur = cur.Parent
 		// if cur.TxCount is zero, it means we dont yet have this block's data
