@@ -1,7 +1,6 @@
 package network
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"io"
@@ -225,50 +224,24 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	if store_on_disk {
 		fname := common.TempBlocksDir() + hash.String()
 		if e := os.WriteFile(fname, b2g.Block.Raw, 0600); e == nil {
-			if e = write_hashes(b2g.Block, fname+".hashes"); e == nil {
-				bei = new(btc.BlockExtraInfo)
-				*bei = b2g.Block.BlockExtraInfo
-				b2g.Block = nil
-			} else {
-				println("write tmp block hashes:", e.Error())
+			buf := make([]byte, 0, 64*len(b2g.Block.Txs))
+			for _, tx := range b2g.Block.Txs {
+				buf = append(buf, tx.WTxID().Hash[:]...)
+				if tx.SegWit != nil { // if segwit was nil, the previous append already did this hash
+					buf = append(buf, tx.Hash.Hash[:]...)
+				}
 			}
+			os.WriteFile(fname+".hashes", buf, 0600)
+			bei = new(btc.BlockExtraInfo)
+			*bei = b2g.Block.BlockExtraInfo
+			b2g.Block = nil
 		} else {
 			println("write tmp block data:", e.Error())
 		}
-		// TODO: also save tx_ids, so you dont have to rehash later
 	}
 
 	NetBlocks <- &BlockRcvd{Conn: conn, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode,
 		OneReceivedBlock: orb, BlockExtraInfo: bei, Size: size}
-}
-
-func write_hashes(bl *btc.Block, fname string) (er error) {
-	if false {
-		buf := make([]byte, 0, 64*len(bl.Txs))
-		for _, tx := range bl.Txs {
-			buf = append(buf, tx.WTxID().Hash[:]...)
-			if tx.SegWit != nil {
-				// is segwit was nil then the previous write already saved this hash
-				buf = append(buf, tx.Hash.Hash[:]...)
-			}
-		}
-		os.WriteFile(fname, buf, 0600)
-	} else {
-		var f *os.File
-		if f, er = os.Create(fname); er != nil {
-			return
-		}
-		wr := bufio.NewWriterSize(f, 0x10000)
-		for _, tx := range bl.Txs {
-			wr.Write(tx.WTxID().Hash[:])
-			if tx.SegWit != nil {
-				wr.Write(tx.Hash.Hash[:])
-			}
-		}
-		wr.Flush()
-		f.Close()
-	}
-	return
 }
 
 // parseLocatorsPayload parses the payload of "getblocks" or "getheaders" messages.
