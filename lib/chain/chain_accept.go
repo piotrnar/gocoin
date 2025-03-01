@@ -3,7 +3,6 @@ package chain
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -120,11 +119,6 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 
 	var wg sync.WaitGroup
 	var ver_err_cnt uint32
-	var tickets chan bool
-
-	if !bl.Trusted.Get() {
-		tickets = make(chan bool, runtime.NumCPU())
-	}
 
 	for i, tx := range bl.Txs {
 		tx.AllocVerVars()
@@ -239,13 +233,11 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 			// second, verify the scrips:
 			if !tx_trusted { // run VerifyTxScript() in a parallel task
 				for j := 0; j < len(bl.Txs[i].TxIn); j++ {
-					tickets <- true
 					wg.Add(1)
 					go func(i int, tx *btc.Tx) {
 						if !script.VerifyTxScript(tx.Spent_outputs[i].Pk_script, &script.SigChecker{Amount: tx.Spent_outputs[i].Value, Idx: i, Tx: tx}, bl.VerifyFlags) {
 							atomic.AddUint32(&ver_err_cnt, 1)
 						}
-						<-tickets
 						wg.Done()
 					}(j, bl.Txs[i])
 				}

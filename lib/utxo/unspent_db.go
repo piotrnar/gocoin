@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -734,10 +733,8 @@ func (db *UnspentDB) UTXOStats() (s string) {
 
 	filesize = 8 + 32 + 8 // UTXO.db: block_no + block_hash + rec_cnt
 
-	tickets := make(chan bool, runtime.NumCPU())
 	var wg sync.WaitGroup
 	for _i := range db.HashMap {
-		tickets <- true
 		wg.Add(1)
 		go func(_i int) {
 			var (
@@ -773,7 +770,6 @@ func (db *UnspentDB) UTXOStats() (s string) {
 				reclen := uint64(len(v) + UtxoIdxLen)
 				atomic.AddUint64(&filesize, uint64(btc.VLenSize(reclen))+reclen)
 				NewUtxoRecOwn(k, v, rec, &sta_cbs)
-				//rec := NewUtxoRecStatic(k, v)
 				var spendable_found bool
 				for _, r := range rec.Outs {
 					if r != nil {
@@ -795,7 +791,6 @@ func (db *UnspentDB) UTXOStats() (s string) {
 				}
 			}
 			db.MapMutex[_i].RUnlock()
-			<-tickets
 			wg.Done()
 		}(_i)
 	}
