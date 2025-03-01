@@ -272,7 +272,7 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 		}
 	}
 
-	// At this point both "ch.blockTreeEnd" and "cur" should be at the same height
+	// At this point both "lastblock" and "cur" should be at the same height
 	for tmp := lastblock; tmp != cur; tmp = tmp.Parent {
 		if cur.Parent.TxCount == 0 {
 			fmt.Println("MoveToBlock cannot continue B")
@@ -285,6 +285,7 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 
 	// At this point "cur" is at the highest common block
 
+	lastblock = ch.LastBlock() // recover lastblock, in case it was changed by the "rare case"
 	fmt.Println("Undoing", lastblock.Height-cur.Height, "block(s)")
 	for lastblock != cur {
 		if AbortNow {
