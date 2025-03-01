@@ -167,6 +167,43 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	return
 }
 
+func get_block_from_disk_cache(hash *btc.Uint256) (bl *btc.Block) {
+	tmpfn := common.TempBlocksDir() + hash.String()
+	dat, e := os.ReadFile(tmpfn)
+	os.Remove(tmpfn)
+	if e != nil {
+		panic(e.Error())
+	}
+	if bl, e = btc.NewBlock(dat); e != nil {
+		panic(e.Error())
+	}
+	hashes, e := os.ReadFile(tmpfn + ".hashes")
+	os.Remove(tmpfn + ".hashes")
+	if e != nil {
+		println("Error reading block data", e.Error())
+		// hashes not stored - calculate them in BuildTxList()
+		if e = bl.BuildTxList(); e != nil {
+			panic(e.Error())
+		}
+	} else {
+		// hashes stored - do not calculate them in BuildTxList()
+		if e = bl.BuildTxListExt(false); e != nil {
+			panic(e.Error())
+		}
+		// now restore hashes:
+		var offs int
+		for _, tx := range bl.Txs {
+			copy(tx.WTxID().Hash[:], hashes[offs:])
+			offs += 32
+			if tx.SegWit != nil {
+				copy(tx.Hash.Hash[:], hashes[offs:])
+				offs += 32
+			}
+		}
+	}
+	return
+}
+
 func retry_cached_blocks() bool {
 	var idx int
 	common.CountSafe("RedoCachedBlks")
@@ -184,18 +221,7 @@ func retry_cached_blocks() bool {
 			common.Busy()
 
 			if newbl.Block == nil {
-				tmpfn := common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
-				dat, e := os.ReadFile(tmpfn)
-				os.Remove(tmpfn)
-				if e != nil {
-					panic(e.Error())
-				}
-				if newbl.Block, e = btc.NewBlock(dat); e != nil {
-					panic(e.Error())
-				}
-				if e = newbl.Block.BuildTxList(); e != nil {
-					panic(e.Error())
-				}
+				newbl.Block = get_block_from_disk_cache(newbl.BlockTreeNode.BlockHash)
 				newbl.Block.BlockExtraInfo = *newbl.BlockExtraInfo
 			}
 
@@ -259,18 +285,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	}
 
 	if newbl.Block == nil {
-		tmpfn := common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
-		dat, e := os.ReadFile(tmpfn)
-		os.Remove(tmpfn)
-		if e != nil {
-			panic(e.Error())
-		}
-		if newbl.Block, e = btc.NewBlock(dat); e != nil {
-			panic(e.Error())
-		}
-		if e = newbl.Block.BuildTxList(); e != nil {
-			panic(e.Error())
-		}
+		newbl.Block = get_block_from_disk_cache(newbl.BlockTreeNode.BlockHash)
 		newbl.Block.BlockExtraInfo = *newbl.BlockExtraInfo
 	}
 

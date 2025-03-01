@@ -116,20 +116,20 @@ func (t *Tx) WriteSerialized(wr io.Writer) {
 
 	//TxIns
 	WriteVlen(wr, uint64(len(t.TxIn)))
-	for i := range t.TxIn {
-		wr.Write(t.TxIn[i].Input.Hash[:])
-		binary.Write(wr, binary.LittleEndian, t.TxIn[i].Input.Vout)
-		WriteVlen(wr, uint64(len(t.TxIn[i].ScriptSig)))
-		wr.Write(t.TxIn[i].ScriptSig[:])
-		binary.Write(wr, binary.LittleEndian, t.TxIn[i].Sequence)
+	for _, ti := range t.TxIn {
+		wr.Write(ti.Input.Hash[:])
+		binary.Write(wr, binary.LittleEndian, ti.Input.Vout)
+		WriteVlen(wr, uint64(len(ti.ScriptSig)))
+		wr.Write(ti.ScriptSig)
+		binary.Write(wr, binary.LittleEndian, ti.Sequence)
 	}
 
 	//TxOuts
 	WriteVlen(wr, uint64(len(t.TxOut)))
-	for i := range t.TxOut {
-		binary.Write(wr, binary.LittleEndian, t.TxOut[i].Value)
-		WriteVlen(wr, uint64(len(t.TxOut[i].Pk_script)))
-		wr.Write(t.TxOut[i].Pk_script[:])
+	for _, to := range t.TxOut {
+		binary.Write(wr, binary.LittleEndian, to.Value)
+		WriteVlen(wr, uint64(len(to.Pk_script)))
+		wr.Write(to.Pk_script)
 	}
 
 	//Lock_time
@@ -484,8 +484,10 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 	offs += n
 	tx.TxIn = make([]*TxIn, le)
 	for i := range tx.TxIn {
-		tx.TxIn[i], n = NewTxIn(b[offs:])
+		var ti *TxIn
+		ti, n = NewTxIn(b[offs:])
 		offs += n
+		tx.TxIn[i] = ti
 	}
 
 	// TxOut
@@ -496,9 +498,12 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 	offs += n
 	tx.TxOut = make([]*TxOut, le)
 	for i := range tx.TxOut {
-		tx.TxOut[i], n = NewTxOut(b[offs:])
+		var to *TxOut
+		to, n = NewTxOut(b[offs:])
 		offs += n
+		tx.TxOut[i] = to
 	}
+	tx.NoWitSize = uint32(offs + 4) // add 4 bytes for the lock time at the end
 
 	if segwit {
 		tx.SegWit = make([][][]byte, len(tx.TxIn))

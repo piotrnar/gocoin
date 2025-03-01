@@ -113,39 +113,64 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 	}
 	bl.Txs = make([]*Tx, bl.TxCount)
 
-	// It would be more elegant to use bytes.Reader here, but this solution is ~20% faster.
 	offs := bl.TxOffset
+	if !dohash {
+		bl.BlockWeight = 4 * (80 + uint(VLenSize(uint64(bl.TxCount))))
+		for i := 0; i < bl.TxCount; i++ {
+			tx, n := NewTx(bl.Raw[offs:])
+			if tx == nil || n == 0 {
+				e = errors.New("NewTx failed")
+				bl.Txs = bl.Txs[:i] // make sure we don't leave any nil pointers in bl.Txs
+				break
+			}
+			tx.Raw = bl.Raw[offs : offs+n]
+			tx.Size = uint32(len(tx.Raw))
+			bl.TotalInputs += len(tx.TxIn)
+			if i == 0 {
+				for _, ou := range tx.TxOut {
+					ou.WasCoinbase = true
+				}
+			}
+			bl.BlockWeight += uint(3*tx.NoWitSize + tx.Size)
+			bl.Txs[i] = tx
+			offs += n
+		}
+		return
+	}
+
 	var wg sync.WaitGroup
 	block_weight := 4 * (80 + uint64(VLenSize(uint64(bl.TxCount))))
 	do_txs := func(txlist []*Tx) {
-		var data2hash, witness2hash []byte
 		for _, tx := range txlist {
 			coinbase := tx == bl.Txs[0]
 			tx.Size = uint32(len(tx.Raw))
 			if coinbase {
-				for _, ou := range bl.Txs[0].TxOut {
+				for _, ou := range tx.TxOut {
 					ou.WasCoinbase = true
 				}
 			}
+			var data2hash, witness2hash []byte
 			if tx.SegWit != nil {
 				data2hash = tx.Serialize()
-				tx.NoWitSize = uint32(len(data2hash))
+				if tx.NoWitSize != uint32(len(data2hash)) {
+					panic("tx.NoWitSize != len(data2hash)")
+				}
 				if !coinbase {
 					witness2hash = tx.Raw
 				}
 			} else {
 				data2hash = tx.Raw
-				tx.NoWitSize = tx.Size
+				if tx.NoWitSize != tx.Size {
+					panic("tx.NoWitSize != tx.Size")
+				}
 				witness2hash = nil
+			}
+			tx.Hash.Calc(data2hash) // Calculate tx hash in a background
+			if witness2hash != nil {
+				tx.wTxID.Calc(witness2hash)
 			}
 			weight := uint64(3*tx.NoWitSize + tx.Size)
 			atomic.AddUint64(&block_weight, weight)
-			if dohash {
-				tx.Hash.Calc(data2hash) // Calculate tx hash in a background
-				if witness2hash != nil {
-					tx.wTxID.Calc(witness2hash)
-				}
-			}
 		}
 		wg.Done()
 	}
