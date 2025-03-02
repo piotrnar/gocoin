@@ -556,7 +556,11 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			}
 			c.Mutex.Unlock()
 		} else {
-			panic("This should not happen")
+			if c.recv.hdr_len > 24 {
+				panic(fmt.Sprint("ERROR: hdr_len > 24 after receiving ", n, " bytes"))
+			}
+			c.Mutex.Unlock()
+			return
 		}
 	}
 
