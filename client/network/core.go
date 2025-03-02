@@ -594,7 +594,12 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			println(c.PeerAddr.Ip(), "- got encrypted msg", c.recv.cmd, "but have no key")
 			return
 		}
-		plain, _ := Decrypt(c.recv.dat, c.X.aesKey)
+		plain, er := Decrypt(c.recv.dat, c.X.aesKey)
+		if er != nil {
+			println("Decryption error:", er.Error())
+			return
+		}
+		println("Received:", hex.EncodeToString(plain))
 		if !bytes.Equal(plain[len(plain)-len(zeros):], zeros[:]) {
 			println(c.PeerAddr.Ip(), "- msg decryption failed")
 			//c.DoS("MsgBadChksum")
