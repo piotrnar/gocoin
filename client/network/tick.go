@@ -793,14 +793,14 @@ func (c *OneConnection) Run() {
 
 		case "tx":
 			if common.AcceptTx() {
-				c.ParseTxNet(cmd.pl, c.X.Authorized && cmd.encrypted)
+				c.ParseTxNet(cmd)
 			}
 
 		case "addr":
 			c.ParseAddr(cmd.pl)
 
 		case "block": //block received
-			netBlockReceived(c, cmd.pl)
+			c.netBlockReceived(cmd)
 			c.MutexSetBool(&c.X.GetBlocksDataNow, true) // ask for more blocks during next tick
 
 		case "getblocks":
@@ -873,7 +873,7 @@ func (c *OneConnection) Run() {
 
 		case "cmpctblock":
 			if common.Get(&common.BlockChainSynchronized) {
-				c.ProcessCmpctBlock(cmd.pl)
+				c.ProcessCmpctBlock(cmd)
 			}
 
 		case "getblocktxn":
@@ -881,7 +881,7 @@ func (c *OneConnection) Run() {
 			//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "getblocktxn", hex.EncodeToString(cmd.pl))
 
 		case "blocktxn":
-			c.ProcessBlockTxn(cmd.pl)
+			c.ProcessBlockTxn(cmd)
 			//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
 
 		case "getmp":
@@ -894,7 +894,7 @@ func (c *OneConnection) Run() {
 
 		case "authack":
 			c.Mutex.Lock()
-			c.X.AuthAckGot = cmd.encrypted
+			c.X.AuthAckGot = cmd.trusted
 			c.Mutex.Unlock()
 			if len(cmd.pl) > 0 {
 				// if there is payload, the first byte says if the node is synchronized

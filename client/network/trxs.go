@@ -131,14 +131,14 @@ func txPoolCB(conid uint32, result byte, t2s *txpool.OneTxToSend) {
 }
 
 // ParseTxNet handles incoming "tx" messages.
-func (c *OneConnection) ParseTxNet(pl []byte, trusted bool) {
-	tx, le := btc.NewTx(pl)
+func (c *OneConnection) ParseTxNet(cmd *BCmsg) {
+	tx, le := btc.NewTx(cmd.pl)
 	if tx == nil {
 		c.DoS("TxRejectedBroken")
-		println(hex.EncodeToString(pl))
+		println(hex.EncodeToString(cmd.pl))
 		return
 	}
-	if le != len(pl) {
+	if le != len(cmd.pl) {
 		c.DoS("TxRejectedLenMismatch")
 		return
 	}
@@ -147,14 +147,16 @@ func (c *OneConnection) ParseTxNet(pl []byte, trusted bool) {
 		return
 	}
 
-	tx.SetHash(pl)
+	tx.SetHash(cmd.pl)
 
 	txpool.NeedThisTxExt(&tx.Hash, func() {
 		// This body is called with a locked TxMutex
-		tx.Raw = pl
 		select {
-		case NetTxs <- &txpool.TxRcvd{FeedbackCB: txPoolCB, FromCID: c.ConnID, Tx: tx, Trusted: trusted}:
+		case NetTxs <- &txpool.TxRcvd{FeedbackCB: txPoolCB, FromCID: c.ConnID, Tx: tx, Trusted: cmd.trusted}:
 			txpool.TransactionsPending[tx.Hash.BIdx()] = true
+			if cmd.trusted {
+				common.CountSafe("TrustedMsg-Tx")
+			}
 		default:
 			common.CountSafe("TxChannelFULL")
 			//println("NetTxsFULL")

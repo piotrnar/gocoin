@@ -104,9 +104,10 @@ func (c *OneConnection) processGetData(b *bytes.Reader) {
 }
 
 // netBlockReceived is called from a net conn thread.
-func netBlockReceived(conn *OneConnection, b []byte) {
+func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
+	b := cmd.pl
 	if len(b) < 100 {
-		conn.DoS("ShortBlock")
+		c.DoS("ShortBlock")
 		return
 	}
 
@@ -121,9 +122,9 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		rb.Cnt++
 		Fetch.BlockBytesWasted += uint64(len(b))
 		Fetch.BlockSameRcvd++
-		conn.Mutex.Lock()
-		delete(conn.GetBlockInProgress, idx)
-		conn.Mutex.Unlock()
+		c.Mutex.Lock()
+		delete(c.GetBlockInProgress, idx)
+		c.Mutex.Unlock()
 		MutexRcv.Unlock()
 		return
 	}
@@ -134,11 +135,11 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		//println("Block", hash.String(), " from", conn.PeerAddr.Ip(), conn.Node.Agent, " was not expected")
 
 		var sta int
-		sta, b2g = conn.ProcessNewHeader(b[:80])
+		sta, b2g = c.ProcessNewHeader(b[:80])
 		if b2g == nil {
 			if sta == PH_STATUS_FATAL {
-				println("Unrequested Block: FAIL - Ban", conn.PeerAddr.Ip(), conn.Node.Agent)
-				conn.DoS("BadUnreqBlock")
+				println("Unrequested Block: FAIL - Ban", c.PeerAddr.Ip(), c.Node.Agent)
+				c.DoS("BadUnreqBlock")
 			} else {
 				common.CountSafe("ErrUnreqBlock")
 			}
@@ -157,16 +158,17 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 
 	prev_block_raw := b2g.Block.Raw // in case if it's a corrupt one
 	b2g.Block.Raw = b
-	if conn.X.Authorized {
+	if cmd.trusted {
 		b2g.Block.Trusted.Set()
+		common.CountSafe("TrustedMsg-Block")
 	}
 
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er != nil {
 		println("Corrupt block", hash.String(), b2g.BlockTreeNode.Height)
-		println(" ... received from", conn.PeerAddr.Ip(), er.Error())
+		println(" ... received from", c.PeerAddr.Ip(), er.Error())
 		//ioutil.WriteFile(hash.String()+"-"+conn.PeerAddr.Ip()+".bin", b, 0700)
-		conn.DoS("BadBlock")
+		c.DoS("BadBlock")
 
 		// We don't need to remove from conn.GetBlockInProgress as we're disconnecting
 		// ... decreasing of b2g.InProgress will also be done then.
@@ -194,22 +196,22 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	}
 
 	orb := &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: b2g.TmPreproc,
-		TmDownload: conn.LastMsgTime, FromConID: conn.ConnID, DoInvs: b2g.SendInvs}
+		TmDownload: c.LastMsgTime, FromConID: c.ConnID, DoInvs: b2g.SendInvs}
 
-	conn.Mutex.Lock()
-	bip := conn.GetBlockInProgress[idx]
+	c.Mutex.Lock()
+	bip := c.GetBlockInProgress[idx]
 	if bip == nil {
 		//println(conn.ConnID, "received unrequested block", hash.String())
 		common.CountSafe("UnreqBlockRcvd")
-		conn.cntInc("NewBlock!")
+		c.cntInc("NewBlock!")
 		orb.TxMissing = -2
 	} else {
-		delete(conn.GetBlockInProgress, idx)
-		conn.cntInc("NewBlock")
+		delete(c.GetBlockInProgress, idx)
+		c.cntInc("NewBlock")
 		orb.TxMissing = -1
 	}
-	conn.blocksreceived = append(conn.blocksreceived, time.Now())
-	conn.Mutex.Unlock()
+	c.blocksreceived = append(c.blocksreceived, time.Now())
+	c.Mutex.Unlock()
 
 	ReceivedBlocks[idx] = orb
 	DelB2G(idx) //remove it from BlocksToGet if no more pending downloads
@@ -240,7 +242,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		}
 	}
 
-	NetBlocks <- &BlockRcvd{Conn: conn, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode,
+	NetBlocks <- &BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode,
 		OneReceivedBlock: orb, BlockExtraInfo: bei, Size: size}
 }
 

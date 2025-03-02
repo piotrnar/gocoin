@@ -250,7 +250,8 @@ type oneBlockDl struct {
 type BCmsg struct {
 	cmd       string
 	pl        []byte
-	encrypted bool
+	decrypted bool
+	trusted   bool
 }
 
 func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
@@ -373,12 +374,8 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		}
 
 		if !common.NoCounters.Get() {
-			var ext string
-			if encrypt {
-				ext = "_enc"
-			}
-			ssent := "sent_" + cmd + ext
-			ssbts := "sbts_" + cmd + ext
+			ssent := "sent_" + cmd
+			ssbts := "sbts_" + cmd
 			c.cntInc(ssent)
 			c.cntAdd(ssbts, uint64(len(pl)))
 			common.CountSafe(ssent)
@@ -639,7 +636,10 @@ do_it:
 	ret = new(BCmsg)
 	ret.cmd = c.recv.cmd
 	ret.pl = c.recv.dat
-	ret.encrypted = c.recv.decrypt
+	if c.recv.decrypt {
+		ret.decrypted = true
+		ret.trusted = c.X.Authorized
+	}
 
 	c.Mutex.Lock()
 	c.recv.hdr_len = 0
@@ -650,12 +650,8 @@ do_it:
 	c.X.LastBtsRcvd = uint32(len(ret.pl))
 
 	if !common.NoCounters.Get() {
-		var ext string
-		if c.recv.decrypt {
-			ext = "_enc"
-		}
-		srcvd := "rcvd_" + ret.cmd + ext
-		srbts := "rbts_" + ret.cmd + ext
+		srcvd := "rcvd_" + ret.cmd
+		srbts := "rbts_" + ret.cmd
 		c.cntInc(srcvd)
 		c.cntAdd(srbts, uint64(len(ret.pl)))
 		c.Mutex.Unlock()

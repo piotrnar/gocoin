@@ -176,7 +176,8 @@ func delB2G_callback(hash *btc.Uint256) {
 	DelB2G(hash.BIdx())
 }
 
-func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
+func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
+	pl := cmd.pl
 	if len(pl) < 90 {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error A", hex.EncodeToString(pl))
 		c.DoS("CmpctBlkErrA")
@@ -397,8 +398,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		orb := &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: time.Now(), FromConID: c.ConnID, DoInvs: b2g.SendInvs}
 		ReceivedBlocks[bidx] = orb
 		DelB2G(bidx) //remove it from BlocksToGet if no more pending downloads
-		if c.X.Authorized {
+		if cmd.trusted {
 			b2g.Block.Trusted.Set()
+			common.CountSafe("TrustedMsg-CmpctBlock")
 		}
 		NetBlocks <- &BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode, OneReceivedBlock: orb}
 	} else {
@@ -414,7 +416,8 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	}
 }
 
-func (c *OneConnection) ProcessBlockTxn(pl []byte) {
+func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
+	pl := cmd.pl
 	if len(pl) < 33 {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn error A", hex.EncodeToString(pl))
 		c.DoS("BlkTxnErrLen")
@@ -527,8 +530,9 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	orb := &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: b2g.TmPreproc,
 		TmDownload: c.LastMsgTime, TxMissing: col.Missing, FromConID: c.ConnID, DoInvs: b2g.SendInvs}
 	ReceivedBlocks[idx] = orb
-	if c.X.Authorized {
+	if cmd.trusted {
 		b2g.Block.Trusted.Set()
+		common.CountSafe("TrustedMsg-BlockTxn")
 	}
 	NetBlocks <- &BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode, OneReceivedBlock: orb}
 }
