@@ -390,17 +390,18 @@ func (c *OneConnection) SendRawMsgExt(cmd string, pl []byte, encrypt bool) (e er
 		binary.LittleEndian.PutUint32(sbuf[0:4], common.Version)
 		copy(sbuf[0:4], common.Magic[:])
 		copy(sbuf[4:16], cmd)
-		binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
 
 		if encrypt {
-			sbuf[19] |= 0x80
+			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)+len(zeros))|0x80000000)
 			buf := make([]byte, 0, len(sbuf[:])+len(pl)+len(zeros))
 			buf = append(buf, sbuf[:]...)
 			buf = append(buf, pl...)
 			buf = append(buf, zeros[:]...)
 			encrypted, _ := Encrypt(buf, c.X.aesKey)
 			c.append_to_send_buffer(encrypted)
+			println(c.PeerAddr.Ip(), "-send encrypted msg")
 		} else {
+			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
 			sh := btc.Sha2Sum(pl[:])
 			copy(sbuf[20:24], sh[:4])
 			c.append_to_send_buffer(sbuf[:])
@@ -540,25 +541,16 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			return
 		}
 		if c.recv.hdr_len == 24 {
-			if (c.recv.hdr[19] & 0x80) != 0 {
-				c.recv.pl_len = (binary.LittleEndian.Uint32(c.recv.hdr[16:20]) & 0x7fffffff) + uint32(len(zeros))
-				decrypt = true
-			} else {
-				c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
-			}
 			c.recv.cmd = strings.TrimRight(string(c.recv.hdr[4:16]), "\000")
+			c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
+			if (c.recv.pl_len & 0x80000000) != 0 {
+				c.recv.pl_len &= 0x7fffffff
+				decrypt = true
+				println(c.PeerAddr.Ip(), "-receiving encrypted message", c.recv.cmd, c.recv.pl_len)
+			}
 			c.Mutex.Unlock()
 		} else {
-			if c.recv.hdr_len > 24 {
-				// hard to belive but I saw this happening twice on Windows
-				println("ERROR: hdr_len > 24 after receiving", n, "bytes")
-				c.Mutex.Unlock()
-				common.CountSafe("SockReadOverflow")
-				c.Disconnect(true, "SockReadOverflow")
-				return
-			}
-			c.Mutex.Unlock()
-			return
+			panic("This should not happen")
 		}
 	}
 
