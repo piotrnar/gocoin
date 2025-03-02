@@ -17,17 +17,35 @@ This will turn off node's internal statistics which should improve performance.<
 
 <h2>Initial chain sync cache</h2>
 
-If you have a fast (e.g. 1Gbit) network connection and some RAM to spare, examine the two options below.<br>
-Don't bother with a slow connection, as the network speed is your bottleneck then.<br>
-The first option will likely have a better effect on the performance.<br>
+If you have a fast network connection (e.g. 1Gbit), examine the two options below.<br>
+Don't bother with a slow connection, as the network speed is your bottleneck then.
+(you know it when syncing node uses your entire bandidth)<br>
+The first option will likely have a better effect on the performance, although requires more RAM.<br>
 <ol>
 <li><b>Turn off caching on disk.</b> Edit the <a href="gocoin_manual_config.html">config file</a> and set the value of <code>Memory.CacheOnDisk</code> to <b>false</b>.</li>
 <li><b>Increase cache size.</b> Edit the <a href="gocoin_manual_config.html">config file</a> and increase the value of <code>Memory.MaxSyncCacheMB</code>.</li>
 </ol>
+With a fast network connection, the bottleneck is the speed at which your node updates the UTXO database.<br>
+To make sure that the UTXO update worker never has to wait for the network,
+the node downloads some blocks data ahead and stores it in the cache.<br>
+The bigger the cache, the less likely it is that the UTXO update worker will ever have to wait for the network.<br>
+<br>
+Having the cache on disk allows the blocks to free the memory in between being downloaded and needed
+by the UTXO worker.<br>
+This however comes at the extra CPU time required for the disk operations and re-creating the block's in-memory
+structure after loading.<br>
+<br>
+As long as <code>CacheOnDisk</code> is on, increasing <code>MaxSyncCacheMB</code> does not have a significant effect on memory
+usage. In such case, it should be safe to set the cache size even to e.g. 5000.<br>
+With <code>CacheOnDisk</code> off, a change of the cache size has a major effect on memory usage.
+In such case, the extra memory required is multiple times higher than the increase of <code>MaxSyncCacheMB</code> value.<br>
+<br>
 <i>Note:<br>
 1. This only affects the chain sync performance. Once the chain is synchronized, it does not matter.<br>
 2. Monitor your system for RAM usage, during the sync. If it uses all the RAM, better to revert your config changes.<br>
-3. The node does not need restarting to apply new values of these parameters.</i><br>
+3. Monitor your node's TextUI for <code>cachempty: X</code> debugs. If X is not increasing after block 200000, your cache is big enough.<br>
+4. The node does not need restarting to apply new values of these parameters.<br>
+5. Restarting the node during chain sync discards the entire cache, even when on disk.</i><br>
 <br>
 
 
