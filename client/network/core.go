@@ -596,7 +596,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	}
 
 	if decrypt {
-		println(c.PeerAddr.Ip(), "Received encrypted:", c.recv.cmd, c.aesData != nil)
+		//println(c.PeerAddr.Ip(), "Received encrypted:", c.recv.cmd, c.aesData != nil)
 		if c.aesData == nil {
 			if c.recv.cmd == "authack" {
 				c.recv.dat = nil

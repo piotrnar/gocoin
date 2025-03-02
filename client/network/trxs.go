@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync/atomic"
@@ -134,6 +135,7 @@ func (c *OneConnection) ParseTxNet(pl []byte, trusted bool) {
 	tx, le := btc.NewTx(pl)
 	if tx == nil {
 		c.DoS("TxRejectedBroken")
+		println(hex.EncodeToString(pl))
 		return
 	}
 	if le != len(pl) {
