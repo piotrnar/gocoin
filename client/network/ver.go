@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -248,6 +249,10 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 	for _, pub := range AuthPubkeys {
 		if pkey.ParsePubkey(pub) && sig.Verify(&pkey, &m) {
 			c.X.Authorized = true
+			var shared_secret [33]byte
+			if secp256k1.Multiply(pub, common.SecretKey, shared_secret[:]) {
+				println(c.PeerAddr.String(), "- shared secret:", hex.EncodeToString(shared_secret[:]))
+			}
 			break
 		}
 	}
