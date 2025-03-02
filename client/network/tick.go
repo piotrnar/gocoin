@@ -900,7 +900,7 @@ func (c *OneConnection) Run() {
 
 		case "authack":
 			if !cmd.trusted {
-				println(c.PeerAddr.Ip(), "-failed authack. Send back authcancel")
+				println(c.PeerAddr.Ip(), "-failed authack. Send back authnack", c.X.AuthAckGot, c.aesData != nil)
 				c.SendRawMsg("authnack", nil)
 				return
 			}
