@@ -892,9 +892,16 @@ func (c *OneConnection) Run() {
 		case "xauth": // "xauth" supports encryption and makes "auth" deprecated as not secure
 			c.AuthRvcd(cmd.pl)
 
+		case "autnhack":
+			println(c.PeerAddr.Ip(), "-sent us authnack", cmd.trusted)
+			c.Mutex.Lock()
+			c.X.AuthAckGot = false
+			c.Mutex.Unlock()
+
 		case "authack":
 			if !cmd.trusted {
-				println(c.PeerAddr.Ip(), "-untrusted authack")
+				println(c.PeerAddr.Ip(), "-failed authack. Send back authcancel")
+				c.SendRawMsg("authnack", nil)
 				return
 			}
 			c.Mutex.Lock()

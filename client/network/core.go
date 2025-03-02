@@ -359,7 +359,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		fmt.Println(c.ConnID, "sent", cmd, len(pl))
 	}*/
 	if c.aesData != nil {
-		if cmd == "authack" {
+		if strings.HasPrefix(cmd, "auth") {
 			encrypt = true
 		} else if c.X.AuthAckGot && cmd == "tx" {
 			encrypt = true
@@ -601,7 +601,9 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	if decrypt {
 		if c.aesData == nil {
 			if c.recv.cmd == "authack" {
-				return // just ignore this authack
+				c.recv.dat = nil
+				decrypt = false
+				goto do_it
 			}
 			println(c.PeerAddr.Ip(), "- got encrypted msg", c.recv.cmd, "but have no key")
 			c.DoS("MsgNoKey")
@@ -626,6 +628,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 		}
 	}
 
+do_it:
 	ret = new(BCmsg)
 	ret.cmd = c.recv.cmd
 	ret.pl = c.recv.dat
