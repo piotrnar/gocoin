@@ -352,12 +352,25 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 }
 
 func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
+	var encrypt bool
 	c.Mutex.Lock()
 
 	/*if c.X.Debug {
 		fmt.Println(c.ConnID, "sent", cmd, len(pl))
 	}*/
-	encrypt := c.aesData != nil && (cmd == "tx" || cmd == "authack")
+	if c.aesData != nil {
+		if cmd == "authack" {
+			encrypt = true
+		} else if c.X.AuthAckGot {
+			switch cmd {
+			case "tx":
+			case "cmpctblock":
+			case "blocktxn":
+				encrypt = true
+			}
+
+		}
+	}
 
 	if !c.broken {
 		// we never allow the buffer to be totally full because then producer would be equal consumer
@@ -392,9 +405,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		copy(sbuf[4:16], cmd)
 
 		if encrypt {
-			println(c.PeerAddr.Ip(), "-send encrypted msg", len(pl))
 			pl, _ = c.Encrypt(pl)
-			println("  ... new len:", len(pl))
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl))|0x80000000)
 		} else {
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
@@ -542,7 +553,6 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			if (c.recv.pl_len & 0x80000000) != 0 {
 				c.recv.pl_len &= 0x7fffffff
 				decrypt = true
-				println(c.PeerAddr.Ip(), "-receiving encrypted message", c.recv.cmd, c.recv.pl_len)
 			}
 			c.Mutex.Unlock()
 		} else {
@@ -593,16 +603,18 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	if decrypt {
 		if c.aesData == nil {
 			println(c.PeerAddr.Ip(), "- got encrypted msg", c.recv.cmd, "but have no key")
+			c.DoS("MsgNoKey")
 			return
 		}
 		plain, er := c.Decrypt(c.recv.dat)
 		if er != nil {
-			println("Decryption error:", er.Error())
+			println(c.PeerAddr.Ip(), "- decryption error:", er.Error())
+			c.DoS("MsgAuthError")
 			return
 		}
-		println("Received:", hex.EncodeToString(plain))
+		//println("Received:", hex.EncodeToString(plain))
 		c.recv.dat = plain
-		println(c.PeerAddr.Ip(), "- got encrypted", c.recv.cmd)
+		//println(c.PeerAddr.Ip(), "- got encrypted", c.recv.cmd)
 	} else if !c.X.VersionReceived {
 		// only verify the checksum on the first message, as it is pretty pointless task
 		sh := btc.Sha2Sum(c.recv.dat)
