@@ -408,7 +408,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 
 			// verify decryption:
 			x, _ := c.Decrypt(pl)
-			if !bytes.Equal(x, pl) {
+			if !bytes.Equal(x, org) {
 				println("Decyption cross-verify failed", len(org), len(pl), len(x))
 				println(hex.EncodeToString(org))
 				os.Exit(1)
