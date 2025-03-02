@@ -357,7 +357,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	/*if c.X.Debug {
 		fmt.Println(c.ConnID, "sent", cmd, len(pl))
 	}*/
-	encrypt := c.aesData != nil && cmd == "authack"
+	encrypt := c.aesData != nil && (cmd == "tx" || cmd == "authack")
 
 	if !c.broken {
 		// we never allow the buffer to be totally full because then producer would be equal consumer
@@ -371,8 +371,12 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		}
 
 		if !common.NoCounters.Get() {
-			ssent := "sent_" + cmd
-			ssbts := "sbts_" + cmd
+			var ext string
+			if encrypt {
+				ext = "_enc"
+			}
+			ssent := "sent_" + cmd + ext
+			ssbts := "sbts_" + cmd + ext
 			c.cntInc(ssent)
 			c.cntAdd(ssbts, uint64(len(pl)))
 			common.CountSafe(ssent)
@@ -623,8 +627,12 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	c.X.LastBtsRcvd = uint32(len(ret.pl))
 
 	if !common.NoCounters.Get() {
-		srcvd := "rcvd_" + ret.cmd
-		srbts := "rbts_" + ret.cmd
+		var ext string
+		if decrypt {
+			ext = "_enc"
+		}
+		srcvd := "rcvd_" + ret.cmd + ext
+		srbts := "rbts_" + ret.cmd + ext
 		c.cntInc(srcvd)
 		c.cntAdd(srbts, uint64(len(ret.pl)))
 		c.Mutex.Unlock()
