@@ -359,7 +359,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	}*/
 	encrypt := c.aesData != nil && (cmd == "authack" || cmd == "tx")
 
-	if encrypt && c.X.Authorized {
+	if encrypt && c.X.Authorized && cmd == "tx" {
 		println("send", cmd, len(pl), hex.EncodeToString(pl[:8]))
 	}
 
