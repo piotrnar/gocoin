@@ -67,6 +67,8 @@ var (
 	// Hammering protection (peers that keep re-connecting) map IPv4 => UnixTime
 	HammeringMutex       sync.Mutex
 	RecentlyDisconencted map[[4]byte]*RecentlyDisconenctedType = make(map[[4]byte]*RecentlyDisconenctedType)
+
+	zeros [32]byte
 )
 
 type RecentlyDisconenctedType struct {
@@ -129,6 +131,7 @@ type ConnectionStatus struct {
 	IsGocoin  bool
 	Debug     bool
 
+	aesKey     []byte
 	Authorized bool
 	AuthMsgGot uint
 	AuthAckGot bool
@@ -350,6 +353,10 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 }
 
 func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
+	return c.SendRawMsgExt(cmd, pl, false)
+}
+
+func (c *OneConnection) SendRawMsgExt(cmd string, pl []byte, encrypt bool) (e error) {
 	c.Mutex.Lock()
 
 	/*if c.X.Debug {
@@ -385,11 +392,20 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		copy(sbuf[4:16], cmd)
 		binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
 
-		sh := btc.Sha2Sum(pl[:])
-		copy(sbuf[20:24], sh[:4])
-
-		c.append_to_send_buffer(sbuf[:])
-		c.append_to_send_buffer(pl)
+		if encrypt {
+			sbuf[19] |= 0x80
+			buf := make([]byte, 0, len(sbuf[:])+len(pl)+len(zeros))
+			buf = append(buf, sbuf[:]...)
+			buf = append(buf, pl...)
+			buf = append(buf, zeros[:]...)
+			encrypted, _ := Encrypt(buf, c.X.aesKey)
+			c.append_to_send_buffer(encrypted)
+		} else {
+			sh := btc.Sha2Sum(pl[:])
+			copy(sbuf[20:24], sh[:4])
+			c.append_to_send_buffer(sbuf[:])
+			c.append_to_send_buffer(pl)
+		}
 
 		if x := c.BytesToSent(); x > c.X.MaxSentBufSize {
 			c.X.MaxSentBufSize = x
@@ -484,6 +500,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	var e error
 	var n int
 	var magic_checked bool
+	var decrypt bool
 
 	for c.recv.hdr_len < 24 {
 		n, e = common.SockRead(c.Conn, c.recv.hdr[c.recv.hdr_len:24])
@@ -523,7 +540,12 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			return
 		}
 		if c.recv.hdr_len == 24 {
-			c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
+			if (c.recv.hdr[19] & 0x80) != 0 {
+				c.recv.pl_len = (binary.LittleEndian.Uint32(c.recv.hdr[16:20]) & 0x7fffffff) + uint32(len(zeros))
+				decrypt = true
+			} else {
+				c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
+			}
 			c.recv.cmd = strings.TrimRight(string(c.recv.hdr[4:16]), "\000")
 			c.Mutex.Unlock()
 		} else {
@@ -580,7 +602,20 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 		}
 	}
 
-	if !c.X.VersionReceived {
+	if decrypt {
+		if c.X.aesKey == nil {
+			println(c.PeerAddr.Ip(), "- got encrypted msg", c.recv.cmd, "but have no key")
+			return
+		}
+		plain, _ := Decrypt(c.recv.dat, c.X.aesKey)
+		if !bytes.Equal(plain[len(plain)-len(zeros):], zeros[:]) {
+			println(c.PeerAddr.Ip(), "- msg decryption failed")
+			//c.DoS("MsgBadChksum")
+			return
+		}
+		c.recv.dat = plain[:len(plain)-len(zeros)]
+		println(c.PeerAddr.Ip(), "- got encrypted", c.recv.cmd)
+	} else if !c.X.VersionReceived {
 		// only verify the checksum on the first message, as it is pretty pointless task
 		sh := btc.Sha2Sum(c.recv.dat)
 		if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {

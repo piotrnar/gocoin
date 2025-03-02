@@ -251,7 +251,9 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 			c.X.Authorized = true
 			var shared_secret [33]byte
 			if secp256k1.Multiply(pub, common.SecretKey, shared_secret[:]) {
-				println(c.PeerAddr.String(), "- shared secret:", hex.EncodeToString(shared_secret[:]))
+				println(c.PeerAddr.Ip(), "- shared secret:", hex.EncodeToString(shared_secret[:]))
+				c.X.aesKey = make([]byte, 32)
+				btc.ShaHash(shared_secret[:], c.X.aesKey)
 			}
 			break
 		}
@@ -279,7 +281,7 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 	if common.Get(&common.BlockChainSynchronized) {
 		repl[0] = 1
 	}
-	c.SendRawMsg("authack", repl[:])
+	c.SendRawMsgExt("authack", repl[:], true)
 }
 
 func (c *OneConnection) HasNetworkService() bool {
