@@ -792,6 +792,7 @@ func (c *OneConnection) Run() {
 			c.ProcessInv(cmd.pl)
 
 		case "tx":
+			println(c.ConnID, "tx", cmd.encrypted, hex.EncodeToString(cmd.pl[:8]))
 			if common.AcceptTx() {
 				c.ParseTxNet(cmd.pl, c.X.Authorized && cmd.encrypted)
 			}
