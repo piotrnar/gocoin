@@ -116,7 +116,7 @@ func (c *OneConnection) HandleGetaddr() {
 			binary.Write(buf, binary.LittleEndian, pers[i].Time)
 			buf.Write(pers[i].NetAddr.Bytes())
 		}
-		c.SendRawMsg("addr", buf.Bytes())
+		c.SendRawMsg("addr", buf.Bytes(), false)
 	}
 }
 
@@ -126,7 +126,7 @@ func (c *OneConnection) SendOwnAddr() {
 		btc.WriteVlen(buf, uint64(1))
 		binary.Write(buf, binary.LittleEndian, uint32(time.Now().Unix()))
 		buf.Write(BestExternalAddr())
-		c.SendRawMsg("addr", buf.Bytes())
+		c.SendRawMsg("addr", buf.Bytes(), false)
 	}
 }
 

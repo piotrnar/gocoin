@@ -214,7 +214,7 @@ func (c *OneConnection) GetBlocks(pl []byte) {
 							binary.Write(inv, binary.LittleEndian, uint32(2))
 							inv.Write(k[:])
 						}
-						c.SendRawMsg("inv", inv.Bytes())
+						c.SendRawMsg("inv", inv.Bytes(), false)
 						return
 					}
 				}
@@ -274,13 +274,13 @@ func (c *OneConnection) SendInvs() (res bool) {
 		common.CountSafe("InvSentAsHeader")
 		var b [5]byte
 		ll := btc.PutVlen(b[:], b_blk.Len()/81)
-		c.SendRawMsg("headers", append(b[:ll], b_blk.Bytes()...))
+		c.SendRawMsg("headers", append(b[:ll], b_blk.Bytes()...), false)
 	}
 
 	if b_txs.Len() > 0 {
 		var b [5]byte
 		ll := btc.PutVlen(b[:], b_txs.Len()/36)
-		c.SendRawMsg("inv", append(b[:ll], b_txs.Bytes()...))
+		c.SendRawMsg("inv", append(b[:ll], b_txs.Bytes()...), false)
 	}
 
 	return

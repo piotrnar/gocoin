@@ -239,7 +239,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 		out := new(bytes.Buffer)
 		btc.WriteVlen(out, uint64(cnt))
 		out.Write(resp)
-		c.SendRawMsg("headers", out.Bytes())
+		c.SendRawMsg("headers", out.Bytes(), false)
 	}()
 
 	for cnt < 2000 {
@@ -294,7 +294,7 @@ func (c *OneConnection) sendGetHeaders() {
 	bmsg.Write(hashes)
 	bmsg.Write(make([]byte, 32)) // null_stop
 
-	c.SendRawMsg("getheaders", bmsg.Bytes())
+	c.SendRawMsg("getheaders", bmsg.Bytes(), false)
 	c.X.LastHeadersHeightAsk = lb.Height
 	c.MutexSetBool(&c.X.GetHeadersInProgress, true)
 	c.X.GetHeadersTimeOutAt = time.Now().Add(GetHeadersTimeout)

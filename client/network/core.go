@@ -248,10 +248,10 @@ type oneBlockDl struct {
 }
 
 type BCmsg struct {
-	cmd       string
-	pl        []byte
-	decrypted bool
-	trusted   bool
+	cmd     string
+	pl      []byte
+	crypted bool
+	signed  bool
 }
 
 func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
@@ -354,13 +354,17 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 	v.Mutex.Unlock()
 }
 
-func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
+func (c *OneConnection) SendRawMsg(cmd string, pl []byte, encrypt bool) (e error) {
 	c.Mutex.Lock()
 
 	/*if c.X.Debug {
 		fmt.Println(c.ConnID, "sent", cmd, len(pl))
 	}*/
-	encrypt := c.aesData != nil && (cmd == "authack" || cmd == "tx")
+	/*
+		if encrypt && (!c.X.AuthAckGot || c.aesData == nil) {
+			encrypt = false // do not encrpt messages if the peer did not send "authack"
+		}
+	*/
 
 	if !c.broken {
 		// we never allow the buffer to be totally full because then producer would be equal consumer
@@ -603,13 +607,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	}
 
 	if c.recv.decrypt {
-		//println(c.PeerAddr.Ip(), "Received encrypted:", c.recv.cmd, c.aesData != nil)
 		if c.aesData == nil {
-			if c.recv.cmd == "authack" {
-				c.recv.dat = nil
-				c.recv.decrypt = false
-				goto do_it
-			}
 			println(c.PeerAddr.Ip(), "- got encrypted msg", c.recv.cmd, "but have no key")
 			c.DoS("MsgNoKey")
 			return
@@ -632,13 +630,12 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 		}
 	}
 
-do_it:
 	ret = new(BCmsg)
 	ret.cmd = c.recv.cmd
 	ret.pl = c.recv.dat
 	if c.recv.decrypt {
-		ret.decrypted = true
-		ret.trusted = c.X.Authorized
+		ret.crypted = true
+		ret.signed = c.X.Authorized
 	}
 
 	c.Mutex.Lock()

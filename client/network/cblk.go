@@ -113,7 +113,7 @@ func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) bool {
 	} else {
 		crec.Block.Txs[0].WriteSerialized(msg) // coinbase - index 0
 	}
-	c.SendRawMsg("cmpctblock", msg.Bytes())
+	c.SendRawMsg("cmpctblock", msg.Bytes(), c.X.AuthAckGot)
 	return true
 }
 
@@ -169,7 +169,7 @@ func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
 		exp_idx = idx + 1
 	}
 
-	c.SendRawMsg("blocktxn", msg.Bytes())
+	c.SendRawMsg("blocktxn", msg.Bytes(), c.X.AuthAckGot)
 }
 
 func delB2G_callback(hash *btc.Uint256) {
@@ -398,7 +398,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 		orb := &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: time.Now(), FromConID: c.ConnID, DoInvs: b2g.SendInvs}
 		ReceivedBlocks[bidx] = orb
 		DelB2G(bidx) //remove it from BlocksToGet if no more pending downloads
-		if cmd.trusted {
+		if cmd.signed {
 			b2g.Block.Trusted.Set()
 			common.CountSafe("TrustedMsg-CmpctBlock")
 		}
@@ -411,7 +411,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 		c.Mutex.Lock()
 		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash: b2g.Block.Hash, start: time.Now(), col: col, SentAtPingCnt: c.X.PingSentCnt}
 		c.Mutex.Unlock()
-		c.SendRawMsg("getblocktxn", msg.Bytes())
+		c.SendRawMsg("getblocktxn", msg.Bytes(), false)
 		//fmt.Println(c.ConnID, "Send getblocktxn for", col.Missing, "/", shortidscnt, "missing txs.  ", msg.Len(), "bytes")
 	}
 }
@@ -530,7 +530,7 @@ func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
 	orb := &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: b2g.TmPreproc,
 		TmDownload: c.LastMsgTime, TxMissing: col.Missing, FromConID: c.ConnID, DoInvs: b2g.SendInvs}
 	ReceivedBlocks[idx] = orb
-	if cmd.trusted {
+	if cmd.signed {
 		b2g.Block.Trusted.Set()
 		common.CountSafe("TrustedMsg-BlockTxn")
 	}

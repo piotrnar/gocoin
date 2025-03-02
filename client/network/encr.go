@@ -13,6 +13,9 @@ type aesData struct {
 }
 
 func (c *OneConnection) Encrypt(plaintext []byte) ([]byte, error) {
+	if c.aesData == nil {
+		return nil, fmt.Errorf("c.aesData is nil")
+	}
 	nonce := make([]byte, c.aesData.AEAD.NonceSize())
 	if _, er := io.ReadFull(rand.Reader, nonce); er != nil {
 		return nil, er

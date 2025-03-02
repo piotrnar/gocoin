@@ -45,7 +45,7 @@ func (c *OneConnection) SendVersion() {
 		b.WriteByte(0) // don't notify me about txs
 	}
 
-	c.SendRawMsg("version", b.Bytes())
+	c.SendRawMsg("version", b.Bytes(), false)
 }
 
 func (c *OneConnection) IsGocoin() bool {
@@ -197,7 +197,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		ExternalIpMutex.Unlock()
 	}
 
-	c.SendRawMsg("verack", []byte{})
+	c.SendRawMsg("verack", []byte{}, false)
 	return nil
 }
 
@@ -222,7 +222,7 @@ func (c *OneConnection) SendAuth() {
 	msg.Write(common.Last.Block.BlockHash.Hash[:])
 	binary.Write(msg, binary.LittleEndian, uint32(common.Last.Block.Height))
 	common.Last.Mutex.Unlock()
-	c.SendRawMsg("xauth", msg.Bytes())
+	c.SendRawMsg("xauth", msg.Bytes(), false)
 }
 
 // AuthRvcd processes auth messages (from other gocoin nodes).
@@ -301,7 +301,7 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 	if common.Get(&common.BlockChainSynchronized) {
 		repl[0] = 1
 	}
-	c.SendRawMsg("authack", repl[:])
+	c.SendRawMsg("authack", repl[:], true)
 }
 
 func (c *OneConnection) HasNetworkService() bool {

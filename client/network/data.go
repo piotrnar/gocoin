@@ -64,10 +64,10 @@ func (c *OneConnection) processGetData(b *bytes.Reader) {
 		if typ == MSG_WITNESS_BLOCK { // Note: MSG_BLOCK is not longer supported
 			common.CountSafe("GetdataBlockSw")
 			hash := btc.NewUint256(h[4:])
-			crec, _, er := common.BlockChain.Blocks.BlockGetExt(hash)
+			crec, trusted, er := common.BlockChain.Blocks.BlockGetExt(hash)
 			if er == nil {
 				bl := crec.Data
-				c.SendRawMsg("block", bl)
+				c.SendRawMsg("block", bl, c.X.AuthAckGot && trusted)
 			} else {
 				//fmt.Println("BlockGetExt-2 failed for", hash.String(), er.Error())
 				//notfound = append(notfound, h[:]...)
@@ -80,11 +80,7 @@ func (c *OneConnection) processGetData(b *bytes.Reader) {
 				tx.SentCnt++
 				tx.Lastsent = time.Now()
 				txpool.TxMutex.Unlock()
-				if tx.SegWit == nil || typ == MSG_WITNESS_TX {
-					c.SendRawMsg("tx", tx.Raw)
-				} else {
-					c.SendRawMsg("tx", tx.Serialize())
-				}
+				c.SendRawMsg("tx", tx.Raw, c.X.AuthAckGot)
 			} else {
 				txpool.TxMutex.Unlock()
 				//notfound = append(notfound, h[:]...)
@@ -158,7 +154,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 
 	prev_block_raw := b2g.Block.Raw // in case if it's a corrupt one
 	b2g.Block.Raw = b
-	if cmd.trusted {
+	if cmd.signed {
 		b2g.Block.Trusted.Set()
 		common.CountSafe("TrustedMsg-Block")
 	}
@@ -454,7 +450,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	btc.WriteVlen(bu, uint64(cnt))
 	pl := append(bu.Bytes(), invs.Bytes()...)
 	//println(c.ConnID, "fetching", cnt, "new blocks ->", cbip)
-	c.SendRawMsg("getdata", pl)
+	c.SendRawMsg("getdata", pl, false)
 	yes = true
 
 	// we don't set c.nextGetData here, as it will be done in tick.go after "block" message

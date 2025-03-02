@@ -200,7 +200,7 @@ func (c *OneConnection) Tick(now time.Time) {
 		// Ask node for new addresses...?
 		if !c.X.OurGetAddrDone && peersdb.PeerDB.Count() < peersdb.MinPeersInDB {
 			common.CountSafe("AddrsWanted")
-			c.SendRawMsg("getaddr", nil)
+			c.SendRawMsg("getaddr", nil, false)
 			c.X.OurGetAddrDone = true
 		}
 	}
@@ -612,7 +612,7 @@ func NetworkTick() {
 func (c *OneConnection) SendFeeFilter() {
 	var pl [8]byte
 	binary.LittleEndian.PutUint64(pl[:], c.X.LastMinFeePerKByte)
-	c.SendRawMsg("feefilter", pl[:])
+	c.SendRawMsg("feefilter", pl[:], false)
 }
 
 // GetMPDone should be called upon receiving "getmpdone" message or when the peer disconnects.
@@ -762,14 +762,14 @@ func (c *OneConnection) Run() {
 			}
 
 			if c.Node.Version >= 70012 && c.HasNetworkService() {
-				c.SendRawMsg("sendheaders", nil)
+				c.SendRawMsg("sendheaders", nil, false)
 				if c.Node.Version >= 70013 {
 					if c.X.LastMinFeePerKByte != 0 {
 						c.SendFeeFilter()
 					}
 					if c.Node.Version >= 70014 && common.Get(&common.CFG.TXPool.Enabled) {
 						// ask for compact blocks version 2 only
-						c.SendRawMsg("sendcmpct", []byte{0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+						c.SendRawMsg("sendcmpct", []byte{0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, false)
 					}
 				}
 			}
@@ -825,7 +825,7 @@ func (c *OneConnection) Run() {
 		case "ping":
 			re := make([]byte, len(cmd.pl))
 			copy(re, cmd.pl)
-			c.SendRawMsg("pong", re)
+			c.SendRawMsg("pong", re, false)
 
 		case "pong":
 			c.HandlePong(cmd.pl)
@@ -893,8 +893,12 @@ func (c *OneConnection) Run() {
 			c.AuthRvcd(cmd.pl)
 
 		case "authack":
+			if !cmd.signed {
+				println(c.PeerAddr.Ip(), "sent us unsigned authack")
+				return
+			}
 			c.Mutex.Lock()
-			c.X.AuthAckGot = cmd.trusted
+			c.X.AuthAckGot = true
 			c.Mutex.Unlock()
 			if len(cmd.pl) > 0 {
 				// if there is payload, the first byte says if the node is synchronized

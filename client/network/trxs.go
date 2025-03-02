@@ -50,7 +50,7 @@ func (c *OneConnection) SendGetMP() error {
 	txpool.CurrentFeeAdjustedSPKB = 0
 	common.SetMinFeePerKB(0)
 	txpool.TxMutex.Unlock()
-	return c.SendRawMsg("getmp", b.Bytes())
+	return c.SendRawMsg("getmp", b.Bytes(), false)
 }
 
 // TxInvNotify handles tx-inv notifications.
@@ -60,7 +60,7 @@ func (c *OneConnection) TxInvNotify(hash []byte) {
 		b[0] = 1                                              // One inv
 		binary.LittleEndian.PutUint32(b[1:5], MSG_WITNESS_TX) // SegWit Tx
 		copy(b[5:37], hash)
-		c.SendRawMsg("getdata", b[:])
+		c.SendRawMsg("getdata", b[:], false)
 	}
 }
 
@@ -152,9 +152,9 @@ func (c *OneConnection) ParseTxNet(cmd *BCmsg) {
 	txpool.NeedThisTxExt(&tx.Hash, func() {
 		// This body is called with a locked TxMutex
 		select {
-		case NetTxs <- &txpool.TxRcvd{FeedbackCB: txPoolCB, FromCID: c.ConnID, Tx: tx, Trusted: cmd.trusted}:
+		case NetTxs <- &txpool.TxRcvd{FeedbackCB: txPoolCB, FromCID: c.ConnID, Tx: tx, Trusted: cmd.signed}:
 			txpool.TransactionsPending[tx.Hash.BIdx()] = true
-			if cmd.trusted {
+			if cmd.signed {
 				common.CountSafe("TrustedMsg-Tx")
 			}
 		default:
@@ -199,11 +199,11 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 			break
 		}
 		if !has_this_one[v.Hash.BIdx()] {
-			c.SendRawMsg("tx", v.Raw)
+			c.SendRawMsg("tx", v.Raw, c.X.AuthAckGot)
 			data_sent_so_far += 24 + len(v.Raw)
 		}
 	}
 	txpool.TxMutex.Unlock()
 
-	c.SendRawMsg("getmpdone", redo[:])
+	c.SendRawMsg("getmpdone", redo[:], false)
 }
