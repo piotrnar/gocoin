@@ -168,6 +168,11 @@ type ConnInfo struct {
 	HasImmunity bool
 }
 
+type aesData struct {
+	cipher.Block
+	cipher.AEAD
+}
+
 type OneConnection struct {
 	// Source of this IP:
 	*peersdb.PeerAddr
@@ -295,11 +300,6 @@ func (v *OneConnection) cntAdd(name string, val uint64) {
 	if !common.NoCounters.Get() {
 		v.counters[name] += val
 	}
-}
-
-type aesData struct {
-	cipher.Block
-	cipher.AEAD
 }
 
 func (c *OneConnection) Encrypt(plaintext []byte) ([]byte, error) {
