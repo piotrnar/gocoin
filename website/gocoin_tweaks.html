@@ -26,8 +26,8 @@ The first option will likely have a better effect on the performance, although r
 <li><b>Increase cache size.</b> Edit the <a href="gocoin_manual_config.html">config file</a> and increase the value of <code>Memory.MaxSyncCacheMB</code>.</li>
 </ol>
 With a fast network connection, the bottleneck is the speed at which your node updates the UTXO database.<br>
-To make sure that the UTXO update worker never has to wait for the network,
-the node downloads some blocks data ahead and stores it in the cache.<br>
+To make sure the UTXO update worker never has to wait for the network,
+the node tries to download blocks ahead and store them in the cache.<br>
 The bigger the cache, the less likely it is that the UTXO update worker will ever have to wait for the network.<br>
 <br>
 Having the cache on disk allows the blocks to free the memory in between being downloaded and needed
