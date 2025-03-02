@@ -580,11 +580,14 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 		}
 	}
 
-	sh := btc.Sha2Sum(c.recv.dat)
-	if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {
-		//println(c.PeerAddr.Ip(), "Msg checksum error")
-		c.DoS("MsgBadChksum")
-		return
+	if !c.X.VersionReceived {
+		// only verify the checksum on the first message, as it is pretty pointless task
+		sh := btc.Sha2Sum(c.recv.dat)
+		if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {
+			//println(c.PeerAddr.Ip(), "Msg checksum error")
+			c.DoS("MsgBadChksum")
+			return
+		}
 	}
 
 	ret = new(BCmsg)
