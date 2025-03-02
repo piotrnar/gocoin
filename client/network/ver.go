@@ -214,7 +214,9 @@ func (c *OneConnection) SendAuth() {
 	sig.R.Set(r)
 	sig.S.Set(s)
 
-	msg := bytes.NewBuffer(sig.Bytes())
+	msg := new(bytes.Buffer)
+	msg.Write(common.PublicKey)
+	msg.Write(sig.Bytes())
 	// add last block hash and last block height
 	common.Last.Mutex.Lock()
 	msg.Write(common.Last.Block.BlockHash.Hash[:])
@@ -226,19 +228,42 @@ func (c *OneConnection) SendAuth() {
 // AuthRvcd processes auth messages (from other gocoin nodes).
 func (c *OneConnection) AuthRvcd(pl []byte) {
 	if c.X.AuthMsgGot > 0 {
-		c.DoS("AuthMsgCnt") // Only allow one auth message per connection (DoS prevention)
+		c.DoS("XAuthMsgCnt") // Only allow one auth message per connection (DoS prevention)
 		return
 	}
 	c.X.AuthMsgGot++
 
 	c.X.Authorized = false
 
+	if len(pl) < 33 {
+		c.DoS("XAuthMsgShort") // Only allow one auth message per connection (DoS prevention)
+		return
+	}
+
+	var shared_secret [33]byte
+	if secp256k1.Multiply(pl[:33], common.SecretKey, shared_secret[:]) {
+		var er error
+		var dat aesData
+		var aeskey [32]byte
+		btc.ShaHash(shared_secret[:], aeskey[:])
+		if dat.Block, er = aes.NewCipher(aeskey[:]); er != nil {
+			println("aes.NewCipher:", er.Error())
+		} else {
+			if dat.AEAD, er = cipher.NewGCM(dat.Block); er != nil {
+				println("cipher.NewGCM:", er.Error())
+			} else {
+				c.aesData = &dat
+				println(c.PeerAddr.Ip(), "- secure context established")
+			}
+		}
+	}
+
 	var sig secp256k1.Signature
 	var pkey secp256k1.XY
 	var m secp256k1.Number
 	var b32 [32]byte
 
-	sig_len := sig.ParseBytes(pl)
+	sig_len := sig.ParseBytes(pl[33:])
 	if sig_len < 0 {
 		return
 	}
@@ -248,25 +273,8 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 
 	FriendsAccess.Lock()
 	for _, pub := range AuthPubkeys {
-		if pkey.ParsePubkey(pub) && sig.Verify(&pkey, &m) {
+		if bytes.Equal(pub, pl[:33]) && pkey.ParsePubkey(pub) && sig.Verify(&pkey, &m) {
 			c.X.Authorized = true
-			var shared_secret [33]byte
-			if secp256k1.Multiply(pub, common.SecretKey, shared_secret[:]) {
-				var er error
-				var dat aesData
-				var aeskey [32]byte
-				btc.ShaHash(shared_secret[:], aeskey[:])
-				if dat.Block, er = aes.NewCipher(aeskey[:]); er != nil {
-					println("aes.NewCipher:", er.Error())
-				} else {
-					if dat.AEAD, er = cipher.NewGCM(dat.Block); er != nil {
-						println("cipher.NewGCM:", er.Error())
-					} else {
-						c.aesData = &dat
-						println(c.PeerAddr.Ip(), "- secure context established")
-					}
-				}
-			}
 			break
 		}
 	}

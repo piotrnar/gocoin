@@ -793,7 +793,7 @@ func (c *OneConnection) Run() {
 
 		case "tx":
 			if common.AcceptTx() {
-				c.ParseTxNet(cmd.pl, cmd.trusted)
+				c.ParseTxNet(cmd.pl, c.X.Authorized && cmd.encrypted)
 			}
 
 		case "addr":
@@ -892,22 +892,9 @@ func (c *OneConnection) Run() {
 		case "xauth": // "xauth" supports encryption and makes "auth" deprecated as not secure
 			c.AuthRvcd(cmd.pl)
 
-		case "authnack":
-			println(c.PeerAddr.Ip(), "-sent us authnack -", c.X.Authorized)
-			c.Mutex.Lock()
-			c.X.Authorized = false
-			c.aesData = nil
-			c.Mutex.Unlock()
-			println(c.PeerAddr.Ip(), "-unauthorized")
-
 		case "authack":
-			if !cmd.trusted {
-				println(c.PeerAddr.Ip(), "-failed authack. Send back authnack", c.X.AuthAckGot, c.X.Authorized, c.aesData != nil)
-				c.SendRawMsg("authnack", nil)
-				return
-			}
 			c.Mutex.Lock()
-			c.X.AuthAckGot = true
+			c.X.AuthAckGot = cmd.encrypted
 			c.Mutex.Unlock()
 			if len(cmd.pl) > 0 {
 				// if there is payload, the first byte says if the node is synchronized

@@ -246,9 +246,9 @@ type oneBlockDl struct {
 }
 
 type BCmsg struct {
-	cmd     string
-	pl      []byte
-	trusted bool
+	cmd       string
+	pl        []byte
+	encrypted bool
 }
 
 func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
@@ -629,7 +629,7 @@ do_it:
 	ret = new(BCmsg)
 	ret.cmd = c.recv.cmd
 	ret.pl = c.recv.dat
-	ret.trusted = decrypt
+	ret.encrypted = decrypt
 
 	c.Mutex.Lock()
 	c.recv.hdr_len = 0
