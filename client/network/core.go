@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -396,8 +397,22 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		copy(sbuf[4:16], cmd)
 
 		if encrypt {
-			pl, _ = c.Encrypt(pl)
+			var er error
+			org := pl
+			pl, er = c.Encrypt(pl)
+			if er != nil {
+				println("Encryption failed:", er.Error())
+				return
+			}
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl))|0x80000000)
+
+			// verify decryption:
+			x, _ := c.Decrypt(pl)
+			if !bytes.Equal(x, pl) {
+				println("Decyption cross-verify failed", len(org), len(pl), len(x))
+				println(hex.EncodeToString(org))
+				os.Exit(1)
+			}
 		} else {
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
 			sh := btc.Sha2Sum(pl[:])
