@@ -65,16 +65,19 @@ func blockUndone(bl *btc.Block) {
 	txpool.BlockUndone(bl)
 }
 
-func exit_now() {
-	al, sy := sys.MemUsed()
+func print_sync_stats() {
+	al, _ := sys.MemUsed()
 	cb, _ := common.MemUsed()
-	fmt.Printf("Sync to %d took %s  -  %.0f min.  Mem: %d %d %d MB  - cachempty: %d\n",
+	fmt.Printf("Sync to %d took %s.  Mem used: %d + %d MB.  cachempty: %d\n",
 		common.Last.Block.Height, time.Since(common.StartTime).String(),
-		float64(time.Since(common.StartTime))/float64(time.Minute), al>>20, sy>>20, cb>>20,
-		network.Fetch.CacheEmpty)
-	fmt.Printf("Wasted %dMB from %d blocks.  Max cache used: %d / %dMB\n",
+		al>>20, cb>>20, network.Fetch.CacheEmpty)
+	fmt.Printf("    wasted %dMB from %d blocks.  Max cache used: %d / %dMB\n",
 		network.Fetch.BlockBytesWasted>>20, network.Fetch.BlockSameRcvd,
 		network.MaxCachedBlocksSize.Get()>>20, common.SyncMaxCacheBytes.Get()>>20)
+}
+
+func exit_now() {
+	print_sync_stats()
 	common.PrintBWStats()
 	fmt.Print("Reached given block ", *exitat, ". Now exiting....\n\n\n\n")
 	os.Exit(0)
@@ -127,14 +130,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		}
 		if common.Last.ParseTill == nil && !common.BlockChainSynchronized &&
 			((common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == network.LastCommitedHeader.Height) {
-			al, sy := sys.MemUsed()
-			cb, _ := common.MemUsed()
-			fmt.Printf("Sync to %d took %s  -  %.1f min.  Mem: %d %d %d MB  - cachempty: %d\n",
-				common.Last.Block.Height, time.Since(common.StartTime).String(),
-				float64(time.Since(common.StartTime))/float64(time.Minute), al>>20, sy>>20, cb>>20,
-				network.Fetch.CacheEmpty)
+			print_sync_stats()
 			if common.Last.Block.Height <= 200e3 {
-				// Cache underflow counter is not reliable at the beginning of chain sync,s o reset it here
+				// Cache underflow counter is not reliable at the beginning of chain sync, so reset it here
 				network.Fetch.CacheEmpty = 0
 			}
 		}
