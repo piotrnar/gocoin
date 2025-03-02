@@ -251,7 +251,7 @@ type BCmsg struct {
 	cmd     string
 	pl      []byte
 	crypted bool
-	signed  bool
+	trusted bool
 }
 
 func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
@@ -635,7 +635,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	ret.pl = c.recv.dat
 	if c.recv.decrypt {
 		ret.crypted = true
-		ret.signed = c.X.Authorized
+		ret.trusted = c.X.Authorized
 	}
 
 	c.Mutex.Lock()

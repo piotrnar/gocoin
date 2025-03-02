@@ -154,7 +154,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 
 	prev_block_raw := b2g.Block.Raw // in case if it's a corrupt one
 	b2g.Block.Raw = b
-	if cmd.signed {
+	if cmd.trusted {
 		b2g.Block.Trusted.Set()
 		common.CountSafe("TrustedMsg-Block")
 	}

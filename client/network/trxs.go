@@ -152,9 +152,9 @@ func (c *OneConnection) ParseTxNet(cmd *BCmsg) {
 	txpool.NeedThisTxExt(&tx.Hash, func() {
 		// This body is called with a locked TxMutex
 		select {
-		case NetTxs <- &txpool.TxRcvd{FeedbackCB: txPoolCB, FromCID: c.ConnID, Tx: tx, Trusted: cmd.signed}:
+		case NetTxs <- &txpool.TxRcvd{FeedbackCB: txPoolCB, FromCID: c.ConnID, Tx: tx, Trusted: cmd.trusted}:
 			txpool.TransactionsPending[tx.Hash.BIdx()] = true
-			if cmd.signed {
+			if cmd.trusted {
 				common.CountSafe("TrustedMsg-Tx")
 			}
 		default:

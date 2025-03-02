@@ -893,7 +893,7 @@ func (c *OneConnection) Run() {
 			c.AuthRvcd(cmd.pl)
 
 		case "authack":
-			if !cmd.signed {
+			if !cmd.trusted {
 				println(c.PeerAddr.Ip(), "sent us unsigned authack")
 				return
 			}

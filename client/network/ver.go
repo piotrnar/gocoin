@@ -253,7 +253,7 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 				println("cipher.NewGCM:", er.Error())
 			} else {
 				c.aesData = &dat
-				println(c.PeerAddr.Ip(), "- secure context established")
+				//println(c.PeerAddr.Ip(), "- secure context established")
 			}
 		}
 	}

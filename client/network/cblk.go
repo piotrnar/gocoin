@@ -398,7 +398,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 		orb := &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: time.Now(), FromConID: c.ConnID, DoInvs: b2g.SendInvs}
 		ReceivedBlocks[bidx] = orb
 		DelB2G(bidx) //remove it from BlocksToGet if no more pending downloads
-		if cmd.signed {
+		if cmd.trusted {
 			b2g.Block.Trusted.Set()
 			common.CountSafe("TrustedMsg-CmpctBlock")
 		}
@@ -530,7 +530,7 @@ func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
 	orb := &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: b2g.TmPreproc,
 		TmDownload: c.LastMsgTime, TxMissing: col.Missing, FromConID: c.ConnID, DoInvs: b2g.SendInvs}
 	ReceivedBlocks[idx] = orb
-	if cmd.signed {
+	if cmd.trusted {
 		b2g.Block.Trusted.Set()
 		common.CountSafe("TrustedMsg-BlockTxn")
 	}
