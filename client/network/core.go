@@ -357,7 +357,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	/*if c.X.Debug {
 		fmt.Println(c.ConnID, "sent", cmd, len(pl))
 	}*/
-	encrypt := c.aesData != nil && cmd == "autack"
+	encrypt := c.aesData != nil && cmd == "authack"
 
 	if !c.broken {
 		// we never allow the buffer to be totally full because then producer would be equal consumer
