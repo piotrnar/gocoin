@@ -600,6 +600,9 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 
 	if decrypt {
 		if c.aesData == nil {
+			if c.recv.cmd == "authack" {
+				return // just ignore this authack
+			}
 			println(c.PeerAddr.Ip(), "- got encrypted msg", c.recv.cmd, "but have no key")
 			c.DoS("MsgNoKey")
 			return
