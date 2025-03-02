@@ -361,10 +361,6 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	}*/
 	encrypt := c.aesData != nil && (cmd == "authack" || cmd == "tx")
 
-	if encrypt && c.X.Authorized && cmd == "tx" {
-		println("send", cmd, len(pl), hex.EncodeToString(pl[:8]))
-	}
-
 	if !c.broken {
 		// we never allow the buffer to be totally full because then producer would be equal consumer
 		if bytes_left := SendBufSize - c.BytesToSent(); bytes_left <= len(pl)+24 {
@@ -414,8 +410,6 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 				println(hex.EncodeToString(org))
 				os.Exit(1)
 			}
-			chk := btc.Sha2Sum(pl)
-			println("   -chksum", hex.EncodeToString(chk[:]))
 		} else {
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
 			sh := btc.Sha2Sum(pl[:])
