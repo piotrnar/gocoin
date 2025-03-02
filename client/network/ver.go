@@ -215,7 +215,7 @@ func (c *OneConnection) SendAuth() {
 	sig.S.Set(s)
 
 	msg := new(bytes.Buffer)
-	msg.Write(common.PublicKey)
+	msg.Write(common.PublicKeyBin)
 	msg.Write(sig.Bytes())
 	// add last block hash and last block height
 	common.Last.Mutex.Lock()

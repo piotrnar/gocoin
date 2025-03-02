@@ -44,9 +44,9 @@ func host_init() {
 		rand.Read(common.SecretKey)
 		os.WriteFile(common.GocoinHomeDir+"authkey", common.SecretKey, 0600)
 	}
-	common.PublicKey = btc.PublicFromPrivate(common.SecretKey, true)
-	common.PublicKeyStr = btc.Encodeb58(common.PublicKey)
-	fmt.Println("Public auth key:", "@"+common.PublicKeyStr)
+	common.PublicKeyBin = btc.PublicFromPrivate(common.SecretKey, true)
+	common.PublicKey = btc.Encodeb58(common.PublicKeyBin)
+	fmt.Println("Public auth key:", "@"+common.PublicKey)
 
 	__exit := make(chan bool)
 	var done sync.WaitGroup

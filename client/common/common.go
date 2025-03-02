@@ -71,8 +71,8 @@ var (
 	KillChan chan os.Signal = make(chan os.Signal)
 
 	SecretKey    []byte // 32 bytes of secret key
-	PublicKey    []byte // 33 bytes of public key
-	PublicKeyStr string
+	PublicKeyBin []byte // 33 bytes of public key
+	PublicKey    string
 
 	WalletON       bool
 	WalletProgress uint32 // 0 for not / 1000 for max
