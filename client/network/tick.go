@@ -893,7 +893,7 @@ func (c *OneConnection) Run() {
 			c.AuthRvcd(cmd.pl)
 
 		case "authnack":
-			println(c.PeerAddr.Ip(), "-sent us authnack", c.X.Authorized)
+			println(c.PeerAddr.Ip(), "-sent us authnack -", c.X.Authorized)
 			c.Mutex.Lock()
 			c.X.Authorized = false
 			c.aesData = nil
