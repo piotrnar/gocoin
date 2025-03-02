@@ -129,7 +129,6 @@ type ConnectionStatus struct {
 	IsGocoin  bool
 	Debug     bool
 
-	aesKey     []byte
 	Authorized bool
 	AuthMsgGot uint
 	AuthAckGot bool
@@ -183,7 +182,8 @@ type OneConnection struct {
 	net.Conn
 
 	// TCP connection data:
-	X ConnectionStatus
+	X        ConnectionStatus
+	*aesData // used for sending secured messages to/from authenticated hosts
 
 	Node NetworkNodeStruct // Data from the version message
 
@@ -246,8 +246,9 @@ type oneBlockDl struct {
 }
 
 type BCmsg struct {
-	cmd string
-	pl  []byte
+	cmd     string
+	pl      []byte
+	trusted bool
 }
 
 func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
@@ -351,15 +352,12 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 }
 
 func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
-	return c.SendRawMsgExt(cmd, pl, false)
-}
-
-func (c *OneConnection) SendRawMsgExt(cmd string, pl []byte, encrypt bool) (e error) {
 	c.Mutex.Lock()
 
 	/*if c.X.Debug {
 		fmt.Println(c.ConnID, "sent", cmd, len(pl))
 	}*/
+	encrypt := c.aesData != nil && cmd == "autack"
 
 	if !c.broken {
 		// we never allow the buffer to be totally full because then producer would be equal consumer
@@ -391,7 +389,7 @@ func (c *OneConnection) SendRawMsgExt(cmd string, pl []byte, encrypt bool) (e er
 
 		if encrypt {
 			println(c.PeerAddr.Ip(), "-send encrypted msg", len(pl))
-			pl, _ = Encrypt(pl, c.X.aesKey)
+			pl, _ = c.Encrypt(pl)
 			println("  ... new len:", len(pl))
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl))|0x80000000)
 		} else {
@@ -589,11 +587,11 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	}
 
 	if decrypt {
-		if c.X.aesKey == nil {
+		if c.aesData == nil {
 			println(c.PeerAddr.Ip(), "- got encrypted msg", c.recv.cmd, "but have no key")
 			return
 		}
-		plain, er := Decrypt(c.recv.dat, c.X.aesKey)
+		plain, er := c.Decrypt(c.recv.dat)
 		if er != nil {
 			println("Decryption error:", er.Error())
 			return
@@ -614,6 +612,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	ret = new(BCmsg)
 	ret.cmd = c.recv.cmd
 	ret.pl = c.recv.dat
+	ret.trusted = decrypt
 
 	c.Mutex.Lock()
 	c.recv.hdr_len = 0

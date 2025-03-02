@@ -889,10 +889,14 @@ func (c *OneConnection) Run() {
 				c.ProcessGetMP(cmd.pl)
 			}
 
-		case "auth":
+		case "xauth": // "xauth" supports encryption and makes "auth" deprecated as not secure
 			c.AuthRvcd(cmd.pl)
 
 		case "authack":
+			if !cmd.trusted {
+				println(c.PeerAddr.Ip(), "-untrusted authack")
+				return
+			}
 			c.Mutex.Lock()
 			c.X.AuthAckGot = true
 			c.Mutex.Unlock()

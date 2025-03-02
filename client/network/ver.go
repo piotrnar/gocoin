@@ -2,8 +2,9 @@ package network
 
 import (
 	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -219,7 +220,7 @@ func (c *OneConnection) SendAuth() {
 	msg.Write(common.Last.Block.BlockHash.Hash[:])
 	binary.Write(msg, binary.LittleEndian, uint32(common.Last.Block.Height))
 	common.Last.Mutex.Unlock()
-	c.SendRawMsg("auth", msg.Bytes())
+	c.SendRawMsg("xauth", msg.Bytes())
 }
 
 // AuthRvcd processes auth messages (from other gocoin nodes).
@@ -251,9 +252,20 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 			c.X.Authorized = true
 			var shared_secret [33]byte
 			if secp256k1.Multiply(pub, common.SecretKey, shared_secret[:]) {
-				println(c.PeerAddr.Ip(), "- shared secret:", hex.EncodeToString(shared_secret[:]))
-				c.X.aesKey = make([]byte, 32)
-				btc.ShaHash(shared_secret[:], c.X.aesKey)
+				var er error
+				var dat aesData
+				var aeskey [32]byte
+				btc.ShaHash(shared_secret[:], aeskey[:])
+				if dat.Block, er = aes.NewCipher(aeskey[:]); er != nil {
+					println("aes.NewCipher:", er.Error())
+				} else {
+					if dat.AEAD, er = cipher.NewGCM(dat.Block); er != nil {
+						println("cipher.NewGCM:", er.Error())
+					} else {
+						c.aesData = &dat
+						println(c.PeerAddr.Ip(), "- secure context established")
+					}
+				}
 			}
 			break
 		}
@@ -281,7 +293,7 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 	if common.Get(&common.BlockChainSynchronized) {
 		repl[0] = 1
 	}
-	c.SendRawMsgExt("authack", repl[:], true)
+	c.SendRawMsg("authack", repl[:])
 }
 
 func (c *OneConnection) HasNetworkService() bool {
