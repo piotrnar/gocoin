@@ -171,7 +171,7 @@ func p_authkey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header()["Content-Type"] = []string{"text/plain"}
-	w.Write([]byte(common.PublicKey))
+	w.Write([]byte(common.PublicKeyStr))
 }
 
 func ServerThread() {
