@@ -196,6 +196,7 @@ type OneConnection struct {
 		cmd     string
 		dat     []byte
 		datlen  uint32
+		decrypt bool
 	}
 	LastMsgTime        time.Time
 	unfinished_getdata *bytes.Buffer
@@ -413,6 +414,8 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 				println(hex.EncodeToString(org))
 				os.Exit(1)
 			}
+			chk := btc.Sha2Sum(pl)
+			println("   -chksum", hex.EncodeToString(chk[:]))
 		} else {
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
 			sh := btc.Sha2Sum(pl[:])
@@ -514,7 +517,6 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	var e error
 	var n int
 	var magic_checked bool
-	var decrypt bool
 
 	for c.recv.hdr_len < 24 {
 		n, e = common.SockRead(c.Conn, c.recv.hdr[c.recv.hdr_len:24])
@@ -556,9 +558,8 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 		if c.recv.hdr_len == 24 {
 			c.recv.cmd = strings.TrimRight(string(c.recv.hdr[4:16]), "\000")
 			c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
-			if (c.recv.pl_len & 0x80000000) != 0 {
+			if c.recv.decrypt = (c.recv.pl_len & 0x80000000) != 0; c.recv.decrypt {
 				c.recv.pl_len &= 0x7fffffff
-				decrypt = true
 			}
 			c.Mutex.Unlock()
 		} else {
@@ -610,12 +611,12 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 		}
 	}
 
-	if decrypt {
+	if c.recv.decrypt {
 		//println(c.PeerAddr.Ip(), "Received encrypted:", c.recv.cmd, c.aesData != nil)
 		if c.aesData == nil {
 			if c.recv.cmd == "authack" {
 				c.recv.dat = nil
-				decrypt = false
+				c.recv.decrypt = false
 				goto do_it
 			}
 			println(c.PeerAddr.Ip(), "- got encrypted msg", c.recv.cmd, "but have no key")
@@ -644,7 +645,7 @@ do_it:
 	ret = new(BCmsg)
 	ret.cmd = c.recv.cmd
 	ret.pl = c.recv.dat
-	ret.encrypted = decrypt
+	ret.encrypted = c.recv.decrypt
 
 	c.Mutex.Lock()
 	c.recv.hdr_len = 0
@@ -656,7 +657,7 @@ do_it:
 
 	if !common.NoCounters.Get() {
 		var ext string
-		if decrypt {
+		if c.recv.decrypt {
 			ext = "_enc"
 		}
 		srcvd := "rcvd_" + ret.cmd + ext
