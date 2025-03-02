@@ -68,16 +68,19 @@ func blockUndone(bl *btc.Block) {
 func print_sync_stats() {
 	al, _ := sys.MemUsed()
 	cb, _ := common.MemUsed()
-	fmt.Printf("Sync to %d took %s.  Mem used: %d + %d MB.  cachempty: %d\n",
+	fmt.Printf("Sync to %d took %s. MemUsed: %d + %d MB.  CachEmpty: %d / MaxUsed: %d/%dMB\n",
 		common.Last.Block.Height, time.Since(common.StartTime).String(),
-		al>>20, cb>>20, network.Fetch.CacheEmpty)
-	fmt.Printf("    wasted %dMB from %d blocks.  Max cache used: %d / %dMB\n",
-		network.Fetch.BlockBytesWasted>>20, network.Fetch.BlockSameRcvd,
-		network.MaxCachedBlocksSize.Get()>>20, common.SyncMaxCacheBytes.Get()>>20)
+		al>>20, cb>>20, network.Fetch.CacheEmpty, network.MaxCachedBlocksSize.Get()>>20,
+		common.SyncMaxCacheBytes.Get()>>20)
 }
 
 func exit_now() {
 	print_sync_stats()
+	if tot := common.DlBytesTotal; tot > 0 {
+		wst := network.Fetch.BlockBytesWasted
+		fmt.Printf("Wasted %d blocks carrying %d / %dMB, which was %.2f%% of total DL bandwidth\n",
+			network.Fetch.BlockSameRcvd, wst>>20, tot>>20, 100*float64(wst)/float64(tot))
+	}
 	common.PrintBWStats()
 	fmt.Print("Reached given block ", *exitat, ". Now exiting....\n\n\n\n")
 	os.Exit(0)
