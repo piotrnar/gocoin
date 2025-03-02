@@ -8,9 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -171,6 +169,7 @@ type ConnInfo struct {
 type aesData struct {
 	cipher.Block
 	cipher.AEAD
+	nonceSize int
 }
 
 type OneConnection struct {
@@ -302,28 +301,29 @@ func (v *OneConnection) cntAdd(name string, val uint64) {
 	}
 }
 
-func (c *OneConnection) Encrypt(plaintext []byte) ([]byte, error) {
+func (c *OneConnection) Encrypt(plain []byte) (res []byte, er error) {
 	if c.aesData == nil {
-		return nil, fmt.Errorf("c.aesData is nil")
+		er = errors.New("c.aesData is nil")
+		return
 	}
-	nonce := make([]byte, c.aesData.AEAD.NonceSize())
-	if _, er := io.ReadFull(rand.Reader, nonce); er != nil {
-		return nil, er
+	ns := c.aesData.nonceSize
+	nonce := make([]byte, ns, ns+len(plain)+16)
+	rand.Read(nonce)
+	x := c.aesData.AEAD.Seal(nonce, nonce, plain, nil)
+	if &x[0] != &nonce[0] {
+		println("pipa encrypt")
 	}
-	return c.aesData.AEAD.Seal(nonce, nonce, plaintext, nil), nil
+	return x, nil
 }
 
-func (c *OneConnection) Decrypt(ciphertext []byte) ([]byte, error) {
-	nonceSize := c.aesData.AEAD.NonceSize()
-	if len(ciphertext) < nonceSize {
-		return nil, fmt.Errorf("ciphertext too short")
+func (c *OneConnection) Decrypt(cipher []byte) (res []byte, er error) {
+	ns := c.aesData.nonceSize
+	if len(cipher) < ns {
+		er = errors.New("ciphertext too short")
+		return
 	}
-	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
-	plaintext, err := c.aesData.AEAD.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, err
-	}
-	return plaintext, nil
+	res, er = c.aesData.AEAD.Open(nil, cipher[:ns], cipher[ns:], nil)
+	return
 }
 
 // MutexSetBool does a mutex protected assignment of val to addr.
@@ -427,21 +427,11 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte, encrypt bool) (e error
 
 		if encrypt {
 			var er error
-			org := pl
-			pl, er = c.Encrypt(pl)
-			if er != nil {
+			if pl, er = c.Encrypt(pl); er != nil {
 				println("Encryption failed:", er.Error())
 				return
 			}
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl))|0x80000000)
-
-			// verify decryption:
-			x, _ := c.Decrypt(pl)
-			if !bytes.Equal(x, org) {
-				println("Decyption cross-verify failed", len(org), len(pl), len(x))
-				println(hex.EncodeToString(org))
-				os.Exit(1)
-			}
 		} else {
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
 			sh := btc.Sha2Sum(pl[:])

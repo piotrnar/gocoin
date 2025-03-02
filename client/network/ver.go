@@ -252,6 +252,7 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 			if dat.AEAD, er = cipher.NewGCM(dat.Block); er != nil {
 				println("cipher.NewGCM:", er.Error())
 			} else {
+				dat.nonceSize = dat.AEAD.NonceSize()
 				c.aesData = &dat
 				//println(c.PeerAddr.Ip(), "- secure context established")
 			}
