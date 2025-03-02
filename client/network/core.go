@@ -361,14 +361,8 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	if c.aesData != nil {
 		if cmd == "authack" {
 			encrypt = true
-		} else if c.X.AuthAckGot {
-			switch cmd {
-			case "tx":
-			case "cmpctblock":
-			case "blocktxn":
-				encrypt = true
-			}
-
+		} else if c.X.AuthAckGot && cmd == "tx" {
+			encrypt = true
 		}
 	}
 

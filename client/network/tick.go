@@ -793,7 +793,7 @@ func (c *OneConnection) Run() {
 
 		case "tx":
 			if common.AcceptTx() {
-				c.ParseTxNet(cmd.pl)
+				c.ParseTxNet(cmd.pl, cmd.trusted)
 			}
 
 		case "addr":
