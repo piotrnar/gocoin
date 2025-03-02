@@ -352,23 +352,13 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 }
 
 func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
-	var encrypt bool
 	c.Mutex.Lock()
 
 	/*if c.X.Debug {
 		fmt.Println(c.ConnID, "sent", cmd, len(pl))
 	}*/
-	if c.aesData != nil {
-		if c.X.AuthAckGot {
-			if cmd == "tx" {
-				encrypt = true
-			}
-		} else {
-			if strings.HasPrefix(cmd, "auth") {
-				encrypt = true
-			}
-		}
-	}
+	encrypt := c.aesData != nil && (cmd == "authack" || cmd == "tx")
+
 	if encrypt {
 		println(c.PeerAddr.Ip(), "- encrypting", cmd)
 	}
