@@ -393,20 +393,15 @@ func (c *OneConnection) SendRawMsgExt(cmd string, pl []byte, encrypt bool) (e er
 
 		if encrypt {
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)+len(zeros))|0x80000000)
-			buf := make([]byte, 0, len(sbuf[:])+len(pl)+len(zeros))
-			buf = append(buf, sbuf[:]...)
-			buf = append(buf, pl...)
-			buf = append(buf, zeros[:]...)
-			encrypted, _ := Encrypt(buf, c.X.aesKey)
-			c.append_to_send_buffer(encrypted)
+			pl, _ = Encrypt(append(pl, zeros[:]...), c.X.aesKey)
 			println(c.PeerAddr.Ip(), "-send encrypted msg")
 		} else {
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
 			sh := btc.Sha2Sum(pl[:])
 			copy(sbuf[20:24], sh[:4])
-			c.append_to_send_buffer(sbuf[:])
-			c.append_to_send_buffer(pl)
 		}
+		c.append_to_send_buffer(sbuf[:])
+		c.append_to_send_buffer(pl)
 
 		if x := c.BytesToSent(); x > c.X.MaxSentBufSize {
 			c.X.MaxSentBufSize = x
