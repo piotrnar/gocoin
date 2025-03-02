@@ -896,7 +896,9 @@ func (c *OneConnection) Run() {
 			println(c.PeerAddr.Ip(), "-sent us authnack", c.X.Authorized)
 			c.Mutex.Lock()
 			c.X.Authorized = false
+			c.aesData = nil
 			c.Mutex.Unlock()
+			println(c.PeerAddr.Ip(), "-unauthorized")
 
 		case "authack":
 			if !cmd.trusted {
