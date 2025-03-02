@@ -359,11 +359,18 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		fmt.Println(c.ConnID, "sent", cmd, len(pl))
 	}*/
 	if c.aesData != nil {
-		if strings.HasPrefix(cmd, "auth") {
-			encrypt = true
-		} else if c.X.AuthAckGot && cmd == "tx" {
-			encrypt = true
+		if c.X.AuthAckGot {
+			if cmd == "tx" {
+				encrypt = true
+			}
+		} else {
+			if strings.HasPrefix(cmd, "auth") {
+				encrypt = true
+			}
 		}
+	}
+	if encrypt {
+		println(c.PeerAddr.Ip(), "- encrypting", cmd)
 	}
 
 	if !c.broken {
@@ -599,6 +606,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	}
 
 	if decrypt {
+		println("Received encrypted:", c.recv.cmd, c.aesData != nil)
 		if c.aesData == nil {
 			if c.recv.cmd == "authack" {
 				c.recv.dat = nil
@@ -615,7 +623,6 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			c.DoS("MsgAuthError")
 			return
 		}
-		//println("Received:", hex.EncodeToString(plain))
 		c.recv.dat = plain
 		//println(c.PeerAddr.Ip(), "- got encrypted", c.recv.cmd)
 	} else if !c.X.VersionReceived {
