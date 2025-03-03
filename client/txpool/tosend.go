@@ -36,21 +36,21 @@ var (
 )
 
 type OneTxToSend struct {
-	better, worse                 *OneTxToSend
-	inPackages                    []*OneTxsPackage // only use inPackagesSet() to set this field
-	Invsentcnt, SentCnt           uint32
 	Firstseen, Lastseen, Lastsent time.Time
-	Volume, Fee                   uint64
 	*btc.Tx
-	MemInputs   []bool // only use memInputsSet() to set this field
-	SigopsCost  uint64
-	VerifyTime  time.Duration
-	SortRank    uint64
-	MemInputCnt uint32
-	Footprint   uint32
-	Local       bool
-	Blocked     byte // if non-zero, it gives you the reason why this tx has not been routed
-	Final       bool // if true RFB will not work on it
+	better, worse       *OneTxToSend
+	MemInputs           []bool           // only use memInputsSet() to set this field
+	inPackages          []*OneTxsPackage // only use inPackagesSet() to set this field
+	Volume, Fee         uint64
+	SigopsCost          uint64
+	SortRank            uint64
+	VerifyTime          time.Duration
+	Invsentcnt, SentCnt uint32
+	MemInputCnt         uint32
+	Footprint           uint32
+	Blocked             byte // if non-zero, it gives you the reason why this tx has not been routed
+	Local               bool
+	Final               bool // if true RFB will not work on it
 }
 
 func (t2s *OneTxToSend) Add(bidx btc.BIDX) {

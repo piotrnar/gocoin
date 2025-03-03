@@ -336,9 +336,9 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 }
 
 type MPFeeRec struct {
+	Txs    []*OneTxToSend
 	Weight uint64
 	Fee    uint64
-	Txs    []*OneTxToSend
 }
 
 func GetMempoolFees(maxweight uint64) (result []*MPFeeRec) {

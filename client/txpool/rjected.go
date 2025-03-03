@@ -31,10 +31,10 @@ var (
 )
 
 type OneTxRejected struct {
-	Id       btc.Uint256
+	time.Time
 	Waiting4 *btc.Uint256
 	*btc.Tx
-	time.Time
+	Id        btc.Uint256
 	Size      uint32
 	Footprint uint32
 	ArrIndex  uint16
