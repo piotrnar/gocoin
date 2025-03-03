@@ -19,26 +19,21 @@ This will turn off node's internal statistics which should improve performance.<
 
 If you have a fast network connection (e.g. 1Gbit), examine the two options below.<br>
 Don't bother with a slow connection, as the network speed is your bottleneck then.
-(you know it when syncing node uses your entire bandidth)<br>
+(you know it when syncing node uses your entire bandwidth)<br>
 The first option will likely have a better effect on the performance, although requires more RAM.<br>
 <ol>
 <li><b>Turn off caching on disk.</b> Edit the <a href="gocoin_manual_config.html">config file</a> and set the value of <code>Memory.CacheOnDisk</code> to <b>false</b>.</li>
-<li><b>Increase cache size.</b> Edit the <a href="gocoin_manual_config.html">config file</a> and increase the value of <code>Memory.MaxSyncCacheMB</code>.</li>
+<li><b>Increase cache size.</b> Edit the <a href="gocoin_manual_config.html">config file</a> and increase the value of <code>Memory.SyncCacheSize</code>.</li>
 </ol>
-With a fast network connection, the bottleneck is the speed at which your node updates the UTXO database.<br>
-To make sure the UTXO update worker never has to wait for the network,
+With a fast network connection, the bottleneck is the speed at which your node builds the UTXO database.<br>
+To make sure the UTXO worker never has to wait for the network,
 the node tries to download blocks ahead and store them in the cache.<br>
-The bigger the cache, the less likely it is that the UTXO update worker will ever have to wait for the network.<br>
+The bigger the cache, the less likely it is that the UTXO worker will ever have to wait for the network.<br>
 <br>
-Having the cache on disk allows the blocks to free the memory in between being downloaded and needed
-by the UTXO worker.<br>
-This however comes at the extra CPU time required for the disk operations and re-creating the block's in-memory
-structure after loading.<br>
+Mind that with <code>CacheOnDisk</code> disabled, a change of the cache size has a major effect on memory usage.<br>
 <br>
-As long as <code>CacheOnDisk</code> is on, increasing <code>MaxSyncCacheMB</code> does not have a significant effect on memory
-usage. In such case, it should be safe to set the cache size even to e.g. 5000.<br>
-With <code>CacheOnDisk</code> off, a change of the cache size has a major effect on memory usage.
-In such case, the extra memory required is multiple times higher than the increase of <code>MaxSyncCacheMB</code> value.<br>
+At the other hand, having the cache on disk results in a minimal memory requiement even for a huge cache size.<br>
+But it comes at the extra time required for the disk operations and re-creation of in-memory structures after loading.<br>
 <br>
 <i>Note:<br>
 1. This only affects the chain sync performance. Once the chain is synchronized, it does not matter.<br>

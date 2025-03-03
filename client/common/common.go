@@ -92,10 +92,10 @@ var (
 )
 
 type TheLastBlock struct {
-	sync.Mutex // use it for writing and reading from non-chain thread
-	Block      *chain.BlockTreeNode
 	time.Time
-	ParseTill   *chain.BlockTreeNode
+	Block     *chain.BlockTreeNode
+	ParseTill *chain.BlockTreeNode
+	sync.Mutex // use it for writing and reading from non-chain thread
 	ScriptFlags uint32
 }
 
