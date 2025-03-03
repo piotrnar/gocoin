@@ -34,12 +34,12 @@ const (
 
 // HDWallet defines the components of a hierarchical deterministic wallet
 type HDWallet struct {
-	Prefix   uint32
-	Depth    byte
-	Checksum [4]byte
-	I        uint32
 	ChCode   []byte //32 bytes
 	Key      []byte //33 bytes
+	Prefix   uint32
+	I        uint32
+	Checksum [4]byte
+	Depth    byte
 }
 
 func IsPublicHDPrefix(p uint32) bool {

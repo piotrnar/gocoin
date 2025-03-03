@@ -8,9 +8,9 @@ import (
 )
 
 type onevec struct {
-	b uint32
 	e string
 	d float64
+	b uint32
 }
 
 var testvecs = []onevec {

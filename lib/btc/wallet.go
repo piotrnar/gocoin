@@ -98,9 +98,9 @@ func NewSpendOutputs(addr *BtcAddr, amount uint64, testnet bool) ([]*TxOut, erro
 
 // PrivateAddr is a Base58 encoded private address with checksum and its corresponding public key/address.
 type PrivateAddr struct {
-	Version byte
-	Key     []byte
 	*BtcAddr
+	Key     []byte
+	Version byte
 }
 
 func NewPrivateAddr(key []byte, ver byte, compr bool) (ad *PrivateAddr) {
