@@ -68,7 +68,7 @@ func blockUndone(bl *btc.Block) {
 func print_sync_stats() {
 	al, _ := sys.MemUsed()
 	cb, _ := common.MemUsed()
-	fmt.Printf("Sync to %d took %s,  Mem: %d+%dMB,  Cach: %d/%d/%dMB - cachempty: %d\n",
+	fmt.Printf("Sync to %d took %s,  Mem: %d+%d,  Cach: %d/%d/%d - cachempty: %d\n",
 		common.Last.Block.Height, time.Since(common.StartTime).String(), al>>20, cb>>20,
 		network.CachedBlocksBytes.Get()>>20, network.MaxCachedBlocksSize.Get()>>20,
 		common.SyncMaxCacheBytes.Get()>>20, network.Fetch.CacheEmpty)
