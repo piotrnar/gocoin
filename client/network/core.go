@@ -428,10 +428,12 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte, encrypt bool) (e error
 				return
 			}
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl))|0x80000000)
-		} else if c.aesData == nil { // if the node sent us xauth, it will not check the cehcksum, so save time
+		} else { // if the node sent us xauth, it will not check the cehcksum, so save time
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
-			sh := btc.Sha2Sum(pl[:])
-			copy(sbuf[20:24], sh[:4])
+			if c.aesData == nil {
+				sh := btc.Sha2Sum(pl[:])
+				copy(sbuf[20:24], sh[:4])
+			}
 		}
 		c.append_to_send_buffer(sbuf[:])
 		c.append_to_send_buffer(pl)
