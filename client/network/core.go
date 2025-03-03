@@ -77,39 +77,28 @@ type RecentlyDisconenctedType struct {
 }
 
 type NetworkNodeStruct struct {
-	Version       uint32
 	Services      uint64
 	Timestamp     uint64
-	Height        uint32
 	Agent         string
-	DoNotRelayTxs bool
-	ReportedIp4   uint32
-	SendHeaders   bool
 	Nonce         [8]byte
-
-	// BIP152:
-	SendCmpctVer  uint64
+	SendCmpctVer  uint64 // 64 bit field, as in the network protocol
+	Version       uint32
+	Height        uint32
+	ReportedIp4   uint32
+	DoNotRelayTxs bool
+	SendHeaders   bool
 	HighBandwidth bool
 }
 
 type ConnectionStatus struct {
-	Incomming                bool
 	ConnectedAt              time.Time
-	VersionReceived          bool
 	LastBtsRcvd, LastBtsSent uint32
 	LastCmdRcvd, LastCmdSent string
 	LastDataGot              time.Time // if we have no data for some time, we abort this conenction
 	Ticks                    uint64
-	OurGetAddrDone           bool // Whether we shoudl issue another "getaddr"
-
-	AllHeadersReceived      bool // keep sending getheaders until this is not set
-	LastHeadersEmpty        bool
-	TotalNewHeadersCount    int
-	GetHeadersInProgress    bool
-	GetHeadersTimeOutAt     time.Time
-	GetHeadersSentAtPingCnt uint64
-	LastHeadersHeightAsk    uint32
-	GetBlocksDataNow        bool
+	TotalNewHeadersCount     int
+	GetHeadersTimeOutAt      time.Time
+	GetHeadersSentAtPingCnt  uint64
 
 	LastSent       time.Time
 	MaxSentBufSize int
@@ -118,31 +107,37 @@ type ConnectionStatus struct {
 	PingHistoryIdx int
 	InvsRecieved   uint64
 
-	BytesReceived, BytesSent uint64
-	Counters                 map[string]uint64
-
-	GetAddrDone bool
-	MinFeeSPKB  int64 // BIP 133
-
-	TxsReceived int // During last hour
-
-	IsSpecial bool // Special connections get more debgs and are not being automatically dropped
-	IsGocoin  bool
-	Debug     bool
-
-	Authorized bool
-	AuthMsgGot uint
-	AuthAckGot bool
-
-	LastMinFeePerKByte uint64
-
 	PingSentCnt   uint64
 	BlocksExpired uint64
 
 	NewAddrsRcvd uint64
 	AddrMsgsRcvd uint64
 
-	ChainSynchronized bool // Initiated by "auth" or "autack" message (gocoin specific commmands)
+	BytesReceived, BytesSent uint64
+	Counters                 map[string]uint64
+
+	MinFeeSPKB         int64 // BIP 133
+	LastMinFeePerKByte uint64
+
+	TxsReceived int // During last hour
+
+	// all the fields smaller than 64 bit are below, to compact the structure
+	LastHeadersHeightAsk uint32
+	GetBlocksDataNow     bool
+	Incomming            bool
+	VersionReceived      bool
+	OurGetAddrDone       bool // Whether we shoudl issue another "getaddr"
+	AllHeadersReceived   bool // keep sending getheaders until this is not set
+	LastHeadersEmpty     bool
+	GetHeadersInProgress bool
+	GetAddrDone          bool
+	IsSpecial            bool // Special connections get more debgs and are not being automatically dropped
+	IsGocoin             bool
+	Debug                bool
+	Authorized           bool
+	AuthMsgGot           bool
+	AuthAckGot           bool
+	ChainSynchronized    bool // Initiated by "auth" or "autack" message (gocoin specific commmands)
 }
 
 type ConnInfo struct {
