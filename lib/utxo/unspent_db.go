@@ -42,11 +42,11 @@ type CallbackFunctions struct {
 
 // BlockChanges is used to pass block's changes to UnspentDB.
 type BlockChanges struct {
-	Height          uint32
-	LastKnownHeight uint32 // put here zero to disable this feature
-	AddList         []*UtxoRec
 	DeledTxs        map[[32]byte][]bool
 	UndoData        map[[32]byte]*UtxoRec
+	AddList         []*UtxoRec
+	Height          uint32
+	LastKnownHeight uint32 // put here zero to disable this feature
 }
 
 type UnspentDB struct {
