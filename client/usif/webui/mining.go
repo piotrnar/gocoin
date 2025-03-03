@@ -16,20 +16,18 @@ import (
 )
 
 type OneMinedBlock struct {
-	Height  uint32
-	Version uint32
+	Strings string
 	Length  int
 	Fees    uint64
-	Strings string
+	Height  uint32
+	Version uint32
 }
 
 type omv struct {
-	unknown_miner bool
+	blocks        []OneMinedBlock
 	bts           uint64
 	fees          uint64
-	blocks        []OneMinedBlock
-	//ebad_cnt int
-	//nya_cnt int
+	unknown_miner bool
 }
 
 type onemiernstat []struct {
@@ -85,15 +83,16 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type one_miner_row struct {
-		Unknown               bool
-		Name                  string
-		Blocks                int
-		TotalFees, TotalBytes uint64
-		MinedBlocks           []OneMinedBlock
-		//BUcnt, NYAcnt int
+		Name        string
+		MinedBlocks []OneMinedBlock
+		Blocks      int
+		TotalFees   uint64
+		TotalBytes  uint64
+		Unknown     bool
 	}
 
 	type the_mining_stats struct {
+		Miners           []one_miner_row
 		MiningStatHours  uint
 		BlockCount       uint
 		FirstBlockTime   int64
@@ -101,7 +100,6 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 		AvgDifficulty    float64
 		AvgHashrate      float64
 		NextDiffChange   uint32
-		Miners           []one_miner_row
 	}
 
 	common.ReloadMiners()

@@ -27,18 +27,18 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var out struct {
-		Height                 uint32
 		Hash                   string
-		Timestamp              uint32
+		Diff                   float64
+		MinValue               uint64
 		Received               int64
 		Time_now               int64
-		Diff                   float64
 		Median                 uint32
+		Height                 uint32
 		Version                uint32
-		MinValue               uint64
-		WalletON               bool
+		Timestamp              uint32
 		LastTrustedBlockHeight uint32
 		LastHeaderHeight       uint32
+		WalletON               bool
 		BlockChainSynchronized bool
 	}
 	common.Last.Mutex.Lock()
@@ -74,24 +74,24 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var out struct {
-		Blocks_cached      int
-		Blocks_on_disk     uint32
+		Heap_sysmem        uint64
+		Qdb_allocs         int
 		BlocksToGet        int
 		Known_peers        int
 		Node_uptime        uint64
 		Net_block_qsize    int
 		Net_tx_qsize       int
 		Heap_size          uint64
-		Heap_sysmem        uint64
+		ProcessPID         int
+		Blocks_cached      int
 		Qdb_extramem       int
-		Qdb_allocs         int
 		Ecdsa_verify_cnt   uint64
 		Average_block_size int
 		Average_fee        float64
-		LastHeaderHeight   uint32
 		NetworkHashRate    float64
+		LastHeaderHeight   uint32
+		Blocks_on_disk     uint32
 		SavingUTXO         bool
-		ProcessPID         int
 	}
 
 	out.Blocks_cached = network.CachedBlocksLen()

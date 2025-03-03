@@ -21,11 +21,12 @@ const (
 )
 
 type MultisigAddr struct {
-	MultiAddress               string
-	ScriptPubKey               string
-	KeysRequired, KeysProvided uint
-	RedeemScript               string
-	ListOfAddres               []string
+	MultiAddress string
+	ScriptPubKey string
+	RedeemScript string
+	ListOfAddres []string
+	KeysRequired uint
+	KeysProvided uint
 }
 
 func dl_payment(w http.ResponseWriter, r *http.Request) {

@@ -88,21 +88,21 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var out struct {
-		Open_conns_total int
-		Open_conns_out   uint32
-		Open_conns_in    uint32
+		ExternalIP       []one_ext_ip
 		Dl_speed_now     uint64
+		Ul_total         uint64
+		Open_conns_total int
 		Dl_speed_max     uint64
 		Dl_total         uint64
 		Ul_speed_now     uint64
 		Ul_speed_max     uint64
-		Ul_total         uint64
-		ExternalIP       []one_ext_ip
-		GetMPInProgress  bool
 		GetMPConnID      int
+		Open_conns_out   uint32
+		Open_conns_in    uint32
+		DefaultTCPPort   uint16
+		GetMPInProgress  bool
 		ListenTCPOn      bool
 		TXPServerStarted bool
-		DefaultTCPPort   uint16
 	}
 
 	common.LockBw()

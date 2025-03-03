@@ -18,31 +18,30 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type one_block struct {
-		Height    uint32
-		Timestamp uint32
-		Hash      string
-		TxCnt     int
-		Size      int
-		Weight    uint
-		Version   uint32
-		Reward    uint64
-		Miner     string
-		FeeSPB    float64
-
-		OrdCnt    uint
-		OrdSize   uint
-		OrdWeight uint
-
-		Received                          uint32
-		TimePre, TimeDl, TimeVer, TimeQue int
-		WasteCnt                          uint
-		MissedCnt                         int
-		FromConID                         uint32
-		Sigops                            int
-
+		Hash         string
+		Miner        string
+		WasteCnt     uint
+		FeeSPB       float64
+		Size         int
+		Weight       uint
+		TotalFees    uint64
+		Reward       uint64
+		Sigops       int
+		MissedCnt    int
+		OrdCnt       uint
+		TimePre      int
+		TxCnt        int
+		OrdWeight    uint
+		OrdSize      uint
+		TimeDl       int
+		TimeVer      int
+		TimeQue      int
+		Received     uint32
+		Height       uint32
+		FromConID    uint32
+		Timestamp    uint32
+		Version      uint32
 		HaveFeeStats bool
-
-		TotalFees uint64
 	}
 
 	var blks []*one_block

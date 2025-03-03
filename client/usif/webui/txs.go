@@ -565,13 +565,13 @@ func json_mpfees(w http.ResponseWriter, r *http.Request) {
 
 	if len(r.Form["full"]) > 0 {
 		type one_stat_row struct {
+			Current_tx_id     string
 			Txs_so_far        uint
 			Txs_cnt_here      uint
 			Real_len_so_far   uint
 			Weight_so_far     uint
 			Current_tx_weight uint
 			Current_tx_spb    float64
-			Current_tx_id     string
 			Time_received     uint
 			Fees_so_far       uint64
 			Ord_weight_so_far uint

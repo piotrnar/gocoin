@@ -75,34 +75,32 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 
 	type OneOut struct {
 		TxId     string
-		Vout     uint32
-		Value    uint64
-		Height   uint32
-		Coinbase bool
 		Message  string
 		Addr     string
 		AddrType string
-		Spending bool   // if true the spending tx is in the mempool
 		RawTx    string `json:",omitempty"`
+		Value    uint64
+		Vout     uint32
+		Height   uint32
+		Coinbase bool
+		Spending bool
 	}
 
 	type OneOuts struct {
-		Value            uint64
-		OutCnt           int
-		SegWitCnt        int
-		SegWitAddr       string
-		SegWitNativeCnt  int
 		SegWitNativeAddr string
-		SegWitTapCnt     int
+		SegWitAddr       string
 		SegWitTapAddr    string
+		PendingOuts      []OneOut
 		Outs             []OneOut
-
-		PendingCnt   int
-		PendingValue uint64
-		PendingOuts  []OneOut
-
-		SpendingValue uint64
-		SpendingCnt   uint64
+		SegWitTapCnt     int
+		Value            uint64
+		SegWitNativeCnt  int
+		SegWitCnt        int
+		PendingCnt       int
+		PendingValue     uint64
+		OutCnt           int
+		SpendingValue    uint64
+		SpendingCnt      uint64
 	}
 
 	out := make(map[string]*OneOuts)
