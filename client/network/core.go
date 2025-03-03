@@ -167,16 +167,11 @@ type aesData struct {
 }
 
 type OneConnection struct {
-	// Source of this IP:
 	*peersdb.PeerAddr
-	ConnID uint32
 
 	sync.Mutex // protects concurent access to any fields inside this structure
 
-	broken           bool // flag that the conenction has been broken / shall be disconnected
-	dead             bool // If set the alive time in PeersDB will ne moved back
 	why_disconnected string
-	banit            bool // Ban this client after disconnecting
 	ban_reason       string
 	misbehave        int // When it reaches 1000, ban it
 
@@ -239,6 +234,11 @@ type OneConnection struct {
 	writing_thread_push chan bool
 
 	GetMP chan bool
+
+	ConnID uint32
+	broken bool // flag that the conenction has been broken / shall be disconnected
+	dead   bool // If set the alive time in PeersDB will ne moved back
+	banit  bool // Ban this client after disconnecting
 }
 
 type oneBlockDl struct {
@@ -582,6 +582,9 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	if c.recv.pl_len > 0 {
 		if c.recv.dat == nil {
 			msi := maxmsgsize(c.recv.cmd)
+			if c.recv.decrypt {
+				msi += 16 + uint(c.aesData.nonceSize)
+			}
 			if c.recv.pl_len > msi {
 				c.DoS("Big-" + c.recv.cmd)
 				return

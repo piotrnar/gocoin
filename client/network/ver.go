@@ -227,11 +227,11 @@ func (c *OneConnection) SendAuth() {
 
 // AuthRvcd processes auth messages (from other gocoin nodes).
 func (c *OneConnection) AuthRvcd(pl []byte) {
-	if c.X.AuthMsgGot > 0 {
+	if c.X.AuthMsgGot {
 		c.DoS("XAuthMsgCnt") // Only allow one auth message per connection (DoS prevention)
 		return
 	}
-	c.X.AuthMsgGot++
+	c.X.AuthMsgGot = true
 
 	c.X.Authorized = false
 
