@@ -71,15 +71,15 @@ var (
 )
 
 type RecentlyDisconenctedType struct {
+	Why string
 	time.Time
 	Count uint
-	Why   string
 }
 
 type NetworkNodeStruct struct {
+	Agent         string
 	Services      uint64
 	Timestamp     uint64
-	Agent         string
 	Nonce         [8]byte
 	SendCmpctVer  uint64 // 64 bit field, as in the network protocol
 	Version       uint32
