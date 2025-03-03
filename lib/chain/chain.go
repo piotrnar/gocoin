@@ -16,21 +16,15 @@ var AbortNow bool // set it to true to abort any activity
 type Chain struct {
 	Blocks  *BlockDB        // blockchain.dat and blockchain.idx
 	Unspent *utxo.UnspentDB // unspent folder
-
 	BlockTreeRoot   *BlockTreeNode
 	blockTreeEnd    *BlockTreeNode
-	blockTreeAccess sync.Mutex
 	Genesis         *btc.Uint256
-
-	BlockIndexAccess sync.Mutex
 	BlockIndex       map[[btc.Uint256IdxLen]byte]*BlockTreeNode
-
 	CB NewChanOpts // callbacks used by Unspent database
-
 	Consensus struct {
+		MaxPOWValue                         *big.Int
 		Window, EnforceUpgrade, RejectBlock uint
 		MaxPOWBits                          uint32
-		MaxPOWValue                         *big.Int
 		GensisTimestamp                     uint32
 		Enforce_CSV                         uint32 // if non zero CVS verifications will be enforced from this block onwards
 		Enforce_SEGWIT                      uint32 // if non zero SegWit verifications will be enforced from this block onwards
@@ -40,18 +34,20 @@ type Chain struct {
 		BIP65Height                         uint32
 		BIP66Height                         uint32
 	}
+	blockTreeAccess sync.Mutex
+	BlockIndexAccess sync.Mutex
 }
 
 type NewChanOpts struct {
-	UTXOVolatileMode bool
-	UndoBlocks       uint // undo this many blocks when opening the chain
 	UTXOCallbacks    utxo.CallbackFunctions
 	BlockMinedCB     func(*btc.Block) // used to remove mined txs from memory pool
 	BlockUndoneCB    func(*btc.Block) // used to put undone txs back into memory pool
+	UtxoFilesSubdir  string
+	UndoBlocks       uint // undo this many blocks when opening the chain
+	UTXOPrealloc     uint
+	UTXOVolatileMode bool
 	DoNotRescan      bool             // when set UTXO will not be automatically updated with new block found on disk
 	CompressUTXO     bool
-	UTXOPrealloc     uint
-	UtxoFilesSubdir  string
 }
 
 // NewChainExt is the very first function one should call in order to use this package.

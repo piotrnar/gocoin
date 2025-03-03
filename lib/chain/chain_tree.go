@@ -11,18 +11,15 @@ import (
 )
 
 type BlockTreeNode struct {
-	BlockHash *btc.Uint256
-	Height    uint32
-	Parent    *BlockTreeNode
-	Childs    []*BlockTreeNode
-
-	BlockSize  uint32 // if this is zero, only header is known so far
-	TxCount    uint32
-	SigopsCost uint32
-
+	BlockHash   *btc.Uint256
+	Parent      *BlockTreeNode
+	Childs      []*BlockTreeNode
+	Height      uint32
+	BlockSize   uint32 // if this is zero, only header is known so far
+	TxCount     uint32
+	SigopsCost  uint32
+	Trusted     sys.SyncBool
 	BlockHeader [80]byte
-
-	Trusted sys.SyncBool
 }
 
 func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
