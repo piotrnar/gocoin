@@ -11,6 +11,7 @@ import (
 )
 
 type OneReceivedBlock struct {
+	*btc.BlockUserInfo
 	TmStart     time.Time // when we received message telling us about this block
 	TmPreproc   time.Time // when we added this block to BlocksToGet
 	TmDownload  time.Time // when we finished downloading this block
@@ -20,8 +21,6 @@ type OneReceivedBlock struct {
 	FromConID   uint32
 	DownloadCnt uint16
 	DoInvs      bool
-
-	*btc.BlockUserInfo
 }
 
 type BlockRcvd struct {
