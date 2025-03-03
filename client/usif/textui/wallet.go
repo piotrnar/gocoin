@@ -16,9 +16,9 @@ import (
 )
 
 type OneWalletAddrs struct {
-	Idx int
-	Key string
 	rec *wallet.OneAllAddrBal
+	Key string
+	Idx int
 }
 
 type SortedWalletAddrs []OneWalletAddrs

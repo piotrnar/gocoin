@@ -347,9 +347,12 @@ func txr_purge(par string) {
 
 func txr_stats(par string) {
 	type rect struct {
-		totsize, memsize uint64
-		totcnt, memcnt   uint32
-		from, to         time.Time
+		from    time.Time
+		to      time.Time
+		totsize uint64
+		memsize uint64
+		totcnt  uint32
+		memcnt  uint32
 	}
 	cnts := make(map[byte]*rect)
 	var reasons []int

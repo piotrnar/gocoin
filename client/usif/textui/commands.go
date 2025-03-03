@@ -25,10 +25,10 @@ import (
 )
 
 type oneUiCmd struct {
-	cmds    []string // command name
-	help    string   // a helf for this command
-	sync    bool     // shall be executed in the blochcina therad
 	handler func(pars string)
+	help    string
+	cmds    []string
+	sync    bool
 }
 
 var (
