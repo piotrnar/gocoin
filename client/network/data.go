@@ -115,7 +115,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 
 	// the blocks seems to be fine
 	if rb, got := ReceivedBlocks[idx]; got {
-		rb.Cnt++
+		rb.DownloadCnt++
 		Fetch.BlockBytesWasted += uint64(len(b))
 		Fetch.BlockSameRcvd++
 		c.Mutex.Lock()

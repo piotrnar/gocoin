@@ -459,7 +459,7 @@ func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
 
 	// the blocks seems to be fine
 	if rb, got := ReceivedBlocks[idx]; got {
-		rb.Cnt++
+		rb.DownloadCnt++
 		common.CountSafe("BlkTxnSameRcvd")
 		//fmt.Println(c.ConnID, "BlkTxn size", len(pl), "for", hash.String()[48:],"- already have")
 		return

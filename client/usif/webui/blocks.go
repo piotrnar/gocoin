@@ -40,8 +40,6 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		FromConID                         uint32
 		Sigops                            int
 
-		NonWitnessSize int
-
 		HaveFeeStats bool
 
 		TotalFees uint64
@@ -77,7 +75,6 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.TxCnt = block.TxCount
 		b.Size = len(bl)
 		b.Weight = block.BlockWeight
-		b.NonWitnessSize = rb.NonWitnessSize
 		b.Version = block.Version()
 
 		b.OrdCnt = rb.OrbTxCnt
@@ -121,7 +118,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 			b.TimeVer = int(rb.TmAccepted.Sub(rb.TmStart) / time.Millisecond)
 		}
 
-		b.WasteCnt = rb.Cnt
+		b.WasteCnt = uint(rb.DownloadCnt)
 		b.MissedCnt = rb.TxMissing
 		b.FromConID = rb.FromConID
 

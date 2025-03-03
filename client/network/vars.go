@@ -11,16 +11,15 @@ import (
 )
 
 type OneReceivedBlock struct {
-	TmStart        time.Time // when we receioved message letting us about this block
-	TmPreproc      time.Time // when we added this block to BlocksToGet
-	TmDownload     time.Time // when we finished dowloading of this block
-	TmQueue        time.Time // when we started comitting this block
-	TmAccepted     time.Time // when the block was commited to blockchain
-	Cnt            uint
-	TxMissing      int
-	FromConID      uint32
-	NonWitnessSize int
-	DoInvs         bool
+	TmStart     time.Time // when we received message telling us about this block
+	TmPreproc   time.Time // when we added this block to BlocksToGet
+	TmDownload  time.Time // when we finished downloading this block
+	TmQueue     time.Time // when we started committing this block
+	TmAccepted  time.Time // when the block was committed to blockchain
+	TxMissing   int
+	FromConID   uint32
+	DownloadCnt uint16
+	DoInvs      bool
 
 	*btc.BlockUserInfo
 }
