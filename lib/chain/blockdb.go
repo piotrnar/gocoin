@@ -67,13 +67,12 @@ type oneBl struct {
 }
 
 type BlckCachRec struct {
-	Data []byte
+	LastUsed time.Time
 	*btc.Block
-
+	Data []byte
 	// This is for BIP152
 	BIP152 []byte // 8 bytes of nonce || 8 bytes of K0 LSB || 8 bytes of K1 LSB
 
-	LastUsed time.Time
 }
 
 type BlockDBOpts struct {
@@ -85,33 +84,30 @@ type BlockDBOpts struct {
 }
 
 type oneB2W struct {
+	data    []byte
 	idx     [btc.Uint256IdxLen]byte
 	h       [32]byte
-	data    []byte
 	height  uint32
 	txcount uint32
 }
 
 type BlockDB struct {
-	dirname            string
-	blockIndex         map[[btc.Uint256IdxLen]byte]*oneBl
-	blockdata          *os.File
-	blockindx          *os.File
-	mutex, disk_access sync.Mutex
-	max_cached_blocks  int
-	cache              map[[btc.Uint256IdxLen]byte]*BlckCachRec
-
+	blockIndex                   map[[btc.Uint256IdxLen]byte]*oneBl
+	cache                        map[[btc.Uint256IdxLen]byte]*BlckCachRec
+	blockdata                    *os.File
+	blockindx                    *os.File
+	blocksToWrite                chan oneB2W
+	dirname                      string
+	data_files_done              sync.WaitGroup
+	max_cached_blocks            int
+	datToWrite                   uint64
 	maxidxfilepos, maxdatfilepos int64
+	max_data_file_size           uint64
+	mutex, disk_access           sync.Mutex
 	maxdatfileidx                uint32
+	data_files_keep              uint32
+	data_files_backup            bool
 	do_not_compress              bool
-
-	blocksToWrite chan oneB2W
-	datToWrite    uint64
-
-	max_data_file_size uint64
-	data_files_keep    uint32
-	data_files_backup  bool
-	data_files_done    sync.WaitGroup
 }
 
 func NewBlockDBExt(dir string, opts *BlockDBOpts) (db *BlockDB) {
