@@ -71,8 +71,8 @@ var (
 )
 
 type RecentlyDisconenctedType struct {
-	Why string
 	time.Time
+	Why string
 	Count uint
 }
 
