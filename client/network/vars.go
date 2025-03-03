@@ -11,12 +11,12 @@ import (
 )
 
 type OneReceivedBlock struct {
+	TmStart    time.Time // when we received message telling us about this block
+	TmPreproc  time.Time // when we added this block to BlocksToGet
+	TmDownload time.Time // when we finished downloading this block
+	TmQueue    time.Time // when we started committing this block
+	TmAccepted time.Time // when the block was committed to blockchain
 	*btc.BlockUserInfo
-	TmStart     time.Time // when we received message telling us about this block
-	TmPreproc   time.Time // when we added this block to BlocksToGet
-	TmDownload  time.Time // when we finished downloading this block
-	TmQueue     time.Time // when we started committing this block
-	TmAccepted  time.Time // when the block was committed to blockchain
 	TxMissing   int
 	FromConID   uint32
 	DownloadCnt uint16
@@ -33,11 +33,11 @@ type BlockRcvd struct {
 }
 
 type OneBlockToGet struct {
-	Started time.Time
+	Started   time.Time
+	TmPreproc time.Time
 	*btc.Block
 	*chain.BlockTreeNode
 	InProgress uint
-	TmPreproc  time.Time // how long it took to start downloading this block
 	SendInvs   bool
 }
 
