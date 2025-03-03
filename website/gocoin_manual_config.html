@@ -289,15 +289,26 @@ therefore setting it to 0.0 will route all the accepted transactions.</td>
 <td class="cfg_name"> Memory.GCPercTrshold</td>
 <td class="cfg_type"> int </td>
 <td> 30</td>
-<td class="cfg_info"> A threshold (in percent) to trigger Go's garbage collector engine.<br>
-    The higher you set it, the better performance should be (at a cost of RAM).</td>
+<td class="cfg_info"> Sets the garbage collection target percentage.<br>
+    <b>-1</b> disables garbage collector - use it only with <code>MemoryLimitMB</code> or your node will run out of memory.</td>
+</tr>
+<tr class="even">
+<td class="cfg_name"> Memory.MemoryLimitMB</td>
+<td class="cfg_type"> int </td>
+<td> 0</td>
+<td class="cfg_info"> Non-zero value sets the soft memory limit for Go heap (value in MB).<br>
+    Zero sets the default limit, which is unlimited unless defined by <code>GOMEMLIMIT</code> envirionment variable.<br>
+    Mind that the UTXO records are not stored within the heap, unless <code>UseGoHeap</code> is set to <b>true</b>.
+</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> Memory.UseGoHeap</td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
-<td class="cfg_info"> Use native Go heap with Garbage Collector for UTXO records.<br>
-Using native heap makes the node a bit faster at a cost of using more RAM, although it is not always the case.
+<td class="cfg_info"> Use native Go heap with garbage collector for UTXO records
+(insted of independant memory heap with no GC).<br>
+Having it enabled will require more memory while the effect on performance may go either way.<br>
+The node must be restarted to apply a new value.
 </td>
 </tr>
 <tr class="even">
@@ -305,12 +316,6 @@ Using native heap makes the node a bit faster at a cost of using more RAM, altho
 <td class="cfg_type"> uint</td>
 <td> 200</td>
 <td class="cfg_info"> How many (recently used) blocks shall be kept in RAM.</td>
-</tr>
-<tr class="even">
-    <td class="cfg_name"> Memory.FreeAtStart</td>
-    <td class="cfg_type"> bool</td>
-    <td> false</td>
-    <td class="cfg_info"> After loading UTXO database from disk, free as much RAM as possible.</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> Memory.CacheOnDisk</td>
@@ -350,8 +355,8 @@ The blocks from "oldat/" folder will still be served by the node to its peers.</
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> When enabled, the node does not store unspendable outputs in its UTXO database.<br>
-Having just enabling this option, execute TextUI command <code>purge</code> to purge all unspendable records kept from past transactions.<br>
-Disabling this will make your node to require more RAM, but may be necessary for certain applications that one may develop on top of Gocoin's UTXO database.<br>
+Having just enabled this option, execute TextUI command <code>purge</code> to purge all unspendable records kept from past transactions.<br>
+Disabling this will cause your node to require more RAM, but may be necessary for certain (future) applications.<br>
 </td>
 </tr>
 <tr class="even">
@@ -359,6 +364,7 @@ Disabling this will make your node to require more RAM, but may be necessary for
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> Compress blocks on disk.<br>
+Compressed blocks use about 15% less disk space.
 </td>
 </tr>
 

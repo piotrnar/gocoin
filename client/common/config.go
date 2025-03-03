@@ -95,9 +95,9 @@ var (
 		}
 		Memory struct {
 			GCPercTrshold        int
+			MemoryLimitMB        int64
 			UseGoHeap            bool // Use Go Heap and Garbage Collector for UTXO records
 			MaxCachedBlks        uint32
-			FreeAtStart          bool // Free all possible memory after initial loading of block chain
 			CacheOnDisk          bool
 			SyncCacheSize        uint32 // When syncing chain, prebuffer up to this MB of bocks data
 			MaxDataFileMB        uint   // 0 for unlimited size
@@ -134,6 +134,8 @@ var (
 	}
 
 	mutex_cfg sync.Mutex
+
+	defaultMemoryLimit = debug.SetMemoryLimit(-1)
 )
 
 type oneAllowedAddr struct {
@@ -378,6 +380,11 @@ func Reset() {
 	SetUploadLimit(uint64(CFG.Net.MaxUpKBps) << 10)
 	SetDownloadLimit(uint64(CFG.Net.MaxDownKBps) << 10)
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
+	if CFG.Memory.MemoryLimitMB != 0 {
+		debug.SetMemoryLimit(CFG.Memory.MemoryLimitMB << 20)
+	} else {
+		debug.SetMemoryLimit(defaultMemoryLimit)
+	}
 	if AllBalMinVal() != CFG.AllBalances.MinValue {
 		fmt.Println("In order to apply the new value of AllBalMinVal, restart the node or do 'wallet off' and 'wallet on'")
 	}

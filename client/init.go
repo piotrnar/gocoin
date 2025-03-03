@@ -125,11 +125,6 @@ func host_init() {
 	common.ApplyLastTrustedBlock()
 	common.UnlockCfg()
 
-	if common.CFG.Memory.FreeAtStart {
-		fmt.Print("Freeing memory... ")
-		sys.FreeMem()
-		fmt.Print("\r                  \r")
-	}
 	sto := time.Now()
 
 	al, sy := sys.MemUsed()

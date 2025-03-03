@@ -131,21 +131,20 @@ You can reverse the operation of compressing the database, be running <code>utxo
 <br>
 <i>Note: It saves only about 3% of space used by UTXO.db file.</i><br>
 <br>
-
 <h2>Garbage Collector and UTXO heap</h2>
 If you have RAM to spare, try increasing the Garbage Collector treshold.<br>
 This will increase memory usage, but should improve performance
 (e.g. initial blockchain download time).<br>
 For that, edit the <a href="gocoin_manual_config.html">config file</a> to set
 <code>Memory.GCPercTrshold</code> to <b>100</b> or more (higher value for more effect).<br>
+You can also turn off the GC treshold (by setting it to <b>-1</b>) and then control
+the maximum memory usage via <code>Memory.MemoryLimitMB</code> parameter.<br>
 <br>
-You can also try switching UTXO records to Go's heap manager by setting <code>Memory.UseGoHeap</code> to <b>true</b>.
+Additionally, you can try switching UTXO records to Go's heap manager by setting <code>Memory.UseGoHeap</code> to <b>true</b>.
 However this may as well have a negative effect on the performance.<br>
 <br>
-<i>Notes:<br>
-1. Do not do this if you have less than 64GB of RAM, as it will likely slow your system down.<br>
-2. Monitor your system for RAM usage. If it uses all the RAM, means you set <code>GCPercTrshold</code> too high.<br>
-3. The node needs to be restarted to apply a new value of <code>Memory.UseGoHeap</code>, but not when changing <code>Memory.GCPercTrshold</code>.
+<i>Note:
+Monitor your system for RAM usage. If it uses all the RAM, means you went too far.
 </i>
 </body>
 </html>
