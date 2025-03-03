@@ -12,26 +12,24 @@ import (
 )
 
 type BtcAddr struct {
-	Version  byte
-	Hash160  [20]byte
-	Checksum []byte
-	Pubkey   []byte
-	Enc58str string
-
 	*SegwitProg // if this is not nil, means that this is a native segwit address
-
+	Enc58str string
 	// This is used only by the client
 	Extra struct {
 		Label  string
 		Wallet string
 		Virgin bool
 	}
+	Checksum []byte
+	Pubkey   []byte
+	Version  byte
+	Hash160  [20]byte
 }
 
 type SegwitProg struct {
 	HRP     string
-	Version int
 	Program []byte
+	Version int
 }
 
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
