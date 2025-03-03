@@ -9,11 +9,11 @@ type AllUnspentTx []*OneUnspentTx
 
 // OneUnspentTx is returned by GetUnspentFromPkScr.
 type OneUnspentTx struct {
-	TxPrevOut
-	Value   uint64
-	MinedAt uint32
 	*BtcAddr
 	destAddr string
+	Value    uint64
+	TxPrevOut
+	MinedAt uint32
 }
 
 func (x AllUnspentTx) Len() int {
