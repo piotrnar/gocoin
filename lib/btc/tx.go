@@ -28,15 +28,15 @@ type TxPrevOut struct {
 }
 
 type TxIn struct {
-	Input     TxPrevOut
 	ScriptSig []byte
+	Input     TxPrevOut
 	Sequence  uint32
 	//PrvOut *TxOut  // this field is used only during verification
 }
 
 type TxOut struct {
-	Value       uint64
 	Pk_script   []byte
+	Value       uint64
 	BlockHeight uint32
 	VoutCount   uint32 // number of outputs in the transaction that it came from
 	WasCoinbase bool
@@ -44,30 +44,28 @@ type TxOut struct {
 
 // Make sure to call tx's AllocVerVars() before using any of these fields and Clean() once done
 type TxVerVars struct {
-	CalculatedFee    uint64
-	Spent_outputs    []*TxOut // this is used by TaprootSigHash()
-	hashLock         sync.Mutex
 	hashPrevouts     *[32]byte
 	hashSequence     *[32]byte
 	hashOutputs      *[32]byte
 	tapSingleHashes  *taprootSHType
 	tapOutSingleHash *[32]byte
+	Spent_outputs    []*TxOut // this is used by TaprootSigHash()
+	CalculatedFee    uint64
+	hashLock         sync.Mutex
 }
 
 type Tx struct {
-	Version   uint32
-	Lock_time uint32
+	*TxVerVars
 	TxIn      []*TxIn
 	TxOut     []*TxOut
 	SegWit    [][][]byte
-
-	// Set by SetHash() method:
-	Raw             []byte
-	Size, NoWitSize uint32
-	Hash            Uint256
-	wTxID           Uint256
-
-	*TxVerVars
+	Raw       []byte
+	Hash      Uint256
+	wTxID     Uint256
+	Version   uint32
+	Lock_time uint32
+	Size      uint32
+	NoWitSize uint32
 }
 
 type AddrValue struct {
