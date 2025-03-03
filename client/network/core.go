@@ -200,12 +200,12 @@ type OneConnection struct {
 
 	// Messages reception state machine:
 	recv struct {
-		hdr     [24]byte
-		hdr_len uint
-		pl_len  uint // length taken from the message header
 		cmd     string
 		dat     []byte
+		hdr_len uint
+		pl_len  uint
 		datlen  uint
+		hdr     [24]byte
 		decrypt bool
 		magicok bool
 	}
