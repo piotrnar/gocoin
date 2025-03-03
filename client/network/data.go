@@ -289,6 +289,7 @@ var Fetc struct {
 }
 
 var Fetch struct {
+	LastCacheEmpty time.Time
 	NoBlocksToGet      uint64
 	HasBlocksExpired   uint64
 	MaxCountInProgress uint64
@@ -304,7 +305,6 @@ var Fetch struct {
 	BlockSameRcvd    uint64
 
 	CacheEmpty     uint64
-	LastCacheEmpty time.Time
 }
 
 func (c *OneConnection) GetBlockData() (yes bool) {
