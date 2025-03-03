@@ -19,15 +19,15 @@ Eech value is variable length:
 */
 
 type UtxoRec struct {
+	Outs     []*UtxoTxOut
 	TxID     [32]byte
 	Coinbase bool
 	InBlock  uint32
-	Outs     []*UtxoTxOut
 }
 
 type UtxoTxOut struct {
-	Value uint64
 	PKScr []byte
+	Value uint64
 }
 
 type NewUtxoOutAllocCbs struct {

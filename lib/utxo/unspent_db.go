@@ -50,39 +50,36 @@ type BlockChanges struct {
 }
 
 type UnspentDB struct {
-	HashMap  [256](map[UtxoKeyType][]byte)
-	MapMutex [256]sync.RWMutex // used to access HashMap
-
-	LastBlockHash      []byte
-	LastBlockHeight    uint32
-	ComprssedUTXO      bool
-	dir_utxo, dir_undo string
-	volatimemode       bool
-	UnwindBufLen       uint32
-	DirtyDB            sys.SyncBool
+	HashMap         [256](map[UtxoKeyType][]byte)
+	CB              CallbackFunctions
+	hurryup         chan bool
+	abortwritingnow chan bool
+	dir_utxo        string
+	dir_undo        string
+	LastBlockHash   []byte
+	lastFileClosed  sync.WaitGroup
+	writingDone     sync.WaitGroup
+	MapMutex        [256]sync.RWMutex  // used to access HashMap
 	sync.Mutex
-
-	abortwritingnow   chan bool
-	WritingInProgress sys.SyncBool
-	writingDone       sync.WaitGroup
-	lastFileClosed    sync.WaitGroup
-
+	DirtyDB             sys.SyncBool
+	WritingInProgress   sys.SyncBool
+	UnwindBufLen        uint32
 	CurrentHeightOnDisk uint32
-	hurryup             chan bool
+	LastBlockHeight     uint32
+	volatimemode        bool
+	ComprssedUTXO       bool
 	DoNotWriteUndoFiles bool
-	CB                  CallbackFunctions
-
-	undo_dir_created bool
+	undo_dir_created    bool
 }
 
 type NewUnspentOpts struct {
-	Dir             string
-	Rescan          bool
-	VolatimeMode    bool
 	CB              CallbackFunctions
 	AbortNow        *bool
-	CompressRecords bool
+	Dir             string
 	RecordsPrealloc uint
+	Rescan          bool
+	VolatimeMode    bool
+	CompressRecords bool
 }
 
 func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
@@ -124,8 +121,8 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	const RECS_PACK_SIZE = 0x10000
 	var wg sync.WaitGroup
 	type one_rec struct {
-		k UtxoKeyType
 		b []byte
+		k UtxoKeyType
 	}
 	//var rec *one_rec
 	var rec_idx, pool_idx int
@@ -632,8 +629,8 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 	var wg sync.WaitGroup
 
 	type one_del_rec struct {
-		k UtxoKeyType
 		v []bool
+		k UtxoKeyType
 	}
 	do_del := func(list []one_del_rec) {
 		for _, rec := range list {

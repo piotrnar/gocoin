@@ -17,13 +17,13 @@ type AllUnspentTx []*OneUnspentTx
 
 // OneUnspentTx is returned by GetUnspentFromPkScr.
 type OneUnspentTx struct {
-	btc.TxPrevOut
-	Value   uint64
-	MinedAt uint32
 	*btc.BtcAddr
 	destString string
-	Coinbase   bool
 	Message    []byte
+	btc.TxPrevOut
+	Value    uint64
+	MinedAt  uint32
+	Coinbase bool
 }
 
 func (x AllUnspentTx) Len() int {
