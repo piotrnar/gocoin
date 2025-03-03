@@ -35,24 +35,24 @@ type OneTransaction struct {
 }
 
 type GetBlockTemplateResp struct {
-	Capabilities      []string         `json:"capabilities"`
-	Version           uint32           `json:"version"`
-	PreviousBlockHash string           `json:"previousblockhash"`
-	Transactions      []OneTransaction `json:"transactions"`
+	Bits              string `json:"bits"`
+	PreviousBlockHash string `json:"previousblockhash"`
 	Coinbaseaux       struct {
 		Flags string `json:"flags"`
 	} `json:"coinbaseaux"`
-	Coinbasevalue uint64   `json:"coinbasevalue"`
-	Longpollid    string   `json:"longpollid"`
-	Target        string   `json:"target"`
-	Mintime       uint     `json:"mintime"`
-	Mutable       []string `json:"mutable"`
-	Noncerange    string   `json:"noncerange"`
-	Sigoplimit    uint     `json:"sigoplimit"`
-	Sizelimit     uint     `json:"sizelimit"`
-	Curtime       uint     `json:"curtime"`
-	Bits          string   `json:"bits"`
-	Height        uint     `json:"height"`
+	Noncerange    string           `json:"noncerange"`
+	Longpollid    string           `json:"longpollid"`
+	Target        string           `json:"target"`
+	Mutable       []string         `json:"mutable"`
+	Transactions  []OneTransaction `json:"transactions"`
+	Capabilities  []string         `json:"capabilities"`
+	Mintime       uint             `json:"mintime"`
+	Coinbasevalue uint64           `json:"coinbasevalue"`
+	Sigoplimit    uint             `json:"sigoplimit"`
+	Sizelimit     uint             `json:"sizelimit"`
+	Curtime       uint             `json:"curtime"`
+	Height        uint             `json:"height"`
+	Version       uint32           `json:"version"`
 }
 
 type GetWorkTemplateResp struct {
@@ -67,20 +67,20 @@ type GetMiningInfoResp struct {
 
 type RpcGetBlockTemplateResp struct {
 	Id     interface{}          `json:"id"`
-	Result GetBlockTemplateResp `json:"result"`
 	Error  interface{}          `json:"error"`
+	Result GetBlockTemplateResp `json:"result"`
 }
 
 type RpcGetWorkResp struct {
 	Id     interface{}         `json:"id"`
-	Result GetWorkTemplateResp `json:"result"`
 	Error  interface{}         `json:"error"`
+	Result GetWorkTemplateResp `json:"result"`
 }
 
 type RpcGetMiningInfoResp struct {
 	Id     interface{}       `json:"id"`
-	Result GetMiningInfoResp `json:"result"`
 	Error  interface{}       `json:"error"`
+	Result GetMiningInfoResp `json:"result"`
 }
 
 func swap256(d []byte) {

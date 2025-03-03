@@ -19,19 +19,19 @@ import (
 */
 
 type ValidAddressResponse struct {
-	IsValid bool `json:"isvalid"`
-	Address string `json:"address"`
+	Address      string `json:"address"`
 	ScriptPubKey string `json:"scriptPubKey"`
-	IsMine bool `json:"ismine"`
-	IsWatchOnly bool `json:"iswatchonly"`
-	IsScript bool `json:"isscript"`
+	IsValid      bool   `json:"isvalid"`
+	IsMine       bool   `json:"ismine"`
+	IsWatchOnly  bool   `json:"iswatchonly"`
+	IsScript     bool   `json:"isscript"`
 }
 
 type InvalidAddressResponse struct {
 	IsValid bool `json:"isvalid"`
 }
 
-func ValidateAddress(addr string) (interface{}) {
+func ValidateAddress(addr string) interface{} {
 	a, e := btc.NewAddrFromString(addr)
 	if e != nil {
 		return new(InvalidAddressResponse)

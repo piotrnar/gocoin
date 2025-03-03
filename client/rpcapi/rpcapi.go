@@ -17,8 +17,8 @@ import (
 )
 
 type RpcError struct {
-	Code    int    `json:"code"`
 	Message string `json:"message"`
+	Code    int    `json:"code"`
 }
 
 type RpcResponse struct {
@@ -29,8 +29,8 @@ type RpcResponse struct {
 
 type RpcCommand struct {
 	Id     interface{} `json:"id"`
-	Method string      `json:"method"`
 	Params interface{} `json:"params"`
+	Method string      `json:"method"`
 }
 
 func process_rpc(b []byte) (out []byte) {
