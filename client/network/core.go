@@ -91,16 +91,20 @@ type NetworkNodeStruct struct {
 }
 
 type ConnectionStatus struct {
-	ConnectedAt              time.Time
-	LastBtsRcvd, LastBtsSent uint32
+	ConnectedAt         time.Time
+	LastDataGot         time.Time // if we have no data for some time, we abort this conenction
+	GetHeadersTimeOutAt time.Time
+	LastSent            time.Time
+
+	Counters map[string]uint64
+
 	LastCmdRcvd, LastCmdSent string
-	LastDataGot              time.Time // if we have no data for some time, we abort this conenction
+
+	LastBtsRcvd, LastBtsSent uint32
 	Ticks                    uint64
 	TotalNewHeadersCount     int
-	GetHeadersTimeOutAt      time.Time
 	GetHeadersSentAtPingCnt  uint64
 
-	LastSent       time.Time
 	MaxSentBufSize int
 
 	PingHistory    [PingHistoryLength]int
@@ -114,7 +118,6 @@ type ConnectionStatus struct {
 	AddrMsgsRcvd uint64
 
 	BytesReceived, BytesSent uint64
-	Counters                 map[string]uint64
 
 	MinFeeSPKB         int64 // BIP 133
 	LastMinFeePerKByte uint64
@@ -141,7 +144,8 @@ type ConnectionStatus struct {
 }
 
 type ConnInfo struct {
-	PeerIp string
+	PeerIp                string
+	LocalAddr, RemoteAddr string
 
 	NetworkNodeStruct
 	ConnectionStatus
@@ -152,8 +156,6 @@ type ConnInfo struct {
 	AveragePing      int
 	InvsDone         int
 	BlocksReceived   int
-
-	LocalAddr, RemoteAddr string
 
 	ID              uint32
 	GetMPInProgress bool // This one is only set inside webui's hnadler (for sorted connections)
@@ -167,21 +169,34 @@ type aesData struct {
 }
 
 type OneConnection struct {
-	*peersdb.PeerAddr
+	LastMsgTime     time.Time
+	LastPingSent    time.Time
+	nextMaintanence time.Time
+	nextGetData     time.Time
+	txsNxt          time.Time
 
-	sync.Mutex // protects concurent access to any fields inside this structure
-
-	why_disconnected string
-	ban_reason       string
-	misbehave        int // When it reaches 1000, ban it
+	writing_thread_push chan bool
 
 	net.Conn
-
-	// TCP connection data:
-	X        ConnectionStatus
 	*aesData // used for sending secured messages to/from authenticated hosts
+	*peersdb.PeerAddr
+	unfinished_getdata *bytes.Buffer
 
-	Node NetworkNodeStruct // Data from the version message
+	GetMP              chan bool
+	counters           map[string]uint64
+	GetBlockInProgress map[btc.BIDX]*oneBlockDl
+	why_disconnected   string
+	ban_reason         string
+
+	blocksreceived []time.Time
+	PendingInvs    []*[36]byte // List of pending INV to send and the mutex protecting access to it
+	PingInProgress []byte
+
+	InvDone struct {
+		Map     map[uint64]uint32
+		History []uint64
+		Idx     int
+	}
 
 	// Messages reception state machine:
 	recv struct {
@@ -194,46 +209,23 @@ type OneConnection struct {
 		decrypt bool
 		magicok bool
 	}
-	LastMsgTime        time.Time
-	unfinished_getdata *bytes.Buffer
 
-	InvDone struct {
-		Map     map[uint64]uint32
-		History []uint64
-		Idx     int
-	}
+	Node NetworkNodeStruct // Data from the version message
+	X    ConnectionStatus
 
-	// Message sending state machine:
-	sendBuf                  [SendBufSize]byte
+	writing_thread_done      sync.WaitGroup
+	keepBlocksOver           int
 	SendBufProd, SendBufCons int
+	misbehave                int   // When it reaches 1000, ban it
+	lastSec                  int64 // Ping stats
+	txsCurIdx                int
+	txsCha                   [TxsCounterBufLen]uint32 // we need this to count txs received only within last hour
 
-	// Statistics:
-	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
+	sync.Mutex  // protects concurent access to any fields inside this structure
 	sendInvsNow sys.SyncBool
 
-	GetBlockInProgress map[btc.BIDX]*oneBlockDl
-
-	// Ping stats
-	LastPingSent   time.Time
-	PingInProgress []byte
-	lastSec        int64
-
-	counters map[string]uint64
-
-	blocksreceived  []time.Time
-	nextMaintanence time.Time
-	nextGetData     time.Time
-	keepBlocksOver  int
-
-	// we need these three below to count txs received only within last hour
-	txsCha    [TxsCounterBufLen]uint32
-	txsCurIdx int
-	txsNxt    time.Time
-
-	writing_thread_done sync.WaitGroup
-	writing_thread_push chan bool
-
-	GetMP chan bool
+	// Message sending state machine:
+	sendBuf [SendBufSize]byte
 
 	ConnID uint32
 	broken bool // flag that the conenction has been broken / shall be disconnected
