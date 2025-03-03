@@ -469,6 +469,11 @@ func fetch_balances_now() {
 }
 
 func main() {
+	var ptr *byte
+	if unsafe.Sizeof(ptr) < 8 {
+		fmt.Println("WARNING: Gocoin client shall be build for 64-bit arch. It will likely crash now.")
+	}
+
 	fmt.Println("Gocoin client version", gocoin.Version, " PID", os.Getpid())
 
 	// Disable Ctrl+C
