@@ -141,7 +141,6 @@ type ConnectionStatus struct {
 }
 
 type ConnInfo struct {
-	ID     uint32
 	PeerIp string
 
 	NetworkNodeStruct
@@ -153,12 +152,12 @@ type ConnInfo struct {
 	AveragePing      int
 	InvsDone         int
 	BlocksReceived   int
-	GetMPInProgress  bool
 
 	LocalAddr, RemoteAddr string
 
-	// This one is only set inside webui's hnadler (for sorted connections)
-	HasImmunity bool
+	ID              uint32
+	GetMPInProgress bool // This one is only set inside webui's hnadler (for sorted connections)
+	HasImmunity     bool
 }
 
 type aesData struct {
