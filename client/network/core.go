@@ -197,12 +197,13 @@ type OneConnection struct {
 	// Messages reception state machine:
 	recv struct {
 		hdr     [24]byte
-		hdr_len int
-		pl_len  uint32 // length taken from the message header
+		hdr_len uint
+		pl_len  uint // length taken from the message header
 		cmd     string
 		dat     []byte
-		datlen  uint32
+		datlen  uint
 		decrypt bool
+		magicok bool
 	}
 	LastMsgTime        time.Time
 	unfinished_getdata *bytes.Buffer
@@ -525,6 +526,7 @@ func (c *OneConnection) HandleError(e error) error {
 	}
 	c.recv.hdr_len = 0
 	c.recv.dat = nil
+	c.recv.magicok = false
 	c.Disconnect(true, "Error:"+e.Error())
 	return e
 }
@@ -532,7 +534,6 @@ func (c *OneConnection) HandleError(e error) error {
 func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	var e error
 	var n int
-	var magic_checked bool
 
 	for c.recv.hdr_len < 24 {
 		n, e = common.SockRead(c.Conn, c.recv.hdr[c.recv.hdr_len:24])
@@ -545,7 +546,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 		if n > 0 {
 			c.X.BytesReceived += uint64(n)
 			c.X.LastDataGot = time.Now()
-			c.recv.hdr_len += n
+			c.recv.hdr_len += uint(n)
 		}
 		if e != nil {
 			c.Mutex.Unlock()
@@ -553,7 +554,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			return // Make sure to exit here, in case of timeout
 		}
 
-		if !magic_checked && c.recv.hdr_len >= 4 {
+		if !c.recv.magicok && c.recv.hdr_len >= 4 {
 			if !bytes.Equal(c.recv.hdr[:4], common.Magic[:]) {
 				if c.X.Debug {
 					fmt.Printf("BadMagic from %s %s \n hdr:%s  n:%d\n R: %s %d / S: %s %d\n> ", c.PeerAddr.Ip(), c.Node.Agent,
@@ -565,7 +566,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 				c.Disconnect(false, "NetBadMagic")
 				return
 			}
-			magic_checked = true
+			c.recv.magicok = true
 		}
 		if c.broken {
 			c.Mutex.Unlock()
@@ -573,7 +574,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 		}
 		if c.recv.hdr_len == 24 {
 			c.recv.cmd = strings.TrimRight(string(c.recv.hdr[4:16]), "\000")
-			c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
+			c.recv.pl_len = uint(binary.LittleEndian.Uint32(c.recv.hdr[16:20]))
 			if c.recv.decrypt = (c.recv.pl_len & 0x80000000) != 0; c.recv.decrypt {
 				c.recv.pl_len &= 0x7fffffff
 			}
@@ -609,7 +610,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			if n > 0 {
 				c.Mutex.Lock()
 				c.X.BytesReceived += uint64(n)
-				c.recv.datlen += uint32(n)
+				c.recv.datlen += uint(n)
 				c.Mutex.Unlock()
 				if c.recv.datlen > c.recv.pl_len {
 					println(c.PeerAddr.Ip(), "is sending more of", c.recv.cmd, "then it should have", c.recv.datlen, c.recv.pl_len)
@@ -661,8 +662,8 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 
 	c.Mutex.Lock()
 	c.recv.hdr_len = 0
-	c.recv.cmd = ""
 	c.recv.dat = nil
+	c.recv.magicok = false
 
 	c.X.LastCmdRcvd = ret.cmd
 	c.X.LastBtsRcvd = uint32(len(ret.pl))
@@ -749,7 +750,7 @@ func ConnectionActive(ad *peersdb.PeerAddr) (yes bool) {
 
 // maxmsgsize returns maximum accepted payload size of a given type of message.
 // For wider compatibility, we assume that any var_len may be up to 9 bytes.
-func maxmsgsize(cmd string) uint32 {
+func maxmsgsize(cmd string) uint {
 	switch cmd {
 	case "inv":
 		return 9 + 50000*36 // the spec says "max 50000 entries"
