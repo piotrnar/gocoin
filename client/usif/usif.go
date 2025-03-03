@@ -21,8 +21,8 @@ import (
 )
 
 type OneUiReq struct {
-	Param   string
 	Handler func(pars string)
+	Param   string
 	Done    sync.WaitGroup
 }
 
