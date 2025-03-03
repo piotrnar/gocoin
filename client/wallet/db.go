@@ -29,9 +29,9 @@ var (
 type OneAllAddrInp [utxo.UtxoIdxLen + 4]byte
 
 type OneAllAddrBal struct {
-	Value   uint64 // Highest bit of it means P2SH
-	unsp    []OneAllAddrInp
 	unspMap map[OneAllAddrInp]bool
+	unsp    []OneAllAddrInp
+	Value   uint64 // Highest bit of it means P2SH
 }
 
 var (
