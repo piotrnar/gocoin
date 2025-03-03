@@ -9,18 +9,20 @@ type ScriptExecutionData struct {
 	//! The tapleaf hash.
 	M_tapleaf_hash []byte
 
-	//! Whether m_codeseparator_pos is initialized.
-	M_codeseparator_pos_init bool
-	//! Opcode position of the last executed OP_CODESEPARATOR (or 0xFFFFFFFF if none executed).
-	M_codeseparator_pos uint32
-
 	//! Hash of the annex data.
 	M_annex_hash []byte
 
-	//! Whether m_validation_weight_left is initialized.
-	M_validation_weight_left_init bool
 	//! How much validation weight is left (decremented for every successful non-empty signature check).
 	M_validation_weight_left int64
+
+	//! Opcode position of the last executed OP_CODESEPARATOR (or 0xFFFFFFFF if none executed).
+	M_codeseparator_pos uint32
+
+	//! Whether m_codeseparator_pos is initialized.
+	M_codeseparator_pos_init bool
+
+	//! Whether m_validation_weight_left is initialized.
+	M_validation_weight_left_init bool
 }
 
 type taprootSHType struct {

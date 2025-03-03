@@ -7,9 +7,9 @@ import (
 )
 
 type MultiSig struct {
-	SigsNeeded uint
 	Signatures []*Signature
 	PublicKeys [][]byte
+	SigsNeeded uint
 }
 
 func NewMultiSig(n uint) (res *MultiSig) {
