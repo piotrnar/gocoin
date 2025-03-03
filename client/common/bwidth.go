@@ -144,6 +144,7 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	if tosend > 0 {
 		// We used to have SetWriteDeadline() here, but it was causing problems because
 		// in case of a timeout returned "n" was always 0, even if some data got sent.
+		// see https://github.com/golang/go/issues/24727
 		n, e = con.Write(buf[:tosend])
 		bw_mutex.Lock()
 		ul_bytes_so_far -= tosend
