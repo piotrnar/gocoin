@@ -392,11 +392,6 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte, encrypt bool) (e error
 	/*if c.X.Debug {
 		fmt.Println(c.ConnID, "sent", cmd, len(pl))
 	}*/
-	/*
-		if encrypt && (!c.X.AuthAckGot || c.aesData == nil) {
-			encrypt = false // do not encrpt messages if the peer did not send "authack"
-		}
-	*/
 
 	if !c.broken {
 		// we never allow the buffer to be totally full because then producer would be equal consumer
@@ -433,7 +428,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte, encrypt bool) (e error
 				return
 			}
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl))|0x80000000)
-		} else {
+		} else if c.aesData == nil { // if the node sent us xauth, it will not check the cehcksum, so save time
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
 			sh := btc.Sha2Sum(pl[:])
 			copy(sbuf[20:24], sh[:4])
