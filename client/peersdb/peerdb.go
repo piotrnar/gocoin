@@ -65,22 +65,19 @@ var (
 )
 
 type PeerAddr struct {
-	btc.NetAddr
-	Time       uint32 // When seen last time
-	Banned     uint32 // time when this address baned or zero if never
-	SeenAlive  bool
 	BanReason  string
-	CameFromIP []byte
 	NodeAgent  string
+	CameFromIP []byte
+	btc.NetAddr
+	key_val   uint64
+	lastSaved int64  // update the record only once per minute
+	Time      uint32 // When seen last time
+	Banned    uint32 // time when this address baned or zero if never
+	SeenAlive bool
+	key_set   bool // cached to avid key crc64 re-calculations
+	Manual    bool // Manually connected (from UI)
+	Friend    bool // Connected from friends.txt
 
-	key_set bool // cached to avid key crc64 re-calculations
-	key_val uint64
-
-	// The fields below don't get saved, but are used internaly
-	Manual bool // Manually connected (from UI)
-	Friend bool // Connected from friends.txt
-
-	lastSaved int64 // update the record only once per minute
 }
 
 func Lock() {
