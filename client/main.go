@@ -181,6 +181,12 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	return
 }
 
+func del_block_from_disk_cache(hash *btc.Uint256) {
+	tmpfn := common.TempBlocksDir() + hash.String()
+	os.Remove(tmpfn)
+	os.Remove(tmpfn + ".hashes")
+}
+
 func get_block_from_disk_cache(hash *btc.Uint256) (bl *btc.Block) {
 	tmpfn := common.TempBlocksDir() + hash.String()
 	dat, e := os.ReadFile(tmpfn)
@@ -230,7 +236,7 @@ func retry_cached_blocks() (more bool) {
 			if CheckParentDiscarded(newbl.BlockTreeNode) {
 				common.CountSafe("DiscardCachedBlock")
 				if newbl.Block == nil {
-					os.Remove(common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String())
+					del_block_from_disk_cache(newbl.BlockTreeNode.BlockHash)
 				}
 				network.CachedBlocksDel(idx)
 				more = len(network.CachedBlocks) > 0
