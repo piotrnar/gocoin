@@ -4,21 +4,38 @@
 </head>
 <body>
 <h1>Tweaks</h1>
-On this page you can find ways to improve performance and lower resource consumptions
-of a running <b>client</b>.<br>
+On this page you can find ways to improve performance and lower resource consumptions of a running <b>client</b>.<br>
+Like with every tuning, you should apply any changes in steps, checking each time for expected gains.<br>
+In particular, you should monitor your system for RAM usage.
+If it uses all the memory, revert the change before you see the swap file burning.<br>
 <br>
 
-<h2>Disable counters</h2>
-Edit the <a href="gocoin_manual_config.html">config file</a> and set the value of <code>Stats.NoCounters</code> to <b>true</b>.<br>
-This will turn off node's internal statistics which should improve performance.<br>
+<a name="gc"></a>
+<h2>Garbage Collector and UTXO heap</h2>
+If you have RAM to spare, try increasing the Garbage Collector treshold.<br>
+This will increase memory usage, but should improve performance
+(e.g. initial blockchain download time).<br>
+For that, edit the <a href="gocoin_manual_config.html">config file</a> to set
+<code>Memory.GCPercTrshold</code> to <b>100</b> or more (higher value for more effect).<br>
 <br>
-<i>Note: It is likely that such a performance gain will not be noticable.</i><br>
+Alternativelly, you can turn off the GC treshold (by setting it to <b>-1</b>) and control
+the maximum memory usage via <code>Memory.MemoryLimitMB</code>.<br>
+Use this method if you want to allocate a fixed amount of RAM for your running node,
+but mind that the limiter does not account for UTXO records when <code>Memory.UseGoHeap</code> is disabled.<br>
+<br>
+Additionally, you can switch UTXO records to Go's heap manager by setting <code>Memory.UseGoHeap</code>
+to <b>true</b>.<br>
+This seems to significantly improve UTXO update performance (so also chain sync times),
+as long as your node does not run GC too often.<br>
+At the other hand, your node will then need more memory and loading of UTXO database (when node starts)
+will take slightly longer.<br>
 <br>
 
+<a name="cache"></a>
 <h2>Initial chain sync cache</h2>
 
-If you have a fast network connection (e.g. 1Gbit), examine the two options below.<br>
-Don't bother with a slow connection, as the network speed is your bottleneck then.
+If you have a fast internet connection (e.g. 1Gbit), examine the two options below.<br>
+Don't bother with a slow connection, as the download speed is your bottleneck then.
 (you know it when syncing node uses your entire bandwidth)<br>
 The first option will likely have a better effect on the performance, although requires more RAM.<br>
 <ol>
@@ -26,34 +43,35 @@ The first option will likely have a better effect on the performance, although r
 <li><b>Increase cache size.</b> Edit the <a href="gocoin_manual_config.html">config file</a> and increase the value of <code>Memory.SyncCacheSize</code>.</li>
 </ol>
 With a fast network connection, the bottleneck is the speed at which your node builds the UTXO database.<br>
-To make sure the UTXO worker never has to wait for the network,
+To assure the UTXO worker doesn't have to wait for the network,
 the node tries to download blocks ahead and store them in the cache.<br>
 The bigger the cache, the less likely it is that the UTXO worker will ever have to wait for the network.<br>
 <br>
 Mind that with <code>CacheOnDisk</code> disabled, a change of the cache size has a major effect on memory usage.<br>
 <br>
 At the other hand, having the cache on disk results in a minimal memory requiement even for a huge cache size.<br>
-But it comes at the extra time required for the disk operations and re-creation of in-memory structures after loading.<br>
+But it comes at the extra time required for the disk operations and re-creation of memory structures after loading.<br>
 <br>
 <i>Note:<br>
 1. This only affects the chain sync performance. Once the chain is synchronized, it does not matter.<br>
-2. Monitor your system for RAM usage, during the sync. If it uses all the RAM, better to revert your config changes.<br>
-3. Monitor your node's TextUI for <code>cachempty: X</code> debugs. If X is not increasing after block 200000, your cache is big enough.<br>
-4. The node does not need restarting to apply new values of these parameters.<br>
-5. Restarting the node during chain sync discards the entire cache, even when on disk.</i><br>
+2. Monitor your node's TextUI for <code>cachempty: X</code> debugs. If X is not increasing after block 200000, don't bother with a bigger cache.<br>
+3. The node does not need restarting to apply new values of these parameters.<br>
+4. Restarting the node during chain sync discards the entire cache, even when on disk.</i><br>
 <br>
 
-
+<a name="wallet"></a>
 <h2>Disable wallet functionality</h2>
 
 You can disable node's wallet functionality, to save system memory used by a running client
 and improve block processing times.<br>
 In order to do so, use TextUI command <code>wallet off</code> or click the disable wallet button on the bottom of the <b>Wallet</b> page in the WebUI.<br>
+<i>Note: This is only applicable to a synchronized node -
+after it launched and made sure to have all the recent blocks.<br></i>
 <br>
-If you don't want the wallet functionality to automatically enable after the node is started,
-set the value of <code>AllBalances.AutoLoad</code> to <code>false</code> in the
+
+If you don't want the wallet functionality to automatically enable after the node is started and synchronized,
+set the value of <code>AllBalances.AutoLoad</code> to <b>false</b> in the
 <a href="gocoin_manual_config.html">config file</a>.<br>
-<br>
 <i>Note: You can manually enable wallet functionality at any time while the node is running,
 either from WebUI or by executing TextUI command <code>wallet on</code>.</i><br>
 <br>
@@ -63,11 +81,8 @@ either from WebUI or by executing TextUI command <code>wallet on</code>.</i><br>
 It is possible to use <a target="_blank" href="https://github.com/bitcoin/bitcoin/tree/master/src/secp256k1">libsecp256k1</a>
 (maintained by <a target="_blank" href="https://github.com/bitcoin/bitcoin/">Bitcoin Core</a> project)
 that is written in C and assembler.<br>
-<br>
-
-<i><b>Note:</b>
-Thanks to the recent improvements, an external library does not always perform better than the Gocoin's native one.<br>
-To check if it does, use test programs from <code>gocoin/lib/others/cgo/ec_bench/</code> - for instance: <code>go run gonative.go</code> vs <code>go run sipasec.go</code>.</i><br>
+<i>Note: To check the performance difference, use test programs from <code>gocoin/lib/others/cgo/ec_bench/</code>
+ (e.g. <code>go run gonative.go</code> vs <code>go run sipasec.go</code>).</i><br>
 <br>
 
 To make Gocoin client to use the external library, copy either the file
@@ -120,6 +135,16 @@ To build <b>secp256k1.dll</b> youself, look into
 </table>
 <br>
 
+<a name="block-compr"></a>
+<h2>Disable BlockDB compression</h2>
+Edit the <a href="gocoin_manual_config.html">config file</a> and set the value of
+<code>Memory.CompressBlockDB</code> to <b>false</b>.<br>
+This may improve chain sync performance, as well as some tasks of a synchronized node.<br>
+<br>
+However, it will require more disk storage, as the compression saves about 15% of blocks data space.<br>
+<br>
+
+<a name="utxo-compr"></a>
 <h2>Compress UTXO records</h2>
 To save some system memory as well as a disk space, although at the cost of a performance, you can compress UTXO database.<br>
 <br>
@@ -131,20 +156,15 @@ You can reverse the operation of compressing the database, be running <code>utxo
 <br>
 <i>Note: It saves only about 3% of space used by UTXO.db file.</i><br>
 <br>
-<h2>Garbage Collector and UTXO heap</h2>
-If you have RAM to spare, try increasing the Garbage Collector treshold.<br>
-This will increase memory usage, but should improve performance
-(e.g. initial blockchain download time).<br>
-For that, edit the <a href="gocoin_manual_config.html">config file</a> to set
-<code>Memory.GCPercTrshold</code> to <b>100</b> or more (higher value for more effect).<br>
-You can also turn off the GC treshold (by setting it to <b>-1</b>) and then control
-the maximum memory usage via <code>Memory.MemoryLimitMB</code> parameter.<br>
+
+<a name="counters"></a>
+<h2>Disable counters</h2>
+Edit the <a href="gocoin_manual_config.html">config file</a> and set the value of <code>Stats.NoCounters</code> to <b>true</b>.<br>
+This will turn off node's internal statistics which should improve performance.<br>
 <br>
-Additionally, you can try switching UTXO records to Go's heap manager by setting <code>Memory.UseGoHeap</code> to <b>true</b>.
-However this may as well have a negative effect on the performance.<br>
+<i>Note: It is likely that such a performance gain will not be noticable.</i><br>
 <br>
-<i>Note:
-Monitor your system for RAM usage. If it uses all the RAM, means you went too far.
-</i>
+
+
 </body>
 </html>
