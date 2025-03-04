@@ -258,7 +258,7 @@ func sync_stats(par string) {
 	network.MutexRcv.Unlock()
 
 	network.CachedBlocksMutex.Lock()
-	lencb := len(network.CachedBlocks)
+	lencb := len(network.CachedBlocksIdx)
 	network.CachedBlocksMutex.Unlock()
 
 	fmt.Printf("@%d\tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d\n",
@@ -271,39 +271,9 @@ func sync_stats(par string) {
 			network.Fetch.BlockSameRcvd, wst>>20, tot>>20, 100*float64(wst)/float64(tot))
 	}
 
-	if strings.Contains(par, "c") {
-		var lowest_cached_height, highest_cached_height uint32
-		var ready_cached_cnt uint32
-		var cached_ready_bytes int
-		m := make(map[uint32]*network.BlockRcvd)
-		for _, b := range network.CachedBlocks {
-			bh := b.BlockTreeNode.Height
-			m[bh] = b
-			if lowest_cached_height == 0 {
-				lowest_cached_height, highest_cached_height = bh, bh
-			} else if b.BlockTreeNode.Height < lowest_cached_height {
-				lowest_cached_height = bh
-			} else if bh > highest_cached_height {
-				highest_cached_height = bh
-			}
-		}
-		for {
-			if b, ok := m[lb+ready_cached_cnt+1]; ok {
-				ready_cached_cnt++
-				cached_ready_bytes += b.Size
-			} else {
-				break
-			}
-		}
-		fmt.Printf("\tCache Ready: %d:%dMB   Used: %d:%dMB   Limit: %dMB   Max Used: %d%%\n",
-			ready_cached_cnt, cached_ready_bytes>>20, lencb, network.CachedBlocksBytes.Get()>>20,
-			common.SyncMaxCacheBytes.Get()>>20,
-			100*network.MaxCachedBlocksSize.Get()/common.SyncMaxCacheBytes.Get())
-	} else {
-		fmt.Printf("\tCache Used: %d:%dMB   Limit: %dMB   Max Used: %d%%\n",
-			lencb, network.CachedBlocksBytes.Get()>>20, common.SyncMaxCacheBytes.Get()>>20,
-			100*network.MaxCachedBlocksSize.Get()/common.SyncMaxCacheBytes.Get())
-	}
+	fmt.Printf("\tCache Used: %d:%dMB   Limit: %dMB   Max Used: %d%%\n",
+		lencb, network.CachedBlocksBytes.Get()>>20, common.SyncMaxCacheBytes.Get()>>20,
+		100*network.MaxCachedBlocksSize.Get()/common.SyncMaxCacheBytes.Get())
 
 	if strings.Contains(par, "x") {
 		var bip_cnt, ip_min, ip_max uint32

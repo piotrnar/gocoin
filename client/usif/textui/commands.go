@@ -361,18 +361,24 @@ func save_config(s string) {
 
 func show_cached(par string) {
 	var hi, lo uint32
-	for _, v := range network.CachedBlocks {
-		//fmt.Printf(" * %s -> %s\n", v.Hash.String(), btc.NewUint256(v.ParentHash()).String())
-		if hi == 0 {
-			hi = v.Block.Height
-			lo = v.Block.Height
-		} else if v.Block.Height > hi {
-			hi = v.Block.Height
-		} else if v.Block.Height < lo {
-			lo = v.Block.Height
+	var cnt int
+	network.CachedBlocksMutex.Lock()
+	for _, lst := range network.CachedBlocksIdx {
+		for _, v := range lst {
+			//fmt.Printf(" * %s -> %s\n", v.Hash.String(), btc.NewUint256(v.ParentHash()).String())
+			if hi == 0 {
+				hi = v.Block.Height
+				lo = v.Block.Height
+			} else if v.Block.Height > hi {
+				hi = v.Block.Height
+			} else if v.Block.Height < lo {
+				lo = v.Block.Height
+			}
+			cnt++
 		}
 	}
-	fmt.Println(len(network.CachedBlocks), "block cached with heights", lo, "to", hi, hi-lo)
+	network.CachedBlocksMutex.Unlock()
+	fmt.Println(cnt, "block cached with heights", lo, "to", hi, hi-lo)
 }
 
 func send_inv(par string) {
