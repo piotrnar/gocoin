@@ -28,12 +28,14 @@ import (
 )
 
 var (
-	retryCachedBlocks bool
-	SaveBlockChain    *time.Timer = time.NewTimer(1<<63 - 1)
+	SaveBlockChain *time.Timer = time.NewTimer(1<<63 - 1)
 
 	NetBlocksSize sys.SyncInt
 
 	exitat *uint = flag.Uint("exitat", 0, "Auto exit node after comitting block with the given height")
+
+	highestAcceptedBlock uint32
+	retryCachedBlocks    bool
 )
 
 const (
@@ -68,11 +70,11 @@ func blockUndone(bl *btc.Block) {
 func print_sync_stats() {
 	_, mu := sys.MemUsed()
 	cb, _ := common.MemUsed()
-	fmt.Printf("Sync to %d took %s,  Mem: %d+%d (%d),  Cach: %d/%d/%d - cachempty: %d\n",
-		common.Last.Block.Height, time.Since(common.StartTime).String(), mu>>20, cb>>20,
-		len(network.NetBlocks), network.CachedBlocksBytes.Get()>>20,
-		network.MaxCachedBlocksSize.Get()>>20, common.SyncMaxCacheBytes.Get()>>20,
-		network.Fetch.CacheEmpty)
+	fmt.Printf("Sync to %d took %s,  Que: %d/%d,  Mem: %d+%d,  Cach: %d/%d/%d - cachempty: %d\n",
+		common.Last.Block.Height, time.Since(common.StartTime).String(),
+		len(network.NetBlocks), len(network.CachedBlocks), mu>>20, cb>>20,
+		network.CachedBlocksBytes.Get()>>20, network.MaxCachedBlocksSize.Get()>>20,
+		common.SyncMaxCacheBytes.Get()>>20, network.Fetch.CacheEmpty)
 }
 
 func exit_now() {
@@ -114,6 +116,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	}
 
 	if e == nil {
+		if bl.Height > highestAcceptedBlock {
+			highestAcceptedBlock = bl.Height
+		}
 		// new block accepted
 		newbl.TmAccepted = time.Now()
 
@@ -211,40 +216,45 @@ func get_block_from_disk_cache(hash *btc.Uint256) (bl *btc.Block) {
 }
 
 func retry_cached_blocks() bool {
-	var idx int
 	common.CountSafe("RedoCachedBlks")
-	for idx < len(network.CachedBlocks) {
+	for idx := range network.CachedBlocks {
 		newbl := network.CachedBlocks[idx]
+		if int(newbl.BlockTreeNode.Height)-int(highestAcceptedBlock) > 1 {
+			continue // ignore blocks with height > highestAcceptedBlock+1
+		}
 		if CheckParentDiscarded(newbl.BlockTreeNode) {
 			common.CountSafe("DiscardCachedBlock")
 			if newbl.Block == nil {
 				os.Remove(common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String())
 			}
 			network.CachedBlocksDel(idx)
-			return len(network.CachedBlocks) > 0
+			continue
 		}
-		if common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
-			common.Busy()
-
-			if newbl.Block == nil {
-				newbl.Block = get_block_from_disk_cache(newbl.BlockTreeNode.BlockHash)
-				newbl.Block.BlockExtraInfo = *newbl.BlockExtraInfo
-			}
-
-			e := LocalAcceptBlock(newbl)
-			if e != nil {
-				fmt.Println("AcceptBlock2", newbl.BlockTreeNode.BlockHash.String(), "-", e.Error())
-				newbl.Conn.Misbehave("LocalAcceptBl2", 250)
-			}
-			if usif.Exit_now.Get() {
-				return false
-			}
-			// remove it from cache
-			network.CachedBlocksDel(idx)
-			return len(network.CachedBlocks) > 0
-		} else {
-			idx++
+		if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
+			continue
 		}
+
+		// found a suitable block
+		common.Busy()
+
+		if newbl.Block == nil {
+			newbl.Block = get_block_from_disk_cache(newbl.BlockTreeNode.BlockHash)
+			newbl.Block.BlockExtraInfo = *newbl.BlockExtraInfo
+		}
+
+		e := LocalAcceptBlock(newbl)
+		if e != nil {
+			fmt.Println("AcceptBlock2", newbl.BlockTreeNode.BlockHash.String(), "-", e.Error())
+			newbl.Conn.Misbehave("LocalAcceptBl2", 250)
+		}
+		if usif.Exit_now.Get() {
+			return false
+		}
+		// remove it from cache
+		network.CachedBlocksDel(idx)
+
+		// about retry_cached_blocks() now, to give the main task time for doing other things
+		return len(network.CachedBlocks) > 0
 	}
 	return false
 }
