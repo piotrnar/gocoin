@@ -243,9 +243,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 }
 
 func queueNewBlock(newbl *BlockRcvd) {
-	MutexRcv.Lock()
-	last_height := LastCommitedHeader.Height
-	MutexRcv.Unlock()
+	last_height := common.BlockChain.LastBlock().Height
 	// TODO: try to figure out a more elegant solution/condition here:
 	if x := int(newbl.BlockTreeNode.Height) - int(last_height); x < cap(NetBlocks)/2 {
 		NetBlocks <- newbl
