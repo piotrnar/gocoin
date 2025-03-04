@@ -66,10 +66,10 @@ func blockUndone(bl *btc.Block) {
 }
 
 func print_sync_stats() {
-	al, _ := sys.MemUsed()
+	_, mu := sys.MemUsed()
 	cb, _ := common.MemUsed()
 	fmt.Printf("Sync to %d took %s,  Mem: %d+%d,  Cach: %d/%d/%d - cachempty: %d\n",
-		common.Last.Block.Height, time.Since(common.StartTime).String(), al>>20, cb>>20,
+		common.Last.Block.Height, time.Since(common.StartTime).String(), mu>>20, cb>>20,
 		network.CachedBlocksBytes.Get()>>20, network.MaxCachedBlocksSize.Get()>>20,
 		common.SyncMaxCacheBytes.Get()>>20, network.Fetch.CacheEmpty)
 }
@@ -123,7 +123,11 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.Last.Block = common.BlockChain.LastBlock()
 		common.UpdateScriptFlags(bl.VerifyFlags)
 
-		if common.Last.ParseTill != nil && (common.Last.Block.Height%100e3) == 0 {
+		div := uint32(100e3)
+		if common.Last.Block.Height > 400e3 {
+			div = 50e3
+		}
+		if common.Last.ParseTill != nil && (common.Last.Block.Height%div) == 0 {
 			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(), len(network.NetBlocks))
 		}
 
