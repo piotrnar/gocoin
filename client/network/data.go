@@ -243,13 +243,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 }
 
 func queueNewBlock(newbl *BlockRcvd) {
-	select {
-	case NetBlocks <- newbl:
-		common.CountSafe("NetBlockQueued")
-	default:
-		CachedBlocksAdd(newbl)
-		common.CountSafe("NetBlockCached")
-	}
+	NetBlocks <- newbl
 }
 
 // parseLocatorsPayload parses the payload of "getblocks" or "getheaders" messages.
