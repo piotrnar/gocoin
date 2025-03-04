@@ -290,9 +290,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 	if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
 		// it's not linking - keep it for later
-		network.CachedBlocksMutex.Lock()
 		network.CachedBlocksAdd(newbl)
-		network.CachedBlocksMutex.Unlock()
 		common.CountSafe("NetBlockUnlinked")
 		return
 	}

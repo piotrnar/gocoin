@@ -72,8 +72,9 @@ func CachedBlocksLen() (l int) {
 	return
 }
 
-// make sure to call it with locked mutex
+// call it with unlocked mutex
 func CachedBlocksAdd(newbl *BlockRcvd) {
+	CachedBlocksMutex.Lock()
 	height := newbl.BlockTreeNode.Height
 	idxrec, ok := CachedBlocksIdx[height]
 	if !ok {
@@ -88,6 +89,7 @@ func CachedBlocksAdd(newbl *BlockRcvd) {
 	if CachedBlocksBytes.Get() > MaxCachedBlocksSize.Get() {
 		MaxCachedBlocksSize.Store(CachedBlocksBytes.Get())
 	}
+	CachedBlocksMutex.Unlock()
 }
 
 // make sure to call it with locked mutex
