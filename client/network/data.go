@@ -247,8 +247,7 @@ func queueNewBlock(newbl *BlockRcvd) {
 	// TODO: try to figure out a more elegant solution/condition here:
 	if x := int(newbl.BlockTreeNode.Height) - int(last_height); x < cap(NetBlocks)/2 {
 		NetBlocks <- newbl
-		common.CountSafePar("NetBlock-", x)
-		//common.CountSafe("NetBlock-Queued")
+		common.CountSafe("NetBlock-Queued")
 	} else {
 		CachedBlocksAdd(newbl)
 		common.CountSafe("NetBlock-CachedA")
