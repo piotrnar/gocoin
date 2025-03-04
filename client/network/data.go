@@ -238,8 +238,18 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 		}
 	}
 
-	NetBlocks <- &BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode,
-		OneReceivedBlock: orb, BlockExtraInfo: bei, Size: size}
+	queueNewBlock(&BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode,
+		OneReceivedBlock: orb, BlockExtraInfo: bei, Size: size})
+}
+
+func queueNewBlock(newbl *BlockRcvd) {
+	select {
+	case NetBlocks <- newbl:
+		common.CountSafe("NetBlockQueued")
+	default:
+		CachedBlocksAdd(newbl)
+		common.CountSafe("NetBlockCached")
+	}
 }
 
 // parseLocatorsPayload parses the payload of "getblocks" or "getheaders" messages.
@@ -289,7 +299,7 @@ var Fetc struct {
 }
 
 var Fetch struct {
-	LastCacheEmpty time.Time
+	LastCacheEmpty     time.Time
 	NoBlocksToGet      uint64
 	HasBlocksExpired   uint64
 	MaxCountInProgress uint64
@@ -304,7 +314,7 @@ var Fetch struct {
 	BlockBytesWasted uint64
 	BlockSameRcvd    uint64
 
-	CacheEmpty     uint64
+	CacheEmpty uint64
 }
 
 func (c *OneConnection) GetBlockData() (yes bool) {
