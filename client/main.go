@@ -269,7 +269,7 @@ func retry_cached_blocks() bool {
 	network.CachedBlocksDel(newbl)
 
 	// about retry_cached_blocks() now, to give the main task time for doing other things
-	return len(network.CachedBlocksIdx) > 0
+	return network.CachedBlocksLen() > 0
 }
 
 // CheckParentDiscarded returns true if the block's parent is on the DiscardedBlocks list.
