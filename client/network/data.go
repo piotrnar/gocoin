@@ -246,6 +246,7 @@ func queueNewBlock(newbl *BlockRcvd) {
 	MutexRcv.Lock()
 	last_height := LastCommitedHeader.Height
 	MutexRcv.Unlock()
+	// TODO: try to figure out a more elegant solution/condition here:
 	if int(newbl.BlockTreeNode.Height)-int(last_height) < cap(NetBlocks)/2 {
 		NetBlocks <- newbl
 		common.CountSafe("NetBlock-Queued")

@@ -232,6 +232,10 @@ func retry_cached_blocks() bool {
 		return false
 	}
 
+	if int(newbl.BlockTreeNode.Height)-int(highestAcceptedBlock) > 1 {
+		return false
+	}
+
 	if CheckParentDiscarded(newbl.BlockTreeNode) {
 		common.CountSafe("DiscardCachedBlock")
 		if newbl.Block == nil {
