@@ -245,7 +245,8 @@ func retry_cached_blocks() (more bool) {
 					newbl.Conn.Misbehave("LocalAcceptBl2", 250)
 				}
 				// we have to return here, as the mutex is already unlocked
-				return len(network.CachedBlocks) > 0
+				more = len(network.CachedBlocks) > 0
+				return
 			}
 		}
 	}
