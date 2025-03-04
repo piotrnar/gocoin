@@ -56,6 +56,8 @@ var (
 
 	CachedBlocksMutex   sync.Mutex
 	CachedBlocks        []*BlockRcvd
+	CachedBlocksIdx     map[uint32][]int = make(map[uint32][]int)
+	CachedMinHeight     uint32
 	CachedBlocksBytes   sys.SyncInt
 	MaxCachedBlocksSize sys.SyncInt
 	DiscardedBlocks     map[btc.BIDX]bool = make(map[btc.BIDX]bool)
@@ -71,7 +73,16 @@ func CachedBlocksLen() (l int) {
 }
 
 func CachedBlocksAdd(newbl *BlockRcvd) {
+	height := newbl.BlockTreeNode.Height
 	CachedBlocksMutex.Lock()
+	idxrec, ok := CachedBlocksIdx[height]
+	if !ok {
+		idxrec = make([]int, 0, 2)
+		if len(CachedBlocksIdx) == 0 || height < CachedMinHeight {
+			CachedMinHeight = height
+		}
+	}
+	CachedBlocksIdx[height] = append(idxrec, len(CachedBlocks))
 	CachedBlocks = append(CachedBlocks, newbl)
 	CachedBlocksBytes.Add(newbl.Size)
 	if CachedBlocksBytes.Get() > MaxCachedBlocksSize.Get() {
@@ -80,12 +91,33 @@ func CachedBlocksAdd(newbl *BlockRcvd) {
 	CachedBlocksMutex.Unlock()
 }
 
+// make sure to call it with locked mutex
 func CachedBlocksDel(idx int) {
-	CachedBlocksMutex.Lock()
 	oldbl := CachedBlocks[idx]
+	height := oldbl.BlockTreeNode.Height
+	if idxrec, ok := CachedBlocksIdx[uint32(height)]; ok {
+		if len(idxrec) == 1 {
+			delete(CachedBlocksIdx, height)
+			if CachedMinHeight == height {
+				for len(CachedBlocksIdx) > 0 {
+					CachedMinHeight++
+					if _, ok := CachedBlocksIdx[uint32(CachedMinHeight)]; ok {
+						break
+					}
+				}
+			}
+		} else {
+			if i := slices.Index(idxrec, idx); i >= 0 {
+				CachedBlocksIdx[height] = slices.Delete(idxrec, i, i+1)
+			} else {
+				panic("CachedBlocksDel called on block that is in CachedBlocksIdx but does not point back to it")
+			}
+		}
+	} else {
+		panic("CachedBlocksDel called on block that is not in CachedBlocksIdx")
+	}
 	CachedBlocksBytes.Add(-oldbl.Size)
 	CachedBlocks = slices.Delete(CachedBlocks, idx, idx+1)
-	CachedBlocksMutex.Unlock()
 }
 
 // make sure to call it with MutexRcv locked

@@ -215,48 +215,42 @@ func get_block_from_disk_cache(hash *btc.Uint256) (bl *btc.Block) {
 	return
 }
 
-func retry_cached_blocks() bool {
+func retry_cached_blocks() (more bool) {
 	common.CountSafe("RedoCachedBlks")
-	for idx := range network.CachedBlocks {
-		newbl := network.CachedBlocks[idx]
-		if int(newbl.BlockTreeNode.Height)-int(highestAcceptedBlock) > 1 {
-			continue // ignore blocks with height > highestAcceptedBlock+1
-		}
-		if CheckParentDiscarded(newbl.BlockTreeNode) {
-			common.CountSafe("DiscardCachedBlock")
-			if newbl.Block == nil {
-				os.Remove(common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String())
+
+	network.CachedBlocksMutex.Lock()
+	if len(network.CachedBlocksIdx) > 0 {
+		if network.CachedMinHeight <= highestAcceptedBlock+1 {
+			lowest_blks := network.CachedBlocksIdx[network.CachedMinHeight]
+			idx := lowest_blks[len(lowest_blks)-1] // start from the last one so it is cheaper to remove
+			newbl := network.CachedBlocks[idx]
+			if CheckParentDiscarded(newbl.BlockTreeNode) {
+				common.CountSafe("DiscardCachedBlock")
+				if newbl.Block == nil {
+					os.Remove(common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String())
+				}
+				network.CachedBlocksDel(idx)
+				more = len(network.CachedBlocks) > 0
+			} else if common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
+				// looks like we found a fitting block. first remove it from cache
+				network.CachedBlocksDel(idx)
+				network.CachedBlocksMutex.Unlock()
+				common.Busy()
+				if newbl.Block == nil {
+					newbl.Block = get_block_from_disk_cache(newbl.BlockTreeNode.BlockHash)
+					newbl.Block.BlockExtraInfo = *newbl.BlockExtraInfo
+				}
+				if e := LocalAcceptBlock(newbl); e != nil {
+					fmt.Println("AcceptBlock2", newbl.BlockTreeNode.BlockHash.String(), "-", e.Error())
+					newbl.Conn.Misbehave("LocalAcceptBl2", 250)
+				}
+				// we have to return here, as the mutex is already unlocked
+				return len(network.CachedBlocks) > 0
 			}
-			network.CachedBlocksDel(idx)
-			continue
 		}
-		if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
-			continue
-		}
-
-		// found a suitable block
-		common.Busy()
-
-		if newbl.Block == nil {
-			newbl.Block = get_block_from_disk_cache(newbl.BlockTreeNode.BlockHash)
-			newbl.Block.BlockExtraInfo = *newbl.BlockExtraInfo
-		}
-
-		e := LocalAcceptBlock(newbl)
-		if e != nil {
-			fmt.Println("AcceptBlock2", newbl.BlockTreeNode.BlockHash.String(), "-", e.Error())
-			newbl.Conn.Misbehave("LocalAcceptBl2", 250)
-		}
-		if usif.Exit_now.Get() {
-			return false
-		}
-		// remove it from cache
-		network.CachedBlocksDel(idx)
-
-		// about retry_cached_blocks() now, to give the main task time for doing other things
-		return len(network.CachedBlocks) > 0
 	}
-	return false
+	network.CachedBlocksMutex.Unlock()
+	return
 }
 
 // CheckParentDiscarded returns true if the block's parent is on the DiscardedBlocks list.
@@ -295,7 +289,9 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 	if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
 		// it's not linking - keep it for later
+		network.CachedBlocksMutex.Lock()
 		network.CachedBlocksAdd(newbl)
+		network.CachedBlocksMutex.Unlock()
 		common.CountSafe("NetBlockUnlinked")
 		return
 	}
