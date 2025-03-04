@@ -243,9 +243,8 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 }
 
 func queueNewBlock(newbl *BlockRcvd) {
-	last_height := common.BlockChain.LastBlock().Height
 	// TODO: try to figure out a more elegant solution/condition here:
-	if x := int(newbl.BlockTreeNode.Height) - int(last_height); x < cap(NetBlocks)/2 {
+	if int(newbl.BlockTreeNode.Height)-int(common.BlockChain.LastBlock().Height) < cap(NetBlocks)/2 {
 		NetBlocks <- newbl
 		common.CountSafe("NetBlock-Queued")
 	} else {
