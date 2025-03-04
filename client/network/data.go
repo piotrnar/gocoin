@@ -245,7 +245,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 func queueNewBlock(newbl *BlockRcvd) {
 	MutexRcv.Lock()
 	last_height := LastCommitedHeader.Height
-	MutexRcv.Lock()
+	MutexRcv.Unlock()
 	if int(newbl.BlockTreeNode.Height)-int(last_height) < cap(NetBlocks)/2 {
 		NetBlocks <- newbl
 		common.CountSafe("NetBlock-Queued")
