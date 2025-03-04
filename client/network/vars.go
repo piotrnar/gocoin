@@ -49,8 +49,8 @@ var (
 	LastCommitedHeader       *chain.BlockTreeNode
 	MutexRcv                 sync.Mutex
 
-	NetBlocks chan *BlockRcvd     = make(chan *BlockRcvd, 100)
-	NetTxs    chan *txpool.TxRcvd = make(chan *txpool.TxRcvd, 2000)
+	NetBlocks chan *BlockRcvd     = make(chan *BlockRcvd, 512)
+	NetTxs    chan *txpool.TxRcvd = make(chan *txpool.TxRcvd, 2048)
 
 	CachedBlocksMutex   sync.Mutex
 	CachedBlocks        []*BlockRcvd
