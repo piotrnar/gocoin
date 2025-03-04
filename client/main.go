@@ -72,7 +72,7 @@ func print_sync_stats() {
 	cb, _ := common.MemUsed()
 	fmt.Printf("Sync to %d took %s,  Que: %d/%d,  Mem: %d+%d,  Cach: %d/%d/%d - cachempty: %d\n",
 		common.Last.Block.Height, time.Since(common.StartTime).String(),
-		len(network.NetBlocks), len(network.CachedBlocks), mu>>20, cb>>20,
+		len(network.NetBlocks), network.CachedBlocksLen(), mu>>20, cb>>20,
 		network.CachedBlocksBytes.Get()>>20, network.MaxCachedBlocksSize.Get()>>20,
 		common.SyncMaxCacheBytes.Get()>>20, network.Fetch.CacheEmpty)
 }
@@ -237,6 +237,7 @@ func retry_cached_blocks() (more bool) {
 			} else if common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
 				// looks like we found a fitting block. first remove it from cache
 				network.CachedBlocksDel(idx)
+				more = len(network.CachedBlocks) > 0
 				network.CachedBlocksMutex.Unlock()
 				common.Busy()
 				if newbl.Block == nil {
@@ -248,7 +249,6 @@ func retry_cached_blocks() (more bool) {
 					newbl.Conn.Misbehave("LocalAcceptBl2", 250)
 				}
 				// we have to return here, as the mutex is already unlocked
-				more = len(network.CachedBlocks) > 0
 				return
 			}
 		}
@@ -287,7 +287,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		if newbl.Block == nil {
 			os.Remove(common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String())
 		}
-		retryCachedBlocks = len(network.CachedBlocks) > 0
+		retryCachedBlocks = network.CachedBlocksLen() > 0
 		return
 	}
 
@@ -736,7 +736,7 @@ func main() {
 				if (network.HeadersReceived.Get() > int(common.Get(&common.CFG.Net.MaxOutCons)/2) ||
 					peersdb.ConnectOnly != "" && network.HeadersReceived.Get() >= 1) &&
 					network.BlocksToGetCnt() == 0 && len(network.NetBlocks) == 0 &&
-					len(network.CachedBlocks) == 0 {
+					network.CachedBlocksLen() == 0 {
 					// only when we have no pending blocks and rteceived header messages, startup_ticks can go down..
 					if startup_ticks > 0 {
 						startup_ticks--
