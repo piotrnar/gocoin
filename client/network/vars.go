@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"slices"
+
 	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -82,7 +84,7 @@ func CachedBlocksDel(idx int) {
 	CachedBlocksMutex.Lock()
 	oldbl := CachedBlocks[idx]
 	CachedBlocksBytes.Add(-oldbl.Size)
-	CachedBlocks = append(CachedBlocks[:idx], CachedBlocks[idx+1:]...)
+	CachedBlocks = slices.Delete(CachedBlocks, idx, idx+1)
 	CachedBlocksMutex.Unlock()
 }
 
