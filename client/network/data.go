@@ -243,7 +243,16 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 }
 
 func queueNewBlock(newbl *BlockRcvd) {
-	NetBlocks <- newbl
+	MutexRcv.Lock()
+	last_height := LastCommitedHeader.Height
+	MutexRcv.Lock()
+	if int(newbl.BlockTreeNode.Height)-int(last_height) < cap(NetBlocks)/2 {
+		NetBlocks <- newbl
+		common.CountSafe("NetBlock-Queued")
+	} else {
+		CachedBlocksAdd(newbl)
+		common.CountSafe("NetBlock-CachedA")
+	}
 }
 
 // parseLocatorsPayload parses the payload of "getblocks" or "getheaders" messages.
