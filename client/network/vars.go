@@ -55,7 +55,7 @@ var (
 	NetTxs    chan *txpool.TxRcvd = make(chan *txpool.TxRcvd, 2048)
 
 	CachedBlocksMutex   sync.Mutex
-	CachedBlocksIdx     map[uint32][]*BlockRcvd = make(map[uint32][]*BlockRcvd)
+	CachedBlocksIdx     map[uint32][]*BlockRcvd = make(map[uint32][]*BlockRcvd, MAX_BLOCKS_FORWARD_CNT)
 	CachedMinHeight     uint32
 	CachedBlocksBytes   sys.SyncInt
 	MaxCachedBlocksSize sys.SyncInt
@@ -64,6 +64,7 @@ var (
 	HeadersReceived sys.SyncInt
 )
 
+/*
 func check_cache() {
 	var lowest_h uint32
 	for h, idxs := range CachedBlocksIdx {
@@ -85,6 +86,7 @@ func check_cache() {
 		panic("lowest_h != CachedMinHeight")
 	}
 }
+*/
 
 func CachedBlocksLen() (l int) {
 	CachedBlocksMutex.Lock()
@@ -111,36 +113,21 @@ func CachedBlocksAdd(newbl *BlockRcvd) {
 	if CachedBlocksBytes.Get() > MaxCachedBlocksSize.Get() {
 		MaxCachedBlocksSize.Store(CachedBlocksBytes.Get())
 	}
-	check_cache()
 	CachedBlocksMutex.Unlock()
 }
 
 func GetLowestCachedBlock() (newbl *BlockRcvd) {
 	CachedBlocksMutex.Lock()
-	//check_cache()
 	if len(CachedBlocksIdx) > 0 {
 		bls := CachedBlocksIdx[CachedMinHeight]
 		newbl = bls[len(bls)-1] // return the last one, which will make it quicker to delete it later
 	}
-	/*
-		for _, lst := range CachedBlocksIdx {
-			for _, bl := range lst {
-				if newbl == nil || bl.BlockTreeNode.Height < newbl.BlockTreeNode.Height {
-					newbl = bl
-				}
-			}
-		}
-		if newbl != nil && newbl.BlockTreeNode.Height != CachedMinHeight {
-			println("pipia", newbl.BlockTreeNode.Height, CachedMinHeight)
-			panic("bl.BlockTreeNode.Height!=CachedMinHeight")
-		}*/
 	CachedBlocksMutex.Unlock()
 	return
 }
 
 func CachedBlocksDel(oldbl *BlockRcvd) {
 	CachedBlocksMutex.Lock()
-	//check_cache()
 	height := oldbl.BlockTreeNode.Height
 	if idxrec, ok := CachedBlocksIdx[height]; ok {
 		if len(idxrec) == 1 {
@@ -164,7 +151,6 @@ func CachedBlocksDel(oldbl *BlockRcvd) {
 		panic("CachedBlocksDel called on block that is not in CachedBlocksIdx")
 	}
 	CachedBlocksBytes.Add(-oldbl.Size)
-	check_cache()
 	CachedBlocksMutex.Unlock()
 }
 
