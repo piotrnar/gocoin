@@ -124,10 +124,12 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 		<b title="ECDSA verify operations" id="si_ecdsa_verify_cnt"></b> ECs
 	<tr><td>Mem Used MB:<td>
 		<span style="float:right;">PID <b id="process_pid">???</b></span>
-		<b title="Total memory used" id="si_total_mem"></b>
-		(<b title="Native Go heap" id="si_heap_size"></b> +
-		<b title="UTXO records" id="si_qdb_extramem"></b>)
-		&nbsp;<span id="el_free_mem" style="display:none">[<a href="javascript:config('freemem')">FREE</a>]</span>
+		<b title="Native Go heap" id="si_heap_size"></b> +
+		<b title="UTXO records" id="si_qdb_extramem"></b>
+		(<b title="Native Go + UTXO" id="si_total_mem"></b>
+		/
+		<b title="Heap sys mem" id="si_heapsys_mem"></b>)
+		&nbsp;<span id="el_free_mem" style="display:none">[<a href="javascript:freemem()">FREE</a>]</span>
 
 	<tr><td nowrap="nowrap">TX Mempool:<td aligh="left">
 		<b title="Accepted" id="ts_t2s_size"></b>
@@ -440,7 +442,7 @@ function refreshsysinfo() {
 			var si = JSON.parse(aj.responseText)
 			si_known_peers.innerText = si.Known_peers
 			si_total_mem.innerText = ((si.Heap_size+si.Qdb_extramem)/0x100000).toFixed(0)
-			el_free_mem.title = (si.Heap_sysmem/0x100000).toFixed(0)
+			si_heapsys_mem.innerText = (si.Heap_sysmem/0x100000).toFixed(0)
 			si_heap_size.innerText = (si.Heap_size/0x100000).toFixed(0)
 			si_qdb_extramem.innerText = (si.Qdb_extramem/0x100000).toFixed(0)
 			si_qdb_extramem.title = "UTXO records cnt: " + si.Qdb_allocs
@@ -461,7 +463,7 @@ function refreshsysinfo() {
 			si_last_hdr_height.innerText = si.LastHeaderHeight
 			si_network_hashrate.innerText = bignum(si.NetworkHashRate) +'H/s'
 			si_saving.style.display = si.SavingUTXO ? "block" : "none"
-			
+
 			process_pid.innerText = si.ProcessPID
 			process_pid.title = 'Click to Copy'
 			process_pid.className = 'hand'
@@ -611,6 +613,17 @@ function import_file_selected(e) {
 	};
 	reader.readAsText(f)
 }
+
+function freemem() {
+	if (server_mode) {
+		alert('Freeing memory is not available in Server Mode')
+		return
+	}
+	if (confirm("Request node to free all the possible memory")) {
+		config('freemem')
+	}
+}
+
 
 function get_auth_key() {
 	var aj = ajax()

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"runtime/debug"
@@ -201,21 +200,6 @@ func show_counters(par string) {
 	common.CounterMutex.Unlock()
 }
 
-func show_pending(par string) {
-	network.MutexRcv.Lock()
-	out := make([]string, len(network.BlocksToGet))
-	var idx int
-	for _, v := range network.BlocksToGet {
-		out[idx] = fmt.Sprintf(" * %d / %s / %d in progress", v.Block.Height, v.Block.Hash.String(), v.InProgress)
-		idx++
-	}
-	network.MutexRcv.Unlock()
-	sort.Strings(out)
-	for _, s := range out {
-		fmt.Println(s)
-	}
-}
-
 func show_help(par string) {
 	fmt.Println("The following", len(uiCmds), "commands are supported:")
 	for i := range uiCmds {
@@ -232,14 +216,50 @@ func show_help(par string) {
 }
 
 func show_mem(p string) {
-	al, sy := sys.MemUsed()
-
-	fmt.Println("Allocated:", al>>20, "MB")
-	fmt.Println("SystemMem:", sy>>20, "MB")
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	fmt.Println("Alloc         :", ms.Alloc)
+	fmt.Println("TotalAlloc    :", ms.TotalAlloc)
+	fmt.Println("Sys           :", ms.Sys)
+	fmt.Println("Lookups       :", ms.Lookups)
+	fmt.Println("Mallocs       :", ms.Mallocs)
+	fmt.Println("Frees         :", ms.Frees)
+	fmt.Println("HeapAlloc     :", ms.HeapAlloc)
+	fmt.Println("HeapSys       :", ms.HeapSys)
+	fmt.Println("HeapIdle      :", ms.HeapIdle)
+	fmt.Println("HeapInuse     :", ms.HeapInuse)
+	fmt.Println("HeapReleased  :", ms.HeapReleased)
+	fmt.Println("HeapObjects   :", ms.HeapObjects)
+	fmt.Println("StackInuse    :", ms.StackInuse)
+	fmt.Println("StackSys      :", ms.StackSys)
+	fmt.Println("MSpanInuse    :", ms.MSpanInuse)
+	fmt.Println("MSpanSys      :", ms.MSpanSys)
+	fmt.Println("MCacheInuse   :", ms.MCacheInuse)
+	fmt.Println("MCacheSys     :", ms.MCacheSys)
+	fmt.Println("BuckHashSys   :", ms.BuckHashSys)
+	fmt.Println("GCSys         :", ms.GCSys)
+	fmt.Println("OtherSys      :", ms.OtherSys)
+	fmt.Println("LastGC        :", time.Unix(0, int64(ms.LastGC)).Format("15:04:05"))
+	fmt.Println("PauseTotal    :", time.Duration(ms.PauseTotalNs).String())
+	fmt.Println("NumGC         :", ms.NumGC)
+	fmt.Println("NumForcedGC   :", ms.NumForcedGC)
+	fmt.Println("GCCPUFraction :", ms.GCCPUFraction)
+	fmt.Println("EnableGC      :", ms.EnableGC)
+	fmt.Println("DebugGC       :", ms.DebugGC)
 
 	if p == "" {
 		return
 	}
+
+	if p == "bs" {
+		var prvSize uint32
+		for _, bs := range ms.BySize {
+			fmt.Printf("  Alloc_Size:%6d -%6d  %10d allocs  %10d frees\n", prvSize, bs.Size, bs.Mallocs, bs.Frees)
+			prvSize = bs.Size
+		}
+		return
+	}
+
 	if p == "free" {
 		fmt.Println("Freeing the mem...")
 		sys.FreeMem()
@@ -252,6 +272,18 @@ func show_mem(p string) {
 		fmt.Println("Done.")
 		return
 	}
+
+	if strings.HasSuffix(p, "MB") {
+		i, e := strconv.ParseInt(p[:len(p)-2], 10, 64)
+		if e != nil {
+			println(e.Error())
+			return
+		}
+		debug.SetMemoryLimit(i << 20)
+		fmt.Println("MemoryLimit set to", i, "MB")
+		return
+	}
+
 	i, e := strconv.ParseInt(p, 10, 64)
 	if e != nil {
 		println(e.Error())
@@ -273,7 +305,7 @@ func dump_block(s string) {
 		return
 	}
 
-	ioutil.WriteFile(h.String()+".bin", crec.Data, 0700)
+	os.WriteFile(h.String()+".bin", crec.Data, 0700)
 	fmt.Println("Block saved")
 }
 
@@ -335,7 +367,7 @@ func set_config(s string) {
 }
 
 func load_config(s string) {
-	d, e := ioutil.ReadFile(common.ConfigFile)
+	d, e := os.ReadFile(common.ConfigFile)
 	if e != nil {
 		println(e.Error())
 		return
@@ -357,28 +389,6 @@ func save_config(s string) {
 		fmt.Println("Current settings saved to", common.ConfigFile)
 	}
 	common.UnlockCfg()
-}
-
-func show_cached(par string) {
-	var hi, lo uint32
-	var cnt int
-	network.CachedBlocksMutex.Lock()
-	for _, lst := range network.CachedBlocksIdx {
-		for _, v := range lst {
-			//fmt.Printf(" * %s -> %s\n", v.Hash.String(), btc.NewUint256(v.ParentHash()).String())
-			if hi == 0 {
-				hi = v.Block.Height
-				lo = v.Block.Height
-			} else if v.Block.Height > hi {
-				hi = v.Block.Height
-			} else if v.Block.Height < lo {
-				lo = v.Block.Height
-			}
-			cnt++
-		}
-	}
-	network.CachedBlocksMutex.Unlock()
-	fmt.Println(cnt, "block cached with heights", lo, "to", hi, hi-lo)
 }
 
 func send_inv(par string) {
@@ -502,23 +512,21 @@ func kill_node(par string) {
 
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
-	newUi("cache", true, show_cached, "Show blocks cached in memory")
-	newUi("configload cl", false, load_config, "Re-load settings from the common file")
-	newUi("configsave cs", false, save_config, "Save current settings to a common file")
-	newUi("configset cfg", false, set_config, "Set a specific common value: use JSON, omit top {}")
-	newUi("counters c", false, show_counters, "Show all the internal debug counters")
+	newUi("configload lc", false, load_config, "Re-load settings from the config file")
+	newUi("configsave sc", false, save_config, "Save current settings to the config file")
+	newUi("configset cfg", false, set_config, "Set a specific config value: use JSON, omit top {}")
+	newUi("counters c", false, show_counters, "Show internal debug counters [prefix]")
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")
 	newUi("inv", false, send_inv, "Send inv message to all the peers - specify type & hash")
 	newUi("kill", false, kill_node, "Kill the node. WARNING: not safe - use 'quit' instead")
-	newUi("mem", false, show_mem, "Show memory stats or: [free|gc|<new_gc_perc>]")
-	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
+	newUi("mem", false, show_mem, "Show memory stats and... [bs|free|gc|<new_gc_perc>|<new_limit>MB]")
 	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")
 	newUi("quit q", false, ui_quit, "Quit the node: [restart]")
-	newUi("redo", true, redo_block, "Redo last block")
-	newUi("savebl bls", false, dump_block, "Saves a block to disk: <hash>")
+	newUi("redo", true, redo_block, "Redo one block")
+	newUi("savebl bl", false, dump_block, "Saves a block to disk: <hash>")
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
 	newUi("trust", true, switch_trust, "Assume all downloaded blocks trusted: 0|1")
-	newUi("undo", true, undo_block, "Undo one last block")
+	newUi("undo", true, undo_block, "Undo one block")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
 }
