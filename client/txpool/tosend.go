@@ -99,7 +99,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		}
 		RepackagingSinceLastRedoTime += time.Since(sta)
 		RepackagingSinceLastRedoCount++
-		if x := time.Since(sta); x > 250*time.Microsecond {
+		if x := time.Since(sta); x > 250*time.Millisecond {
 			println("getAllTopParents returned", len(parents), "records in", x.String())
 			already_in := make(map[*OneTxToSend]struct{}, len(parents))
 			for _, parent := range parents {
