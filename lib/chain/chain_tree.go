@@ -263,7 +263,7 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	// At this point "cur" is at the highest common block
 
 	lastblock = ch.LastBlock() // recover lastblock, in case it was changed by the "rare case"
-	fmt.Println("Undoing", lastblock.Height-cur.Height, "block(s) starting from", lastblock.Height)
+	fmt.Println("Undoing", lastblock.Height-cur.Height, "block(s) starting from", lastblock.Height, lastblock.BlockHash.String()[56:])
 	for lastblock != cur {
 		if AbortNow {
 			return
