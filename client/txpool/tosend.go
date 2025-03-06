@@ -62,7 +62,9 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	TransactionsToSend[bidx] = t2s
 	TransactionsToSendWeight += uint64(t2s.Weight())
 	TransactionsToSendSize += uint64(t2s.Footprint)
+	sta := time.Now()
 	t2s.AddToSort()
+	timeCheck(&sta, "after-AddToSort")
 
 	if FeePackagesDirty {
 		return
