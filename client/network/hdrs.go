@@ -53,7 +53,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 
 	if dos, _, er := common.BlockChain.PreCheckBlock(bl); er != nil {
 		common.CountSafe("PreCheckBlockFail")
-		println("PreCheckBlock err", dos, er.Error()) // TODO: remove this debug
+		//println("PreCheckBlock err", dos, er.Error())
 		if dos {
 			return PH_STATUS_FATAL, nil
 		} else {

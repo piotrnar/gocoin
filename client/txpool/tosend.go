@@ -79,12 +79,17 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	// here we know that FeePackagesDirty is false
 	if t2s.MemInputCnt > 0 { // go through all the parents...
 		sta := time.Now()
-		parents, full := t2s.getAllTopParents(1024)
-		if full {
-			common.CountSafe("TxPkgsSusp-Complex")
-			FeePackagesDirty = true
-			return
-		}
+		parents, _ := t2s.getAllTopParents(1024)
+		/*
+			if full {
+				println("getAllTopParents - would be...")
+				sta := time.Now()
+				parents, _ := t2s.getAllTopParents(0)
+				println("number of parents:", len(parents), "in", time.Since(sta).String)
+				common.CountSafe("TxPkgsSusp-Complex")
+				FeePackagesDirty = true
+				return
+			}*/
 		for _, parent := range parents {
 			if parent.MemInputCnt != 0 {
 				println("ERROR: parent.MemInputCnt!=0 must not happen here")
@@ -94,11 +99,19 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		}
 		RepackagingSinceLastRedoTime += time.Since(sta)
 		RepackagingSinceLastRedoCount++
-		timeCheck(&sta, fmt.Sprint("after-addToPackages-", len(parents)))
+		if x := time.Since(sta); x > 250*time.Microsecond {
+			println("getAllTopParents returned", len(parents), "records in", x.String())
+			already_in := make(map[*OneTxToSend]struct{}, len(parents))
+			for _, parent := range parents {
+				already_in[parent] = struct{}{}
+			}
+			println(" .... unique records:", len(already_in))
+		}
 	}
 }
 
 func (tx *OneTxToSend) getAllTopParents(limit int) (result []*OneTxToSend, full bool) {
+	result = make([]*OneTxToSend, 0, 256)
 	var do_one_parent func(t2s *OneTxToSend)
 	do_one_parent = func(t2s *OneTxToSend) {
 		for vout, meminput := range t2s.MemInputs {
@@ -283,11 +296,11 @@ func (tx *OneTxToSend) GetItWithAllChildren(limit int) (result []*OneTxToSend, f
 			println("GetItWithAllChildren took", x.String(), "for tx cnt", len(result))
 		}
 	}()
-	already_included := make(map[*OneTxToSend]bool, 256)
+	already_included := make(map[*OneTxToSend]struct{}, 256)
 
 	result = make([]*OneTxToSend, 1, 256)
 	result[0] = tx // our starting (parent) tx shall be the first element of the result
-	already_included[tx] = true
+	already_included[tx] = struct{}{}
 
 	for idx := 0; idx < len(result); idx++ {
 		par := result[idx]
@@ -307,7 +320,7 @@ func (tx *OneTxToSend) GetItWithAllChildren(limit int) (result []*OneTxToSend, f
 						}
 						result = append(result, prnt)
 						// ... and mark it as included, for later
-						already_included[prnt] = true
+						already_included[prnt] = struct{}{}
 					}
 				}
 
@@ -318,7 +331,7 @@ func (tx *OneTxToSend) GetItWithAllChildren(limit int) (result []*OneTxToSend, f
 				}
 				result = append(result, ch)
 				// ... and mark it as included, for later
-				already_included[ch] = true
+				already_included[ch] = struct{}{}
 			}
 		}
 	}
