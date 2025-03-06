@@ -190,7 +190,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 	sta, b2g := c.ProcessNewHeader(pl[:80])
 
 	if b2g == nil {
-		common.CountSafe("CmpctBlockHdrNo")
+		common.CountSafePar("CmpctBlockRjctd-", sta)
 		if sta == PH_STATUS_ERROR {
 			c.ReceiveHeadersNow()       // block doesn't connect so ask for the headers
 			c.Misbehave("BadCmpct", 50) // do it 20 times and you are banned
