@@ -79,7 +79,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	// here we know that FeePackagesDirty is false
 	if t2s.MemInputCnt > 0 { // go through all the parents...
 		sta := time.Now()
-		parents, _ := t2s.getAllTopParents(1024)
+		parents, _ := t2s.getAllTopParents(0)
 		/*
 			if full {
 				println("getAllTopParents - would be...")
