@@ -76,7 +76,12 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	// here we know that FeePackagesDirty is false
 	if t2s.MemInputCnt > 0 { // go through all the parents...
 		sta := time.Now()
-		parents := t2s.getAllTopParents()
+		parents, full := t2s.getAllTopParents(16)
+		if full {
+			common.CountSafe("TxPkgsSusp-Complex")
+			FeePackagesDirty = true
+			return
+		}
 		for _, parent := range parents {
 			if parent.MemInputCnt != 0 {
 				println("ERROR: parent.MemInputCnt!=0 must not happen here")
@@ -89,13 +94,18 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	}
 }
 
-func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
+func (tx *OneTxToSend) getAllTopParents(limit int) (result []*OneTxToSend, full bool) {
 	var do_one_parent func(t2s *OneTxToSend)
 	do_one_parent = func(t2s *OneTxToSend) {
 		for vout, meminput := range t2s.MemInputs {
 			if meminput { // and add yoursef to their packages
 				if parent, has := TransactionsToSend[btc.BIdx(t2s.TxIn[vout].Input.Hash[:])]; has {
 					if parent.MemInputCnt == 0 {
+						if len(result) == limit {
+							result = nil
+							full = true
+							return
+						}
 						result = append(result, parent)
 					} else {
 						do_one_parent(parent)
