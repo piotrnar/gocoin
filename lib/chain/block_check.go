@@ -36,7 +36,7 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (dos bool, maybelater bool, er err
 	// Check timestamp (must not be higher than now +2 hours)
 	if int64(bl.BlockTime()) > time.Now().Unix()+2*60*60 {
 		er = errors.New("CheckBlock() : block timestamp too far in the future - RPC_Result:time-too-new")
-		dos = true
+		dos = int64(bl.BlockTime()) > time.Now().Unix()+2*60*60+5*60 // mark it as DOS if more than 5 minutes over
 		return
 	}
 
