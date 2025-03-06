@@ -55,6 +55,7 @@ type OneTxToSend struct {
 }
 
 func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
+	sta := time.Now()
 	for _, inp := range t2s.TxIn {
 		SpentOutputs[inp.Input.UIdx()] = bidx
 	}
@@ -62,7 +63,6 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	TransactionsToSend[bidx] = t2s
 	TransactionsToSendWeight += uint64(t2s.Weight())
 	TransactionsToSendSize += uint64(t2s.Footprint)
-	sta := time.Now()
 	t2s.AddToSort()
 	timeCheck(&sta, "after-AddToSort")
 
@@ -78,7 +78,6 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 
 	// here we know that FeePackagesDirty is false
 	if t2s.MemInputCnt > 0 { // go through all the parents...
-		sta := time.Now()
 		parents, full := t2s.getAllTopParents(16)
 		if full {
 			common.CountSafe("TxPkgsSusp-Complex")
