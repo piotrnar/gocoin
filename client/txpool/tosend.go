@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	TxMutex sys.Dutex
+	TxMutex sys.Dutex // TODO: cganhe to regular Mutex
 
 	// The actual memory pool:
 	TransactionsToSend       map[btc.BIDX]*OneTxToSend
@@ -275,9 +275,17 @@ func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 // If any of the children has other unconfirmed parents, they are also included in the result.
 // The result is sorted with the input parent first and always with parents before their children.
 func (tx *OneTxToSend) GetItWithAllChildren(limit int) (result []*OneTxToSend, full bool) {
-	already_included := make(map[*OneTxToSend]bool)
+	// TODO: remove debugs from this function
+	sta := time.Now()
+	defer func() {
+		if x := time.Since(sta); x > 50*time.Millisecond {
+			println("GetItWithAllChildren took", x.String(), "for tx cnt", len(result))
+		}
+	}()
+	already_included := make(map[*OneTxToSend]bool, 256)
 
-	result = []*OneTxToSend{tx} // out starting (parent) tx shall be the first element of the result
+	result = make([]*OneTxToSend, 1, 256)
+	result[0] = tx // our starting (parent) tx shall be the first element of the result
 	already_included[tx] = true
 
 	for idx := 0; idx < len(result); idx++ {

@@ -292,8 +292,9 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 	return 0, rec
 }
 
+// TODO: get rid if these checks
 func timeCheck(sta *time.Time, point string) {
-	if ts := time.Since(*sta); ts > time.Second {
+	if ts := time.Since(*sta); ts > 50*time.Millisecond {
 		println("getting to point", point, "took", ts.String())
 		*sta = time.Now()
 	}
