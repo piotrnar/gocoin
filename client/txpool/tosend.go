@@ -76,7 +76,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	// here we know that FeePackagesDirty is false
 	if t2s.MemInputCnt > 0 { // go through all the parents...
 		sta := time.Now()
-		parents, full := t2s.getAllTopParents(16)
+		parents, full := t2s.getAllTopParents(1024)
 		if full {
 			common.CountSafe("TxPkgsSusp-Complex")
 			FeePackagesDirty = true
