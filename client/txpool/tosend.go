@@ -1,18 +1,19 @@
 package txpool
 
 import (
+	"fmt"
 	"os"
 	"runtime/debug"
-	"sync"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 var (
-	TxMutex sync.Mutex
+	TxMutex sys.Dutex
 
 	// The actual memory pool:
 	TransactionsToSend       map[btc.BIDX]*OneTxToSend
@@ -91,6 +92,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		}
 		RepackagingSinceLastRedoTime += time.Since(sta)
 		RepackagingSinceLastRedoCount++
+		timeCheck(&sta, fmt.Sprint("after-addToPackages-", len(parents)))
 	}
 }
 
@@ -133,6 +135,8 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		}
 	}
 
+	sta := time.Now()
+	var cnt int
 	if with_children {
 		// remove all the children that are spending from tx
 		for vout := range tx.TxOut {
@@ -140,10 +144,12 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 			if so, ok := SpentOutputs[uidx]; ok {
 				if child, ok := TransactionsToSend[so]; ok {
 					child.Delete(true, reason)
+					cnt++
 				}
 			}
 		}
 	}
+	timeCheck(&sta, fmt.Sprint("after-Del.Children-", len(tx.TxOut), "-", cnt))
 
 	for _, txin := range tx.TxIn {
 		uidx := txin.Input.UIdx()
@@ -160,9 +166,11 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		RepackagingSinceLastRedoTime += time.Since(sta)
 		RepackagingSinceLastRedoCount++
 		tx.inPackagesSet(nil) // this one will update tx.Footprint
+		timeCheck(&sta, "after-delFromPackages")
 	}
 
 	tx.DelFromSort()
+	timeCheck(&sta, "after-DelFromSort")
 
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	TransactionsToSendSize -= uint64(tx.Footprint)

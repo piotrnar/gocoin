@@ -268,6 +268,7 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 		var ctx *OneTxToSend
 		for ctx = range rbf_tx_list {
 			if ctx.HasNoChildren() {
+				timeCheck(&start_time, "point E.1")
 				break
 			}
 		}
@@ -276,18 +277,30 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 			break
 		}
 
+		timeCheck(&start_time, "point E.2")
 		ctx.Delete(false, TX_REJECTED_REPLACED)
+		timeCheck(&start_time, "point E.3")
 		delete(rbf_tx_list, ctx)
 	}
+	timeCheck(&start_time, "point E")
 
 	rec := &OneTxToSend{Volume: totinp, Local: ntx.Local, Fee: fee,
 		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
 	rec.Clean()
+	timeCheck(&start_time, "point Z.1")
 	rec.Add(bidx)
+	timeCheck(&start_time, "after-Add")
 	common.CountSafe("TxAccepted")
 	return 0, rec
+}
+
+func timeCheck(sta *time.Time, point string) {
+	if ts := time.Since(*sta); ts > time.Second {
+		println("getting to point", point, "took", ts.String())
+		*sta = time.Now()
+	}
 }
 
 // HandleNetTx must be called from the chain's thread.
