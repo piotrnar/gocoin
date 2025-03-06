@@ -80,7 +80,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	if t2s.MemInputCnt > 0 { // go through all the parents...
 		parents, full := t2s.getAllTopParents(16)
 		if full {
-			common.CountSafe("TxPkgsSusp-CplxA1")
+			common.CountSafe("TxPkgsSusp-Complex")
 			FeePackagesDirty = true
 			return
 		}

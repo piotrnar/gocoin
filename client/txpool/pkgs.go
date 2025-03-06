@@ -61,7 +61,7 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 		// we create a new package, like in lookForPackages()
 		pandch, full := parent.GetItWithAllChildren(16)
 		if full {
-			common.CountSafe("TxPkgsSusp-CplxA2")
+			common.CountSafe("TxPkgsSusp-InAddC")
 			FeePackagesDirty = true
 			return
 		}
@@ -139,7 +139,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 		} else {
 			pandch, full := pkg.Txs[0].GetItWithAllChildren(16)
 			if full {
-				common.CountSafe("TxPkgsSusp-CplxD1")
+				common.CountSafe("TxPkgsSusp-InDelC")
 				FeePackagesDirty = true
 				return
 			}
