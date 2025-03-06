@@ -80,7 +80,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	if t2s.MemInputCnt > 0 { // go through all the parents...
 		parents, full := t2s.getAllTopParents(16)
 		if full {
-			common.CountSafe("TxPkgsSusp-Complex")
+			common.CountSafe("TxPkgsSusp-CplxA1")
 			FeePackagesDirty = true
 			return
 		}
@@ -274,7 +274,7 @@ func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 // GetItWithAllChildren gets all the children (and all of their children...) of the tx.
 // If any of the children has other unconfirmed parents, they are also included in the result.
 // The result is sorted with the input parent first and always with parents before their children.
-func (tx *OneTxToSend) GetItWithAllChildren() (result []*OneTxToSend) {
+func (tx *OneTxToSend) GetItWithAllChildren(limit int) (result []*OneTxToSend, full bool) {
 	already_included := make(map[*OneTxToSend]bool)
 
 	result = []*OneTxToSend{tx} // out starting (parent) tx shall be the first element of the result
@@ -292,6 +292,10 @@ func (tx *OneTxToSend) GetItWithAllChildren() (result []*OneTxToSend) {
 				for _, prnt := range ch.GetAllParentsExcept(par) {
 					if _, ok := already_included[prnt]; !ok {
 						// if we dont have a parent, just insert it here into the result
+						if limit != 0 && len(result) == limit {
+							result, full = nil, true
+							return
+						}
 						result = append(result, prnt)
 						// ... and mark it as included, for later
 						already_included[prnt] = true
@@ -299,6 +303,10 @@ func (tx *OneTxToSend) GetItWithAllChildren() (result []*OneTxToSend) {
 				}
 
 				// now we can safely insert the child, as all its parent shall be already included
+				if limit != 0 && len(result) == limit {
+					result, full = nil, true
+					return
+				}
 				result = append(result, ch)
 				// ... and mark it as included, for later
 				already_included[ch] = true

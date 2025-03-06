@@ -59,7 +59,13 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 	common.CountSafe("TxPkgsAdd")
 	if len(parent.inPackages) == 0 {
 		// we create a new package, like in lookForPackages()
-		if pandch := parent.GetItWithAllChildren(); len(pandch) > 1 {
+		pandch, full := parent.GetItWithAllChildren(16)
+		if full {
+			common.CountSafe("TxPkgsSusp-CplxA2")
+			FeePackagesDirty = true
+			return
+		}
+		if len(pandch) > 1 {
 			pkg := &OneTxsPackage{Txs: pandch}
 			for _, t := range pandch {
 				pkg.Weight += t.Weight()
@@ -104,6 +110,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 
 	var records2remove int
 	common.CountSafe("TxPkgsDel")
+	sta := time.Now()
 
 	for _, pkg := range t2s.inPackages {
 		if CheckForErrors() && len(pkg.Txs) < 2 {
@@ -130,7 +137,13 @@ func (t2s *OneTxToSend) delFromPackages() {
 			pkg.Txs = nil
 			records2remove++
 		} else {
-			pandch := pkg.Txs[0].GetItWithAllChildren()
+			pandch, full := pkg.Txs[0].GetItWithAllChildren(16)
+			if full {
+				common.CountSafe("TxPkgsSusp-CplxD1")
+				FeePackagesDirty = true
+				return
+			}
+			timeCheck(&sta, fmt.Sprint("after-GetItWithAllChildren-", len(pandch)))
 			// first unmark all txs using this pkg (we may mark them back later)
 			for _, t := range pkg.Txs {
 				if t != t2s {
@@ -161,6 +174,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 			feePackagesReSort = true
 		}
 	}
+	timeCheck(&sta, fmt.Sprint("after-delFromPackages-", len(t2s.inPackages)))
 
 	if records2remove > 0 {
 		common.CountSafe("TxPkgsDelGrCnt")
@@ -273,7 +287,7 @@ func buildListAndPackages() {
 			continue
 		}
 
-		if pandch := t2s.GetItWithAllChildren(); len(pandch) > 1 {
+		if pandch, _ := t2s.GetItWithAllChildren(0); len(pandch) > 1 {
 			pkg := &OneTxsPackage{Txs: pandch}
 			for _, t := range pandch {
 				pkg.Weight += t.Weight()
