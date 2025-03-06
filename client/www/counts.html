@@ -138,9 +138,9 @@ function do_one_table(output_table, data, prefix='') {
 		var row
 		if (i < output_table.rows.length-1) {
 			row = output_table.rows[i+1]
+			row.className = ''
 		} else {
 			row = output_table.insertRow(-1)
-			row.className = ''
 			row.insertCell(-1)
 			row.insertCell(-1)
 			row.cells[0].className = 'gennam'
