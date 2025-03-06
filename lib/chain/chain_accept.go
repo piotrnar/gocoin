@@ -99,7 +99,9 @@ func (ch *Chain) CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 				e = errors.New("CommitBlock: MoveToBlock failed")
 			}
 		} else {
-			println("Orphaned block", bl.Hash.String(), cur.Height)
+			if !ch.testnet() {
+				println("Orphaned block", bl.Hash.String(), cur.Height)
+			}
 		}
 	}
 

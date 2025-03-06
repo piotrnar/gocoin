@@ -283,7 +283,7 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	// At this point "cur" is at the highest common block
 
 	lastblock = ch.LastBlock() // recover lastblock, in case it was changed by the "rare case"
-	fmt.Println("Undoing", lastblock.Height-cur.Height, "block(s)")
+	fmt.Println("Undoing", lastblock.Height-cur.Height, "block(s) starting from", lastblock.Height)
 	for lastblock != cur {
 		if AbortNow {
 			return
@@ -296,7 +296,9 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 
 func (ch *Chain) UndoLastBlock() {
 	last := ch.LastBlock()
-	fmt.Println("Undo block", last.Height, last.BlockHash.String(), last.BlockSize>>10, "KB")
+	if !ch.testnet() {
+		fmt.Println("Undo block", last.Height, last.BlockHash.String(), last.BlockSize>>10, "KB")
+	}
 
 	crec, _, er := ch.Blocks.BlockGetInternal(last.BlockHash, true)
 	if er != nil {
