@@ -79,9 +79,9 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	// here we know that FeePackagesDirty is false
 	if t2s.MemInputCnt > 0 { // go through all the parents...
 		sta := time.Now()
-		parents, dups, lvl := t2s.getAllTopParents(false)
+		parents, dups := t2s.getAllTopParents(false)
 		if x := time.Since(sta); x > 50*time.Millisecond || dups > 50 {
-			println("getAllTopParents returned", len(parents), dups, lvl, "records in", x.String())
+			println("getAllTopParents returned", len(parents), dups, "records in", x.String())
 			println(" for txid:", t2s.Id(), "with meinputscnt:", t2s.MemInputCnt, len(t2s.MemInputs))
 			for _, p := range parents {
 				println("    parent:", p.Id())
@@ -100,12 +100,12 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	}
 }
 
-func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups, lvl int) {
+func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups int) {
 	result = make([]*OneTxToSend, 0, 16)
 	already_in := make(map[*OneTxToSend]struct{}, 16)
 	already_checked := make(map[btc.BIDX]struct{}, 16)
-	var do_one_parent func(*OneTxToSend)
-	do_one_parent = func(t2s *OneTxToSend) {
+	var do_one_parent func(*OneTxToSend, int)
+	do_one_parent = func(t2s *OneTxToSend, lvl int) {
 		if dbg {
 			println("do_one_parent for", t2s.Id(), "at level", lvl, dups, len(result), "mpc:", len(t2s.MemInputs))
 			for vout, meminput := range t2s.MemInputs {
@@ -113,7 +113,6 @@ func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups, 
 				println()
 			}
 		}
-		lvl++
 		for vout, meminput := range t2s.MemInputs {
 			if meminput {
 				bidx := btc.BIdx(t2s.TxIn[vout].Input.Hash[:])
@@ -138,7 +137,7 @@ func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups, 
 						if dbg {
 							println("  -> do_parent", parent.Id(), "...")
 						}
-						do_one_parent(parent)
+						do_one_parent(parent, lvl+1)
 					}
 				} else {
 					println("ERROR: getAllTopParents t2s being added has mem input which does not exist")
@@ -152,7 +151,7 @@ func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups, 
 	if dbg {
 		println("\n__________", tx.Id())
 	}
-	do_one_parent(tx)
+	do_one_parent(tx, 0)
 	return
 }
 
