@@ -79,7 +79,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	// here we know that FeePackagesDirty is false
 	if t2s.MemInputCnt > 0 { // go through all the parents...
 		sta := time.Now()
-		parents := t2s.getAllTopParents()
+		parents, dups := t2s.getAllTopParents()
 		for _, parent := range parents {
 			if parent.MemInputCnt != 0 {
 				println("ERROR: parent.MemInputCnt!=0 must not happen here")
@@ -89,8 +89,8 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		}
 		RepackagingSinceLastRedoTime += time.Since(sta)
 		RepackagingSinceLastRedoCount++
-		if x := time.Since(sta); x > 250*time.Millisecond {
-			println("getAllTopParents returned", len(parents), "records in", x.String())
+		if x := time.Since(sta); x > 50*time.Millisecond {
+			println("getAllTopParents returned", len(parents), dups, "records in", x.String())
 			already_in := make(map[*OneTxToSend]struct{}, len(parents))
 			for _, parent := range parents {
 				already_in[parent] = struct{}{}
@@ -100,7 +100,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	}
 }
 
-func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
+func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend, dups int) {
 	result = make([]*OneTxToSend, 0, 16)
 	already_in := make(map[*OneTxToSend]struct{}, 16)
 	var do_one_parent func(t2s *OneTxToSend)
@@ -111,7 +111,9 @@ func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
 					if parent.MemInputCnt == 0 {
 						if _, ok := already_in[parent]; !ok {
 							already_in[parent] = struct{}{}
-						result = append(result, parent)
+							result = append(result, parent)
+						} else {
+							dups++
 						}
 					} else {
 						do_one_parent(parent)
