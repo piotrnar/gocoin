@@ -105,22 +105,27 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups, lvl int) {
 	result = make([]*OneTxToSend, 0, 16)
 	already_in := make(map[*OneTxToSend]struct{}, 16)
-	var do_one_parent func(t2s *OneTxToSend)
+	var do_one_parent func(*OneTxToSend)
 	do_one_parent = func(t2s *OneTxToSend) {
 		if dbg {
-			println("do_one_parent for", t2s.Id(), "at level", lvl)
+			println("do_one_parent for", t2s.Id(), "at level", lvl, dups, len(result), "mpc:", len(t2s.MemInputs))
+			for vout, meminput := range t2s.MemInputs {
+				print("  vo:", vout, ":", meminput)
+				println()
+			}
 		}
 		lvl++
 		for vout, meminput := range t2s.MemInputs {
 			if bytes.Equal(t2s.TxIn[vout].Input.Hash[:], t2s.Hash.Hash[:]) {
-				println("txid", t2s.Hash.String(), "pints back to itself")
+				println("txid", t2s.Hash.String(), "points back to itself")
 				println(hex.EncodeToString(t2s.Raw))
 				panic("wtf")
 			}
 			if meminput {
 				parent, has := TransactionsToSend[btc.BIdx(t2s.TxIn[vout].Input.Hash[:])]
 				if dbg {
-					println(" meminput", vout, "/", len(t2s.MemInputs), " - pmeminputs:", parent.MemInputCnt, parent == t2s)
+					println(" meminput", vout, "/", len(t2s.MemInputs), " - pmeminputs:", parent.MemInputCnt, parent == t2s,
+						"ext:", lvl, dups, len(result))
 				}
 				if has {
 					if parent == t2s {
@@ -136,6 +141,9 @@ func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups, 
 							dups++
 						}
 					} else {
+						if dbg {
+							println("... do_parent", parent.Id(), "...")
+						}
 						do_one_parent(parent)
 					}
 				} else {
@@ -145,7 +153,7 @@ func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups, 
 		}
 	}
 	if dbg {
-		println("_________________________________________________")
+		println("\n__________", tx.Id())
 	}
 	do_one_parent(tx)
 	return

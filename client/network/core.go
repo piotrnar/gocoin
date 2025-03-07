@@ -481,7 +481,7 @@ func (c *OneConnection) DoS(why string) {
 
 func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 	c.Mutex.Lock()
-	if c.X.Debug || c.X.Authorized {
+	if c.X.Debug /*|| c.X.Authorized*/ {
 		print("Misbehave " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	if !c.banit {
