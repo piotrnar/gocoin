@@ -1,6 +1,8 @@
 package txpool
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"runtime/debug"
@@ -79,7 +81,15 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	// here we know that FeePackagesDirty is false
 	if t2s.MemInputCnt > 0 { // go through all the parents...
 		sta := time.Now()
-		parents, dups, lvl := t2s.getAllTopParents()
+		parents, dups, lvl := t2s.getAllTopParents(false)
+		if x := time.Since(sta); x > 50*time.Millisecond {
+			println("getAllTopParents returned", len(parents), dups, lvl, "records in", x.String())
+			println(" for txid:", t2s.Id(), "with meinputscnt:", t2s.MemInputCnt, len(t2s.MemInputs))
+			for _, p := range parents {
+				println("    parent:", p.Id())
+			}
+			t2s.getAllTopParents(true)
+		}
 		for _, parent := range parents {
 			if parent.MemInputCnt != 0 {
 				println("ERROR: parent.MemInputCnt!=0 must not happen here")
@@ -89,25 +99,35 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		}
 		RepackagingSinceLastRedoTime += time.Since(sta)
 		RepackagingSinceLastRedoCount++
-		if x := time.Since(sta); x > 50*time.Millisecond {
-			println("getAllTopParents returned", len(parents), dups, lvl, "records in", x.String())
-			println(" for txid:", t2s.Id(), "with meinputscnt:", t2s.MemInputCnt, len(t2s.MemInputs))
-			for _, p := range parents {
-				println("    parent:", p.Id())
-			}
-		}
 	}
 }
 
-func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend, dups, lvl int) {
+func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups, lvl int) {
 	result = make([]*OneTxToSend, 0, 16)
 	already_in := make(map[*OneTxToSend]struct{}, 16)
 	var do_one_parent func(t2s *OneTxToSend)
 	do_one_parent = func(t2s *OneTxToSend) {
+		if dbg {
+			println("do_one_parent for", t2s.Id(), "at level", lvl)
+		}
 		lvl++
 		for vout, meminput := range t2s.MemInputs {
+			if bytes.Equal(t2s.TxIn[vout].Input.Hash[:], t2s.Hash.Hash[:]) {
+				println("txid", t2s.Hash.String(), "pints back to itself")
+				println(hex.EncodeToString(t2s.Raw))
+				panic("wtf")
+			}
 			if meminput {
-				if parent, has := TransactionsToSend[btc.BIdx(t2s.TxIn[vout].Input.Hash[:])]; has {
+				parent, has := TransactionsToSend[btc.BIdx(t2s.TxIn[vout].Input.Hash[:])]
+				if dbg {
+					println(" meminput", vout, "/", len(t2s.MemInputs), " - pmeminputs:", parent.MemInputCnt, parent == t2s)
+				}
+				if has {
+					if parent == t2s {
+						println("parnet points back to t2s", t2s.Hash.String())
+						println(hex.EncodeToString(t2s.Raw))
+						panic("wtf2")
+					}
 					if parent.MemInputCnt == 0 {
 						if _, ok := already_in[parent]; !ok {
 							already_in[parent] = struct{}{}
@@ -123,6 +143,9 @@ func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend, dups, lvl int)
 				}
 			}
 		}
+	}
+	if dbg {
+		println("_________________________________________________")
 	}
 	do_one_parent(tx)
 	return
