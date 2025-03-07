@@ -79,15 +79,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	// here we know that FeePackagesDirty is false
 	if t2s.MemInputCnt > 0 { // go through all the parents...
 		sta := time.Now()
-		parents, dups := t2s.getAllTopParents(false)
-		if x := time.Since(sta); x > 50*time.Millisecond || dups > 50 {
-			println("getAllTopParents returned", len(parents), dups, "records in", x.String())
-			println(" for txid:", t2s.Id(), "with meinputscnt:", t2s.MemInputCnt, len(t2s.MemInputs))
-			for _, p := range parents {
-				println("    parent:", p.Id())
-			}
-			t2s.getAllTopParents(true)
-		}
+		parents := t2s.getAllTopParents()
 		for _, parent := range parents {
 			if parent.MemInputCnt != 0 {
 				println("ERROR: parent.MemInputCnt!=0 must not happen here")
@@ -100,19 +92,12 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	}
 }
 
-func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups int) {
+func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
 	result = make([]*OneTxToSend, 0, 16)
 	already_in := make(map[*OneTxToSend]struct{}, 16)
 	already_checked := make(map[btc.BIDX]struct{}, 16)
-	var do_one_parent func(*OneTxToSend, int)
-	do_one_parent = func(t2s *OneTxToSend, lvl int) {
-		if dbg {
-			println("do_one_parent for", t2s.Id(), "at level", lvl, dups, len(result), "mpc:", len(t2s.MemInputs))
-			for vout, meminput := range t2s.MemInputs {
-				print("  vo:", vout, ":", meminput)
-				println()
-			}
-		}
+	var do_one_parent func(*OneTxToSend)
+	do_one_parent = func(t2s *OneTxToSend) {
 		for vout, meminput := range t2s.MemInputs {
 			if meminput {
 				bidx := btc.BIdx(t2s.TxIn[vout].Input.Hash[:])
@@ -120,38 +105,22 @@ func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups i
 					continue
 				}
 				already_checked[bidx] = struct{}{}
-
 				if parent, has := TransactionsToSend[bidx]; has {
-					if dbg {
-						println(" meminput", vout, "/", len(t2s.MemInputs), " - pmeminputs:", parent.MemInputCnt, parent == t2s,
-							"ext:", lvl, dups, len(result))
-					}
 					if parent.MemInputCnt == 0 {
 						if _, ok := already_in[parent]; !ok {
 							already_in[parent] = struct{}{}
 							result = append(result, parent)
-						} else {
-							dups++
 						}
 					} else {
-						if dbg {
-							println("  -> do_parent", parent.Id(), "...")
-						}
-						do_one_parent(parent, lvl+1)
+						do_one_parent(parent)
 					}
 				} else {
 					println("ERROR: getAllTopParents t2s being added has mem input which does not exist")
 				}
 			}
 		}
-		if dbg {
-			println(" done", t2s.Id(), "at level", lvl, dups, len(result), "mpc:", len(t2s.MemInputs))
 		}
-	}
-	if dbg {
-		println("\n__________", tx.Id())
-	}
-	do_one_parent(tx, 0)
+	do_one_parent(tx)
 	return
 }
 
@@ -306,14 +275,7 @@ func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 // GetItWithAllChildren gets all the children (and all of their children...) of the tx.
 // If any of the children has other unconfirmed parents, they are also included in the result.
 // The result is sorted with the input parent first and always with parents before their children.
-func (tx *OneTxToSend) GetItWithAllChildren(limit int) (result []*OneTxToSend, full bool) {
-	// TODO: remove debugs from this function
-	sta := time.Now()
-	defer func() {
-		if x := time.Since(sta); x > 50*time.Millisecond {
-			println("GetItWithAllChildren took", x.String(), "for tx cnt", len(result))
-		}
-	}()
+func (tx *OneTxToSend) GetItWithAllChildren() (result []*OneTxToSend) {
 	already_included := make(map[*OneTxToSend]struct{}, 256)
 
 	result = make([]*OneTxToSend, 1, 256)
@@ -332,10 +294,6 @@ func (tx *OneTxToSend) GetItWithAllChildren(limit int) (result []*OneTxToSend, f
 				for _, prnt := range ch.GetAllParentsExcept(par) {
 					if _, ok := already_included[prnt]; !ok {
 						// if we dont have a parent, just insert it here into the result
-						if limit != 0 && len(result) == limit {
-							result, full = nil, true
-							return
-						}
 						result = append(result, prnt)
 						// ... and mark it as included, for later
 						already_included[prnt] = struct{}{}
@@ -343,10 +301,6 @@ func (tx *OneTxToSend) GetItWithAllChildren(limit int) (result []*OneTxToSend, f
 				}
 
 				// now we can safely insert the child, as all its parent shall be already included
-				if limit != 0 && len(result) == limit {
-					result, full = nil, true
-					return
-				}
 				result = append(result, ch)
 				// ... and mark it as included, for later
 				already_included[ch] = struct{}{}
@@ -359,14 +313,14 @@ func (tx *OneTxToSend) GetItWithAllChildren(limit int) (result []*OneTxToSend, f
 // GetAllChildren gets all the children (and all of their children...) of the tx.
 // The result is sorted by the oldest parent.
 func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
-	already_included := make(map[*OneTxToSend]bool)
+	already_included := make(map[*OneTxToSend]struct{})
 	var idx int
 	par := tx
 	for {
 		chlds := par.GetChildren()
 		for _, ch := range chlds {
 			if _, ok := already_included[ch]; !ok {
-				already_included[ch] = true
+				already_included[ch] = struct{}{}
 				result = append(result, ch)
 			}
 		}
@@ -375,7 +329,7 @@ func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
 		}
 
 		par = result[idx]
-		already_included[par] = true // TODO: this line is probably not needed
+		already_included[par] = struct{}{} // TODO: this line is probably not needed
 		idx++
 	}
 	return
