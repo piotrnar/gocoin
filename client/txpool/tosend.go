@@ -91,7 +91,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		RepackagingSinceLastRedoCount++
 		if x := time.Since(sta); x > 50*time.Millisecond {
 			println("getAllTopParents returned", len(parents), dups, lvl, "records in", x.String())
-			println(" for txid:", t2s.Id())
+			println(" for txid:", t2s.Id(), "with meinputscnt:", t2s.MemInputCnt, len(t2s.MemInputs))
 			for _, p := range parents {
 				println("    parent:", p.Id())
 			}
