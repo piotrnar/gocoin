@@ -1,8 +1,6 @@
 package txpool
 
 import (
-	"bytes"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"runtime/debug"
@@ -82,7 +80,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	if t2s.MemInputCnt > 0 { // go through all the parents...
 		sta := time.Now()
 		parents, dups, lvl := t2s.getAllTopParents(false)
-		if x := time.Since(sta); x > 50*time.Millisecond {
+		if x := time.Since(sta); x > 50*time.Millisecond || dups > 50 {
 			println("getAllTopParents returned", len(parents), dups, lvl, "records in", x.String())
 			println(" for txid:", t2s.Id(), "with meinputscnt:", t2s.MemInputCnt, len(t2s.MemInputs))
 			for _, p := range parents {
@@ -105,6 +103,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups, lvl int) {
 	result = make([]*OneTxToSend, 0, 16)
 	already_in := make(map[*OneTxToSend]struct{}, 16)
+	already_checked := make(map[btc.BIDX]struct{}, 16)
 	var do_one_parent func(*OneTxToSend)
 	do_one_parent = func(t2s *OneTxToSend) {
 		if dbg {
@@ -116,22 +115,17 @@ func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups, 
 		}
 		lvl++
 		for vout, meminput := range t2s.MemInputs {
-			if bytes.Equal(t2s.TxIn[vout].Input.Hash[:], t2s.Hash.Hash[:]) {
-				println("txid", t2s.Hash.String(), "points back to itself")
-				println(hex.EncodeToString(t2s.Raw))
-				panic("wtf")
-			}
 			if meminput {
-				parent, has := TransactionsToSend[btc.BIdx(t2s.TxIn[vout].Input.Hash[:])]
-				if dbg {
-					println(" meminput", vout, "/", len(t2s.MemInputs), " - pmeminputs:", parent.MemInputCnt, parent == t2s,
-						"ext:", lvl, dups, len(result))
+				bidx := btc.BIdx(t2s.TxIn[vout].Input.Hash[:])
+				if _, ok := already_checked[bidx]; ok {
+					continue
 				}
-				if has {
-					if parent == t2s {
-						println("parnet points back to t2s", t2s.Hash.String())
-						println(hex.EncodeToString(t2s.Raw))
-						panic("wtf2")
+				already_checked[bidx] = struct{}{}
+
+				if parent, has := TransactionsToSend[bidx]; has {
+					if dbg {
+						println(" meminput", vout, "/", len(t2s.MemInputs), " - pmeminputs:", parent.MemInputCnt, parent == t2s,
+							"ext:", lvl, dups, len(result))
 					}
 					if parent.MemInputCnt == 0 {
 						if _, ok := already_in[parent]; !ok {
@@ -142,7 +136,7 @@ func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups, 
 						}
 					} else {
 						if dbg {
-							println("... do_parent", parent.Id(), "...")
+							println("  -> do_parent", parent.Id(), "...")
 						}
 						do_one_parent(parent)
 					}
@@ -150,6 +144,9 @@ func (tx *OneTxToSend) getAllTopParents(dbg bool) (result []*OneTxToSend, dups, 
 					println("ERROR: getAllTopParents t2s being added has mem input which does not exist")
 				}
 			}
+		}
+		if dbg {
+			println(" done", t2s.Id(), "at level", lvl, dups, len(result), "mpc:", len(t2s.MemInputs))
 		}
 	}
 	if dbg {
