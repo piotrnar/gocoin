@@ -92,11 +92,17 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
 	result = make([]*OneTxToSend, 0, 16)
 	already_in := make(map[*OneTxToSend]struct{}, 16)
-	var do_one_parent func(t2s *OneTxToSend)
+	already_checked := make(map[btc.BIDX]struct{}, 16)
+	var do_one_parent func(*OneTxToSend)
 	do_one_parent = func(t2s *OneTxToSend) {
 		for vout, meminput := range t2s.MemInputs {
 			if meminput {
-				if parent, has := TransactionsToSend[btc.BIdx(t2s.TxIn[vout].Input.Hash[:])]; has {
+				bidx := btc.BIdx(t2s.TxIn[vout].Input.Hash[:])
+				if _, ok := already_checked[bidx]; ok {
+					continue
+				}
+				already_checked[bidx] = struct{}{}
+				if parent, has := TransactionsToSend[bidx]; has {
 					if parent.MemInputCnt == 0 {
 						if _, ok := already_in[parent]; !ok {
 							already_in[parent] = struct{}{}
