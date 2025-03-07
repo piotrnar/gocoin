@@ -79,7 +79,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	// here we know that FeePackagesDirty is false
 	if t2s.MemInputCnt > 0 { // go through all the parents...
 		sta := time.Now()
-		parents, dups := t2s.getAllTopParents()
+		parents, dups, lvl := t2s.getAllTopParents()
 		for _, parent := range parents {
 			if parent.MemInputCnt != 0 {
 				println("ERROR: parent.MemInputCnt!=0 must not happen here")
@@ -90,21 +90,21 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		RepackagingSinceLastRedoTime += time.Since(sta)
 		RepackagingSinceLastRedoCount++
 		if x := time.Since(sta); x > 50*time.Millisecond {
-			println("getAllTopParents returned", len(parents), dups, "records in", x.String())
-			already_in := make(map[*OneTxToSend]struct{}, len(parents))
-			for _, parent := range parents {
-				already_in[parent] = struct{}{}
+			println("getAllTopParents returned", len(parents), dups, lvl, "records in", x.String())
+			println(" for txid:", t2s.Id())
+			for _, p := range parents {
+				println("    parent:", p.Id())
 			}
-			println(" .... unique records:", len(already_in))
 		}
 	}
 }
 
-func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend, dups int) {
+func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend, dups, lvl int) {
 	result = make([]*OneTxToSend, 0, 16)
 	already_in := make(map[*OneTxToSend]struct{}, 16)
 	var do_one_parent func(t2s *OneTxToSend)
 	do_one_parent = func(t2s *OneTxToSend) {
+		lvl++
 		for vout, meminput := range t2s.MemInputs {
 			if meminput {
 				if parent, has := TransactionsToSend[btc.BIdx(t2s.TxIn[vout].Input.Hash[:])]; has {
