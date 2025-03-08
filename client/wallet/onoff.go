@@ -44,7 +44,8 @@ func LoadBalancesFromUtxo() {
 
 	for _i := range common.BlockChain.Unspent.HashMap {
 		common.BlockChain.Unspent.MapMutex[_i].RLock()
-		for k, v := range common.BlockChain.Unspent.HashMap[_i] {
+		for k, vv := range common.BlockChain.Unspent.HashMap[_i] {
+			v := common.BlockChain.Unspent.GetData(vv)
 			TxNotifyAdd(utxo.NewUtxoRecStatic(k, v))
 			if FetchingBalanceTick != nil && FetchingBalanceTick() {
 				aborted = true

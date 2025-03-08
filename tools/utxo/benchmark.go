@@ -33,7 +33,8 @@ func do_the_thing(db *utxo.UnspentDB, i int, tmp *uint32) {
 			},
 		}
 	)
-	for k, v := range db.HashMap[i] {
+	for k, vv := range db.HashMap[i] {
+		v := db.GetData(vv)
 		utxo.NewUtxoRecOwn(k, v, &sta_rec, &sta_cbs)
 		atomic.AddUint32(tmp, sta_rec.InBlock)
 	}
@@ -75,7 +76,8 @@ func utxo_benchmark(dir string) {
 	tmp = 0
 	sta = time.Now()
 	for i := range db.HashMap {
-		for _, v := range db.HashMap[i] {
+		for _, vv := range db.HashMap[i] {
+			v := db.GetData(vv)
 			tmp += binary.LittleEndian.Uint32(v)
 		}
 	}
@@ -115,7 +117,8 @@ func utxo_benchmark(dir string) {
 	tmp = 0
 	sta = time.Now()
 	for i := range db.HashMap {
-		for k, v := range db.HashMap[i] {
+		for k, vv := range db.HashMap[i] {
+			v := db.GetData(vv)
 			tmp += utxo.NewUtxoRecStatic(k, v).InBlock
 		}
 	}
@@ -125,7 +128,8 @@ func utxo_benchmark(dir string) {
 	tmp = 0
 	sta = time.Now()
 	for i := range db.HashMap {
-		for k, v := range db.HashMap[i] {
+		for k, vv := range db.HashMap[i] {
+			v := db.GetData(vv)
 			tmp += utxo.NewUtxoRec(k, v).InBlock
 		}
 	}

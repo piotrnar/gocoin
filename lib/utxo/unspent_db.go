@@ -50,7 +50,7 @@ type BlockChanges struct {
 }
 
 type UnspentDB struct {
-	HashMap         [256](map[UtxoKeyType][]byte)
+	HashMap         [256](map[UtxoKeyType]interface{})
 	CB              CallbackFunctions
 	hurryup         chan bool
 	abortwritingnow chan bool
@@ -59,7 +59,7 @@ type UnspentDB struct {
 	LastBlockHash   []byte
 	lastFileClosed  sync.WaitGroup
 	writingDone     sync.WaitGroup
-	MapMutex        [256]sync.RWMutex  // used to access HashMap
+	MapMutex        [256]sync.RWMutex // used to access HashMap
 	sync.Mutex
 	DirtyDB             sys.SyncBool
 	WritingInProgress   sys.SyncBool
@@ -70,6 +70,7 @@ type UnspentDB struct {
 	ComprssedUTXO       bool
 	DoNotWriteUndoFiles bool
 	undo_dir_created    bool
+	file                *os.File
 }
 
 type NewUnspentOpts struct {
@@ -103,7 +104,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	db.ComprssedUTXO = opts.CompressRecords
 	if opts.Rescan {
 		for i := range db.HashMap {
-			db.HashMap[i] = make(map[UtxoKeyType][]byte, opts.RecordsPrealloc/256)
+			db.HashMap[i] = make(map[UtxoKeyType]interface{}, opts.RecordsPrealloc/256)
 		}
 		return
 	}
@@ -111,10 +112,10 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	// Load data from disk
 	var cnt_dwn, cnt_dwn_from, perc int
 	var le uint64
+	var n int
 	var u64, tot_recs uint64
 	var info string
 	var rd *bufio.Reader
-	var of *os.File
 
 	const BUFFERS_CNT = 6
 	const CHANNEL_SIZE = BUFFERS_CNT - 2
@@ -123,22 +124,24 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	type one_rec struct {
 		b []byte
 		k UtxoKeyType
+		o int64
 	}
 	//var rec *one_rec
 	var rec_idx, pool_idx int
 	var recpool [BUFFERS_CNT][RECS_PACK_SIZE]one_rec
 	var ch chan []one_rec
 	var recs []one_rec
+	var er error
+	var file_offs int64
 
 	fname := "UTXO.db"
 
 redo:
-	of, er := os.Open(db.dir_utxo + fname)
-	if er != nil {
+	if db.file, er = os.Open(db.dir_utxo + fname); er != nil {
 		goto fatal_error
 	}
 
-	rd = bufio.NewReaderSize(of, 0x40000) // read ahed buffer size
+	rd = bufio.NewReaderSize(db.file, 0x40000) // read ahed buffer size
 
 	er = binary.Read(rd, binary.LittleEndian, &u64)
 	if er != nil {
@@ -164,7 +167,7 @@ redo:
 	perc = 0
 
 	for i := range db.HashMap {
-		db.HashMap[i] = make(map[UtxoKeyType][]byte, int(u64)/256)
+		db.HashMap[i] = make(map[UtxoKeyType]interface{}, int(u64)/256)
 	}
 	if db.ComprssedUTXO {
 		info = fmt.Sprint("\rLoading ", u64, " compressed txs from ", fname, " - ")
@@ -183,17 +186,35 @@ redo:
 				return
 			} else {
 				for _, r := range recs {
-					db.HashMap[r.k[0]][r.k] = r.b
+					//println("do o:", r.o, "  buf:", len(r.b))
+					if r.o != 0 {
+						db.HashMap[r.k[0]][r.k] = r.o
+						/*
+							if _v, ok := db.GetMapRec(int(r.k[0]), r.k); ok {
+								if !bytes.Equal(_v, r.b) {
+									println("bytes mismatch at offs", r.o, len(r.b), len(_v))
+									println(" should be:", hex.EncodeToString(r.b))
+									println(" and is::", hex.EncodeToString(_v))
+									os.Exit(1)
+								}
+							} else {
+								println("record added and not found")
+								os.Exit(1)
+							}*/
+					} else {
+						db.HashMap[r.k[0]][r.k] = r.b
+					}
 				}
 			}
 		}
 	}()
 
+	file_offs = 8 + 32 + 8 // size of the header
 	for tot_recs = 0; tot_recs < u64; tot_recs++ {
 		if opts.AbortNow != nil && *opts.AbortNow {
 			break
 		}
-		le, er = btc.ReadVLen(rd)
+		le, n, er = btc.ReadVLenX(rd)
 		if er != nil {
 			goto fatal_error
 		}
@@ -207,6 +228,9 @@ redo:
 		if _, er = io.ReadFull(rd, rec.b); er != nil {
 			goto fatal_error
 		}
+		rec.o = file_offs
+
+		file_offs += int64(n) + int64(le)
 
 		if rec_idx == len(recs)-1 {
 			ch <- recs
@@ -230,7 +254,6 @@ redo:
 	}
 	ch <- nil
 	wg.Wait()
-	of.Close()
 
 	fmt.Print("\r                                                                 \r")
 
@@ -244,8 +267,8 @@ redo:
 	return
 
 fatal_error:
-	if of != nil {
-		of.Close()
+	if db.file != nil {
+		db.file.Close()
 	}
 
 	println(er.Error())
@@ -256,9 +279,41 @@ fatal_error:
 	db.LastBlockHeight = 0
 	db.LastBlockHash = nil
 	for i := range db.HashMap {
-		db.HashMap[i] = make(map[UtxoKeyType][]byte, opts.RecordsPrealloc/256)
+		db.HashMap[i] = make(map[UtxoKeyType]interface{}, opts.RecordsPrealloc/256)
 	}
 
+	return
+}
+
+func (db *UnspentDB) GetData(recval interface{}) (res []byte) {
+	switch t := recval.(type) {
+	case []byte:
+		res = recval.([]byte)
+	case int64:
+		if db.file == nil {
+			println("ERROR: utxo.GetMap file not open")
+			return
+		}
+		db.file.Seek(recval.(int64), 0)
+		if le, er := btc.ReadVLen(db.file); er == nil {
+			res = make([]byte, int(le))
+			io.ReadFull(db.file, res)
+			res = res[UtxoIdxLen:]
+		} else {
+			println("ERROR: utxo.GetMap", er.Error())
+		}
+	default:
+		println("ERROR: utxo.GetMap WRONG TYPE", t)
+
+	}
+	return
+}
+
+func (db *UnspentDB) GetMapRec(idx int, k UtxoKeyType) (res []byte, ok bool) {
+	if tmp, yes := db.HashMap[idx][k]; yes {
+		ok = true
+		res = db.GetData(tmp)
+	}
 	return
 }
 
@@ -343,7 +398,8 @@ func (db *UnspentDB) save() {
 	for _i := range db.HashMap {
 		db.MapMutex[_i].RLock()
 		defer db.MapMutex[_i].RUnlock()
-		for k, v := range db.HashMap[_i] {
+		for k, vv := range db.HashMap[_i] {
+			v := db.GetData(vv)
 			if check_time {
 				check_time = false
 				data_progress = int64(current_record<<20) / int64(total_records)
@@ -504,7 +560,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 		var ind UtxoKeyType
 		copy(ind[:], rec.TxID[:])
 		db.MapMutex[ind[0]].RLock()
-		v := db.HashMap[ind[0]][ind]
+		v, _ := db.GetMapRec(int(ind[0]), ind)
 		db.MapMutex[ind[0]].RUnlock()
 		if v != nil {
 			oldrec := NewUtxoRec(ind, v)
@@ -576,7 +632,7 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 	copy(ind[:], po.Hash[:])
 
 	db.MapMutex[ind[0]].RLock()
-	v = db.HashMap[ind[0]][ind]
+	v, _ = db.GetMapRec(int(ind[0]), ind)
 	db.MapMutex[ind[0]].RUnlock()
 	if v != nil {
 		res = OneUtxoRec(ind, v, po.Vout)
@@ -597,7 +653,7 @@ func (db *UnspentDB) TxPresent(id *btc.Uint256) (res bool) {
 
 func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 	db.MapMutex[ind[0]].RLock()
-	v := db.HashMap[ind[0]][ind]
+	v, _ := db.GetMapRec(int(ind[0]), ind)
 	db.MapMutex[ind[0]].RUnlock()
 	if v == nil {
 		return // no such txid in UTXO (just ignore delete request)
@@ -763,7 +819,8 @@ func (db *UnspentDB) UTXOStats() (s string) {
 			rec := &sta_rec
 			db.MapMutex[_i].RLock()
 			atomic.AddUint64(&lele, uint64(len(db.HashMap[_i])))
-			for k, v := range db.HashMap[_i] {
+			for k, vv := range db.HashMap[_i] {
+				v := db.GetData(vv)
 				reclen := uint64(len(v) + UtxoIdxLen)
 				atomic.AddUint64(&filesize, uint64(btc.VLenSize(reclen))+reclen)
 				NewUtxoRecOwn(k, v, rec, &sta_cbs)
@@ -830,7 +887,8 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 
 	for _i := range db.HashMap {
 		db.MapMutex[_i].Lock()
-		for k, v := range db.HashMap[_i] {
+		for k, vv := range db.HashMap[_i] {
+			v := db.GetData(vv)
 			rec := NewUtxoRecStatic(k, v)
 			var spendable_found bool
 			var record_removed uint64

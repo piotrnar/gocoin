@@ -44,9 +44,9 @@ func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 	var ind utxo.UtxoKeyType
 	copy(ind[:], ur[:])
 	common.BlockChain.Unspent.MapMutex[int(ind[0])].RLock()
-	v := common.BlockChain.Unspent.HashMap[int(ind[0])][ind]
+	v, ok := common.BlockChain.Unspent.GetMapRec(int(ind[0]), ind)
 	common.BlockChain.Unspent.MapMutex[int(ind[0])].RUnlock()
-	if v != nil {
+	if ok {
 		vout = binary.LittleEndian.Uint32(ur[utxo.UtxoIdxLen:])
 		rec = utxo.NewUtxoRec(ind, v)
 	}

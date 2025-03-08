@@ -230,6 +230,33 @@ func ReadVLen(b io.Reader) (res uint64, e error) {
 	return
 }
 
+// ReadVLen is like ReadVLen but also returns number of bytes used by len field.
+func ReadVLenX(b io.Reader) (res uint64, c int, e error) {
+	var buf [8]byte
+
+	if _, e = io.ReadFull(b, buf[:1]); e != nil {
+		//println("ReadVLen1 error:", e.Error())
+		return
+	}
+
+	if buf[0] < 0xfd {
+		res = uint64(buf[0])
+		c = 1
+		return
+	}
+
+	c = 2 << (2 - (0xff - buf[0]))
+
+	if _, e = io.ReadFull(b, buf[:c]); e != nil {
+		println("ReadVLen1 error:", e.Error())
+		return
+	}
+	for i := 0; i < c; i++ {
+		res |= (uint64(buf[i]) << uint64(8*i))
+	}
+	return
+}
+
 // WriteVlen writes var_length field into the given writer.
 func WriteVlen(b io.Writer, var_len uint64) {
 	if var_len < 0xfd {
