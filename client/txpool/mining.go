@@ -2,6 +2,7 @@ package txpool
 
 import (
 	"os"
+	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -88,13 +89,17 @@ func (tx *OneTxToSend) unmined() {
 
 // txMined is called for each tx mined in a new block.
 func txMined(tx *btc.Tx) {
+	sta := time.Now()
 	bidx := tx.Hash.BIdx()
 
 	if rec, ok := TransactionsToSend[bidx]; ok {
 		// if we have this tx in mempool, remove it and it should clean everything up nicely
 		common.CountSafe("TxMinedAccepted")
+		timeCheck(&sta, "before-A")
 		rec.mined()
+		timeCheck(&sta, "mid-A")
 		rec.Delete(false, 0) // this should take care of the RejectedUsedUTXOs stuff
+		timeCheck(&sta, "end-A")
 		return
 	}
 
@@ -107,7 +112,9 @@ func txMined(tx *btc.Tx) {
 			if rec := TransactionsToSend[val]; rec != nil {
 				// there is this one...
 				common.CountSafePar("TxMinedUTXO-", rec.Local)
+				timeCheck(&sta, "before-B")
 				rec.Delete(true, 0) // this should remove relevant RejectedUsedUTXOs record as well
+				timeCheck(&sta, "end-B")
 				if CheckForErrors() {
 					if _, ok := SpentOutputs[idx]; ok {
 						println("ERROR: SpentOutput was supposed to be deleted, but still here\n  ", inp.Input.String())
@@ -130,7 +137,9 @@ func txMined(tx *btc.Tx) {
 			// it is - remove all rejected tx that would use any of just mined inputs
 			for _, rbidx := range lst {
 				if txr, ok := TransactionsRejected[rbidx]; ok {
+					timeCheck(&sta, "before-C")
 					txr.Delete()
+					timeCheck(&sta, "end-C")
 					if rbidx == bidx {
 						common.CountSafePar("TxMinedRjctdA-", txr.Reason)
 						was_rejected = true
@@ -159,6 +168,7 @@ func txMined(tx *btc.Tx) {
 		common.CountSafe("TxMinedPending")
 		delete(TransactionsPending, bidx)
 	}
+	timeCheck(&sta, "after-txMined")
 }
 
 // BlockMined removes all the block's tx from the mempool.
