@@ -231,7 +231,7 @@ func ReadVLen(b io.Reader) (res uint64, e error) {
 }
 
 // ReadVLen is like ReadVLen but also returns number of bytes used by len field.
-func ReadVLenX(b io.Reader) (res uint64, c int, e error) {
+func ReadVLenX(b io.Reader) (res uint64, n int, e error) {
 	var buf [8]byte
 
 	if _, e = io.ReadFull(b, buf[:1]); e != nil {
@@ -241,11 +241,12 @@ func ReadVLenX(b io.Reader) (res uint64, c int, e error) {
 
 	if buf[0] < 0xfd {
 		res = uint64(buf[0])
-		c = 1
+		n = 1
 		return
 	}
 
-	c = 2 << (2 - (0xff - buf[0]))
+	c := 2 << (2 - (0xff - buf[0]))
+	n = c + 1
 
 	if _, e = io.ReadFull(b, buf[:c]); e != nil {
 		println("ReadVLen1 error:", e.Error())

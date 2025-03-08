@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -71,6 +72,7 @@ type UnspentDB struct {
 	DoNotWriteUndoFiles bool
 	undo_dir_created    bool
 	file                *os.File
+	fileMutex           sync.Mutex
 }
 
 type NewUnspentOpts struct {
@@ -133,6 +135,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	var recs []one_rec
 	var er error
 	var file_offs int64
+	var tmp []byte = make([]byte, 900e3)
 
 	fname := "UTXO.db"
 
@@ -186,21 +189,8 @@ redo:
 				return
 			} else {
 				for _, r := range recs {
-					//println("do o:", r.o, "  buf:", len(r.b))
-					if r.o != 0 {
+					if r.b == nil {
 						db.HashMap[r.k[0]][r.k] = r.o
-						/*
-							if _v, ok := db.GetMapRec(int(r.k[0]), r.k); ok {
-								if !bytes.Equal(_v, r.b) {
-									println("bytes mismatch at offs", r.o, len(r.b), len(_v))
-									println(" should be:", hex.EncodeToString(r.b))
-									println(" and is::", hex.EncodeToString(_v))
-									os.Exit(1)
-								}
-							} else {
-								println("record added and not found")
-								os.Exit(1)
-							}*/
 					} else {
 						db.HashMap[r.k[0]][r.k] = r.b
 					}
@@ -224,11 +214,21 @@ redo:
 			goto fatal_error
 		}
 
-		rec.b = Memory_Malloc(int(le) - UtxoIdxLen)
-		if _, er = io.ReadFull(rd, rec.b); er != nil {
-			goto fatal_error
+		if false {
+			rec.b = Memory_Malloc(int(le) - UtxoIdxLen)
+			if _, er = io.ReadFull(rd, rec.b); er != nil {
+				goto fatal_error
+			}
+		} else {
+			if len(tmp) < int(le)-UtxoIdxLen {
+				println("buf", len(tmp), "->", int(le)-UtxoIdxLen)
+				tmp = make([]byte, int(le)-UtxoIdxLen)
+			}
+			if _, er = io.ReadFull(rd, tmp[:int(le)-UtxoIdxLen]); er != nil {
+				goto fatal_error
+			}
+			rec.o = file_offs
 		}
-		rec.o = file_offs
 
 		file_offs += int64(n) + int64(le)
 
@@ -264,6 +264,19 @@ redo:
 		Serialize = SerializeC
 	}
 
+	/*
+		println("verifying map 0", len(db.HashMap[0]))
+		perc = 0
+		for idx := range db.HashMap {
+			for k, vv := range db.HashMap[idx] {
+				perc++
+				v := db.GetData(vv)
+				NewUtxoRec(k, v)
+			}
+		}
+		println("verify ok")
+	*/
+
 	return
 
 fatal_error:
@@ -290,7 +303,9 @@ func (db *UnspentDB) GetData(recval interface{}) (res []byte) {
 	case []byte:
 		res = recval.([]byte)
 	case int64:
+		db.fileMutex.Lock()
 		if db.file == nil {
+			db.fileMutex.Unlock()
 			println("ERROR: utxo.GetMap file not open")
 			return
 		}
@@ -299,6 +314,35 @@ func (db *UnspentDB) GetData(recval interface{}) (res []byte) {
 			res = make([]byte, int(le))
 			io.ReadFull(db.file, res)
 			res = res[UtxoIdxLen:]
+		} else {
+			println("ERROR: utxo.GetMap", er.Error())
+		}
+		db.fileMutex.Unlock()
+	default:
+		println("ERROR: utxo.GetMap WRONG TYPE", t)
+
+	}
+	return
+}
+
+func (db *UnspentDB) GetDataDbg(recval interface{}) (res []byte) {
+	switch t := recval.(type) {
+	case []byte:
+		res = recval.([]byte)
+	case int64:
+		if db.file == nil {
+			println("ERROR: utxo.GetMap file not open")
+			return
+		}
+		println("Seek to", recval.(int64))
+		db.file.Seek(recval.(int64), 0)
+		if le, n, er := btc.ReadVLenX(db.file); er == nil {
+			println("le:", le, n)
+			res = make([]byte, int(le))
+			io.ReadFull(db.file, res)
+			println("resA:", hex.EncodeToString(res))
+			res = res[UtxoIdxLen:]
+			println("resB:", hex.EncodeToString(res))
 		} else {
 			println("ERROR: utxo.GetMap", er.Error())
 		}
@@ -325,7 +369,17 @@ func (db *UnspentDB) save() {
 	const save_buffer_min = 0x10000 // write in chunks of ~64KB
 	const save_buffer_cnt = 100
 
+	var reopen bool
+	db.fileMutex.Lock()
+	if db.file != nil {
+		db.file.Close()
+		reopen = true
+	}
 	os.Rename(db.dir_utxo+"UTXO.db", db.dir_utxo+"UTXO.old")
+	if reopen {
+		db.file, _ = os.Open(db.dir_utxo + "UTXO.old")
+	}
+	db.fileMutex.Unlock()
 	data_channel := make(chan []byte, save_buffer_cnt)
 	exit_channel := make(chan bool, 1)
 
@@ -387,6 +441,11 @@ func (db *UnspentDB) save() {
 		} else {
 			of.Flush()
 			of_.Close()
+			/*
+				if db.file != nil {
+					db.file.Close()
+					db.file = nil
+				}*/
 			os.Rename(fname, db.dir_utxo+"UTXO.db")
 		}
 		db.lastFileClosed.Done()
