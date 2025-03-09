@@ -7,10 +7,10 @@ import (
 )
 
 type Mutex struct {
+	file string
+	line int
 	sync.Mutex
 	locked bool
-	line   int
-	file   string
 }
 
 func (m *Mutex) Lock() {
