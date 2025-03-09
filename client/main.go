@@ -386,19 +386,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 	last := common.BlockChain.LastBlock()
 
 	if last != end {
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					println("FindPathTo panicked:", r.(string))
-					if last = last.FindFirstFather(end); last == nil {
-						panic("Cannot find a common father between best BlockDB node and current UTXO.db")
-					}
-					println("Updated the last block to:", last.Height, last.BlockHash.String())
-				}
-			}()
-			last.FindPathTo(end)
-		}()
-
+		last = last.FindFirstFather(end)
 	}
 
 	for last != end {
