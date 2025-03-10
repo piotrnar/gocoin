@@ -85,7 +85,6 @@ var (
 			RejectRecCnt   uint16
 			SaveOnDisk     bool
 			NotFullRBF     bool
-			PkgsBlockStop  bool
 		}
 		TXRoute struct {
 			Enabled     bool // Global on/off swicth
