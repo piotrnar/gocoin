@@ -382,6 +382,14 @@ td.balbtc {
 .pubkey {
 	color:darkblue;
 }
+td.inpid {
+	text-align: left;
+	font-size: 90%;
+	font-family: monospace;
+}
+td.long_addr {
+	font-size:9px;
+}
 td.segwitaddr {
 	text-align: left;
 	white-space: nowrap;
