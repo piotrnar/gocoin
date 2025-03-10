@@ -168,9 +168,7 @@ func BlockMined(bl *btc.Block) {
 	}
 
 	TxMutex.Lock()
-	if !FeePackagesDirty && common.Get(&common.CFG.TXPool.PkgsBlockStop) {
-		FeePackagesDirty = true //<-- keep(?) pkg list as maintaining it here should be fast
-	}
+	FeePackagesDirty = true
 	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
 		tx := bl.Txs[i]
 		txMined(tx)
