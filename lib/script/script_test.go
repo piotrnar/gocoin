@@ -1,12 +1,10 @@
 package script
 
 import (
-	//"os"
-	//"fmt"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -28,7 +26,7 @@ func TestScritps(t *testing.T) {
 	var vecs []*one_test_vector
 
 	DBG_ERR = false
-	dat, er := ioutil.ReadFile("../test/script_tests.json")
+	dat, er := os.ReadFile("../test/script_tests.json")
 	if er != nil {
 		t.Error(er.Error())
 		return
@@ -138,6 +136,7 @@ func TestScritps(t *testing.T) {
 		credit_tx := mk_credit_tx(v.pkscr, v.value)
 		spend_tx := mk_spend_tx(credit_tx, v.sigscr, v.witness)
 		spend_tx.Raw = spend_tx.SerializeNew()
+		spend_tx.AllocVerVars()
 
 		if DBG_SCR {
 			println("desc:", v, tot, v.desc)

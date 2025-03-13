@@ -5,9 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"io/ioutil"
+	"os"
 	"testing"
+
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 type oneinp struct {
@@ -130,6 +131,7 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 			}
 		}
 	}
+	tx.AllocVerVars()
 
 	oks := 0
 	for i := range tx.TxIn {
@@ -160,7 +162,7 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 
 func TestValidTransactions(t *testing.T) {
 	var str interface{}
-	dat, er := ioutil.ReadFile("../test/tx_valid.json")
+	dat, er := os.ReadFile("../test/tx_valid.json")
 	if er != nil {
 		println(er.Error())
 		return
@@ -193,7 +195,7 @@ func TestValidTransactions(t *testing.T) {
 
 func TestInvalidTransactions(t *testing.T) {
 	var str interface{}
-	dat, er := ioutil.ReadFile("../test/tx_invalid.json")
+	dat, er := os.ReadFile("../test/tx_invalid.json")
 	if er != nil {
 		println(er.Error())
 		return
@@ -239,7 +241,7 @@ func TestInvalidTransactions(t *testing.T) {
 func TestSighash(t *testing.T) {
 	var arr [][]interface{}
 
-	dat, er := ioutil.ReadFile("../test/sighash.json")
+	dat, er := os.ReadFile("../test/sighash.json")
 	if er != nil {
 		println(er.Error())
 		return
