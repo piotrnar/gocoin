@@ -6,9 +6,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"io/ioutil"
+	"os"
 	"testing"
+
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 type one_scr_tst struct {
@@ -40,7 +41,7 @@ func TestTaprootScritps(t *testing.T) {
 	var res bool
 
 	DBG_ERR = false
-	dat, er := ioutil.ReadFile("../test/bip341_script_tests.json")
+	dat, er := os.ReadFile("../test/bip341_script_tests.json")
 	if er != nil {
 		t.Error(er.Error())
 		return
@@ -66,12 +67,13 @@ func TestTaprootScritps(t *testing.T) {
 			t.Fatal(i, "Tx not fully decoded", off, len(d), tv.Tx)
 		}
 
+		tx.AllocVerVars()
 		tx.Spent_outputs = make([]*btc.TxOut, len(tv.Prevouts))
 
 		/*
-		_b := new(bytes.Buffer)
-		btc.WriteVlen(_b, uint64(len(tv.Prevouts)))
-		outs := _b.Bytes()
+			_b := new(bytes.Buffer)
+			btc.WriteVlen(_b, uint64(len(tv.Prevouts)))
+			outs := _b.Bytes()
 		*/
 
 		for i, pks := range tv.Prevouts {
