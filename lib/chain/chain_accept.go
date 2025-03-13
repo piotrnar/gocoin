@@ -120,29 +120,35 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 	blUnsp := make(map[[32]byte][]*btc.TxOut, len(bl.Txs))
 
 	var wg sync.WaitGroup
+	var wait4compl bool
 	var ver_err_cnt uint32
+
+	defer func() { // this is for when it returns from inside the range bl.Txs loop
+		if wait4compl {
+			wg.Wait()
+		}
+	}()
 
 	for i, tx := range bl.Txs {
 		tx.AllocVerVars()
 		txoutsum, txinsum = 0, 0
 
-		sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * bl.Txs[i].GetLegacySigOpCount())
+		sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount())
 
 		// Check each tx for a valid input, except from the first one
 		if i > 0 {
-
 			tx_trusted := bl.Trusted.Get()
 			if !tx_trusted {
-				if TrustedTxChecker != nil && TrustedTxChecker(bl.Txs[i]) {
+				if TrustedTxChecker != nil && TrustedTxChecker(tx) {
 					tx_trusted = true
 				} else {
-					tx.Spent_outputs = make([]*btc.TxOut, len(bl.Txs[i].TxIn))
+					tx.Spent_outputs = make([]*btc.TxOut, len(tx.TxIn))
 				}
 			}
 
 			// first collect all the inputs, their amounts and spend scripts
-			for j := 0; j < len(bl.Txs[i].TxIn); j++ {
-				inp := &bl.Txs[i].TxIn[j].Input
+			for j := range tx.TxIn {
+				inp := &tx.TxIn[j].Input
 				spent_map, was_spent := changes.DeledTxs[inp.Hash]
 				if was_spent {
 					if int(inp.Vout) >= len(spent_map) {
@@ -221,12 +227,12 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 
 				if (bl.VerifyFlags & script.VER_P2SH) != 0 {
 					if btc.IsP2SH(tout.Pk_script) {
-						sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig))
+						sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[j].ScriptSig))
 					}
 				}
 
 				if (bl.VerifyFlags & script.VER_WITNESS) != 0 {
-					sigopscost += uint32(bl.Txs[i].CountWitnessSigOps(j, tout.Pk_script))
+					sigopscost += uint32(tx.CountWitnessSigOps(j, tout.Pk_script))
 				}
 
 				txinsum += tout.Value
@@ -234,46 +240,48 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 
 			// second, verify the scrips:
 			if !tx_trusted { // run VerifyTxScript() in a parallel task
-				for j := 0; j < len(bl.Txs[i].TxIn); j++ {
+				for j := range tx.TxIn {
 					wg.Add(1)
 					go func(i int, tx *btc.Tx) {
 						if !script.VerifyTxScript(tx.Spent_outputs[i].Pk_script, &script.SigChecker{Amount: tx.Spent_outputs[i].Value, Idx: i, Tx: tx}, bl.VerifyFlags) {
 							atomic.AddUint32(&ver_err_cnt, 1)
 						}
 						wg.Done()
-					}(j, bl.Txs[i])
+					}(j, tx)
+					wait4compl = true
 				}
 			}
 		} else {
 			// For coinbase tx we need to check (like satoshi) whether the script size is between 2 and 100 bytes
 			// (Previously we made sure in CheckBlock() that this was a coinbase type tx)
-			if len(bl.Txs[0].TxIn[0].ScriptSig) < 2 || len(bl.Txs[0].TxIn[0].ScriptSig) > 100 {
-				e = errors.New(fmt.Sprint("Coinbase script has a wrong length ", len(bl.Txs[0].TxIn[0].ScriptSig)))
+			if len(tx.TxIn[0].ScriptSig) < 2 || len(tx.TxIn[0].ScriptSig) > 100 {
+				e = errors.New(fmt.Sprint("Coinbase script has a wrong length ", len(tx.TxIn[0].ScriptSig)))
 				return
 			}
 		}
 
 		sumblockin += txinsum
 
-		for j := range bl.Txs[i].TxOut {
-			txoutsum += bl.Txs[i].TxOut[j].Value
+		for j := range tx.TxOut {
+			txoutsum += tx.TxOut[j].Value
 		}
 		sumblockout += txoutsum
 
 		if i > 0 {
-			bl.Txs[i].CalculatedFee = txinsum - txoutsum
+			tx.CalculatedFee = txinsum - txoutsum
 			if txoutsum > txinsum {
 				e = fmt.Errorf("more spent (%.8f) than at the input (%.8f) in TX %s",
-					float64(txoutsum)/1e8, float64(txinsum)/1e8, bl.Txs[i].Hash.String())
+					float64(txoutsum)/1e8, float64(txinsum)/1e8, tx.Hash.String())
 				return
 			}
 		}
 
 		// Add each tx outs from the currently executed TX to the temporary pool
-		blUnsp[bl.Txs[i].Hash.Hash] = slices.Clone(bl.Txs[i].TxOut)
+		blUnsp[tx.Hash.Hash] = slices.Clone(tx.TxOut)
 	}
 
 	if !bl.Trusted.Get() {
+		wait4compl = false
 		wg.Wait()
 		if ver_err_cnt > 0 {
 			println("VerifyScript failed", ver_err_cnt, "time (s)")
