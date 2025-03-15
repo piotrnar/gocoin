@@ -242,7 +242,7 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 					unsp := &utxo.OneUnspentTx{TxPrevOut: btc.TxPrevOut{Hash: qr.TxID, Vout: vout},
 						Value: oo.Value, MinedAt: qr.InBlock, Coinbase: qr.Coinbase, BtcAddr: aa}
 
-					if int(vout+1) < len(qr.Outs) {
+					if !qr.Coinbase && int(vout+1) < len(qr.Outs) {
 						var msg []byte
 						if qr.Outs[vout+1] != nil && len(qr.Outs[vout+1].PKScr) > 1 && qr.Outs[vout+1].PKScr[0] == 0x6a {
 							msg = qr.Outs[vout+1].PKScr[1:]
