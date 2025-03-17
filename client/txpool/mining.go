@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -178,14 +179,21 @@ func BlockMined(bl *btc.Block) {
 	}
 
 	TxMutex.Lock()
+	TxMutex.SetVar("cp1")
 	FeePackagesDirty = true
+	TxMutex.SetVar("cp2")
 	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
+		TxMutex.SetVar(fmt.Sprint("cp-", i, "/", len(bl.Txs), "-b"))
 		tx := bl.Txs[i]
 		txMined(tx)
+		TxMutex.SetVar(fmt.Sprint("cp-", i, "/", len(bl.Txs), "-e"))
 	}
+	TxMutex.SetVar("cp3")
 	// now check if any mempool txs are waiting for inputs which were just mined
-	for _, tx := range bl.Txs[1:] {
+	for i, tx := range bl.Txs[1:] {
+		TxMutex.SetVar(fmt.Sprint("cr-", i, "/", len(bl.Txs), "-b"))
 		txAccepted(tx.Hash.BIdx())
+		TxMutex.SetVar(fmt.Sprint("cr-", i, "/", len(bl.Txs), "-e"))
 	}
 	TxMutex.Unlock()
 }

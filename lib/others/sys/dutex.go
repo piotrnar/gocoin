@@ -8,10 +8,11 @@ import (
 )
 
 type Dutex struct {
-	ltime time.Time
-	file  string
-	line  int
-	lttot time.Duration
+	ltime  time.Time
+	file   string
+	varstr string
+	line   int
+	lttot  time.Duration
 	sync.Mutex
 	mutint sync.Mutex
 	locked bool
@@ -24,7 +25,7 @@ func (d *Dutex) Status() (s string) {
 	} else {
 		s = "last unlocked in"
 	}
-	s += fmt.Sprint(" ", d.file, ":", d.line, " ", time.Since(d.ltime).String(), " ago  (", d.lttot.String(), " total)")
+	s += fmt.Sprint(" ", d.file, ":", d.line, " ", time.Since(d.ltime).String(), " ago  (", d.lttot.String(), " total) -", d.varstr)
 	d.mutint.Unlock()
 	return
 }
@@ -40,6 +41,12 @@ func (d *Dutex) fixfile() {
 			}
 		}
 	}
+}
+
+func (d *Dutex) SetVar(v string) {
+	d.mutint.Lock()
+	d.varstr = v
+	d.mutint.Unlock()
 }
 
 func (d *Dutex) Lock() {
