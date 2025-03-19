@@ -271,13 +271,18 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 // call this function after the tx has been accepted,
 // to re-submit all txs that had been waiting for it
 func txAccepted(bidx btc.BIDX) {
-	var delidx int
+	var delidx, xxx int
 	var wtg *OneWaitingList
 	var found bool
 	var txr *OneTxRejected
 
 	recs2do := []btc.BIDX{bidx}
 	for {
+		if xxx > 500e3 {
+			println("txAccepted stuck in the loop", delidx, len(recs2do), btc.BIdxString(bidx))
+			xxx = 0
+		}
+		xxx++
 		if wtg, found = WaitingForInputs[recs2do[delidx]]; !found {
 			if delidx++; delidx == len(recs2do) {
 				return
@@ -288,6 +293,7 @@ func txAccepted(bidx btc.BIDX) {
 			panic("This should not happen")
 		}
 
+		txrr := wtg.Ids[0]
 		txr = TransactionsRejected[wtg.Ids[0]] // always remove the first one ...
 
 		if CheckForErrors() {
@@ -300,13 +306,27 @@ func txAccepted(bidx btc.BIDX) {
 			}
 		}
 
+		xxs := fmt.Sprint(delidx, "/", len(recs2do))
+		blen := len(wtg.Ids)
+		TxMutex.SetVar("rj-b-del-" + xxs)
 		txr.Delete() // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
+		if blen-1 != len(wtg.Ids) {
+			println("ERROR: same amount of wtg.Ids records after Delete:", blen, len(wtg.Ids))
+			panic("This should not happen")
+		}
+		if len(wtg.Ids) > 0 && slices.Contains(wtg.Ids, txrr) {
+			println("ERROR: txrr not removed:", btc.BIdxString(txrr), "from", btc.BIdxString(bidx), blen, len(wtg.Ids))
+			panic("This should not happen")
+		}
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
+		TxMutex.SetVar("rj-b-pro-" + xxs)
 		if res, t2s := processTx(pendtxrcv); res == 0 {
+			TxMutex.SetVar("rj-a-pro-ok-" + xxs)
 			// if res was 0, t2s is not nil
 			recs2do = append(recs2do, t2s.Hash.BIdx())
 			common.CountSafe("TxRetryAccepted")
 		} else {
+			TxMutex.SetVar(fmt.Sprint("rj-a-pro-err", res, "-", xxs))
 			common.CountSafePar("TxRetryRjctd-", res)
 		}
 	}
