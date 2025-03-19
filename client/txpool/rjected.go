@@ -222,6 +222,7 @@ func (tr *OneTxRejected) cleanup() {
 					println("ERROR: WaitingForInputs record does not have us at the only txr\n  txr:", tr.Waiting4.String(), tr.Id.String())
 				} else {
 					delete(WaitingForInputs, w4idx)
+					w4i.Ids = nil
 				}
 			} else {
 				idx := slices.Index(w4i.Ids, bidx)
