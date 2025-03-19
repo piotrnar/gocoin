@@ -54,14 +54,16 @@ func (c *OneConnection) SendGetMP() error {
 }
 
 // TxInvNotify handles tx-inv notifications.
-func (c *OneConnection) TxInvNotify(hash []byte) {
+func (c *OneConnection) TxInvNotify(hash []byte) (res bool) {
 	if txpool.NeedThisTxExt(btc.NewUint256(hash), nil) == 0 {
 		var b [1 + 4 + 32]byte
 		b[0] = 1                                              // One inv
 		binary.LittleEndian.PutUint32(b[1:5], MSG_WITNESS_TX) // SegWit Tx
 		copy(b[5:37], hash)
 		c.SendRawMsg("getdata", b[:], false)
+		res = true
 	}
+	return
 }
 
 func isRoutable(rec *txpool.OneTxToSend) (yes bool, spkb uint64) {
@@ -98,15 +100,39 @@ func isRoutable(rec *txpool.OneTxToSend) (yes bool, spkb uint64) {
 	return
 }
 
-func txPoolCB(conid uint32, result byte, t2s *txpool.OneTxToSend) {
-	c := GetConnFromID(conid)
+func txPoolCB(ntx *txpool.TxRcvd, t2s *txpool.OneTxToSend) {
+	c := GetConnFromID(ntx.FromCID)
 	if c == nil {
 		// the connection has been closed since
 		return
 	}
 
-	if result != 0 {
-		if result == txpool.TX_REJECTED_OVERSPEND {
+	if result := ntx.Result; result != 0 {
+		if result == txpool.TX_REJECTED_NO_TXOU {
+			alreadyin := make(map[[32]byte]struct{}, len(ntx.TxIn))
+			missing_inputs := make([]int, 0, len(ntx.TxIn))
+			for txinidx, txin := range ntx.TxIn {
+				if _, ok := alreadyin[txin.Input.Hash]; !ok {
+					alreadyin[txin.Input.Hash] = struct{}{}
+					if txpool.NeedThisTxExt(btc.NewUint256(txin.Input.Hash[:]), nil) == 0 {
+						missing_inputs = append(missing_inputs, txinidx)
+					}
+				}
+			}
+			if len(missing_inputs) > 0 {
+				cnt := len(missing_inputs)
+				msg := bytes.NewBuffer(make([]byte, 0, 5+36*cnt))
+				btc.WriteVlen(msg, uint64(cnt))
+				for _, idx := range missing_inputs {
+					binary.Write(msg, binary.LittleEndian, uint32(MSG_WITNESS_TX))
+					msg.Write(ntx.TxIn[idx].Input.Hash[:])
+				}
+				c.SendRawMsg("getdata", msg.Bytes(), false)
+				common.CountSafeAdd("TxMissingGetData", uint64(cnt))
+			} else {
+				common.CountSafe("TxMissingIgnore")
+			}
+		} else if result == txpool.TX_REJECTED_OVERSPEND {
 			c.DoS("TxOversend")
 		} else if result == txpool.TX_REJECTED_SCRIPT_FAIL {
 			c.DoS("TxScriptFail")
