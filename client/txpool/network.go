@@ -21,11 +21,12 @@ var (
 
 type TxRcvd struct {
 	*btc.Tx
-	FeedbackCB func(uint32, byte, *OneTxToSend)
+	FeedbackCB func(*TxRcvd, *OneTxToSend)
 	FromCID    uint32
 	Trusted    bool
 	Local      bool
 	Unmined    bool
+	Result     byte // this is an output value (sent to callback from HandleNetTx)
 }
 
 // NeedThisTx returns 0 if mempool wants this tx.
@@ -312,7 +313,8 @@ func HandleNetTx(ntx *TxRcvd) bool {
 	TxMutex.Unlock()
 
 	if ntx.FeedbackCB != nil {
-		ntx.FeedbackCB(ntx.FromCID, result, t2s)
+		ntx.Result = result
+		ntx.FeedbackCB(ntx, t2s)
 	}
 
 	return result == 0
