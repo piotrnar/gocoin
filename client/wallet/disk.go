@@ -122,6 +122,8 @@ func save_map(fn string, tm map[OneAddrIndex]*OneAllAddrBal, wg *sync.WaitGroup)
 }
 
 func LoadBalances() (er error) {
+	useMapCnt = int(common.Get(&common.CFG.AllBalances.UseMapCnt))
+
 	fname := dump_folder_name()
 	dir := common.GocoinHomeDir + BALANCES_SUBDIR + string(os.PathSeparator) + fname
 	if _, er = os.Stat(dir); os.IsNotExist(er) {
