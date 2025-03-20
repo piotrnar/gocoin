@@ -8,6 +8,7 @@ import (
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/siphash"
 	"github.com/piotrnar/gocoin/lib/script"
 	"github.com/piotrnar/gocoin/lib/utxo"
 )
@@ -28,6 +29,8 @@ var (
 
 type OneAllAddrInp [utxo.UtxoIdxLen + 4]byte
 
+type OneAddrIndex uint64
+
 type OneAllAddrBal struct {
 	unspMap map[OneAllAddrInp]bool
 	unsp    []OneAllAddrInp
@@ -35,7 +38,7 @@ type OneAllAddrBal struct {
 }
 
 var (
-	allBalances [IDX_CNT]map[string]*OneAllAddrBal
+	allBalances [IDX_CNT]map[OneAddrIndex]*OneAllAddrBal
 	accessMutex sync.Mutex
 	useMapCnt   int
 )
@@ -53,28 +56,34 @@ func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 	return
 }
 
-func Script2Idx(pkscr []byte) (idx int, uidx []byte) {
+func ourHash(dat []byte) OneAddrIndex {
+	return OneAddrIndex(siphash.Hash(0, 0, dat))
+}
+
+func Script2Idx(pkscr []byte) (idx int, uidx OneAddrIndex) {
 	if script.IsP2KH(pkscr) {
-		uidx = pkscr[3:23]
+		uidx = ourHash(pkscr[3:23])
 		idx = IDX_P2KH
 	} else if script.IsP2SH(pkscr) {
-		uidx = pkscr[2:22]
+		uidx = ourHash(pkscr[2:22])
 		idx = IDX_P2SH
 	} else if script.IsP2WPKH(pkscr) {
-		uidx = pkscr[2:22]
+		uidx = ourHash(pkscr[2:22])
 		idx = IDX_P2WKH
 	} else if script.IsP2WSH(pkscr) {
-		uidx = pkscr[2:34]
+		uidx = ourHash(pkscr[2:34])
 		idx = IDX_P2WSH
 	} else if script.IsP2TAP(pkscr) {
-		uidx = pkscr[2:34]
+		uidx = ourHash(pkscr[2:34])
 		idx = IDX_P2TAP
+	} else {
+		idx = -1
 	}
 	return
 }
 
 func NewUTXO(tx *utxo.UtxoRec) {
-	var uidx []byte
+	var uidx OneAddrIndex
 	var idx int
 	var rec *OneAllAddrBal
 	var nr OneAllAddrInp
@@ -89,13 +98,13 @@ func NewUTXO(tx *utxo.UtxoRec) {
 		if out.Value < common.AllBalMinVal() {
 			continue
 		}
-		if idx, uidx = Script2Idx(out.PKScr); uidx == nil {
+		if idx, uidx = Script2Idx(out.PKScr); idx < 0 {
 			continue
 		}
-		rec = allBalances[idx][string(uidx)]
+		rec = allBalances[idx][uidx]
 		if rec == nil {
 			rec = &OneAllAddrBal{}
-			allBalances[idx][string(uidx)] = rec
+			allBalances[idx][uidx] = rec
 		}
 
 		binary.LittleEndian.PutUint32(nr[utxo.UtxoIdxLen:], vout)
@@ -122,7 +131,7 @@ func NewUTXO(tx *utxo.UtxoRec) {
 }
 
 func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
-	var uidx []byte
+	var uidx OneAddrIndex
 	var rec *OneAllAddrBal
 	var i, idx int
 	var nr OneAllAddrInp
@@ -132,10 +141,10 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 		if !outs[vout] || out == nil || out.Value < common.AllBalMinVal() {
 			continue
 		}
-		if idx, uidx = Script2Idx(out.PKScr); uidx == nil {
+		if idx, uidx = Script2Idx(out.PKScr); idx < 0 {
 			continue
 		}
-		if rec, ok = allBalances[idx][string(uidx)]; !ok {
+		if rec, ok = allBalances[idx][uidx]; !ok {
 			println("ERROR: balance rec not found for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String(),
 				btc.NewUint256(tx.TxID[:]).String(), vout, btc.UintToBtc(out.Value))
 			continue
@@ -150,7 +159,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 			}
 			delete(rec.unspMap, nr)
 			if len(rec.unspMap) == 0 {
-				delete(allBalances[idx], string(uidx))
+				delete(allBalances[idx], uidx)
 			} else {
 				rec.Value -= out.Value
 			}
@@ -162,7 +171,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 			continue
 		}
 		if len(rec.unsp) == 1 {
-			delete(allBalances[idx], string(uidx))
+			delete(allBalances[idx], uidx)
 		} else {
 			rec.Value -= out.Value
 			rec.unsp = append(rec.unsp[:i], rec.unsp[i+1:]...)
@@ -205,15 +214,36 @@ func (r *OneAllAddrBal) Count() int {
 	}
 }
 
+// all the records should point to the same BTC address
+func (r *OneAllAddrBal) BtcAddr() (ad *btc.BtcAddr) {
+	var inp OneAllAddrInp
+	if r.unspMap != nil {
+		for v := range r.unspMap {
+			inp = v
+			break
+		}
+	} else if len(r.unsp) > 0 {
+		inp = r.unsp[0]
+	} else {
+		return
+	}
+	if rec, vout := inp.GetRec(); rec != nil {
+		ad = btc.NewAddrFromPkScript(rec.Outs[vout].PKScr, common.Testnet)
+	}
+	return
+}
+
 func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	var rec *OneAllAddrBal
+	var uidx OneAddrIndex
 
 	accessMutex.Lock() // in case this function was not called from the main thread
 	defer accessMutex.Unlock()
 
 	if aa.SegwitProg != nil {
 		if aa.SegwitProg.Version == 1 && len(aa.SegwitProg.Program) == 32 {
-			rec = allBalances[IDX_P2TAP][string(aa.SegwitProg.Program)]
+			uidx = ourHash(aa.SegwitProg.Program)
+			rec = allBalances[IDX_P2TAP][uidx]
 		} else {
 			if aa.SegwitProg.Version != 0 {
 				return
@@ -221,17 +251,21 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 			switch len(aa.SegwitProg.Program) {
 			case 20:
 				copy(aa.Hash160[:], aa.SegwitProg.Program)
-				rec = allBalances[IDX_P2WKH][string(aa.Hash160[:])]
+				uidx = ourHash(aa.Hash160[:])
+				rec = allBalances[IDX_P2WKH][uidx]
 			case 32:
-				rec = allBalances[IDX_P2WSH][string(aa.SegwitProg.Program)]
+				uidx = ourHash(aa.SegwitProg.Program)
+				rec = allBalances[IDX_P2WSH][uidx]
 			default:
 				return
 			}
 		}
 	} else if aa.Version == btc.AddrVerPubkey(common.Testnet) {
-		rec = allBalances[IDX_P2KH][string(aa.Hash160[:])]
+		uidx = ourHash(aa.Hash160[:])
+		rec = allBalances[IDX_P2KH][uidx]
 	} else if aa.Version == btc.AddrVerScript(common.Testnet) {
-		rec = allBalances[IDX_P2SH][string(aa.Hash160[:])]
+		uidx = ourHash(aa.Hash160[:])
+		rec = allBalances[IDX_P2SH][uidx]
 	} else {
 		return
 	}
@@ -262,7 +296,7 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	return
 }
 
-func browse(cb func(addr_type int, addr_hash string, coins *OneAllAddrBal)) {
+func browse(cb func(addr_type int, addr_hash OneAddrIndex, coins *OneAllAddrBal)) {
 	for idx := range allBalances {
 		for k, r := range allBalances[idx] {
 			cb(idx, k, r)
@@ -270,7 +304,7 @@ func browse(cb func(addr_type int, addr_hash string, coins *OneAllAddrBal)) {
 	}
 }
 
-func Browse(cb func(addr_type int, addr_hash string, coins *OneAllAddrBal)) {
+func Browse(cb func(addr_type int, addr_hash OneAddrIndex, coins *OneAllAddrBal)) {
 	accessMutex.Lock()
 	browse(cb)
 	accessMutex.Unlock()
@@ -283,7 +317,7 @@ func PrintStat() {
 	fmt.Println("AllBalMinVal:", btc.UintToBtc(common.AllBalMinVal()),
 		"  UseMapCnt:", useMapCnt, "  Saved As:", LAST_SAVED_FNAME)
 
-	browse(func(idx int, k string, r *OneAllAddrBal) {
+	browse(func(idx int, k OneAddrIndex, r *OneAllAddrBal) {
 		vals[idx] += r.Value
 		if r.unspMap != nil {
 			maps[idx]++

@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"bufio"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +15,7 @@ import (
 )
 
 const (
-	CURRENT_FILE_VERSION = 2
+	CURRENT_FILE_VERSION = 3
 	BALANCES_SUBDIR      = "bal"
 )
 
@@ -29,8 +30,8 @@ func dump_folder_name() string {
 		CURRENT_FILE_VERSION)
 }
 
-func (b *OneAllAddrBal) Save(key []byte, of *bufio.Writer) {
-	of.Write(key)
+func (b *OneAllAddrBal) Save(key OneAddrIndex, of *bufio.Writer) {
+	binary.Write(of, binary.LittleEndian, key)
 	btc.WriteVarInt(of, btc.CompressAmount(b.Value))
 	if b.unsp != nil {
 		btc.WriteVarInt(of, uint64(len(b.unsp)))
@@ -89,30 +90,30 @@ func load_map(dir string, idx int, wg *sync.WaitGroup) {
 	var er error
 
 	defer wg.Done()
-	ke := make([]byte, IDX2SIZE[idx])
 	if f, _ := os.Open(dir + IDX2SYMB[idx]); f != nil {
 		rd := bufio.NewReaderSize(f, 0x4000)
 		if le, er = btc.ReadVLen(rd); er != nil {
 			return
 		}
-		themap := make(map[string]*OneAllAddrBal, int(le))
+		themap := make(map[OneAddrIndex]*OneAllAddrBal, int(le))
+		var ke OneAddrIndex
 		for ; le > 0; le-- {
-			if _, er = io.ReadFull(rd, ke); er != nil {
+			if er = binary.Read(rd, binary.LittleEndian, &ke); er != nil {
 				return
 			}
-			themap[string(ke)] = newAddrBal(rd)
+			themap[ke] = newAddrBal(rd)
 		}
 		f.Close()
 		allBalances[idx] = themap
 	}
 }
 
-func save_map(fn string, tm map[string]*OneAllAddrBal, wg *sync.WaitGroup) {
+func save_map(fn string, tm map[OneAddrIndex]*OneAllAddrBal, wg *sync.WaitGroup) {
 	if f, _ := os.Create(fn); f != nil {
 		wr := bufio.NewWriterSize(f, 0x100000)
 		btc.WriteVlen(wr, uint64(len(tm)))
 		for k, rec := range tm {
-			rec.Save([]byte(k), wr)
+			rec.Save(k, wr)
 		}
 		wr.Flush()
 		f.Close()
