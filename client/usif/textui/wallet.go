@@ -17,7 +17,7 @@ import (
 
 type OneWalletAddrs struct {
 	rec *wallet.OneAllAddrBal
-	Key string
+	Key wallet.OneAddrIndex
 	Idx int
 }
 
@@ -105,7 +105,7 @@ func all_addrs(par string) {
 		MIN_OUTS = 0
 	}
 
-	wallet.Browse(func(idx int, k string, rec *wallet.OneAllAddrBal) {
+	wallet.Browse(func(idx int, k wallet.OneAddrIndex, rec *wallet.OneAllAddrBal) {
 		cnts[idx]++
 		vals[idx] += rec.Value
 		outs[idx] += uint64(rec.Count())
@@ -141,25 +141,11 @@ func all_addrs(par string) {
 	pkscr_p2kh[24] = 0xac
 
 	for i := 0; i < len(best) && i < cnt; i++ {
-		switch best[i].Idx {
-		case wallet.IDX_P2KH:
-			copy(pkscr_p2kh[3:23], best[i].Key)
-			ad = btc.NewAddrFromPkScript(pkscr_p2kh[:], common.CFG.Testnet)
-		case wallet.IDX_P2SH:
-			copy(pkscr_p2sk[2:22], best[i].Key)
-			ad = btc.NewAddrFromPkScript(pkscr_p2sk[:], common.CFG.Testnet)
-		case wallet.IDX_P2WKH, wallet.IDX_P2WSH, wallet.IDX_P2TAP:
-			ad = new(btc.BtcAddr)
-			ad.SegwitProg = new(btc.SegwitProg)
-			ad.SegwitProg.HRP = btc.GetSegwitHRP(common.CFG.Testnet)
-			ad.SegwitProg.Program = []byte(best[i].Key)
-			if best[i].Idx != wallet.IDX_P2TAP {
-				ad.SegwitProg.Version = 0
-			} else {
-				ad.SegwitProg.Version = 1
-			}
+		if ad = best[i].rec.BtcAddr(); ad != nil {
+			fmt.Println(i+1, ad.String(), btc.UintToBtc(best[i].rec.Value), "BTC in", best[i].rec.Count(), "inputs")
+		} else {
+			println("ERROR: could not extract the address")
 		}
-		fmt.Println(i+1, ad.String(), btc.UintToBtc(best[i].rec.Value), "BTC in", best[i].rec.Count(), "inputs")
 	}
 }
 

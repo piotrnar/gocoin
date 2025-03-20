@@ -24,7 +24,7 @@ func InitMaps(empty bool) {
 	}
 
 	for i := range allBalances {
-		allBalances[i] = make(map[string]*OneAllAddrBal, szs[i])
+		allBalances[i] = make(map[OneAddrIndex]*OneAllAddrBal, szs[i])
 	}
 	useMapCnt = int(common.Get(&common.CFG.AllBalances.UseMapCnt))
 }
