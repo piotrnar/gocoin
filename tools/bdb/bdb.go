@@ -10,10 +10,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -35,7 +33,7 @@ import (
 		[4:36]  - 256-bit block hash - DEPRECATED! (hash the header to get the value)
 
 		[4:28] - reserved
-		[28:32] - specifies which blockchain.dat file is used (if not zero, the filename is: blockchain-%08x.dat)
+		[28:32] - specifies which blXXXXXXXX.dat file is used (the filename is: bl%08d.dat)
 		[32:36] - length of uncompressed block
 
 		[36:40] - 32-bit block height (genesis is 0)
@@ -54,7 +52,7 @@ var (
 	fl_help              bool
 	fl_block, fl_stop    uint
 	fl_dir               string
-	fl_scan, fl_defrag   bool
+	fl_scan              bool
 	fl_split             string
 	fl_skip              uint
 	fl_append            string
@@ -157,15 +155,6 @@ func (r one_idx_rec) DatIdx() uint32 {
 		return binary.LittleEndian.Uint32(r.sl[28:32])
 	}
 	return 0
-}
-
-/********************************************************/
-
-type one_tree_node struct {
-	off int // offset in teh idx file
-	one_idx_rec
-	parent *one_tree_node
-	next   *one_tree_node
 }
 
 /********************************************************/
@@ -432,7 +421,6 @@ func main() {
 	flag.BoolVar(&fl_help, "h", false, "Show help")
 	flag.UintVar(&fl_block, "block", 0, "Print details of the given block number (or start -verify from it)")
 	flag.BoolVar(&fl_scan, "scan", false, "Scan database for first extra blocks")
-	flag.BoolVar(&fl_defrag, "defrag", false, "Purge all the orphaned blocks")
 	flag.UintVar(&fl_stop, "stop", 0, "Stop after so many scan errors")
 	flag.StringVar(&fl_dir, "dir", "", "Use blockdb from this directory")
 	flag.StringVar(&fl_split, "split", "", "Split blockdb at this block's hash")
@@ -469,6 +457,9 @@ func main() {
 	flag.BoolVar(&fl_ox, "ox", false, "Extract ord inscriptions instead of analysing (use with -ord))")
 
 	flag.StringVar(&fl_compress, "compress", "", "Compress all the blocks inside the given blxxxxxxxx.dat file")
+
+	flag.BoolVar(&fl_defrag, "defrag", false, "Purge all the orphaned blocks")
+	flag.StringVar(&fl_tophash, "top", "", "Specify hash of the top block to use")
 
 	flag.Parse()
 
@@ -878,139 +869,7 @@ func main() {
 	}
 
 	if fl_defrag {
-		blks := make(map[[32]byte]*one_tree_node, len(dat)/136)
-		for off := 0; off < len(dat); off += 136 {
-			sl := new_sl(dat[off : off+136])
-			blks[sl.HIdx()] = &one_tree_node{off: off, one_idx_rec: sl}
-		}
-		var maxbl uint32
-		var maxblptr *one_tree_node
-		for _, v := range blks {
-			v.parent = blks[v.PIdx()]
-			h := v.Height()
-			if h > maxbl {
-				maxbl = h
-				maxblptr = v
-			} else if h == maxbl {
-				maxblptr = nil
-			}
-		}
-		fmt.Println("Max block height =", maxbl)
-		if maxblptr == nil {
-			fmt.Println("More than one block at maximum height - cannot continue")
-			return
-		}
-		used := make(map[[32]byte]bool)
-		var first_block *one_tree_node
-		var total_data_size uint64
-		for n := maxblptr; n != nil; n = n.parent {
-			if n.parent != nil {
-				n.parent.next = n
-			}
-			used[n.PIdx()] = true
-			if first_block == nil || first_block.Height() > n.Height() {
-				first_block = n
-			}
-			total_data_size += uint64(n.DLen())
-		}
-		if len(used) < len(blks) {
-			fmt.Println("Purge", len(blks)-len(used), "blocks from the index file...")
-			f, e := os.Create(fl_dir + "blockchain.tmp")
-			if e != nil {
-				println(e.Error())
-				return
-			}
-			var off int
-			for n := first_block; n != nil; n = n.next {
-				n.off = off
-				n.sl[0] = n.sl[0] & 0xfc
-				f.Write(n.sl)
-				off += len(n.sl)
-			}
-			f.Close()
-			os.Rename(fl_dir+"blockchain.tmp", fl_dir+"blockchain.new")
-		} else {
-			fmt.Println("The index file looks perfect")
-		}
-
-		for n := first_block; n != nil && n.next != nil; n = n.next {
-			if n.next.DPos() < n.DPos() {
-				fmt.Println("There is a problem... swapped order in the data file!", n.off)
-				return
-			}
-		}
-
-		fdat, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_RDWR, 0600)
-		if er != nil {
-			println(er.Error())
-			return
-		}
-
-		if fl, _ := fdat.Seek(0, os.SEEK_END); uint64(fl) == total_data_size {
-			fdat.Close()
-			fmt.Println("All good - blockchain.dat has an optimal length")
-			return
-		}
-
-		if !fl_commit {
-			fdat.Close()
-			fmt.Println("Warning: blockchain.dat shall be defragmented. Use \"-defrag -commit\"")
-			return
-		}
-
-		fidx, er := os.OpenFile(fl_dir+"blockchain.new", os.O_RDWR, 0600)
-		if er != nil {
-			println(er.Error())
-			return
-		}
-
-		// Capture Ctrl+C
-		killchan := make(chan os.Signal, 1)
-		signal.Notify(killchan, os.Interrupt, syscall.SIGTERM)
-
-		var doff uint64
-		var prv_perc uint64 = 101
-		for n := first_block; n != nil; n = n.next {
-			perc := 1000 * doff / total_data_size
-			dp := n.DPos()
-			dl := n.DLen()
-			if perc != prv_perc {
-				fmt.Printf("\rDefragmenting data file - %.1f%% (%d bytes saved so far)...",
-					float64(perc)/10.0, dp-doff)
-				prv_perc = perc
-			}
-			if dp > doff {
-				fdat.Seek(int64(dp), os.SEEK_SET)
-				fdat.Read(buf[:int(dl)])
-
-				n.SetDPos(doff)
-
-				fdat.Seek(int64(doff), os.SEEK_SET)
-				fdat.Write(buf[:int(dl)])
-
-				fidx.Seek(int64(n.off), os.SEEK_SET)
-				fidx.Write(n.sl)
-			}
-			doff += uint64(dl)
-
-			select {
-			case <-killchan:
-				fmt.Println("interrupted")
-				fidx.Close()
-				fdat.Close()
-				fmt.Println("Database closed - should be still usable, but no space saved")
-				return
-			default:
-			}
-		}
-
-		fidx.Close()
-		fdat.Close()
-		fmt.Println()
-
-		fmt.Println("Truncating blockchain.dat at position", doff)
-		os.Truncate(fl_dir+"blockchain.dat", int64(doff))
-
+		do_defrag(dat)
 		return
 	}
 
