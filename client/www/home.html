@@ -117,19 +117,22 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 	<h2>Node</h2>
 	<table width="100%">
 	<tr><td>Uptime:<td>
+		<span style="float:right;">PID <b id="process_pid">???</b></span>
 		<b id="si_node_uptime"></b>
 		&nbsp;&bull;&nbsp;
 		<b title="Known peers" id="si_known_peers"></b> peers
 		&nbsp;&bull;&nbsp;
 		<b title="ECDSA verify operations" id="si_ecdsa_verify_cnt"></b> ECs
 	<tr><td>Mem Used MB:<td>
-		<span style="float:right;">PID <b id="process_pid">???</b></span>
 		<b title="Native Go heap" id="si_heap_size"></b> +
 		<b title="UTXO records" id="si_qdb_extramem"></b>
 		(<b title="Native Go + UTXO" id="si_total_mem"></b>
 		/
 		<b title="Heap sys mem" id="si_heapsys_mem"></b>)
-		&nbsp;<span id="el_free_mem" style="display:none">[<a href="javascript:freemem()">FREE</a>]</span>
+		&bull;
+		<b id="si_gcs_data">0</b>
+		&bull;
+		<span id="el_free_mem" style="display:none">[<a href="javascript:freemem()">FREE</a>]</span>
 
 	<tr><td nowrap="nowrap">TX Mempool:<td aligh="left">
 		<b title="Accepted" id="ts_t2s_size"></b>
@@ -443,6 +446,18 @@ function refreshsysinfo() {
 			si_known_peers.innerText = si.Known_peers
 			si_total_mem.innerText = ((si.Heap_size+si.Qdb_extramem)/0x100000).toFixed(0)
 			si_heapsys_mem.innerText = (si.Heap_sysmem/0x100000).toFixed(0)
+
+			si_gcs_data.innerText = si.GC_Num + ' GCs'
+			var gctot = ''
+			if (si.GC_Total > 60*1e9) {
+				gctot = (si.GC_Total/(60*1e9)).toFixed(2) + 'min'
+			} else if (si.GC_Total > 1e9) {
+				gctot = (si.GC_Total/1e9).toFixed(2) + 's'
+			} else {
+				gctot = (si.GC_Total/1e6).toFixed(2) + 'ms'
+			}
+			si_gcs_data.title = 'Last GC at '+tim2str(si.GC_Last, true)+', total '+gctot
+
 			si_heap_size.innerText = (si.Heap_size/0x100000).toFixed(0)
 			si_qdb_extramem.innerText = (si.Qdb_extramem/0x100000).toFixed(0)
 			si_qdb_extramem.title = "UTXO records cnt: " + si.Qdb_allocs

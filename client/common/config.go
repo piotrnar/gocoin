@@ -379,11 +379,7 @@ func Reset() {
 	SetUploadLimit(uint64(CFG.Net.MaxUpKBps) << 10)
 	SetDownloadLimit(uint64(CFG.Net.MaxDownKBps) << 10)
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
-	if CFG.Memory.MemoryLimitMB != 0 {
-		debug.SetMemoryLimit(CFG.Memory.MemoryLimitMB << 20)
-	} else {
-		debug.SetMemoryLimit(defaultMemoryLimit)
-	}
+	UpdateMemoryLimit()
 	if AllBalMinVal() != CFG.AllBalances.MinValue {
 		fmt.Println("In order to apply the new value of AllBalMinVal, restart the node or do 'wallet off' and 'wallet on'")
 	}
@@ -481,6 +477,14 @@ func Reset() {
 	ApplyLastTrustedBlock()
 }
 
+func UpdateMemoryLimit() {
+	if CFG.Memory.MemoryLimitMB != 0 {
+		debug.SetMemoryLimit(CFG.Memory.MemoryLimitMB << 20)
+	} else {
+		debug.SetMemoryLimit(defaultMemoryLimit)
+	}
+}
+
 func MkTempBlocksDir() {
 	// no point doing it before GocoinHomeDir is set in host_init()
 	if CFG.Memory.CacheOnDisk && GocoinHomeDir != "" {
@@ -557,7 +561,7 @@ func Get[T bool | uint16 | uint32 | uint64 | time.Duration](addr *T) (res T) {
 	return
 }
 
-func Set[T bool | uint16 | uint32 | uint64 | time.Duration](addr *T, val T) {
+func Set[T bool | uint16 | uint32 | int64 | uint64 | time.Duration](addr *T, val T) {
 	mutex_cfg.Lock()
 	*addr = val
 	mutex_cfg.Unlock()

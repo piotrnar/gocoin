@@ -216,6 +216,45 @@ func show_help(par string) {
 }
 
 func show_mem(p string) {
+	if p == "free" {
+		fmt.Println("Freeing the mem...")
+		sys.FreeMem()
+		show_mem("")
+		return
+	}
+	if p == "gc" {
+		fmt.Println("Running GC...")
+		runtime.GC()
+		fmt.Println("Done.")
+		return
+	}
+
+	if strings.HasSuffix(p, "MB") {
+		i, e := strconv.ParseInt(p[:len(p)-2], 10, 64)
+		if e != nil {
+			println(e.Error())
+			return
+		}
+		fmt.Println("CFG.Memory.MemoryLimitMB =", i)
+		fmt.Println("Execute 'sc' to save the config.")
+		common.LockCfg()
+		common.CFG.Memory.MemoryLimitMB = i
+		common.UpdateMemoryLimit()
+		common.UnlockCfg()
+		return
+	}
+
+	i, e := strconv.ParseInt(p, 10, 64)
+	if e == nil {
+		common.LockCfg()
+		common.CFG.Memory.GCPercTrshold = int(i)
+		common.UnlockCfg()
+		debug.SetGCPercent(int(i))
+		fmt.Println("CFG.Memory.GCPercTrshold = ", i)
+		fmt.Println("Execute 'sc' to save the config.")
+		return
+	}
+
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	fmt.Println("Alloc         :", ms.Alloc)
@@ -259,38 +298,6 @@ func show_mem(p string) {
 		}
 		return
 	}
-
-	if p == "free" {
-		fmt.Println("Freeing the mem...")
-		sys.FreeMem()
-		show_mem("")
-		return
-	}
-	if p == "gc" {
-		fmt.Println("Running GC...")
-		runtime.GC()
-		fmt.Println("Done.")
-		return
-	}
-
-	if strings.HasSuffix(p, "MB") {
-		i, e := strconv.ParseInt(p[:len(p)-2], 10, 64)
-		if e != nil {
-			println(e.Error())
-			return
-		}
-		debug.SetMemoryLimit(i << 20)
-		fmt.Println("MemoryLimit set to", i, "MB")
-		return
-	}
-
-	i, e := strconv.ParseInt(p, 10, 64)
-	if e != nil {
-		println(e.Error())
-		return
-	}
-	debug.SetGCPercent(int(i))
-	fmt.Println("GC treshold set to", i, "percent")
 }
 
 func dump_block(s string) {
