@@ -94,6 +94,6 @@ func MemUsed() (uint64, uint64) {
 
 // FreeMem runs the GC and frees as much memory as possible.
 func FreeMem() {
-	runtime.GC()
+	//runtime.GC() <-- debug.FreeOSMemory() should execute the GC()
 	debug.FreeOSMemory()
 }
