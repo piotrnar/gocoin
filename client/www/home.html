@@ -131,8 +131,9 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 		<b title="Heap sys mem" id="si_heapsys_mem"></b>)
 		&bull;
 		<b id="si_gcs_data">0</b>
-		&bull;
-		<span id="el_free_mem" style="display:none">[<a href="javascript:freemem()">FREE</a>]</span>
+		<span style="float:right;">
+			<img id="el_free_mem" class="free hand" onclick="freemem()" title="Free all possible memory">
+		</span>
 
 	<tr><td nowrap="nowrap">TX Mempool:<td aligh="left">
 		<b title="Accepted" id="ts_t2s_size"></b>

@@ -571,6 +571,11 @@ img.pkgsort-on {
 	height:16px;
 }
 
+img.free {
+	content:url("free-black.png");
+	height:16px;
+}
+
 img.empty_icon {
 	content:url("empty.png");
 	height:16px;
