@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/piotrnar/gocoin/client/peersdb"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 var (
@@ -89,6 +89,9 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 		Average_block_size int
 		Average_fee        float64
 		NetworkHashRate    float64
+		GC_Total           uint64
+		GC_Num             uint32
+		GC_Last            uint32
 		LastHeaderHeight   uint32
 		Blocks_on_disk     uint32
 		SavingUTXO         bool
@@ -105,7 +108,6 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	out.Node_uptime = uint64(time.Since(common.StartTime).Seconds())
 	out.Net_block_qsize = len(network.NetBlocks)
 	out.Net_tx_qsize = len(network.NetTxs)
-	out.Heap_size, out.Heap_sysmem = sys.MemUsed()
 	out.Qdb_extramem, out.Qdb_allocs = common.MemUsed()
 	out.Ecdsa_verify_cnt = btc.EcdsaVerifyCnt()
 	out.Average_block_size = common.AverageBlockSize.Get()
@@ -124,6 +126,13 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 
 	out.SavingUTXO = common.BlockChain.Unspent.WritingInProgress.Get()
 	out.ProcessPID = os.Getpid()
+
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	out.Heap_size, out.Heap_sysmem = ms.Alloc, ms.Sys
+	out.GC_Num = ms.NumGC
+	out.GC_Last = uint32(ms.LastGC / uint64(time.Second))
+	out.GC_Total = ms.PauseTotalNs
 
 	bx, er := json.Marshal(out)
 	if er == nil {
