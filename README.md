@@ -91,12 +91,13 @@ Go to a chosen sub-folder and execute `go build` there.
 
 # Binaries
 
-Find the latest binaries for common platforms in [Releases](https://github.com/piotrnar/gocoin/releases/latest).
+Find the latest binaries of **client**, **wallet** and **balio** tool for
+Windows, Linux and MacOS in [Releases](https://github.com/piotrnar/gocoin/releases/latest).
 
 Older binaries can be downloaded from [sourceforge.net](https://sourceforge.net/projects/gocoin/files/?source=directory).
 
-Please note that the binaries are almost never up to date.
-I strongly encourage everyone to build the binaries himself.
+Note that the binaries are almost never up to date.
+I strongly encourage everyone to build the binaries himself as it is a fairly easy process.
 
 # Development
 Although it is an open source project, I am sorry to inform you that **I will not merge in any pull requests**.
