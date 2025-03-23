@@ -91,8 +91,8 @@ Go to a chosen sub-folder and execute `go build` there.
 
 # Binaries
 
-Find the latest binaries of **client**, **wallet** and **balio** tool for
-Windows, Linux and MacOS in [Releases](https://github.com/piotrnar/gocoin/releases/latest).
+Find the latest binaries (of **client**, **wallet** and **balio** tool) for
+Windows, Linux and macOS in [Releases](https://github.com/piotrnar/gocoin/releases/latest).
 
 Older binaries can be downloaded from [sourceforge.net](https://sourceforge.net/projects/gocoin/files/?source=directory).
 
