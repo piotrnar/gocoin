@@ -91,11 +91,11 @@ Go to a chosen sub-folder and execute `go build` there.
 
 # Binaries
 
-Windows or Linux (amd64) binaries can be downloaded from
+Find the latest binaries for common platforms in [Releases](https://github.com/piotrnar/gocoin/releases/latest).
 
- * https://sourceforge.net/projects/gocoin/files/?source=directory
+Older binaries can be downloaded from [sourceforge.net](https://sourceforge.net/projects/gocoin/files/?source=directory).
 
-Please note that the binaries are usually not up to date.
+Please note that the binaries are almost never up to date.
 I strongly encourage everyone to build the binaries himself.
 
 # Development
