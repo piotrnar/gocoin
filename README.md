@@ -97,7 +97,7 @@ Windows, Linux and MacOS in [Releases](https://github.com/piotrnar/gocoin/releas
 Older binaries can be downloaded from [sourceforge.net](https://sourceforge.net/projects/gocoin/files/?source=directory).
 
 Note that the binaries are almost never up to date.
-I strongly encourage everyone to build the binaries himself as it is a fairly easy process.
+I strongly encourage everyone to build the binaries themselves.
 
 # Development
 Although it is an open source project, I am sorry to inform you that **I will not merge in any pull requests**.
