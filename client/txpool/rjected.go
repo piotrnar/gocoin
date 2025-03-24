@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"encoding/hex"
 	"fmt"
 	"slices"
 	"sync/atomic"
@@ -327,6 +328,27 @@ func txAccepted(bidx btc.BIDX) {
 			recs2do = append(recs2do, t2s.Hash.BIdx())
 			common.CountSafe("TxRetryAccepted")
 		} else {
+			if res == TX_REJECTED_NO_TXOU || true {
+				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
+					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
+						println("w4txr removed and then put back with", res)
+						println("parent:", btc.BIdxString(bidx))
+						if t2s, ok := TransactionsToSend[bidx]; ok {
+							println(" id:", t2s.Hash.String())
+							println(" raw:", hex.EncodeToString(t2s.Tx.Raw))
+						}
+						println("t2r:", btc.BIdxString(txrr))
+						if txr, ok := TransactionsRejected[txrr]; ok {
+							println(" xid:", txr.Id.String())
+							if txr.Tx != nil && txr.Tx.Raw != nil {
+								println(" xraw:", hex.EncodeToString(txr.Tx.Raw))
+							}
+						}
+						panic("this should not happen")
+					}
+				}
+
+			}
 			TxMutex.SetVar(fmt.Sprint("rj-a-pro-err", res, "-", xxs))
 			common.CountSafePar("TxRetryRjctd-", res)
 		}
