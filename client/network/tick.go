@@ -80,8 +80,8 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		if bip, ok := BlocksToGet[k]; ok {
 			bip.InProgress--
 			bip.FailCount++
-			if bip.FailCount == 100 {
-				println("Block", bip.Height, bip.BlockHash.String(), "failed", bip.FailCount, "times")
+			if sin := time.Since(bip.Started); sin > 10*time.Minute && bip.FailCount >= 100 {
+				println("Block", bip.Height, bip.BlockHash.String(), "from", sin.String(), "ago, failed", bip.FailCount, "times")
 				DelB2G(k)
 			}
 		}
@@ -95,6 +95,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	MutexRcv.Unlock()
 
 	if disconnect != "" {
+		common.CountSafe(disconnect)
 		if c.X.IsSpecial {
 			common.CountSafe("Spec" + disconnect)
 			c.cntInc(disconnect)
