@@ -432,6 +432,15 @@ func save_utxo(par string) {
 	common.BlockChain.Unspent.Save()
 }
 
+func show_pending(par string) {
+	network.MutexRcv.Lock()
+	for _, b2g := range network.BlocksToGet {
+		println(b2g.Height, b2g.BlockHash.String(), time.Since(b2g.Started).String(),
+			"ago.  inprog:", b2g.InProgress, "   failed:", b2g.FailCount)
+	}
+	network.MutexRcv.Unlock()
+}
+
 func purge_utxo(par string) {
 	common.BlockChain.Unspent.PurgeUnspendable(true)
 	if !common.CFG.Memory.PurgeUnspendableUTXO {
@@ -528,6 +537,7 @@ func init() {
 	newUi("inv", false, send_inv, "Send inv message to all the peers - specify type & hash")
 	newUi("kill", false, kill_node, "Kill the node. WARNING: not safe - use 'quit' instead")
 	newUi("mem", false, show_mem, "Show memory stats and... [bs|free|gc|<new_gc_perc>|<new_limit>MB]")
+	newUi("pend", true, show_pending, "Show pending blocks")
 	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")
 	newUi("quit q", false, ui_quit, "Quit the node: [restart]")
 	newUi("redo", true, redo_block, "Redo one block")
