@@ -216,7 +216,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 		c.Mutex.Unlock()
 	}
 
-	if b2g.InProgress >= uint(common.CFG.Net.MaxBlockAtOnce) {
+	if b2g.InProgress >= common.CFG.Net.MaxBlockAtOnce {
 		common.CountSafe("CmpctBlockMaxInProg")
 		//fmt.Println(c.ConnID, " - too many in progress")
 		return

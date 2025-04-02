@@ -39,7 +39,8 @@ type OneBlockToGet struct {
 	TmPreproc time.Time
 	*btc.Block
 	*chain.BlockTreeNode
-	InProgress uint
+	InProgress uint32
+	FailCount  uint32
 	SendInvs   bool
 }
 
