@@ -42,6 +42,7 @@ type OneBlockToGet struct {
 	*chain.BlockTreeNode
 	InProgress uint32
 	FailCount  uint32
+	FromCID    uint32
 	SendInvs   bool
 }
 
