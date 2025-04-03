@@ -82,7 +82,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 			bip.FailCount++
 			if sin := time.Since(bip.Started); sin > 10*time.Minute && bip.FailCount >= 100 {
 				println("Block", bip.Height, bip.BlockHash.String(), "from", sin.String(),
-					"ago, failed", bip.FailCount, "times. from:", bip.From, bip.SendInvs)
+					"ago, failed", bip.FailCount, "times. from:", bip.From, bip.SendInvs, bip.FromCID)
 				DelB2G(k)
 			}
 		}
@@ -100,8 +100,10 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		if c.X.IsSpecial {
 			common.CountSafe("Spec" + disconnect)
 			c.cntInc(disconnect)
-		} else {
+		} else if !common.Get(&common.BlockChainSynchronized) {
 			c.Disconnect(true, disconnect)
+		} else {
+			common.CountSafe("Sync" + disconnect)
 		}
 	}
 }
