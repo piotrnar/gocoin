@@ -42,6 +42,7 @@ type OneBlockToGet struct {
 	InProgress uint32
 	FailCount  uint32
 	SendInvs   bool
+	From       byte
 }
 
 var (

@@ -136,6 +136,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 				if sta == PH_STATUS_NEW {
 					if cnt == 1 {
 						b2g.SendInvs = true
+						b2g.From = 3
 					}
 					new_headers_got++
 				}

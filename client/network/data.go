@@ -145,6 +145,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 		}
 		if sta == PH_STATUS_NEW {
 			b2g.SendInvs = true
+			b2g.From = 2
 		}
 		//println(c.ConnID, " - taking this new block")
 		common.CountSafe("UnxpectedBlockNEW")

@@ -201,6 +201,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 	}
 	if sta == PH_STATUS_NEW {
 		b2g.SendInvs = true
+		b2g.From = 1
 	}
 
 	if c.Node.SendCmpctVer != 2 {
