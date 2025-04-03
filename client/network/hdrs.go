@@ -65,7 +65,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 
 	node := common.BlockChain.AcceptHeader(bl)
 	b2g = &OneBlockToGet{Started: c.LastMsgTime, Block: bl, BlockTreeNode: node, InProgress: 0}
-	_, fil, lin, _ := runtime.Caller(-1)
+	_, fil, lin, _ := runtime.Caller(1)
 	b2g.From = fmt.Sprint(fil, ":", lin)
 	println(b2g.Height, b2g.BlockHash.String(), b2g.From)
 
