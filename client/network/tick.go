@@ -81,7 +81,8 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 			bip.InProgress--
 			bip.FailCount++
 			if sin := time.Since(bip.Started); sin > 10*time.Minute && bip.FailCount >= 100 {
-				println("Block", bip.Height, bip.BlockHash.String(), "from", sin.String(), "ago, failed", bip.FailCount, "times")
+				println("Block", bip.Height, bip.BlockHash.String(), "from", sin.String(),
+					"ago, failed", bip.FailCount, "times. from:", bip.From, bip.SendInvs)
 				DelB2G(k)
 			}
 		}
