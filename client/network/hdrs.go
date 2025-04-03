@@ -3,6 +3,8 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -63,6 +65,10 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 
 	node := common.BlockChain.AcceptHeader(bl)
 	b2g = &OneBlockToGet{Started: c.LastMsgTime, Block: bl, BlockTreeNode: node, InProgress: 0}
+	_, fil, lin, _ := runtime.Caller(-1)
+	b2g.From = fmt.Sprint(fil, ":", lin)
+	println(b2g.Height, b2g.BlockHash.String(), b2g.From)
+
 	AddB2G(b2g)
 	if node.Height > LastCommitedHeader.Height {
 		LastCommitedHeader = node
@@ -136,7 +142,6 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 				if sta == PH_STATUS_NEW {
 					if cnt == 1 {
 						b2g.SendInvs = true
-						b2g.From = 3
 					}
 					new_headers_got++
 				}
