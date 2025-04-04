@@ -68,7 +68,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	_, fil, lin, _ := runtime.Caller(1)
 	b2g.From = fmt.Sprint(fil, ":", lin)
 	b2g.FromCID = c.ConnID
-	println(b2g.FromCID, b2g.Height, b2g.BlockHash.String(), b2g.From)
+	//println(b2g.FromCID, b2g.Height, b2g.BlockHash.String(), b2g.From)
 
 	AddB2G(b2g)
 	if node.Height > LastCommitedHeader.Height {

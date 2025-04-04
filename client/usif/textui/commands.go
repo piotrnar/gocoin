@@ -436,7 +436,7 @@ func show_pending(par string) {
 	network.MutexRcv.Lock()
 	for _, b2g := range network.BlocksToGet {
 		println(b2g.Height, b2g.BlockHash.String(), time.Since(b2g.Started).String(),
-			"ago.  inprog:", b2g.InProgress, "   failed:", b2g.FailCount, "  from:", b2g.From, b2g.SendInvs)
+			"ago\n   inprog:", b2g.InProgress, "   failed:", b2g.FailCount, "  from:", b2g.From, "  sendinvs:", b2g.SendInvs)
 	}
 	network.MutexRcv.Unlock()
 }
