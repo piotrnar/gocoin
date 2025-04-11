@@ -80,10 +80,14 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		if bip, ok := BlocksToGet[k]; ok {
 			bip.InProgress--
 			bip.FailCount++
-			if sin := time.Since(bip.Started); sin > 10*time.Minute && bip.FailCount >= 50 {
+			if sin := time.Since(bip.Started); sin > 20*time.Minute && bip.FailCount >= 50 {
 				println("Block", bip.Height, bip.BlockHash.String(), "\n  from", sin.String(),
 					"ago, failed", bip.FailCount, "times. from:", bip.From, bip.SendInvs, bip.FromCID)
-				DelB2G(k)
+				if bip.Height < common.LastTrustedBlockHeight {
+					println(" - still may be needed as we ar on", common.LastTrustedBlockHeight)
+				} else {
+					DelB2G(k)
+				}
 			}
 		}
 		if now == nil {
