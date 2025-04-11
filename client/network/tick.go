@@ -87,6 +87,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 					println(" - still may be needed as we ar on", common.LastTrustedBlockHeight)
 				} else {
 					DelB2G(k)
+					//common.BlockChain.DeleteBranch(bip.BlockTreeNode, delB2G_callback)
 				}
 			}
 		}
