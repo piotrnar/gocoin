@@ -268,6 +268,7 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 	if sig_len < 0 {
 		return
 	}
+	sig_len += 33
 
 	copy(b32[:8], nonce[:]) // the remaining bytes shall be zero'ed
 	m.SetBytes(b32[:])
