@@ -83,8 +83,8 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 			if sin := time.Since(bip.Started); sin > 30*time.Minute && bip.FailCount >= 50 {
 				println("Block", bip.Height, bip.BlockHash.String(), "\n  from", sin.String(),
 					"ago, failed", bip.FailCount, "times. from:", bip.From, bip.SendInvs, bip.FromCID)
-				if bip.Height < common.LastTrustedBlockHeight {
-					println(" - still may be needed as we ar on", common.LastTrustedBlockHeight)
+				if lbh := common.Last.BlockHeight(); bip.Height < lbh {
+					println(" - still may be needed as we are on", lbh)
 				} else {
 					DelB2G(k)
 					//common.BlockChain.DeleteBranch(bip.BlockTreeNode, delB2G_callback)
