@@ -708,6 +708,10 @@ func main() {
 				rec.In.Done()
 				rec.Out.Wait()
 
+			case <-usif.PushCache:
+				retryCachedBlocks = true
+				println("Pusing cache B")
+
 			case <-SaveBlockChain.C:
 				common.Busy()
 				common.CountSafe("SaveBlockChain")
