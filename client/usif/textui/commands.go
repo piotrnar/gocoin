@@ -454,16 +454,16 @@ func show_pending(par string) {
 
 func show_cached(par string) {
 	network.MutexRcv.Lock()
-	cnt := len(network.BlocksToGet)
+	cnt := len(network.CachedBlocksIdx)
 	var sofar int
-	fmt.Println("Number of blocks to get:", cnt)
+	fmt.Println("CachedBlocksIdx length::", cnt)
 	bh := network.CachedMinHeight
 	for sofar < cnt {
 		if cblks, ok := network.CachedBlocksIdx[bh]; ok && len(cblks) > 0 {
 			for _, cbl := range cblks {
-				sofar++
 				fmt.Println(sofar, bh, cbl.Block.Height, cbl.BlockHash.String(), time.Since(cbl.OneReceivedBlock.TmStart).String(), "ago")
 			}
+			sofar++
 		}
 		bh++
 	}
