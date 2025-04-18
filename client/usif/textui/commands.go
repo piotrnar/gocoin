@@ -471,8 +471,13 @@ func show_cached(par string) {
 }
 
 func push_cache(par string) {
-	println("Pusing cache A")
-	usif.PushCache <- struct{}{}
+	println("Pusing cache A", len(usif.PushCache), "...")
+	select {
+	case usif.PushCache <- struct{}{}:
+		println("ok..")
+	default:
+		println("ERROR: channel full")
+	}
 }
 
 func purge_utxo(par string) {
