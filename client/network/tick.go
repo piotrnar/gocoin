@@ -35,6 +35,23 @@ var (
 	GetMPInProgressConnID sys.SyncInt
 )
 
+func show_cached() {
+	cnt := len(CachedBlocksIdx)
+	var sofar int
+	fmt.Println("CachedBlocksIdx length::", cnt)
+	bh := CachedMinHeight
+	for sofar < cnt {
+		if cblks, ok := CachedBlocksIdx[bh]; ok && len(cblks) > 0 {
+			for _, cbl := range cblks {
+				fmt.Println(sofar, bh, cbl.Block.Height, cbl.BlockHash.String(), time.Since(cbl.OneReceivedBlock.TmStart).String(), "ago")
+				fmt.Println("   linking to:", btc.NewUint256(cbl.ParentHash()).String(), cbl.Parent)
+			}
+			sofar++
+		}
+		bh++
+	}
+}
+
 // call with unlocked c.Mutex
 func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt uint64) {
 	var disconnect string
@@ -87,6 +104,8 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 					println(" - still may be needed as we are on", lbh)
 				} else {
 					DelB2G(k)
+					println("delted. listing cached...")
+					show_cached()
 					//common.BlockChain.DeleteBranch(bip.BlockTreeNode, delB2G_callback)
 				}
 			}

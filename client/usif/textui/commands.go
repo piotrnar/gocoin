@@ -462,6 +462,7 @@ func show_cached(par string) {
 		if cblks, ok := network.CachedBlocksIdx[bh]; ok && len(cblks) > 0 {
 			for _, cbl := range cblks {
 				fmt.Println(sofar, bh, cbl.Block.Height, cbl.BlockHash.String(), time.Since(cbl.OneReceivedBlock.TmStart).String(), "ago")
+				fmt.Println("   linking to:", btc.NewUint256(cbl.ParentHash()).String(), cbl.Parent)
 			}
 			sofar++
 		}
