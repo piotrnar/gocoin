@@ -35,7 +35,7 @@ var (
 	GetMPInProgressConnID sys.SyncInt
 )
 
-func show_cached() {
+func Net_show_cached() {
 	cnt := len(CachedBlocksIdx)
 	var sofar int
 	fmt.Println("CachedBlocksIdx length::", cnt)
@@ -44,7 +44,7 @@ func show_cached() {
 		if cblks, ok := CachedBlocksIdx[bh]; ok && len(cblks) > 0 {
 			for _, cbl := range cblks {
 				fmt.Println(sofar, bh, cbl.Block.Height, cbl.BlockHash.String(), time.Since(cbl.OneReceivedBlock.TmStart).String(), "ago")
-				fmt.Println("   linking to:", btc.NewUint256(cbl.ParentHash()).String(), cbl.Parent)
+				fmt.Println("   linking to:", btc.NewUint256(cbl.ParentHash()).String(), cbl.Parent.BlockHash.String())
 			}
 			sofar++
 		}

@@ -454,20 +454,7 @@ func show_pending(par string) {
 
 func show_cached(par string) {
 	network.MutexRcv.Lock()
-	cnt := len(network.CachedBlocksIdx)
-	var sofar int
-	fmt.Println("CachedBlocksIdx length::", cnt)
-	bh := network.CachedMinHeight
-	for sofar < cnt {
-		if cblks, ok := network.CachedBlocksIdx[bh]; ok && len(cblks) > 0 {
-			for _, cbl := range cblks {
-				fmt.Println(sofar, bh, cbl.Block.Height, cbl.BlockHash.String(), time.Since(cbl.OneReceivedBlock.TmStart).String(), "ago")
-				fmt.Println("   linking to:", btc.NewUint256(cbl.ParentHash()).String(), cbl.Parent)
-			}
-			sofar++
-		}
-		bh++
-	}
+	network.Net_show_cached()
 	network.MutexRcv.Unlock()
 }
 
