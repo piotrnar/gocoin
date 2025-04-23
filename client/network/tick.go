@@ -105,7 +105,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 				} else {
 					DelB2G(k)
 					println("delted. listing cached...")
-					show_cached()
+					Net_show_cached()
 					//common.BlockChain.DeleteBranch(bip.BlockTreeNode, delB2G_callback)
 				}
 			}
