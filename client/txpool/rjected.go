@@ -344,6 +344,8 @@ func txAccepted(bidx btc.BIDX) {
 								println(" xraw:", hex.EncodeToString(txr.Tx.Raw))
 							}
 						}
+						println("checking mempool...")
+						MempoolCheck()
 						panic("this should not happen")
 					}
 				}
