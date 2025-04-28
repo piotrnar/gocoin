@@ -35,7 +35,8 @@ var (
 	GetMPInProgressConnID sys.SyncInt
 )
 
-func Net_show_cached() {
+func Net_show_cached(del2height int64) {
+	var block2del []*BlockRcvd
 	cnt := len(CachedBlocksIdx)
 	var sofar int
 	fmt.Println("CachedBlocksIdx length::", cnt)
@@ -44,11 +45,29 @@ func Net_show_cached() {
 		if cblks, ok := CachedBlocksIdx[bh]; ok && len(cblks) > 0 {
 			for _, cbl := range cblks {
 				fmt.Println(sofar, bh, cbl.Block.Height, cbl.BlockHash.String(), time.Since(cbl.OneReceivedBlock.TmStart).String(), "ago")
-				fmt.Println("   linking to:", btc.NewUint256(cbl.ParentHash()).String(), cbl.Parent.BlockHash.String())
+				_, parenttoget := BlocksToGet[cbl.Parent.BlockHash.BIdx()]
+				_, parentrcvd := ReceivedBlocks[cbl.Parent.BlockHash.BIdx()]
+				fmt.Println("   linking to:", btc.NewUint256(cbl.ParentHash()).String(), "   toget:", parenttoget, "   got:", parentrcvd)
+				if del2height > 0 && bh <= uint32(del2height) {
+					block2del = append(block2del, cbl)
+				}
 			}
 			sofar++
 		}
 		bh++
+	}
+	if len(block2del) > 0 {
+		fmt.Println("Deleting", len(block2del), "blocks")
+		for _, cbl := range block2del {
+			_, rcvd := ReceivedBlocks[cbl.BlockHash.BIdx()]
+			println(" -", cbl.Block.Height, cbl.BlockHash.String(), "   in_rcvd:", rcvd)
+			CachedBlocksDel(cbl)
+			if rcvd {
+				delete(ReceivedBlocks, cbl.BlockHash.BIdx())
+			} else {
+				fmt.Println(" *** Not received")
+			}
+		}
 	}
 }
 
@@ -105,7 +124,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 				} else {
 					DelB2G(k)
 					println("delted. listing cached...")
-					Net_show_cached()
+					Net_show_cached(-1)
 					//common.BlockChain.DeleteBranch(bip.BlockTreeNode, delB2G_callback)
 				}
 			}
