@@ -44,7 +44,26 @@ func Net_show_cached(del2height int64) {
 	for sofar < cnt {
 		if cblks, ok := CachedBlocksIdx[bh]; ok && len(cblks) > 0 {
 			for _, cbl := range cblks {
-				fmt.Println(sofar, bh, cbl.Block.Height, cbl.BlockHash.String(), time.Since(cbl.OneReceivedBlock.TmStart).String(), "ago")
+				fmt.Print(sofar, " ", bh, " ")
+				if cbl != nil {
+					if cbl.Block != nil {
+						fmt.Print(cbl.Block.Height, " ")
+					} else {
+						fmt.Print("nil.Block ")
+					}
+					if cbl.BlockHash != nil {
+						fmt.Print(cbl.BlockHash.String(), " ")
+					} else {
+						fmt.Print("nil.Hash ")
+					}
+					if cbl.OneReceivedBlock != nil {
+						fmt.Println(time.Since(cbl.OneReceivedBlock.TmStart).String(), "ago")
+					} else {
+						fmt.Println("nil.Rcvd")
+					}
+				} else {
+					fmt.Println("NIL")
+				}
 				_, parenttoget := BlocksToGet[cbl.Parent.BlockHash.BIdx()]
 				_, parentrcvd := ReceivedBlocks[cbl.Parent.BlockHash.BIdx()]
 				fmt.Println("   linking to:", btc.NewUint256(cbl.ParentHash()).String(), "   toget:", parenttoget, "   got:", parentrcvd)
