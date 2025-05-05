@@ -64,9 +64,10 @@ func Net_show_cached(del2height int64) {
 				} else {
 					fmt.Println("NIL")
 				}
-				_, parenttoget := BlocksToGet[cbl.Parent.BlockHash.BIdx()]
-				_, parentrcvd := ReceivedBlocks[cbl.Parent.BlockHash.BIdx()]
-				fmt.Println("   linking to:", btc.NewUint256(cbl.ParentHash()).String(), "   toget:", parenttoget, "   got:", parentrcvd)
+				parent_hash := cbl.Parent.BlockHash
+				_, parenttoget := BlocksToGet[parent_hash.BIdx()]
+				_, parentrcvd := ReceivedBlocks[parent_hash.BIdx()]
+				fmt.Println("   linking to:", parent_hash.String(), "   toget:", parenttoget, "   got:", parentrcvd)
 				if del2height > 0 && bh <= uint32(del2height) {
 					block2del = append(block2del, cbl)
 				}
