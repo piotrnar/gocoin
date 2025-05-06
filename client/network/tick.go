@@ -35,11 +35,14 @@ var (
 	GetMPInProgressConnID sys.SyncInt
 )
 
-func Net_show_cached(del2height int64) {
+func Net_show_cached(del2height int64, delparent *btc.Uint256) {
 	var block2del []*BlockRcvd
 	cnt := len(CachedBlocksIdx)
 	var sofar int
-	fmt.Println("CachedBlocksIdx length::", cnt)
+	fmt.Println("CachedBlocksIdx length::", cnt, del2height)
+	if delparent != nil {
+		fmt.Println("*Delete if parent is", delparent.String())
+	}
 	bh := CachedMinHeight
 	for sofar < cnt {
 		if cblks, ok := CachedBlocksIdx[bh]; ok && len(cblks) > 0 {
@@ -68,8 +71,16 @@ func Net_show_cached(del2height int64) {
 				_, parenttoget := BlocksToGet[parent_hash.BIdx()]
 				_, parentrcvd := ReceivedBlocks[parent_hash.BIdx()]
 				fmt.Println("   linking to:", parent_hash.String(), "   toget:", parenttoget, "   got:", parentrcvd)
+
+				if delparent != nil {
+					if delparent.Equal(parent_hash) {
+						block2del = append(block2del, cbl)
+						fmt.Println(" add A to block2del", len(block2del))
+					}
+				}
 				if del2height > 0 && bh <= uint32(del2height) {
 					block2del = append(block2del, cbl)
+					fmt.Println(" add B to block2del", len(block2del))
 				}
 			}
 			sofar++
@@ -143,8 +154,8 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 					println(" - still may be needed as we are on", lbh)
 				} else {
 					DelB2G(k)
-					println("delted. listing cached...")
-					Net_show_cached(-1)
+					println("deleted. listing cached with delete if parent...")
+					Net_show_cached(-1, bip.BlockHash)
 					//common.BlockChain.DeleteBranch(bip.BlockTreeNode, delB2G_callback)
 				}
 			}

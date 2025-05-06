@@ -455,10 +455,10 @@ func show_pending(par string) {
 func show_cached(par string) {
 	var del2height int64 = -1
 	network.MutexRcv.Lock()
-	if v, er := strconv.ParseInt(par, 10, 32); er != nil {
+	if v, er := strconv.ParseInt(par, 10, 32); er == nil {
 		del2height = v
 	}
-	network.Net_show_cached(del2height)
+	network.Net_show_cached(del2height, nil)
 	network.MutexRcv.Unlock()
 }
 
