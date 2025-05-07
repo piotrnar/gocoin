@@ -154,7 +154,9 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 					"ago, failed", bip.FailCount, "times. from:", bip.From, bip.SendInvs, bip.FromCID)
 				if lbh := common.Last.BlockHeight(); bip.Height >= lbh {
 					println(" - still may be needed as we are on", lbh)
+					common.CountSafe("BlockDlNeeded")
 				} else {
+					common.CountSafe("BlockDlFailed")
 					DelB2G(k)
 					println("deleted. listing cached with delete if parent...")
 					Net_show_cached(-1, bip.BlockHash)
