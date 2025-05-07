@@ -295,6 +295,7 @@ func txAccepted(bidx btc.BIDX) {
 			panic("This should not happen")
 		}
 
+		before := slices.Clone(wtg.Ids)
 		txrr := wtg.Ids[0]
 		txr = TransactionsRejected[wtg.Ids[0]] // always remove the first one ...
 
@@ -331,13 +332,21 @@ func txAccepted(bidx btc.BIDX) {
 			if res == TX_REJECTED_NO_TXOU || true {
 				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
 					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
-						println("w4txr removed and then put back with", res)
-						println("parent:", btc.BIdxString(bidx))
+						println("w4txr", btc.BIdxString(txrr), "removed and then put back with", res, "at idx", idx, "of len", wtg.Ids)
+						for ii, id := range wtg.Ids {
+							fmt.Print(" ", ii, ":", id)
+						}
+						print("\nbefore:")
+						for ii, id := range before {
+							fmt.Print(" ", ii, ":", id)
+						}
+						println("\nparent:", btc.BIdxString(bidx))
 						if t2s, ok := TransactionsToSend[bidx]; ok {
 							println(" id:", t2s.Hash.String())
 							println(" raw:", hex.EncodeToString(t2s.Tx.Raw))
+						} else {
+							println(" parent not in mempool - ok")
 						}
-						println("t2r:", btc.BIdxString(txrr))
 						if txr, ok := TransactionsRejected[txrr]; ok {
 							println(" xid:", txr.Id.String())
 							if txr.Tx != nil && txr.Tx.Raw != nil {
