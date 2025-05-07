@@ -41,7 +41,7 @@ func Net_show_cached(del2height int64, delparent *btc.Uint256) {
 	var sofar int
 	fmt.Println("CachedBlocksIdx length::", cnt, del2height)
 	if delparent != nil {
-		fmt.Println("*Delete if parent is", delparent.String())
+		fmt.Println("  delete if parent is", delparent.String())
 	}
 	bh := CachedMinHeight
 	for sofar < cnt {
@@ -76,11 +76,13 @@ func Net_show_cached(del2height int64, delparent *btc.Uint256) {
 					if delparent.Equal(parent_hash) {
 						block2del = append(block2del, cbl)
 						fmt.Println(" add A to block2del", len(block2del))
+						common.CountSafe("BlockCacheDelA")
 					}
 				}
 				if del2height > 0 && bh <= uint32(del2height) {
 					block2del = append(block2del, cbl)
 					fmt.Println(" add B to block2del", len(block2del))
+					common.CountSafe("BlockCacheDelB")
 				}
 			}
 			sofar++
