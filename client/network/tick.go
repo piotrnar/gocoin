@@ -35,14 +35,39 @@ var (
 	GetMPInProgressConnID sys.SyncInt
 )
 
-func Net_show_cached(del2height int64, delparent *btc.Uint256) {
+func BlockDeleteCachedChildren(parent *btc.Uint256, height uint32) {
+	var block2del []*BlockRcvd
+	fmt.Println("BlockDeleteCachedChildren", parent.String(), height)
+	if cblks, ok := CachedBlocksIdx[height]; ok && len(cblks) > 0 {
+		for _, cbl := range cblks {
+			if cbl.Parent.BlockHash.Equal(parent) {
+				block2del = append(block2del, cbl)
+				fmt.Println(" add", height, cbl.Parent.BlockHash.String(), "to block2del")
+				common.CountSafe("BlockCachedDel")
+			}
+		}
+		if len(block2del) > 0 {
+			fmt.Println("Deleting", len(block2del), "blocks")
+			for _, cbl := range block2del {
+				_, rcvd := ReceivedBlocks[cbl.BlockHash.BIdx()]
+				println(" -", cbl.Block.Height, cbl.BlockHash.String(), "   in_rcvd:", rcvd)
+				CachedBlocksDel(cbl)
+				if rcvd {
+					delete(ReceivedBlocks, cbl.BlockHash.BIdx())
+				} else {
+					fmt.Println(" *** Not received")
+				}
+				BlockDeleteCachedChildren(cbl.BlockHash, height+1)
+			}
+		}
+	}
+}
+
+func Net_show_cached(del2height int64) {
 	var block2del []*BlockRcvd
 	cnt := len(CachedBlocksIdx)
 	var sofar int
 	fmt.Println("CachedBlocksIdx length::", cnt, del2height)
-	if delparent != nil {
-		fmt.Println("  delete if parent is", delparent.String())
-	}
 	bh := CachedMinHeight
 	for sofar < cnt {
 		if cblks, ok := CachedBlocksIdx[bh]; ok && len(cblks) > 0 {
@@ -72,13 +97,6 @@ func Net_show_cached(del2height int64, delparent *btc.Uint256) {
 				_, parentrcvd := ReceivedBlocks[parent_hash.BIdx()]
 				fmt.Println("   linking to:", parent_hash.String(), "   toget:", parenttoget, "   got:", parentrcvd)
 
-				if delparent != nil {
-					if delparent.Equal(parent_hash) {
-						block2del = append(block2del, cbl)
-						fmt.Println(" add A to block2del", len(block2del))
-						common.CountSafe("BlockCacheDelA")
-					}
-				}
 				if del2height > 0 && bh <= uint32(del2height) {
 					block2del = append(block2del, cbl)
 					fmt.Println(" add B to block2del", len(block2del))
@@ -158,8 +176,9 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 				} else {
 					common.CountSafe("BlockDlFailed")
 					DelB2G(k)
-					println("deleted. listing cached with delete if parent...")
-					Net_show_cached(-1, bip.BlockHash)
+					println("deleted. purging cached parents...")
+					BlockDeleteCachedChildren(bip.BlockHash, bip.Height+1)
+					Net_show_cached(-1)
 					//common.BlockChain.DeleteBranch(bip.BlockTreeNode, delB2G_callback)
 				}
 			}

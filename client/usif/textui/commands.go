@@ -458,7 +458,7 @@ func show_cached(par string) {
 	if v, er := strconv.ParseInt(par, 10, 32); er == nil {
 		del2height = v
 	}
-	network.Net_show_cached(del2height, nil)
+	network.Net_show_cached(del2height)
 	network.MutexRcv.Unlock()
 }
 
