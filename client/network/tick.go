@@ -90,11 +90,14 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	MutexRcv.Unlock()
 
 	if disconnect != "" {
+		common.CountSafe(disconnect)
 		if c.X.IsSpecial {
-			common.CountSafe("Spec" + disconnect)
+			common.CountSafe(disconnect + "Spec")
 			c.cntInc(disconnect)
-		} else {
+		} else if !common.Get(&common.BlockChainSynchronized) {
 			c.Disconnect(true, disconnect)
+		} else {
+			common.CountSafe(disconnect + "Sync")
 		}
 	}
 }
