@@ -40,6 +40,7 @@ type OneBlockToGet struct {
 	*btc.Block
 	*chain.BlockTreeNode
 	InProgress uint
+	FailCount  uint32
 	SendInvs   bool
 }
 

@@ -79,6 +79,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		delete(c.GetBlockInProgress, k)
 		if bip, ok := BlocksToGet[k]; ok {
 			bip.InProgress--
+			bip.FailCount++
 		}
 		if now == nil {
 			disconnect = "BlockDlPongExp"
