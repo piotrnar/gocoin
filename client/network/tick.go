@@ -37,17 +37,15 @@ var (
 
 func BlockDeleteCachedChildren(parent *btc.Uint256, height uint32) {
 	var block2del []*BlockRcvd
-	fmt.Println("BlockDeleteCachedChildren", parent.String(), height)
 	if cblks, ok := CachedBlocksIdx[height]; ok && len(cblks) > 0 {
 		for _, cbl := range cblks {
 			if cbl.Parent.BlockHash.Equal(parent) {
 				block2del = append(block2del, cbl)
-				fmt.Println("****** add", height, cbl.Parent.BlockHash.String(), "to block2del ***")
 				common.CountSafe("BlockCachedDel")
 			}
 		}
 		if len(block2del) > 0 {
-			fmt.Println("============> Deleting", len(block2del), "blocks")
+			fmt.Println("============> Deleting", len(block2del), "of", len(cblks), "blocks at height", height)
 			for _, cbl := range block2del {
 				_, rcvd := ReceivedBlocks[cbl.BlockHash.BIdx()]
 				println(" -", cbl.Block.Height, cbl.BlockHash.String(), "   in_rcvd:", rcvd)
@@ -59,7 +57,11 @@ func BlockDeleteCachedChildren(parent *btc.Uint256, height uint32) {
 				}
 				BlockDeleteCachedChildren(cbl.BlockHash, height+1)
 			}
+		} else {
+			fmt.Println("none of ", len(cblks), "cached blocks at height", height, "links to it")
 		}
+	} else {
+		fmt.Println("no cached blocks at height", height)
 	}
 }
 
