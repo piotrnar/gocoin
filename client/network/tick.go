@@ -42,12 +42,12 @@ func BlockDeleteCachedChildren(parent *btc.Uint256, height uint32) {
 		for _, cbl := range cblks {
 			if cbl.Parent.BlockHash.Equal(parent) {
 				block2del = append(block2del, cbl)
-				fmt.Println(" add", height, cbl.Parent.BlockHash.String(), "to block2del")
+				fmt.Println("****** add", height, cbl.Parent.BlockHash.String(), "to block2del ***")
 				common.CountSafe("BlockCachedDel")
 			}
 		}
 		if len(block2del) > 0 {
-			fmt.Println("Deleting", len(block2del), "blocks")
+			fmt.Println("============> Deleting", len(block2del), "blocks")
 			for _, cbl := range block2del {
 				_, rcvd := ReceivedBlocks[cbl.BlockHash.BIdx()]
 				println(" -", cbl.Block.Height, cbl.BlockHash.String(), "   in_rcvd:", rcvd)
@@ -176,9 +176,10 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 				} else {
 					common.CountSafe("BlockDlFailed")
 					DelB2G(k)
-					println("deleted. purging cached parents...")
+					DiscardBlock(bip.BlockTreeNode)
+					println("--- discarded. Also delete cached children...")
 					BlockDeleteCachedChildren(bip.BlockHash, bip.Height+1)
-					Net_show_cached(-1)
+					//Net_show_cached(-1)
 					//common.BlockChain.DeleteBranch(bip.BlockTreeNode, delB2G_callback)
 				}
 			}
