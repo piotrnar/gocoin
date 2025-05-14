@@ -225,9 +225,37 @@ func get_block_from_disk_cache(hash *btc.Uint256) (bl *btc.Block) {
 }
 
 func retry_cached_blocks() bool {
+	var newbl *network.BlockRcvd
+	var lowest_cached_blocks []*network.BlockRcvd
+	var lowest_cached_block_idx int
+
 	common.CountSafe("RedoCachedBlks")
 
-	newbl := network.GetLowestCachedBlock()
+	cached_min_height := network.CachedMinHeight
+
+try_next_one:
+	network.CachedBlocksMutex.Lock()
+	if len(network.CachedBlocksIdx) > 0 {
+		if lowest_cached_blocks != nil {
+			if lowest_cached_block_idx > 0 {
+				lowest_cached_block_idx--
+			} else {
+				lowest_cached_blocks = nil
+				cached_min_height++
+				if cached_min_height > network.CachedMaxHeight {
+					goto not_found
+				}
+			}
+		}
+		if lowest_cached_blocks == nil {
+			lowest_cached_blocks = network.CachedBlocksIdx[cached_min_height]
+			lowest_cached_block_idx = len(lowest_cached_blocks) - 1 // start form the last one, which will make it quicker to delete it later
+		}
+		newbl = lowest_cached_blocks[lowest_cached_block_idx]
+	}
+not_found:
+	network.CachedBlocksMutex.Unlock()
+
 	if newbl == nil {
 		return false
 	}
@@ -246,7 +274,8 @@ func retry_cached_blocks() bool {
 	}
 
 	if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
-		return false
+		println("Cached", newbl.BlockTreeNode.Height, cached_min_height, newbl.BlockTreeNode.BlockHash.String(), "has no parent. Try next one.")
+		goto try_next_one
 	}
 
 	// found a suitable block

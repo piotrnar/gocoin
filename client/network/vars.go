@@ -60,6 +60,7 @@ var (
 	CachedBlocksMutex   sync.Mutex
 	CachedBlocksIdx     map[uint32][]*BlockRcvd = make(map[uint32][]*BlockRcvd, MAX_BLOCKS_FORWARD_CNT)
 	CachedMinHeight     uint32
+	CachedMaxHeight     uint32
 	CachedBlocksBytes   sys.SyncInt
 	MaxCachedBlocksSize sys.SyncInt
 	DiscardedBlocks     map[btc.BIDX]bool = make(map[btc.BIDX]bool)
@@ -107,6 +108,9 @@ func CachedBlocksAdd(newbl *BlockRcvd) {
 		if len(CachedBlocksIdx) == 0 || height < CachedMinHeight {
 			CachedMinHeight = height
 		}
+		if height > CachedMaxHeight {
+			CachedMaxHeight = height
+		}
 		CachedBlocksIdx[height] = []*BlockRcvd{newbl}
 	} else {
 		CachedBlocksIdx[height] = append(idxrec, newbl)
@@ -117,16 +121,6 @@ func CachedBlocksAdd(newbl *BlockRcvd) {
 		MaxCachedBlocksSize.Store(CachedBlocksBytes.Get())
 	}
 	CachedBlocksMutex.Unlock()
-}
-
-func GetLowestCachedBlock() (newbl *BlockRcvd) {
-	CachedBlocksMutex.Lock()
-	if len(CachedBlocksIdx) > 0 {
-		bls := CachedBlocksIdx[CachedMinHeight]
-		newbl = bls[len(bls)-1] // return the last one, which will make it quicker to delete it later
-	}
-	CachedBlocksMutex.Unlock()
-	return
 }
 
 func CachedBlocksDel(oldbl *BlockRcvd) {
