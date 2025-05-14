@@ -445,7 +445,7 @@ func show_pending(par string) {
 				b2g := network.BlocksToGet[bha]
 				fmt.Println(sofar, bh, b2g.Height, b2g.BlockHash.String(), time.Since(b2g.Started).String(), "ago")
 				fmt.Print("\tinprog: ", b2g.InProgress, "   failed: [")
-				for _, cid := range b2g.FailCount {
+				for _, cid := range b2g.Failed {
 					fmt.Print(" ", cid)
 				}
 				fmt.Print("]")

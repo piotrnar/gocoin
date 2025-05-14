@@ -403,7 +403,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			if idxlst, ok := IndexToBlocksToGet[bh]; ok {
 				for _, idx := range idxlst {
 					v := BlocksToGet[idx]
-					if slices.Contains(v.FailCount, c.ConnID) {
+					if slices.Contains(v.Failed, c.ConnID) {
 						// do not ask for blocks that already failed on this peer
 						common.CountSafe("BlockHoldGet")
 						c.cntInc("HoldBlockGet")

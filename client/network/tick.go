@@ -168,10 +168,10 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		delete(c.GetBlockInProgress, k)
 		if bip, ok := BlocksToGet[k]; ok {
 			bip.InProgress--
-			bip.FailCount = append(bip.FailCount, c.ConnID)
-			if sin := time.Since(bip.Started); sin > 30*time.Minute && len(bip.FailCount) >= 8 {
+			bip.Failed = append(bip.Failed, c.ConnID)
+			if sin := time.Since(bip.Started); sin > 30*time.Minute && len(bip.Failed) >= int(common.CFG.Net.MaxOutCons) {
 				println("Block", bip.Height, bip.BlockHash.String(), "\n  from", sin.String(),
-					"ago, failed", len(bip.FailCount), "times. from:", bip.From, bip.SendInvs, bip.FromCID)
+					"ago, failed", len(bip.Failed), "times. from:", bip.From, bip.SendInvs, bip.FromCID)
 				if lbh := common.Last.BlockHeight(); bip.Height >= lbh {
 					println(" - still may be needed as we are on", lbh)
 					common.CountSafe("BlockDlNeeded")
