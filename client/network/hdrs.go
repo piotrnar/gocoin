@@ -66,6 +66,9 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	node := common.BlockChain.AcceptHeader(bl)
 	b2g = &OneBlockToGet{Started: c.LastMsgTime, Block: bl, BlockTreeNode: node, InProgress: 0}
 	_, fil, lin, _ := runtime.Caller(1)
+	if len(fil) > 7 {
+		fil = fil[len(fil)-7:]
+	}
 	b2g.From = fmt.Sprint(fil, ":", lin)
 	b2g.FromCID = c.ConnID
 	//println(b2g.FromCID, b2g.Height, b2g.BlockHash.String(), b2g.From)

@@ -41,7 +41,7 @@ type OneBlockToGet struct {
 	*btc.Block
 	*chain.BlockTreeNode
 	InProgress uint32
-	FailCount  uint32
+	FailCount  map[uint32]uint32
 	FromCID    uint32
 	SendInvs   bool
 }

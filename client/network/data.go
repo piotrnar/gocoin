@@ -402,6 +402,12 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			if idxlst, ok := IndexToBlocksToGet[bh]; ok {
 				for _, idx := range idxlst {
 					v := BlocksToGet[idx]
+					if v.FailCount != nil && v.FailCount[c.ConnID] > 0 {
+						// do not ask for blocks that already failed on this peer
+						common.CountSafe("BlockHoldGet")
+						c.cntInc("HoldBlockGet")
+						continue
+					}
 					if uint32(v.InProgress) == cnt_in_progress {
 						c.Mutex.Lock()
 						_, ok := c.GetBlockInProgress[idx]
