@@ -40,8 +40,8 @@ type OneBlockToGet struct {
 	TmPreproc time.Time
 	*btc.Block
 	*chain.BlockTreeNode
+	FailCount  []uint32
 	InProgress uint32
-	FailCount  map[uint32]uint32
 	FromCID    uint32
 	SendInvs   bool
 }
