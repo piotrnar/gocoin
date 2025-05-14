@@ -235,6 +235,7 @@ func retry_cached_blocks() bool {
 
 try_next_one:
 	network.CachedBlocksMutex.Lock()
+	newbl = nil
 	if len(network.CachedBlocksIdx) > 0 {
 		if lowest_cached_blocks != nil {
 			if lowest_cached_block_idx > 0 {
