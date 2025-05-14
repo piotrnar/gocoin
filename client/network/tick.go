@@ -174,7 +174,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 			bip.FailCount[c.ConnID]++
 			if sin := time.Since(bip.Started); sin > 30*time.Minute && len(bip.FailCount) >= 8 {
 				println("Block", bip.Height, bip.BlockHash.String(), "\n  from", sin.String(),
-					"ago, failed", bip.FailCount, "times. from:", bip.From, bip.SendInvs, bip.FromCID)
+					"ago, failed", len(bip.FailCount), "times. from:", bip.From, bip.SendInvs, bip.FromCID)
 				if lbh := common.Last.BlockHeight(); bip.Height >= lbh {
 					println(" - still may be needed as we are on", lbh)
 					common.CountSafe("BlockDlNeeded")
