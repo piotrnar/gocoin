@@ -173,27 +173,24 @@ func txMined(tx *btc.Tx) {
 }
 
 // BlockMined removes all the block's tx from the mempool.
+var txdbg_xtra_info string
+
 func BlockMined(bl *btc.Block) {
 	if len(bl.Txs) < 2 {
 		return
 	}
 
 	TxMutex.Lock()
-	TxMutex.SetVar("cp1")
 	FeePackagesDirty = true
-	TxMutex.SetVar("cp2")
 	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
-		TxMutex.SetVar(fmt.Sprint("cp-", i, "/", len(bl.Txs), "-b"))
 		tx := bl.Txs[i]
 		txMined(tx)
-		TxMutex.SetVar(fmt.Sprint("cp-", i, "/", len(bl.Txs), "-e"))
 	}
-	TxMutex.SetVar("cp3")
 	// now check if any mempool txs are waiting for inputs which were just mined
-	for i, tx := range bl.Txs[1:] {
-		TxMutex.SetVar(fmt.Sprint("cr-", i, "/", len(bl.Txs), "-b"))
+	for ii, tx := range bl.Txs[1:] {
+		txdbg_xtra_info = fmt.Sprintf("Block %d %s tx:%d/%d %s", bl.Height, bl.Hash.String(), ii+1, len(bl.Txs), tx.Hash.String())
 		txAccepted(tx.Hash.BIdx())
-		TxMutex.SetVar(fmt.Sprint("cr-", i, "/", len(bl.Txs), "-e"))
+		txdbg_xtra_info = ""
 	}
 	TxMutex.Unlock()
 }

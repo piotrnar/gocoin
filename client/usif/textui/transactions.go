@@ -429,7 +429,7 @@ func save_mempool(par string) {
 }
 
 func check_txs(par string) {
-	fmt.Println("Locking TxMutex\n", txpool.TxMutex.Status())
+	fmt.Println("Locking TxMutex")
 	txpool.TxMutex.Lock()
 	fmt.Println("TxMutex Locked")
 	err := txpool.MempoolCheck()

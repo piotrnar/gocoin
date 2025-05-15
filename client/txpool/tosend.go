@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"os"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
-	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 var (
-	TxMutex sys.Dutex // TODO: cganhe to regular Mutex
+	TxMutex sync.Mutex
 
 	// The actual memory pool:
 	TransactionsToSend       map[btc.BIDX]*OneTxToSend
@@ -119,7 +119,7 @@ func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
 				}
 			}
 		}
-		}
+	}
 	do_one_parent(tx)
 	return
 }
