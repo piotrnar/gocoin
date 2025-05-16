@@ -36,6 +36,7 @@ var (
 
 	highestAcceptedBlock uint32
 	retryCachedBlocks    bool
+	syncDoneAnnounced    bool
 )
 
 const (
@@ -144,12 +145,15 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.BlockChain.BlockIndexAccess.Lock()
 		lch := network.LastCommitedHeader
 		common.BlockChain.BlockIndexAccess.Unlock()
-		if common.Last.ParseTill == nil && !common.BlockChainSynchronized &&
+		if !syncDoneAnnounced && common.Last.ParseTill == nil && !common.BlockChainSynchronized &&
 			((common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height) {
 			print_sync_stats()
 			if common.Last.Block.Height <= 200e3 {
 				// Cache underflow counter is not reliable at the beginning of chain sync, so reset it here
 				network.Fetch.CacheEmpty = 0
+			}
+			if common.Last.Block.Height == lch.Height {
+				syncDoneAnnounced = true
 			}
 		}
 		if *exitat != 0 && uint(common.Last.Block.Height) == *exitat {
