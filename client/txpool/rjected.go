@@ -271,7 +271,7 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 }
 
 func print_ids(lab string, ids []btc.BIDX) {
-	print("ids", lab, ":")
+	print("ids ", lab, ":")
 	for ii, id := range ids {
 		fmt.Print(" ", ii, ":", btc.BIdxString(id))
 	}
@@ -335,7 +335,7 @@ func txAccepted(bidx btc.BIDX) {
 			recs2do = append(recs2do, t2s.Hash.BIdx())
 			common.CountSafe("TxRetryAccepted")
 		} else {
-			if res == TX_REJECTED_NO_TXOU || true {
+			if res == TX_REJECTED_NO_TXOU {
 				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
 					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
 						println()
