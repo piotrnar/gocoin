@@ -6,6 +6,7 @@ import (
 
 	"slices"
 
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -161,6 +162,16 @@ func DiscardBlock(n *chain.BlockTreeNode) {
 		DiscardBlock(c)
 	}
 	DiscardedBlocks[n.BlockHash.BIdx()] = true
+	delete(ReceivedBlocks, n.BlockHash.BIdx())
+	if cl, ok := CachedBlocksIdx[n.Height]; ok {
+		for _, clb := range cl {
+			if clb.BlockTreeNode == n {
+				CachedBlocksDel(clb)
+				common.CountSafe("BlockDiscardCach")
+				break
+			}
+		}
+	}
 }
 
 func AddB2G(b2g *OneBlockToGet) {

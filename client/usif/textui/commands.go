@@ -458,12 +458,43 @@ func show_pending(par string) {
 }
 
 func show_cached(par string) {
-	var del2height int64 = -1
 	network.MutexRcv.Lock()
-	if v, er := strconv.ParseInt(par, 10, 32); er == nil {
-		del2height = v
+	cnt := len(network.CachedBlocksIdx)
+	var sofar int
+	fmt.Println("CachedBlocksIdx length::", cnt)
+	bh := network.CachedMinHeight
+	for sofar < cnt {
+		if cblks, ok := network.CachedBlocksIdx[bh]; ok && len(cblks) > 0 {
+			for _, cbl := range cblks {
+				fmt.Print(sofar, " ", bh, " ")
+				if cbl != nil {
+					if cbl.Block != nil {
+						fmt.Print(cbl.Block.Height, " ")
+					} else {
+						fmt.Print("nil.Block ")
+					}
+					if cbl.BlockHash != nil {
+						fmt.Print(cbl.BlockHash.String(), " ")
+					} else {
+						fmt.Print("nil.Hash ")
+					}
+					if cbl.OneReceivedBlock != nil {
+						fmt.Println(time.Since(cbl.OneReceivedBlock.TmStart).String(), "ago")
+					} else {
+						fmt.Println("nil.Rcvd")
+					}
+				} else {
+					fmt.Println("NIL")
+				}
+				parent_hash := cbl.Parent.BlockHash
+				_, parenttoget := network.BlocksToGet[parent_hash.BIdx()]
+				_, parentrcvd := network.ReceivedBlocks[parent_hash.BIdx()]
+				fmt.Println("   linking to:", parent_hash.String(), "   toget:", parenttoget, "   got:", parentrcvd)
+			}
+			sofar++
+		}
+		bh++
 	}
-	network.Net_show_cached(del2height)
 	network.MutexRcv.Unlock()
 }
 
