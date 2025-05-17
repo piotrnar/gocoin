@@ -446,7 +446,7 @@ func show_pending(par string) {
 				fmt.Println(sofar, bh, b2g.Height, b2g.BlockHash.String())
 				fmt.Printf("  Announced %s ago by %d from %s  inpr:%d  invs:%t\n", time.Since(b2g.Started).String(), b2g.FromCID, b2g.From, b2g.InProgress, b2g.SendInvs)
 				if len(b2g.Failed) > 0 {
-					fmt.Print("  Failed by", len(b2g.Failed), "peers:")
+					fmt.Print("  Failed by ", len(b2g.Failed), " peers:")
 					for _, fid := range b2g.Failed {
 						fmt.Print(" ", fid)
 					}
