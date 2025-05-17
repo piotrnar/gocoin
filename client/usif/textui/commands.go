@@ -443,13 +443,18 @@ func show_pending(par string) {
 			for _, bha := range b2gs {
 				sofar++
 				b2g := network.BlocksToGet[bha]
-				fmt.Println(sofar, bh, b2g.Height, b2g.BlockHash.String(), time.Since(b2g.Started).String(), "ago")
-				fmt.Print("\tinprog: ", b2g.InProgress, "   failed: [")
-				for _, cid := range b2g.Failed {
-					fmt.Print(" ", cid)
+				fmt.Println(sofar, bh, b2g.Height, b2g.BlockHash.String())
+				fmt.Printf("  Announced %s ago by %d from %s  inpr:%d  invs:%t\n", time.Since(b2g.Started).String(), b2g.FromCID, b2g.From, b2g.InProgress, b2g.SendInvs)
+				if len(b2g.Failed) > 0 {
+					fmt.Print("  Failed by", len(b2g.Failed), "peers:")
+					for _, fid := range b2g.Failed {
+						fmt.Print(" ", fid)
+					}
+					fmt.Println()
+				} else {
+					fmt.Println("  Not failed yet")
+
 				}
-				fmt.Print("]")
-				fmt.Println("  from:", b2g.From, "  sendinvs:", b2g.SendInvs)
 			}
 		}
 		bh++
@@ -461,7 +466,7 @@ func show_cached(par string) {
 	network.MutexRcv.Lock()
 	cnt := len(network.CachedBlocksIdx)
 	var sofar int
-	fmt.Println("CachedBlocksIdx length::", cnt)
+	fmt.Println("CachedBlocksIdx length:", cnt)
 	bh := network.CachedMinHeight
 	for sofar < cnt {
 		if cblks, ok := network.CachedBlocksIdx[bh]; ok && len(cblks) > 0 {

@@ -91,7 +91,8 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		if bip, ok := BlocksToGet[k]; ok {
 			bip.InProgress--
 			bip.Failed = append(bip.Failed, c.ConnID)
-			if sin := time.Since(bip.Started); sin > 30*time.Minute && len(bip.Failed) >= fail_limit() {
+			if sin := time.Since(bip.Started); sin > time.Hour && len(bip.Failed) >= fail_limit() {
+				// If we have not received block's data for over one hour and we asked multiple peers for it, we shall discard it
 				lbh := common.Last.BlockHeight()
 				println("Block", bip.Height, bip.BlockHash.String(), "/", lbh)
 				println("  anncd", sin.String(), "ago, by", bip.From, bip.SendInvs, bip.FromCID, " failed", len(bip.Failed), "times")
