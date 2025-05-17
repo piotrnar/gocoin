@@ -41,10 +41,10 @@ type OneBlockToGet struct {
 	TmPreproc time.Time
 	*btc.Block
 	*chain.BlockTreeNode
-	Failed     []uint32
-	InProgress uint32
-	FromCID    uint32
-	SendInvs   bool
+	OnlyFetchFrom []uint32
+	InProgress    uint32
+	FromCID       uint32
+	SendInvs      bool
 }
 
 var (

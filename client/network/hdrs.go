@@ -70,7 +70,6 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 		fil = fil[len(fil)-7:]
 	}
 	b2g.From = fmt.Sprint(fil, ":", lin)
-	b2g.FromCID = c.ConnID
 	//println(b2g.FromCID, b2g.Height, b2g.BlockHash.String(), b2g.From)
 
 	AddB2G(b2g)
@@ -148,6 +147,9 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 						b2g.SendInvs = true
 					}
 					new_headers_got++
+				}
+				if common.Get(&common.BlockChainSynchronized) {
+					b2g.OnlyFetchFrom = append(b2g.OnlyFetchFrom, c.ConnID)
 				}
 				if b2g.Block.Height > highest_block_found {
 					highest_block_found = b2g.Block.Height

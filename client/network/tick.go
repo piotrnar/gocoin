@@ -62,17 +62,6 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	}
 	c.Mutex.Unlock()
 
-	fail_limit := func() int {
-		res := int(common.Get(&common.CFG.Net.MaxOutCons))
-		if res < 8 {
-			return 8
-		}
-		if res > 30 {
-			return 30
-		}
-		return res
-	}
-
 	// never lock network.MutexRcv within (*OneConnection).Mutex as it can cause a deadlock
 	MutexRcv.Lock()
 	c.Mutex.Lock()
@@ -90,31 +79,15 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		delete(c.GetBlockInProgress, k)
 		if bip, ok := BlocksToGet[k]; ok {
 			bip.InProgress--
-			bip.Failed = append(bip.Failed, c.ConnID)
-			if sin := time.Since(bip.Started); sin > time.Hour && len(bip.Failed) >= fail_limit() {
-				// If we have not received block's data for over one hour and we asked multiple peers for it, we shall discard it
-				lbh := common.Last.BlockHeight()
-				println("Block", bip.Height, bip.BlockHash.String(), " while @", lbh)
-				println("  announced", sin.String(), "ago, by", bip.FromCID, "/", bip.From, bip.SendInvs, "failed", len(bip.Failed), "times")
-				print("  failed by:")
-				for _, cid := range bip.Failed {
-					print(" ", cid)
-				}
-				println()
-				if bip.Height >= lbh {
-					println(" - still may be needed as we are on", lbh)
-					common.CountSafe("BlockDlNeeded")
-				} else {
-					common.CountSafe("BlockDlFailed")
-					DelB2G(k)
-					DiscardBlock(bip.BlockTreeNode)
-				}
+			if now == nil {
+				disconnect = "BlockDlPongExp"
+			} else {
+				disconnect = "BlockDlTimeout"
 			}
-		}
-		if now == nil {
-			disconnect = "BlockDlPongExp"
-		} else {
-			disconnect = "BlockDlTimeout"
+			if len(bip.OnlyFetchFrom) > 0 {
+				lbh := common.Last.BlockHeight()
+				println(c.ConnID, disconnect, bip.Height, bip.BlockHash.String(), " while @", lbh)
+			}
 		}
 	}
 	c.Mutex.Unlock()
@@ -125,10 +98,8 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		if c.X.IsSpecial {
 			common.CountSafe(disconnect + "Spec")
 			c.cntInc(disconnect)
-		} else if !common.Get(&common.BlockChainSynchronized) {
-			c.Disconnect(true, disconnect)
 		} else {
-			common.CountSafe(disconnect + "Sync")
+			c.Disconnect(true, disconnect)
 		}
 	}
 }

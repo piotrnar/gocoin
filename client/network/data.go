@@ -403,10 +403,30 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			if idxlst, ok := IndexToBlocksToGet[bh]; ok {
 				for _, idx := range idxlst {
 					v := BlocksToGet[idx]
-					if slices.Contains(v.Failed, c.ConnID) {
-						// do not ask for blocks that already failed on this peer
-						common.CountSafe("BlockHoldGet")
-						c.cntInc("HoldBlockGet")
+					if len(v.OnlyFetchFrom) != 0 && !slices.Contains(v.OnlyFetchFrom, c.ConnID) {
+						var still_hope bool
+						Mutex_net.Lock()
+						for _, fid := range v.OnlyFetchFrom {
+							if _, ok := openConsByID[fid]; ok {
+								still_hope = true
+								break
+							}
+						}
+						if !still_hope {
+							lbh := common.Last.BlockHeight()
+							println("Lost hope for block", v.Height, v.BlockHash.String(), " while @", lbh)
+							println("  announced", time.Since(v.Started).String(), "ago, from", v.From, "  invs:", v.SendInvs)
+							print("  only from:")
+							for _, cid := range v.OnlyFetchFrom {
+								print(" ", cid)
+							}
+							println()
+							common.CountSafe("BlockDlFailed")
+							DelB2G(idx)
+							DiscardBlock(v.BlockTreeNode)
+							println("*** Disarded ***")
+						}
+						Mutex_net.Unlock()
 						continue
 					}
 					if uint32(v.InProgress) == cnt_in_progress {
