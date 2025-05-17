@@ -62,6 +62,17 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	}
 	c.Mutex.Unlock()
 
+	fail_limit := func() int {
+		res := int(common.Get(&common.CFG.Net.MaxOutCons))
+		if res < 8 {
+			return 8
+		}
+		if res > 30 {
+			return 30
+		}
+		return res
+	}
+
 	// never lock network.MutexRcv within (*OneConnection).Mutex as it can cause a deadlock
 	MutexRcv.Lock()
 	c.Mutex.Lock()
@@ -80,17 +91,21 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		if bip, ok := BlocksToGet[k]; ok {
 			bip.InProgress--
 			bip.Failed = append(bip.Failed, c.ConnID)
-			if sin := time.Since(bip.Started); sin > 30*time.Minute && len(bip.Failed) >= int(common.CFG.Net.MaxOutCons) {
-				println("Block", bip.Height, bip.BlockHash.String(), "\n  from", sin.String(),
-					"ago, failed", len(bip.Failed), "times. from:", bip.From, bip.SendInvs, bip.FromCID)
-				if lbh := common.Last.BlockHeight(); bip.Height >= lbh {
+			if sin := time.Since(bip.Started); sin > 30*time.Minute && len(bip.Failed) >= fail_limit() {
+				lbh := common.Last.BlockHeight()
+				println("Block", bip.Height, bip.BlockHash.String(), "/", lbh)
+				println("  anncd", sin.String(), "ago, by", bip.From, bip.SendInvs, bip.FromCID, " failed", len(bip.Failed), "times")
+				for _, cid := range bip.Failed {
+					print("  ", cid)
+				}
+				println()
+				if bip.Height >= lbh {
 					println(" - still may be needed as we are on", lbh)
 					common.CountSafe("BlockDlNeeded")
 				} else {
 					common.CountSafe("BlockDlFailed")
 					DelB2G(k)
 					DiscardBlock(bip.BlockTreeNode)
-					println("--- discarded. Also delete cached children...")
 				}
 			}
 		}
