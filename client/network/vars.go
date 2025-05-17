@@ -43,7 +43,6 @@ type OneBlockToGet struct {
 	*chain.BlockTreeNode
 	OnlyFetchFrom []uint32
 	InProgress    uint32
-	FromCID       uint32
 	SendInvs      bool
 }
 
