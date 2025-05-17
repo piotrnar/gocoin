@@ -412,6 +412,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 								break
 							}
 						}
+						Mutex_net.Unlock()
 						if !still_hope {
 							lbh := common.Last.BlockHeight()
 							println("Lost hope for block", v.Height, v.BlockHash.String(), " while @", lbh)
@@ -426,7 +427,6 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 							DiscardBlock(v.BlockTreeNode)
 							println("*** Disarded ***")
 						}
-						Mutex_net.Unlock()
 						continue
 					}
 					if uint32(v.InProgress) == cnt_in_progress {
