@@ -153,9 +153,6 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 					if !slices.Contains(b2g.OnlyFetchFrom, c.ConnID) {
 						b2g.OnlyFetchFrom = append(b2g.OnlyFetchFrom, c.ConnID)
 						println(c.ConnID, common.Last.BlockHeight(), "#", b2g.Height, b2g.BlockHash.String(), sta, "new hdrs", cnt)
-					} else {
-						println(c.ConnID, common.Last.BlockHeight(), "#", b2g.Height, b2g.BlockHash.String(), sta, "dup hdrs", cnt)
-
 					}
 				}
 				if b2g.Block.Height > highest_block_found {
