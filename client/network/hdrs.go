@@ -156,7 +156,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 						if common.FLAG.Log { // TODO: remove this after done testing
 							f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
 							if f != nil {
-								fmt.Fprintf(f, "%s: new block %d %s %d from %d at %d  hdrcnt:%d  offlen:%d\n", time.Now().Format("15:04:05"),
+								fmt.Fprintf(f, "%s: new block %d %s %d from %d at %d  hdrcnt:%d  offlen:%d\n", time.Now().Format("2006-01-02 15:04:05"),
 									b2g.Height, b2g.BlockHash.String(), sta, c.ConnID, common.Last.BlockHeight(), cnt, len(b2g.OnlyFetchFrom))
 								f.Close()
 							}
