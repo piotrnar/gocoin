@@ -100,6 +100,12 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	common.BlockChain.Blocks.BlockAdd(newbl.BlockTreeNode.Height, bl)
 	newbl.TmQueue = time.Now()
 
+	if newbl.DoInvs && bl.Bits() != common.BlockChain.Consensus.MaxPOWBits {
+		common.Busy()
+		network.NetRouteInv(network.MSG_BLOCK, bl.Hash, newbl.Conn)
+		newbl.DoInvs = false // to  not do it later, in this function
+	}
+
 	network.MutexRcv.Lock()
 	bl.LastKnownHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
@@ -154,13 +160,22 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		if *exitat != 0 && uint(common.Last.Block.Height) == *exitat {
 			exit_now()
 		}
+		new_top := common.Last.Block == newbl.BlockTreeNode
 		common.Last.Mutex.Unlock()
 
-		if newbl.DoInvs {
+		if newbl.DoInvs && new_top {
+			// we will end up here for new blosks with minimal POW (testnet)
+			// we want to hold invs for those with timestamps too much ahead
+			const SAFETY_MARGIN = 10 // seconds
 			common.Busy()
-			curr_time := time.Now().Unix()
-			if int64(bl.BlockTime())-curr_time > 7200-15 {
-				println("Hold invs for", bl.Height, bl.Hash.String(), "-", int64(bl.BlockTime())-curr_time, "seconds ahead")
+			seconds_ahead := int64(bl.BlockTime()) - time.Now().Unix()
+			if seconds_ahead > 7200-SAFETY_MARGIN {
+				go func(h *btc.Uint256, con *network.OneConnection) {
+					time.Sleep(time.Duration(seconds_ahead-(7200-SAFETY_MARGIN)) * time.Second)
+					network.NetRouteInv(network.MSG_BLOCK, h, con)
+					println("Invs for", bl.Height, bl.Hash.String(), "delayed by", time.Duration(seconds_ahead-(7200-15)), "seconds")
+					common.CountSafe("BlockInvHeld")
+				}(bl.Hash, newbl.Conn)
 			} else {
 				network.NetRouteInv(network.MSG_BLOCK, bl.Hash, newbl.Conn)
 			}
