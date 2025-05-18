@@ -160,7 +160,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			common.Busy()
 			curr_time := time.Now().Unix()
 			if int64(bl.BlockTime())-curr_time > 7200-15 {
-				println("Hold the invs for", bl.Height, "as its time is", int64(bl.BlockTime())-curr_time, "seconds ahead")
+				println("Hold invs for", bl.Height, bl.Hash.String(), "-", int64(bl.BlockTime())-curr_time, "seconds ahead")
 			} else {
 				network.NetRouteInv(network.MSG_BLOCK, bl.Hash, newbl.Conn)
 			}
