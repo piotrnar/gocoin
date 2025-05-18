@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"os"
 	"runtime"
 	"slices"
 	"time"
@@ -152,11 +153,13 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 				if common.Get(&common.BlockChainSynchronized) {
 					if !slices.Contains(b2g.OnlyFetchFrom, c.ConnID) {
 						b2g.OnlyFetchFrom = append(b2g.OnlyFetchFrom, c.ConnID)
-						print(time.Now().Format("15:04:05"), " ")
-						if len(b2g.OnlyFetchFrom) == 1 {
-							println("#", b2g.Height, b2g.BlockHash.String(), sta, "from", c.ConnID, "at", common.Last.BlockHeight(), "in hdrs", cnt)
-						} else {
-							println(" ", b2g.Height, b2g.BlockHash.String(), sta, "from", c.ConnID, "at", common.Last.BlockHeight(), "in hdrs", cnt)
+						if common.FLAG.Log { // TODO: remove this after done testing
+							f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+							if f != nil {
+								fmt.Fprintf(f, "%s: new block %d %s %d from %d at %d  hdrcnt:%d  offlen:%d\n", time.Now().Format("15:04:05"),
+									b2g.Height, b2g.BlockHash.String(), sta, c.ConnID, common.Last.BlockHeight(), cnt, len(b2g.OnlyFetchFrom))
+								f.Close()
+							}
 						}
 					}
 				}

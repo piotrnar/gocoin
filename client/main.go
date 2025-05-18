@@ -171,9 +171,10 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			seconds_ahead := int64(bl.BlockTime()) - time.Now().Unix()
 			if seconds_ahead > 7200-SAFETY_MARGIN {
 				go func(h *btc.Uint256, con *network.OneConnection) {
-					time.Sleep(time.Duration(seconds_ahead-(7200-SAFETY_MARGIN)) * time.Second)
+					delay_sec := seconds_ahead - (7200 - SAFETY_MARGIN)
+					time.Sleep(time.Duration(delay_sec) * time.Second)
 					network.NetRouteInv(network.MSG_BLOCK, h, con)
-					println("Invs for", bl.Height, bl.Hash.String(), "delayed by", time.Duration(seconds_ahead-(7200-15)), "seconds")
+					println("Invs for", bl.Height, bl.Hash.String(), "delayed by", delay_sec, "seconds")
 					common.CountSafe("BlockInvHeld")
 				}(bl.Hash, newbl.Conn)
 			} else {
