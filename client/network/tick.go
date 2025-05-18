@@ -754,7 +754,7 @@ func (c *OneConnection) Run() {
 			if common.FLAG.Log {
 				f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
 				if f != nil {
-					fmt.Fprintf(f, "%s: New connection. ID:%d  Incomming:%t  Addr:%s  Version:%d  Services:0x%x  Agent:%s\n",
+					fmt.Fprintf(f, "%s: New connection. ID:%d  In:%t  Addr:%s  Version:%d  Services:0x%x  Agent:%s\n",
 						time.Now().Format("2006-01-02 15:04:05"), c.ConnID, c.X.Incomming,
 						c.PeerAddr.Ip(), c.Node.Version, c.Node.Services, c.Node.Agent)
 					f.Close()
@@ -920,6 +920,24 @@ func (c *OneConnection) Run() {
 			c.DoS("SPV")
 
 		default:
+		}
+	}
+	if common.FLAG.Log {
+		f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+		if f != nil {
+			if c.X.VersionReceived {
+				if c.banit {
+					fmt.Fprintf(f, "%s: Disconnect and Ban ConnID:%d  Because:%s\n",
+						time.Now().Format("2006-01-02 15:04:05"), c.ConnID, c.ban_reason)
+				} else {
+					fmt.Fprintf(f, "%s: Disconnect ConnID:%d  Reason:%s\n",
+						time.Now().Format("2006-01-02 15:04:05"), c.ConnID, c.why_disconnected)
+				}
+			} else {
+				fmt.Fprintf(f, "%s: Failed to connect Id:%d  In:%t  Addr:%s  Error:%s\n",
+					time.Now().Format("2006-01-02 15:04:05"), c.ConnID, c.X.Incomming, c.PeerAddr.Ip(), c.why_disconnected)
+			}
+			f.Close()
 		}
 	}
 
