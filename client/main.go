@@ -166,7 +166,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		if newbl.DoInvs && new_top {
 			// we will end up here for new blosks with minimal POW (testnet)
 			// we want to hold invs for those with timestamps too much ahead
-			const SAFETY_MARGIN = 10 // seconds
+			const SAFETY_MARGIN = 5 // seconds
 			common.Busy()
 			seconds_ahead := int64(bl.BlockTime()) - time.Now().Unix()
 			if seconds_ahead > 7200-SAFETY_MARGIN {
