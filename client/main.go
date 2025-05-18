@@ -100,11 +100,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	common.BlockChain.Blocks.BlockAdd(newbl.BlockTreeNode.Height, bl)
 	newbl.TmQueue = time.Now()
 
-	if newbl.DoInvs {
-		common.Busy()
-		network.NetRouteInv(network.MSG_BLOCK, bl.Hash, newbl.Conn)
-	}
-
 	network.MutexRcv.Lock()
 	bl.LastKnownHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
@@ -160,6 +155,17 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			exit_now()
 		}
 		common.Last.Mutex.Unlock()
+
+		if newbl.DoInvs {
+			common.Busy()
+			curr_time := time.Now().Unix()
+			if int64(bl.BlockTime())-curr_time > 7200-15 {
+				println("Hold the invs for", bl.Height, "as its time is", int64(bl.BlockTime())-curr_time, "seconds ahead")
+			} else {
+				network.NetRouteInv(network.MSG_BLOCK, bl.Hash, newbl.Conn)
+			}
+		}
+
 	} else {
 		//fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 		new_end := common.BlockChain.LastBlock()

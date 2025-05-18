@@ -3,3 +3,4 @@ client
 ssl_cert/*.crt
 ssl_cert/*.key
 conn_log.txt
+drop_log.txt
