@@ -152,7 +152,12 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 				if common.Get(&common.BlockChainSynchronized) {
 					if !slices.Contains(b2g.OnlyFetchFrom, c.ConnID) {
 						b2g.OnlyFetchFrom = append(b2g.OnlyFetchFrom, c.ConnID)
-						println(c.ConnID, common.Last.BlockHeight(), "#", b2g.Height, b2g.BlockHash.String(), sta, "new hdrs", cnt)
+						print(time.Now().Format("15:04:05"), " ")
+						if len(b2g.OnlyFetchFrom) == 1 {
+							println("#", b2g.Height, b2g.BlockHash.String(), sta, "from", c.ConnID, "at", common.Last.BlockHeight(), "in hdrs", cnt)
+						} else {
+							println(" ", b2g.Height, b2g.BlockHash.String(), sta, "from", c.ConnID, "at", common.Last.BlockHeight(), "in hdrs", cnt)
+						}
 					}
 				}
 				if b2g.Block.Height > highest_block_found {

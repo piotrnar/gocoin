@@ -84,10 +84,11 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 			} else {
 				disconnect = "BlockDlTimeout"
 			}
-			if len(bip.OnlyFetchFrom) > 0 {
-				lbh := common.Last.BlockHeight()
-				println(c.ConnID, disconnect, bip.Height, bip.BlockHash.String(), " while @", lbh)
+			if true || len(bip.OnlyFetchFrom) > 0 {
+				println(time.Now().Format("15:04:05"), c.ConnID, disconnect, bip.Height, bip.BlockHash.String(), len(bip.OnlyFetchFrom), " while @", common.Last.BlockHeight())
 			}
+		} else {
+			println(time.Now().Format("15:04:05"), c.ConnID, "BIP", btc.BIdxString(k), "not found in BlocksToGet while @", common.Last.BlockHeight())
 		}
 	}
 	c.Mutex.Unlock()
@@ -754,7 +755,7 @@ func (c *OneConnection) Run() {
 			if common.FLAG.Log {
 				f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
 				if f != nil {
-					fmt.Fprintf(f, "%s: New connection. ID:%d  In:%t  Addr:%s  Version:%d  Services:0x%x  Agent:%s\n",
+					fmt.Fprintf(f, "%s: Connected ID:%d  In:%t  Addr:%s  Version:%d  Services:0x%x  Agent:%s\n",
 						time.Now().Format("2006-01-02 15:04:05"), c.ConnID, c.X.Incomming,
 						c.PeerAddr.Ip(), c.Node.Version, c.Node.Services, c.Node.Agent)
 					f.Close()

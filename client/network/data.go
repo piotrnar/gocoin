@@ -415,7 +415,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 						Mutex_net.Unlock()
 						if !still_hope {
 							lbh := common.Last.BlockHeight()
-							println("Lost hope for block", v.Height, v.BlockHash.String(), " while @", lbh)
+							println(time.Now().Format("15:04:05"), "Drop block", v.Height, v.BlockHash.String(), " while @", lbh)
 							println("  announced", time.Since(v.Started).String(), "ago, from", v.From, "  invs:", v.SendInvs)
 							print("  only from:")
 							for _, cid := range v.OnlyFetchFrom {
