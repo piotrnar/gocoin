@@ -1,6 +1,9 @@
 package network
 
 import (
+	"fmt"
+	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -184,6 +187,17 @@ func AddB2G(b2g *OneBlockToGet) {
 }
 
 func DelB2G(idx btc.BIDX) {
+	if common.FLAG.Log { // TODO: remove this after done testing
+		f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+		if f != nil {
+			_, fil, lin, _ := runtime.Caller(1)
+			if len(fil) > 7 {
+				fil = fil[len(fil)-7:]
+			}
+			fmt.Fprintf(f, "%s: DelB2G %s  from %s:%d\n", time.Now().Format("2006-01-02 15:04:05"), btc.BIdxString(idx), fil, lin)
+			f.Close()
+		}
+	}
 	b2g := BlocksToGet[idx]
 	if b2g == nil {
 		println("DelB2G - not found")

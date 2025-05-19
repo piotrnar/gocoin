@@ -91,6 +91,16 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 	b2g.Block.Trusted.Store(b2g.BlockTreeNode.Trusted.Get())
 
+	b2g.OnlyFetchFrom = append(b2g.OnlyFetchFrom, c.ConnID)
+	if common.FLAG.Log { // TODO: remove this after done testing
+		f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+		if f != nil {
+			fmt.Fprintf(f, "%s: new block %d %s from %d / %s at %d  bidx:%s\n", time.Now().Format("2006-01-02 15:04:05"),
+				b2g.Height, b2g.BlockHash.String(), c.ConnID, b2g.From, common.Last.BlockHeight(),
+				btc.BIdxString(b2g.BlockHash.BIdx()))
+			f.Close()
+		}
+	}
 	return PH_STATUS_NEW, b2g
 }
 
@@ -153,14 +163,6 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 				if common.Get(&common.BlockChainSynchronized) {
 					if !slices.Contains(b2g.OnlyFetchFrom, c.ConnID) {
 						b2g.OnlyFetchFrom = append(b2g.OnlyFetchFrom, c.ConnID)
-						if common.FLAG.Log { // TODO: remove this after done testing
-							f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
-							if f != nil {
-								fmt.Fprintf(f, "%s: new block %d %s %d from %d at %d  hdrcnt:%d  offlen:%d\n", time.Now().Format("2006-01-02 15:04:05"),
-									b2g.Height, b2g.BlockHash.String(), sta, c.ConnID, common.Last.BlockHeight(), cnt, len(b2g.OnlyFetchFrom))
-								f.Close()
-							}
-						}
 					}
 				}
 				if b2g.Block.Height > highest_block_found {

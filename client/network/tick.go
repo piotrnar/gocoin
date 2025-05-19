@@ -84,11 +84,21 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 			} else {
 				disconnect = "BlockDlTimeout"
 			}
-			if true || len(bip.OnlyFetchFrom) > 0 {
+			if len(bip.OnlyFetchFrom) > 0 {
 				println(time.Now().Format("15:04:05"), c.ConnID, disconnect, bip.Height, bip.BlockHash.String(), len(bip.OnlyFetchFrom), " while @", common.Last.BlockHeight())
 			}
 		} else {
 			println(time.Now().Format("15:04:05"), c.ConnID, "BIP", btc.BIdxString(k), "not found in BlocksToGet while @", common.Last.BlockHeight())
+			if rcvd, ok := ReceivedBlocks[k]; ok {
+				println(" but found in received - from:", rcvd.FromConID)
+			} else {
+				println(" also not received")
+			}
+			if _, ok := DiscardedBlocks[k]; ok {
+				println(" but found in discarded")
+			} else {
+				println(" also not discarded")
+			}
 		}
 	}
 	c.Mutex.Unlock()

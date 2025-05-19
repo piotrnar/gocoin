@@ -174,7 +174,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 					delay_sec := seconds_ahead - (7200 - SAFETY_MARGIN)
 					time.Sleep(time.Duration(delay_sec) * time.Second)
 					network.NetRouteInv(network.MSG_BLOCK, h, con)
-					println("Invs for", bl.Height, bl.Hash.String(), "delayed by", delay_sec, "seconds")
+					//println("Invs for", bl.Height, bl.Hash.String(), "delayed by", delay_sec, "seconds")
 					common.CountSafe("BlockInvHeld")
 				}(bl.Hash, newbl.Conn)
 			} else {
