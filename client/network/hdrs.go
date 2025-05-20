@@ -96,7 +96,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 		f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
 		if f != nil {
 			fmt.Fprintf(f, "%s: new block %d %s from %d / %s at %d  bidx:%s\n", time.Now().Format("2006-01-02 15:04:05"),
-				b2g.Height, b2g.BlockHash.String(), c.ConnID, b2g.From, common.Last.BlockHeight(),
+				b2g.Height, b2g.BlockHash.String(), c.ConnID, b2g.From, common.Last.Block.Height,
 				btc.BIdxString(b2g.BlockHash.BIdx()))
 			f.Close()
 		}

@@ -62,6 +62,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	}
 	c.Mutex.Unlock()
 
+	lbh := common.Last.BlockHeight()
 	// never lock network.MutexRcv within (*OneConnection).Mutex as it can cause a deadlock
 	MutexRcv.Lock()
 	c.Mutex.Lock()
@@ -85,10 +86,10 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 				disconnect = "BlockDlTimeout"
 			}
 			if len(bip.OnlyFetchFrom) > 0 {
-				println(time.Now().Format("15:04:05"), c.ConnID, disconnect, bip.Height, bip.BlockHash.String(), len(bip.OnlyFetchFrom), " while @", common.Last.BlockHeight())
+				println(time.Now().Format("15:04:05"), c.ConnID, disconnect, bip.Height, bip.BlockHash.String(), len(bip.OnlyFetchFrom), " while @", lbh)
 			}
 		} else {
-			println(time.Now().Format("15:04:05"), c.ConnID, "BIP", btc.BIdxString(k), "not found in BlocksToGet while @", common.Last.BlockHeight())
+			println(time.Now().Format("15:04:05"), c.ConnID, "BIP", btc.BIdxString(k), "not found in BlocksToGet while @", lbh)
 			if rcvd, ok := ReceivedBlocks[k]; ok {
 				println(" but found in received - from:", rcvd.FromConID)
 			} else {

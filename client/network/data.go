@@ -322,6 +322,7 @@ var Fetch struct {
 func (c *OneConnection) GetBlockData() (yes bool) {
 	//MAX_GETDATA_FORWARD
 	// Need to send getdata...?
+	last_block_height := common.Last.BlockHeight()
 	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
 
@@ -363,7 +364,6 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	// We can issue getdata for this peer
 	// Let's look for the lowest height block in BlocksToGet that isn't being downloaded yet
 
-	last_block_height := common.Last.BlockHeight()
 	max_height := last_block_height + uint32(common.SyncMaxCacheBytes.Get()/avg_block_size)
 
 	Fetc.HeightA = uint64(last_block_height)
@@ -414,8 +414,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 						}
 						Mutex_net.Unlock()
 						if !still_hope {
-							lbh := common.Last.BlockHeight()
-							println(time.Now().Format("15:04:05"), "Drop block", v.Height, v.BlockHash.String(), " while @", lbh)
+							println(time.Now().Format("15:04:05"), "Drop block", v.Height, v.BlockHash.String(), " while @", last_block_height)
 							println("  announced", time.Since(v.Started).String(), "ago, from", v.From, "  invs:", v.SendInvs)
 							print("  only from:")
 							for _, cid := range v.OnlyFetchFrom {
