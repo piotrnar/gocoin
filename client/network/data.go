@@ -322,9 +322,40 @@ var Fetch struct {
 func (c *OneConnection) GetBlockData() (yes bool) {
 	//MAX_GETDATA_FORWARD
 	// Need to send getdata...?
+	var check_for_death []*OneBlockToGet
+
 	last_block_height := common.Last.BlockHeight()
 	MutexRcv.Lock()
-	defer MutexRcv.Unlock()
+	defer func() {
+		MutexRcv.Unlock()
+
+		// we need to check for dead connections after unlocking MutexRcv
+		// as Mutex_net.Lock() with locked MutexRcv can cause a deadlock
+		for _, v := range check_for_death {
+			var still_hope bool
+			Mutex_net.Lock()
+			for _, fid := range v.OnlyFetchFrom {
+				if _, ok := openConsByID[fid]; ok {
+					still_hope = true
+					break
+				}
+			}
+			Mutex_net.Unlock()
+			if !still_hope {
+				println(time.Now().Format("15:04:05"), "Drop block", v.Height, v.BlockHash.String(), " while @", last_block_height)
+				println("  announced", time.Since(v.Started).String(), "ago, from", v.From, "  invs:", v.SendInvs)
+				print("  only from:")
+				for _, cid := range v.OnlyFetchFrom {
+					print(" ", cid)
+				}
+				println()
+				common.CountSafe("BlockDlFailed")
+				DelB2G(v.BlockHash.BIdx())
+				DiscardBlock(v.BlockTreeNode)
+				println("*** Disarded ***")
+			}
+		}
+	}()
 
 	if LowestIndexToBlocksToGet == 0 || len(BlocksToGet) == 0 {
 		Fetch.NoBlocksToGet++
@@ -404,28 +435,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 				for _, idx := range idxlst {
 					v := BlocksToGet[idx]
 					if len(v.OnlyFetchFrom) != 0 && !slices.Contains(v.OnlyFetchFrom, c.ConnID) {
-						var still_hope bool
-						Mutex_net.Lock()
-						for _, fid := range v.OnlyFetchFrom {
-							if _, ok := openConsByID[fid]; ok {
-								still_hope = true
-								break
-							}
-						}
-						Mutex_net.Unlock()
-						if !still_hope {
-							println(time.Now().Format("15:04:05"), "Drop block", v.Height, v.BlockHash.String(), " while @", last_block_height)
-							println("  announced", time.Since(v.Started).String(), "ago, from", v.From, "  invs:", v.SendInvs)
-							print("  only from:")
-							for _, cid := range v.OnlyFetchFrom {
-								print(" ", cid)
-							}
-							println()
-							common.CountSafe("BlockDlFailed")
-							DelB2G(idx)
-							DiscardBlock(v.BlockTreeNode)
-							println("*** Disarded ***")
-						}
+						check_for_death = append(check_for_death, v)
 						continue
 					}
 					if uint32(v.InProgress) == cnt_in_progress {
