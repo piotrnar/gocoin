@@ -91,7 +91,9 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 	b2g.Block.Trusted.Store(b2g.BlockTreeNode.Trusted.Get())
 
-	b2g.OnlyFetchFrom = append(b2g.OnlyFetchFrom, c.ConnID)
+	if common.Get(&common.BlockChainSynchronized) {
+		b2g.OnlyFetchFrom = []uint32{c.ConnID}
+	}
 	if common.FLAG.Log { // TODO: remove this after done testing
 		f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
 		if f != nil {
