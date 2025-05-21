@@ -52,6 +52,7 @@ type OneBlockToGet struct {
 var (
 	ReceivedBlocks           map[btc.BIDX]*OneReceivedBlock = make(map[btc.BIDX]*OneReceivedBlock, 400e3)
 	BlocksToGet              map[btc.BIDX]*OneBlockToGet    = make(map[btc.BIDX]*OneBlockToGet)
+	BlocksToGetFailed        map[btc.BIDX]struct{}          = make(map[btc.BIDX]struct{})
 	IndexToBlocksToGet       map[uint32][]btc.BIDX          = make(map[uint32][]btc.BIDX)
 	LowestIndexToBlocksToGet uint32
 	LastCommitedHeader       *chain.BlockTreeNode

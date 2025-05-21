@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -62,7 +63,6 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	}
 	c.Mutex.Unlock()
 
-	lbh := common.Last.BlockHeight()
 	// never lock network.MutexRcv within (*OneConnection).Mutex as it can cause a deadlock
 	MutexRcv.Lock()
 	c.Mutex.Lock()
@@ -78,28 +78,10 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		}
 		c.X.BlocksExpired++
 		delete(c.GetBlockInProgress, k)
-		if bip, ok := BlocksToGet[k]; ok {
-			bip.InProgress--
-			if now == nil {
-				disconnect = "BlockDlPongExp"
-			} else {
-				disconnect = "BlockDlTimeout"
-			}
-			if len(bip.OnlyFetchFrom) > 0 {
-				println(time.Now().Format("15:04:05"), c.ConnID, disconnect, bip.Height, bip.BlockHash.String(), len(bip.OnlyFetchFrom), " while @", lbh)
-			}
+		if now == nil {
+			disconnect = "BlockDlPongExp"
 		} else {
-			println(time.Now().Format("15:04:05"), c.ConnID, "BIP", btc.BIdxString(k), "not found in BlocksToGet while @", lbh)
-			if rcvd, ok := ReceivedBlocks[k]; ok {
-				println(" but found in received - from:", rcvd.FromConID)
-			} else {
-				println(" also not received")
-			}
-			if _, ok := DiscardedBlocks[k]; ok {
-				println(" but found in discarded")
-			} else {
-				println(" also not discarded")
-			}
+			disconnect = "BlockDlTimeout"
 		}
 	}
 	c.Mutex.Unlock()
@@ -532,8 +514,10 @@ func NetworkTick() {
 	var cnt_headers_in_progress int
 	var max_headers_got_cnt int
 	var _v *OneConnection
+	valid_conn_ids := make([]uint32, 0, len(OpenCons))
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
+		valid_conn_ids = append(valid_conn_ids, v.ConnID)
 		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress {
 			cnt_headers_in_progress++
 		} else if !v.X.LastHeadersEmpty {
@@ -546,6 +530,36 @@ func NetworkTick() {
 	}
 	conn_cnt := OutConsActive
 	Mutex_net.Unlock()
+
+	MutexRcv.Lock()
+	if len(BlocksToGetFailed) > 0 {
+		for idx := range BlocksToGetFailed {
+			if v, ok := BlocksToGet[idx]; ok {
+				var still_hope bool
+				for _, fid := range v.OnlyFetchFrom {
+					if slices.Contains(valid_conn_ids, fid) {
+						still_hope = true
+						break
+					}
+				}
+				if !still_hope {
+					println(time.Now().Format("15:04:05"), "Drop block", v.Height, v.BlockHash.String(), " while @", common.Last.BlockHeight())
+					println("  announced", time.Since(v.Started).String(), "ago, from", v.From, "  invs:", v.SendInvs)
+					print("  only from:")
+					for _, cid := range v.OnlyFetchFrom {
+						print(" ", cid)
+					}
+					println()
+					common.CountSafe("BlockDlFailed")
+					DelB2G(idx)
+					DiscardBlock(v.BlockTreeNode)
+					println("*** Disarded ***")
+				}
+			}
+		}
+		BlocksToGetFailed = make(map[btc.BIDX]struct{})
+	}
+	MutexRcv.Unlock()
 
 	if cnt_headers_in_progress == 0 {
 		if _v != nil {
