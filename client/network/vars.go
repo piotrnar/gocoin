@@ -55,7 +55,7 @@ var (
 	IndexToBlocksToGet       map[uint32][]btc.BIDX          = make(map[uint32][]btc.BIDX)
 	LowestIndexToBlocksToGet uint32
 	LastCommitedHeader       *chain.BlockTreeNode
-	MutexRcv                 sync.Mutex
+	MutexRcv                 sys.Dutex
 
 	NetBlocks chan *BlockRcvd     = make(chan *BlockRcvd, 512)
 	NetTxs    chan *txpool.TxRcvd = make(chan *txpool.TxRcvd, 2048)

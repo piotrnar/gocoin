@@ -58,7 +58,7 @@ const (
 )
 
 var (
-	Mutex_net                   sync.Mutex
+	Mutex_net                   sys.Dutex
 	OpenCons                    map[uint64]*OneConnection = make(map[uint64]*OneConnection)
 	openConsByID                map[uint32]*OneConnection = make(map[uint32]*OneConnection)
 	InConsActive, OutConsActive uint32
