@@ -303,7 +303,7 @@ not_found:
 	}
 
 	if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
-		println("Cached", newbl.BlockTreeNode.Height, cached_min_height, newbl.BlockTreeNode.BlockHash.String(), "has no parent. Try next one.")
+		//println("Cached", newbl.BlockTreeNode.Height, cached_min_height, newbl.BlockTreeNode.BlockHash.String(), "has no parent. Try next one.")
 		goto try_next_one
 	}
 
