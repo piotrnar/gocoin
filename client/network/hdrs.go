@@ -42,6 +42,9 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	if b2g, ok = BlocksToGet[bl.Hash.BIdx()]; ok {
 		common.CountSafe("HeaderFresh")
 		//fmt.Println(c.PeerAddr.Ip(), "block", bl.Hash.String(), " not new but get it")
+		if len(b2g.OnlyFetchFrom) > 0 {
+			b2g.OnlyFetchFrom = append(b2g.OnlyFetchFrom, c.ConnID)
+		}
 		return PH_STATUS_FRESH, b2g
 	}
 
@@ -80,6 +83,9 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 	b2g.Block.Trusted.Store(b2g.BlockTreeNode.Trusted.Get())
 
+	if common.Get(&common.BlockChainSynchronized) {
+		b2g.OnlyFetchFrom = []uint32{c.ConnID}
+	}
 	return PH_STATUS_NEW, b2g
 }
 

@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -77,10 +78,6 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		}
 		c.X.BlocksExpired++
 		delete(c.GetBlockInProgress, k)
-		if bip, ok := BlocksToGet[k]; ok {
-			bip.InProgress--
-			bip.FailCount++
-		}
 		if now == nil {
 			disconnect = "BlockDlPongExp"
 		} else {
@@ -95,10 +92,8 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		if c.X.IsSpecial {
 			common.CountSafe(disconnect + "Spec")
 			c.cntInc(disconnect)
-		} else if !common.Get(&common.BlockChainSynchronized) {
-			c.Disconnect(true, disconnect)
 		} else {
-			common.CountSafe(disconnect + "Sync")
+			c.Disconnect(true, disconnect)
 		}
 	}
 }
@@ -519,8 +514,10 @@ func NetworkTick() {
 	var cnt_headers_in_progress int
 	var max_headers_got_cnt int
 	var _v *OneConnection
+	valid_conn_ids := make([]uint32, 0, len(OpenCons))
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
+		valid_conn_ids = append(valid_conn_ids, v.ConnID)
 		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress {
 			cnt_headers_in_progress++
 		} else if !v.X.LastHeadersEmpty {
@@ -533,6 +530,36 @@ func NetworkTick() {
 	}
 	conn_cnt := OutConsActive
 	Mutex_net.Unlock()
+
+	MutexRcv.Lock()
+	if len(BlocksToGetFailed) > 0 {
+		for idx := range BlocksToGetFailed {
+			if v, ok := BlocksToGet[idx]; ok {
+				var still_hope bool
+				for _, fid := range v.OnlyFetchFrom {
+					if slices.Contains(valid_conn_ids, fid) {
+						still_hope = true
+						break
+					}
+				}
+				if !still_hope {
+					println(time.Now().Format("15:04:05"), "Drop block", v.Height, v.BlockHash.String(), " while @", common.Last.BlockHeight())
+					println("  announced", time.Since(v.Started).String(), "ago, with SendInvs:", v.SendInvs)
+					print("  only from:")
+					for _, cid := range v.OnlyFetchFrom {
+						print(" ", cid)
+					}
+					println()
+					common.CountSafe("BlockDlFailed")
+					DelB2G(idx)
+					DiscardBlock(v.BlockTreeNode)
+					println("*** Disarded ***")
+				}
+			}
+		}
+		BlocksToGetFailed = make(map[btc.BIDX]struct{})
+	}
+	MutexRcv.Unlock()
 
 	if cnt_headers_in_progress == 0 {
 		if _v != nil {
@@ -753,7 +780,7 @@ func (c *OneConnection) Run() {
 			if common.FLAG.Log {
 				f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
 				if f != nil {
-					fmt.Fprintf(f, "%s: New connection. ID:%d  Incomming:%t  Addr:%s  Version:%d  Services:0x%x  Agent:%s\n",
+					fmt.Fprintf(f, "%s: Connected ID:%d  In:%t  Addr:%s  Version:%d  Services:0x%x  Agent:%s\n",
 						time.Now().Format("2006-01-02 15:04:05"), c.ConnID, c.X.Incomming,
 						c.PeerAddr.Ip(), c.Node.Version, c.Node.Services, c.Node.Agent)
 					f.Close()

@@ -6,6 +6,7 @@ import (
 
 	"slices"
 
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -39,14 +40,15 @@ type OneBlockToGet struct {
 	TmPreproc time.Time
 	*btc.Block
 	*chain.BlockTreeNode
-	InProgress uint
-	FailCount  uint32
+	OnlyFetchFrom []uint32
+	InProgress uint32
 	SendInvs   bool
 }
 
 var (
 	ReceivedBlocks           map[btc.BIDX]*OneReceivedBlock = make(map[btc.BIDX]*OneReceivedBlock, 400e3)
 	BlocksToGet              map[btc.BIDX]*OneBlockToGet    = make(map[btc.BIDX]*OneBlockToGet)
+	BlocksToGetFailed        map[btc.BIDX]struct{}          = make(map[btc.BIDX]struct{})
 	IndexToBlocksToGet       map[uint32][]btc.BIDX          = make(map[uint32][]btc.BIDX)
 	LowestIndexToBlocksToGet uint32
 	LastCommitedHeader       *chain.BlockTreeNode
@@ -58,6 +60,7 @@ var (
 	CachedBlocksMutex   sync.Mutex
 	CachedBlocksIdx     map[uint32][]*BlockRcvd = make(map[uint32][]*BlockRcvd, MAX_BLOCKS_FORWARD_CNT)
 	CachedMinHeight     uint32
+	CachedMaxHeight     uint32
 	CachedBlocksBytes   sys.SyncInt
 	MaxCachedBlocksSize sys.SyncInt
 	DiscardedBlocks     map[btc.BIDX]bool = make(map[btc.BIDX]bool)
@@ -105,6 +108,9 @@ func CachedBlocksAdd(newbl *BlockRcvd) {
 		if len(CachedBlocksIdx) == 0 || height < CachedMinHeight {
 			CachedMinHeight = height
 		}
+		if height > CachedMaxHeight {
+			CachedMaxHeight = height
+		}
 		CachedBlocksIdx[height] = []*BlockRcvd{newbl}
 	} else {
 		CachedBlocksIdx[height] = append(idxrec, newbl)
@@ -115,16 +121,6 @@ func CachedBlocksAdd(newbl *BlockRcvd) {
 		MaxCachedBlocksSize.Store(CachedBlocksBytes.Get())
 	}
 	CachedBlocksMutex.Unlock()
-}
-
-func GetLowestCachedBlock() (newbl *BlockRcvd) {
-	CachedBlocksMutex.Lock()
-	if len(CachedBlocksIdx) > 0 {
-		bls := CachedBlocksIdx[CachedMinHeight]
-		newbl = bls[len(bls)-1] // return the last one, which will make it quicker to delete it later
-	}
-	CachedBlocksMutex.Unlock()
-	return
 }
 
 func CachedBlocksDel(oldbl *BlockRcvd) {
@@ -165,6 +161,16 @@ func DiscardBlock(n *chain.BlockTreeNode) {
 		DiscardBlock(c)
 	}
 	DiscardedBlocks[n.BlockHash.BIdx()] = true
+	delete(ReceivedBlocks, n.BlockHash.BIdx())
+	if cl, ok := CachedBlocksIdx[n.Height]; ok {
+		for _, clb := range cl {
+			if clb.BlockTreeNode == n {
+				CachedBlocksDel(clb)
+				common.CountSafe("BlockDiscardCach")
+				break
+			}
+		}
+	}
 }
 
 func AddB2G(b2g *OneBlockToGet) {

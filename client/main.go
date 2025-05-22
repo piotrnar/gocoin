@@ -36,6 +36,7 @@ var (
 
 	highestAcceptedBlock uint32
 	retryCachedBlocks    bool
+	syncDoneAnnounced    bool
 )
 
 const (
@@ -99,11 +100,13 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	common.BlockChain.Blocks.BlockAdd(newbl.BlockTreeNode.Height, bl)
 	newbl.TmQueue = time.Now()
 
-	if newbl.DoInvs {
+	if newbl.DoInvs && bl.Bits() != common.BlockChain.Consensus.MaxPOWBits {
 		common.Busy()
 		network.NetRouteInv(network.MSG_BLOCK, bl.Hash, newbl.Conn)
+		newbl.DoInvs = false // to  not do it later, in this function
 	}
 
+	common.Busy()
 	network.MutexRcv.Lock()
 	bl.LastKnownHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
@@ -124,6 +127,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 
 		common.RecalcAverageBlockSize()
 
+		common.Busy()
 		common.Last.Mutex.Lock()
 		common.Last.Time = time.Now()
 		common.Last.Block = common.BlockChain.LastBlock()
@@ -144,18 +148,42 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.BlockChain.BlockIndexAccess.Lock()
 		lch := network.LastCommitedHeader
 		common.BlockChain.BlockIndexAccess.Unlock()
-		if common.Last.ParseTill == nil && !common.BlockChainSynchronized &&
+		if !syncDoneAnnounced && common.Last.ParseTill == nil && !common.BlockChainSynchronized &&
 			((common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height) {
 			print_sync_stats()
 			if common.Last.Block.Height <= 200e3 {
 				// Cache underflow counter is not reliable at the beginning of chain sync, so reset it here
 				network.Fetch.CacheEmpty = 0
 			}
+			if common.Last.Block.Height == lch.Height {
+				syncDoneAnnounced = true
+			}
 		}
 		if *exitat != 0 && uint(common.Last.Block.Height) == *exitat {
 			exit_now()
 		}
+		new_top := common.Last.Block == newbl.BlockTreeNode
 		common.Last.Mutex.Unlock()
+
+		if newbl.DoInvs && new_top {
+			// we will end up here for new blosks with minimal POW (testnet)
+			// we want to hold invs for those with timestamps too much ahead
+			const SAFETY_MARGIN = 5 // seconds
+			common.Busy()
+			seconds_ahead := int64(bl.BlockTime()) - time.Now().Unix()
+			if seconds_ahead > 7200-SAFETY_MARGIN {
+				go func(h *btc.Uint256, con *network.OneConnection) {
+					delay_sec := seconds_ahead - (7200 - SAFETY_MARGIN)
+					time.Sleep(time.Duration(delay_sec) * time.Second)
+					network.NetRouteInv(network.MSG_BLOCK, h, con)
+					//println("Invs for", bl.Height, bl.Hash.String(), "delayed by", delay_sec, "seconds")
+					common.CountSafe("BlockInvHeld")
+				}(bl.Hash, newbl.Conn)
+			} else {
+				network.NetRouteInv(network.MSG_BLOCK, bl.Hash, newbl.Conn)
+			}
+		}
+
 	} else {
 		//fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 		new_end := common.BlockChain.LastBlock()
@@ -225,9 +253,38 @@ func get_block_from_disk_cache(hash *btc.Uint256) (bl *btc.Block) {
 }
 
 func retry_cached_blocks() bool {
+	var newbl *network.BlockRcvd
+	var lowest_cached_blocks []*network.BlockRcvd
+	var lowest_cached_block_idx int
+
 	common.CountSafe("RedoCachedBlks")
 
-	newbl := network.GetLowestCachedBlock()
+	cached_min_height := network.CachedMinHeight
+
+try_next_one:
+	network.CachedBlocksMutex.Lock()
+	newbl = nil
+	if len(network.CachedBlocksIdx) > 0 {
+		if lowest_cached_blocks != nil {
+			if lowest_cached_block_idx > 0 {
+				lowest_cached_block_idx--
+			} else {
+				lowest_cached_blocks = nil
+				cached_min_height++
+				if cached_min_height > network.CachedMaxHeight {
+					goto not_found
+				}
+			}
+		}
+		if lowest_cached_blocks == nil {
+			lowest_cached_blocks = network.CachedBlocksIdx[cached_min_height]
+			lowest_cached_block_idx = len(lowest_cached_blocks) - 1 // start form the last one, which will make it quicker to delete it later
+		}
+		newbl = lowest_cached_blocks[lowest_cached_block_idx]
+	}
+not_found:
+	network.CachedBlocksMutex.Unlock()
+
 	if newbl == nil {
 		return false
 	}
@@ -246,7 +303,8 @@ func retry_cached_blocks() bool {
 	}
 
 	if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
-		return false
+		//println("Cached", newbl.BlockTreeNode.Height, cached_min_height, newbl.BlockTreeNode.BlockHash.String(), "has no parent. Try next one.")
+		goto try_next_one
 	}
 
 	// found a suitable block

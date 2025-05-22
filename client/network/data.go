@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -402,6 +403,10 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			if idxlst, ok := IndexToBlocksToGet[bh]; ok {
 				for _, idx := range idxlst {
 					v := BlocksToGet[idx]
+					if len(v.OnlyFetchFrom) != 0 && !slices.Contains(v.OnlyFetchFrom, c.ConnID) {
+						BlocksToGetFailed[idx] = struct{}{}
+						continue
+					}
 					if uint32(v.InProgress) == cnt_in_progress {
 						c.Mutex.Lock()
 						_, ok := c.GetBlockInProgress[idx]
