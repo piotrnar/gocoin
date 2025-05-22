@@ -288,6 +288,7 @@ func txAccepted(bidx btc.BIDX) {
 
 	recs2do := []btc.BIDX{bidx}
 	for {
+		// TODO: Remove all the debugs from this function when done investigating
 		if xxx > 500e3 {
 			println("txAccepted stuck in the loop", delidx, len(recs2do), btc.BIdxString(bidx))
 			xxx = 0
