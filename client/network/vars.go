@@ -114,7 +114,7 @@ func CachedBlocksAdd(newbl *BlockRcvd) {
 		CachedBlocksIdx[height] = []*BlockRcvd{newbl}
 	} else {
 		CachedBlocksIdx[height] = append(idxrec, newbl)
-		println(len(idxrec)+1, "blocks at height", height)
+		//println(len(idxrec)+1, "blocks at height", height)
 	}
 	CachedBlocksBytes.Add(newbl.Size)
 	if CachedBlocksBytes.Get() > MaxCachedBlocksSize.Get() {
