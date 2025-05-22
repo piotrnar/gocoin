@@ -443,9 +443,60 @@ func show_pending(par string) {
 			for _, bha := range b2gs {
 				sofar++
 				b2g := network.BlocksToGet[bha]
-				fmt.Println(sofar, bh, b2g.Height, b2g.BlockHash.String(), time.Since(b2g.Started).String(), "ago")
-				fmt.Println("\tinprog:", b2g.InProgress, "   failed:", b2g.FailCount, "  sendinvs:", b2g.SendInvs)
+				fmt.Println(sofar, bh, b2g.Height, b2g.BlockHash.String())
+				fmt.Printf("  Announced %s,  inpr:%d  invs:%t\n", time.Since(b2g.Started).String(), b2g.InProgress, b2g.SendInvs)
+				if len(b2g.OnlyFetchFrom) > 0 {
+					fmt.Print("  Only fetch from ", len(b2g.OnlyFetchFrom), " peers:")
+					for _, fid := range b2g.OnlyFetchFrom {
+						fmt.Print(" ", fid)
+					}
+					fmt.Println()
+				} else {
+					fmt.Println("  Fetch from anywhere")
+
+				}
 			}
+		}
+		bh++
+	}
+	network.MutexRcv.Unlock()
+}
+
+func show_cached(par string) {
+	network.MutexRcv.Lock()
+	cnt := len(network.CachedBlocksIdx)
+	var sofar int
+	fmt.Println("CachedBlocksIdx length:", cnt)
+	bh := network.CachedMinHeight
+	for sofar < cnt {
+		if cblks, ok := network.CachedBlocksIdx[bh]; ok && len(cblks) > 0 {
+			for _, cbl := range cblks {
+				fmt.Print(sofar, " ", bh, " ")
+				if cbl != nil {
+					if cbl.Block != nil {
+						fmt.Print(cbl.Block.Height, " ")
+					} else {
+						fmt.Print("nil.Block ")
+					}
+					if cbl.BlockHash != nil {
+						fmt.Print(cbl.BlockHash.String(), " ")
+					} else {
+						fmt.Print("nil.Hash ")
+					}
+					if cbl.OneReceivedBlock != nil {
+						fmt.Println(time.Since(cbl.OneReceivedBlock.TmStart).String(), "ago")
+					} else {
+						fmt.Println("nil.Rcvd")
+					}
+				} else {
+					fmt.Println("NIL")
+				}
+				parent_hash := cbl.Parent.BlockHash
+				_, parenttoget := network.BlocksToGet[parent_hash.BIdx()]
+				_, parentrcvd := network.ReceivedBlocks[parent_hash.BIdx()]
+				fmt.Println("   linking to:", parent_hash.String(), "   toget:", parenttoget, "   got:", parentrcvd)
+			}
+			sofar++
 		}
 		bh++
 	}
@@ -549,6 +600,7 @@ func init() {
 	newUi("kill", false, kill_node, "Kill the node. WARNING: not safe - use 'quit' instead")
 	newUi("mem", false, show_mem, "Show memory stats and... [bs|free|gc|<new_gc_perc>|<new_limit>MB]")
 	newUi("pend bp", true, show_pending, "Show pending blocks")
+	newUi("cach bc", true, show_cached, "Show cached blocks [del2height]")
 	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")
 	newUi("quit q", false, ui_quit, "Quit the node: [restart]")
 	newUi("redo", true, redo_block, "Redo one block")
