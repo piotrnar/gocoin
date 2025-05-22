@@ -93,13 +93,10 @@ func exit_now() {
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
 	if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted.Get() {
-		common.Busy()
 		bl.Trusted.Set()
 	}
 
-	common.Busy()
 	common.BlockChain.Unspent.AbortWriting() // abort saving of UTXO.db
-	common.Busy()
 	common.BlockChain.Blocks.BlockAdd(newbl.BlockTreeNode.Height, bl)
 	newbl.TmQueue = time.Now()
 
@@ -114,16 +111,13 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl.LastKnownHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
 
-	common.Busy()
 	txpool.BlockCommitInProgress(true)
-	common.Busy()
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	txpool.BlockCommitInProgress(false)
 	if bl.LastKnownHeight-bl.Height > common.Get(&common.CFG.Memory.MaxCachedBlks) {
 		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused
 	}
 
-	common.Busy()
 	if e == nil {
 		if bl.Height > highestAcceptedBlock {
 			highestAcceptedBlock = bl.Height
@@ -771,10 +765,6 @@ func main() {
 				common.CountSafe("MainLocks")
 				rec.In.Done()
 				rec.Out.Wait()
-
-			case <-usif.PushCache:
-				retryCachedBlocks = true
-				println("Pusing cache B")
 
 			case <-SaveBlockChain.C:
 				common.Busy()

@@ -125,6 +125,7 @@ func show_info(par string) {
 	fmt.Println("Mutex_net ", network.Mutex_net.Status())
 	fmt.Println("MutexRcv ", network.MutexRcv.Status())
 	fmt.Println("main.go last seen in line:", common.BusyIn())
+
 	network.MutexRcv.Lock()
 	discarded := len(network.DiscardedBlocks)
 	cached := network.CachedBlocksLen()
@@ -504,16 +505,6 @@ func show_cached(par string) {
 	network.MutexRcv.Unlock()
 }
 
-func push_cache(par string) {
-	println("Pusing cache A", len(usif.PushCache), "...")
-	select {
-	case usif.PushCache <- struct{}{}:
-		println("ok..")
-	default:
-		println("ERROR: channel full")
-	}
-}
-
 func purge_utxo(par string) {
 	common.BlockChain.Unspent.PurgeUnspendable(true)
 	if !common.CFG.Memory.PurgeUnspendableUTXO {
@@ -615,7 +606,6 @@ func init() {
 	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")
 	newUi("quit q", false, ui_quit, "Quit the node: [restart]")
 	newUi("redo", true, redo_block, "Redo one block")
-	newUi("push", true, push_cache, "Push block(s) from cache")
 	newUi("savebl bl", false, dump_block, "Saves a block to disk: <hash>")
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
 	newUi("trust", true, switch_trust, "Assume all downloaded blocks trusted: 0|1")

@@ -38,7 +38,6 @@ type OneLock struct {
 var (
 	UiChannel chan *OneUiReq = make(chan *OneUiReq, 1)
 	LocksChan chan *OneLock  = make(chan *OneLock, 1)
-	PushCache chan struct{}  = make(chan struct{}, 1)
 
 	FetchingBalances sys.SyncBool
 	Exit_now         sys.SyncBool
