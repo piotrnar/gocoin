@@ -28,7 +28,9 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	var tot_bytes uint64
 
 	last := ch.LastBlock()
-	fmt.Println("Applying txs from block", last.Height, last.BlockHash.String()[56:], "to", end.Height, end.BlockHash.String()[56:])
+	if !ch.testnet() {
+		fmt.Println("Applying txs from block", last.Height, last.BlockHash.String(), "\n  to", end.Height, end.BlockHash.String())
+	}
 	for !AbortNow && last != end {
 		nxt := last.FindPathTo(end)
 		if nxt == nil {
@@ -263,7 +265,9 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	// At this point "cur" is at the highest common block
 
 	lastblock = ch.LastBlock() // recover lastblock, in case it was changed by the "rare case"
-	fmt.Println("Undoing", lastblock.Height-cur.Height, "block(s) starting from", lastblock.Height, lastblock.BlockHash.String()[56:])
+	if !ch.testnet() {
+		fmt.Println("Undoing", lastblock.Height-cur.Height, "block(s) starting from", lastblock.Height, lastblock.BlockHash.String())
+	}
 	for lastblock != cur {
 		if AbortNow {
 			return
