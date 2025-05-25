@@ -273,7 +273,7 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 // call this function after the tx has been accepted,
 // to re-submit all txs that had been waiting for it
 func txAccepted(bidx btc.BIDX) {
-	var delidx, xxx int
+	var delidx int
 	var wtg *OneWaitingList
 	var found bool
 	var txr *OneTxRejected
@@ -281,23 +281,15 @@ func txAccepted(bidx btc.BIDX) {
 	recs2do := []btc.BIDX{bidx}
 	for {
 		// TODO: Remove all the debugs from this function when done investigating
-		if xxx > 500e3 {
-			println("txAccepted stuck in the loop", delidx, len(recs2do), btc.BIdxString(bidx))
-			xxx = 0
-		}
-		xxx++
 		if wtg, found = WaitingForInputs[recs2do[delidx]]; !found {
 			if delidx++; delidx == len(recs2do) {
 				return
 			}
 			continue
-		} else if len(wtg.Ids) == 0 {
-			println("ERROR: WaitingForInput record has no Ids")
-			panic("This should not happen")
+		} else if CheckForErrors() && len(wtg.Ids) == 0 {
+			panic("WaitingForInput record has no Ids")
 		}
 
-		before := slices.Clone(wtg.Ids)
-		txrr := wtg.Ids[0]
 		txr = TransactionsRejected[wtg.Ids[0]] // always remove the first one ...
 
 		if CheckForErrors() {
@@ -310,52 +302,32 @@ func txAccepted(bidx btc.BIDX) {
 			}
 		}
 
-		blen := len(wtg.Ids)
 		txr.Delete() // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
-		if blen-1 != len(wtg.Ids) {
-			println("ERROR: same amount of wtg.Ids records after Delete:", blen, len(wtg.Ids))
-			panic("This should not happen")
-		}
-		if len(wtg.Ids) > 0 && slices.Contains(wtg.Ids, txrr) {
-			println("ERROR: txrr not removed:", btc.BIdxString(txrr), "from", btc.BIdxString(bidx), blen, len(wtg.Ids))
-			panic("This should not happen")
-		}
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if res, t2s := processTx(pendtxrcv); res == 0 {
 			// if res was 0, t2s is not nil
 			recs2do = append(recs2do, t2s.Hash.BIdx())
 			common.CountSafe("TxRetryAccepted")
-		} else {
-			if res == TX_REJECTED_NO_TXOU || true {
+		} else /*if CheckForErrors()*/ {
+			if res == TX_REJECTED_NO_TXOU {
 				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
+					txrr := txr.Hash.BIdx()
 					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
-						println("w4txr", btc.BIdxString(txrr), "removed and then put back with", res, "at idx", idx, "of len", wtg.Ids)
+						println("w4txr", txr.Hash.String(), "put back at idx", idx, "of len", wtg.Ids)
 						for ii, id := range wtg.Ids {
-							fmt.Print(" ", ii, ":", id)
-						}
-						print("\nbefore:")
-						for ii, id := range before {
 							fmt.Print(" ", ii, ":", id)
 						}
 						println("\nparent:", btc.BIdxString(bidx))
 						if t2s, ok := TransactionsToSend[bidx]; ok {
+							println(" parent in mempool - ERROR")
 							println(" id:", t2s.Hash.String())
 							println(" raw:", hex.EncodeToString(t2s.Tx.Raw))
 						} else {
 							println(" parent not in mempool - ok")
 						}
-						if txr, ok := TransactionsRejected[txrr]; ok {
-							println(" xid:", txr.Id.String())
-							if txr.Tx != nil && txr.Tx.Raw != nil {
-								println(" xraw:", hex.EncodeToString(txr.Tx.Raw))
-							}
-						}
-						println("checking mempool...")
-						MempoolCheck()
 						panic("this should not happen")
 					}
 				}
-
 			}
 			common.CountSafePar("TxRetryRjctd-", res)
 		}
