@@ -85,6 +85,10 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 	var rbf_tx_list map[*OneTxToSend]bool
 	full_rbf := !common.Get(&common.CFG.TXPool.NotFullRBF)
 
+	if txdbg_xtra_info != "" {
+		txdbg_xtra_info += "\n_inPtx.. "
+	}
+
 	// Check if all the inputs exist in the chain
 	for i := range tx.TxIn {
 		if !full_rbf && !final && tx.TxIn[i].Sequence >= 0xfffffffe {
@@ -150,6 +154,10 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 		} else {
 			pos[i] = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
+				if txdbg_xtra_info != "" {
+					txdbg_xtra_info += fmt.Sprintf("No out %d/%d %s\n 1st:%p 2nd:%p 3rd:%p", i, len(tx.TxIn), tx.TxIn[i].Input.String(),
+						pos[i], common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input), common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input))
+				}
 				if ntx.Unmined {
 					println("ERROR: No UTXO for unmined tx", tx.TxIn[i].Input.String(), txinmem, ok)
 					return TX_REJECTED_NO_TXOU, nil

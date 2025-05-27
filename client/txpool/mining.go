@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -162,6 +163,8 @@ func txMined(tx *btc.Tx) {
 }
 
 // BlockMined removes all the block's tx from the mempool.
+var txdbg_xtra_info string
+
 func BlockMined(bl *btc.Block) {
 	if len(bl.Txs) < 2 {
 		return
@@ -174,8 +177,12 @@ func BlockMined(bl *btc.Block) {
 		txMined(tx)
 	}
 	// now check if any mempool txs are waiting for inputs which were just mined
-	for _, tx := range bl.Txs[1:] {
+	for ii, tx := range bl.Txs[1:] {
+		if common.Testnet {
+			txdbg_xtra_info = fmt.Sprintf("Block %d %s tx:%d/%d %s", bl.Height, bl.Hash.String(), ii+1, len(bl.Txs), tx.Hash.String())
+		}
 		txAccepted(tx.Hash.BIdx())
+		txdbg_xtra_info = ""
 	}
 	TxMutex.Unlock()
 }
