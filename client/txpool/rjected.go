@@ -315,7 +315,7 @@ func txAccepted(bidx btc.BIDX) {
 					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
 						println("w4txr", txr.Hash.String(), "put back at idx", idx, "of len", wtg.Ids)
 						for ii, id := range wtg.Ids {
-							fmt.Print(" ", ii, ":", id)
+							fmt.Print(" ", ii, ":", btc.BIdxString(id))
 						}
 						println("\nparent:", btc.BIdxString(bidx))
 						if t2s, ok := TransactionsToSend[bidx]; ok {
