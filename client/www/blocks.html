@@ -214,6 +214,12 @@ function refreshblocks() {
 				td = row.insertCell(-1)
 				td.className = "i stat0 hand bordr"
 				td.innerText = miner
+				if (cs[i].Difficulty==1) {
+					td.title = 'Minimal Difficulty'
+					td.classList.add("diff1")
+				} else {
+					td.title = 'Difficulty: ' + bignum(cs[i].Difficulty)
+				}
 				onc_mid(td, i)
 
 				td = row.insertCell(-1)

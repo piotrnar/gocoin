@@ -252,6 +252,10 @@ td.blspb {
 	text-align: right;
 }
 
+td.diff1 {
+	color:#c0a0a0;
+}
+
 div.footer {
 	margin-top:10px;
 	font-style:italic;

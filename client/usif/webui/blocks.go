@@ -22,6 +22,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		Miner        string
 		WasteCnt     uint
 		FeeSPB       float64
+		Difficulty   float64
 		Size         int
 		Weight       uint
 		TotalFees    uint64
@@ -89,6 +90,8 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		if rb.PaidTxsWeight > 0 {
 			b.FeeSPB = float64(4*b.TotalFees) / float64(rb.PaidTxsWeight)
 		}
+
+		b.Difficulty = btc.GetDifficulty(block.Bits())
 
 		b.Received = uint32(rb.TmStart.Unix())
 		b.Sigops = int(node.SigopsCost)
