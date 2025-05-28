@@ -299,7 +299,7 @@ function update_connection_info(ci) {
 		s += 'Connecting' + (ci.Incomming ? ' <== ' : ' ==> ') + ci.PeerIp + '\n'
 	} else {
 		s += ci.LocalAddr + (ci.Incomming ? ' <== ' : ' ==> ') + ci.RemoteAddr + '\n'
-		s += 'Connected at ' + tim2str(Date.parse(ci.ConnectedAt)/1000) + ' | Ticks: ' + ci.Ticks + '\n'
+		s += 'Connected at ' + tim2str(Date.parse(ci.ConnectedAt)/1000) + ' | Ticks: ' + ci.Ticks + ' | Misbehave=' + (ci.Misbehave/10.0).toFixed(1) +  '%\n'
 		s += 'Node Version: ' + ci.Version + ' | Services: 0x' + ci.Services.toString(16) + ' | Chain Height: ' + ci.Height + '\n'
 		s += 'User Agent: ' + ci.Agent + ' | Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
 		s += 'SendHeaders: ' + ci.SendHeaders + ' | SendCmpctVer: ' + ci.SendCmpctVer + ' | HighBandwidth: ' + ci.HighBandwidth + '\n'

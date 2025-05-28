@@ -158,7 +158,8 @@ type ConnInfo struct {
 	BlocksReceived   int
 
 	ID              uint32
-	GetMPInProgress bool // This one is only set inside webui's hnadler (for sorted connections)
+	Misbehave       uint16 // max value 1000
+	GetMPInProgress bool   // This one is only set inside webui's hnadler (for sorted connections)
 	HasImmunity     bool
 }
 
@@ -368,6 +369,7 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 	res.InvsDone = len(v.InvDone.History)
 	res.BlocksReceived = len(v.blocksreceived)
 	res.GetMPInProgress = len(v.GetMP) != 0
+	res.Misbehave = uint16(v.misbehave)
 
 	v.Mutex.Unlock()
 }
