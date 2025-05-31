@@ -130,8 +130,8 @@ func TestECmult(t *testing.T) {
 
 type wnafvec struct {
 	inp string
-	w   uint
 	exp []int
+	w   uint
 }
 
 func TestWNAF(t *testing.T) {
