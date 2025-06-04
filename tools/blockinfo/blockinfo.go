@@ -38,8 +38,11 @@ func main() {
 
 	bl.BuildTxList()
 	fmt.Println("Transactions:", len(bl.Txs))
-	for _, tx := range bl.Txs {
-		fmt.Println(tx.Hash.String(), "-", len(tx.TxOut), "outs")
+	for tn, tx := range bl.Txs {
+		fmt.Println(tn, tx.Hash.String(), "-", len(tx.TxIn), "inps and", len(tx.TxOut), "outs")
+		for idx, ti := range tx.TxIn {
+			fmt.Println("  inp", idx, ":", ti.Input.String())
+		}
 	}
 
 }

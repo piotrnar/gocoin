@@ -184,6 +184,9 @@ func BlockMined(bl *btc.Block) {
 		txAccepted(tx.Hash.BIdx())
 		txdbg_xtra_info = ""
 	}
+	if common.Testnet && MempoolCheck() {
+		println("ERROR: MempoolCheck() failed after BlockMined", bl.Height, bl.Hash.String())
+	}
 	TxMutex.Unlock()
 }
 
@@ -213,6 +216,9 @@ func BlockUndone(bl *btc.Block) {
 			os.Exit(1)
 		}
 	}
-	removeExcessiveTxs() // now we can limit the mempool size, if it went too far
+	c, b := removeExcessiveTxs() // now we can limit the mempool size, if it went too far
+	if common.Testnet && MempoolCheck() {
+		println("ERROR: MempoolCheck() failed after BlockUndone", bl.Height, bl.Hash.String(), "\n  txremoved:", c, b)
+	}
 	TxMutex.Unlock()
 }

@@ -174,11 +174,10 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	}
 }
 
-func removeExcessiveTxs() {
+func removeExcessiveTxs() (cnt, bytes uint64) {
 	if len(GetMPInProgressTicket) != 0 {
 		return // don't do it during mpget
 	}
-	var cnt, bytes uint64
 	if TransactionsToSendSize >= common.MaxMempoolSize()+1e6 { // only remove txs when we are 1MB over the maximum size
 		sorted_txs := GetSortedMempoolRBF()
 		FeePackagesDirty = true // do not update fee packages while doing this, as it will take forever
@@ -199,6 +198,7 @@ func removeExcessiveTxs() {
 		common.SetMinFeePerKB(CurrentFeeAdjustedSPKB)
 		lastFeeAdjustedTime = time.Now()
 	}
+	return
 }
 
 func txChecker(tx *btc.Tx) bool {
