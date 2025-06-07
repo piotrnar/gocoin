@@ -313,7 +313,7 @@ func txAccepted(bidx btc.BIDX) {
 		}
 
 		txr.Delete() // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
-		pendtxrcv := &TxRcvd{Tx: txr.Tx}
+		pendtxrcv := &TxRcvd{Tx: txr.Tx, mined: true}
 		midway := slices.Clone(wtg.Ids)
 		if res, t2s := processTx(pendtxrcv); res == 0 {
 			// if res was 0, t2s is not nil
@@ -342,6 +342,8 @@ func txAccepted(bidx btc.BIDX) {
 						} else {
 							println(" parent not in mempool - ok")
 						}
+						println("xinfo:", txdbg_xtra_info)
+						println("checking mempool:", MempoolCheck())
 						if txr, ok := TransactionsRejected[txrr]; ok {
 							println("TransactionsRejected for", btc.BIdxString(txrr), "contains:")
 							println(" xid:", txr.Id.String())
@@ -355,13 +357,10 @@ func txAccepted(bidx btc.BIDX) {
 							} else {
 								println("*** waiting4 is nil")
 							}
+							panic("this should not happen")
 						} else {
-							println("*** txrr not in rejected")
+							println("*** txrr not in rejected - continue normally\n\n")
 						}
-						println("xinfo:", txdbg_xtra_info)
-						println("checking mempool...")
-						MempoolCheck()
-						panic("this should not happen")
 					}
 				}
 			}
