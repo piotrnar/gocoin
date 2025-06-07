@@ -160,8 +160,10 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 						pos[i], common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input), common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input))
 				}
 				if ntx.mined {
-					println("ERROR: The bug has been triggered")
-					return TX_REJECTED_NOT_MINED, nil
+					println("ERROR: The bug has been triggered - txid:", tx.Hash.String())
+					println("xtrainfo:", txdbg_xtra_info)
+					txdbg_xtra_info = ""
+					return TX_REJECTED_NO_TXOU, nil
 				}
 				if ntx.Unmined {
 					println("ERROR: No UTXO for unmined tx", tx.TxIn[i].Input.String(), txinmem, ok)
