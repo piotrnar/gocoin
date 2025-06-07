@@ -295,6 +295,7 @@ func (ch *Chain) UndoLastBlock() {
 	if er != nil {
 		panic("UndoLastBlock: BuildTxList() should not fail with block from disk")
 	}
+	bl.Height = last.Height
 
 	ch.Unspent.UndoBlockTxs(bl, last.Parent.BlockHash.Hash[:])
 	if ch.CB.BlockUndoneCB != nil {
