@@ -176,10 +176,9 @@ function refreshblocks() {
 					img.src = 'static/stats.png'
 					img.className = 'hand'
 					img.style.margin = '0px 0px 0px 10px'
-					img.style.verticalAlign = 'top'
+					img.style.verticalAlign = 'bottom'
 					td.appendChild(img)
 					onc_stat(img, cs[i].Height, cs[i].Size, cs[i].Miner.substr(0,12))
-					//h += '<img src="static/stats.png" style="float:right" onclick="feestats(\'' + h + '\')">'
 				}
 
 				td = row.insertCell(-1)
