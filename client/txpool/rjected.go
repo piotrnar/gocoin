@@ -321,8 +321,8 @@ func txAccepted(bidx btc.BIDX) {
 			common.CountSafe("TxRetryAccepted")
 		} else if common.Testnet /*&& CheckForErrors()*/ {
 			if res == TX_REJECTED_NO_TXOU {
+				txrr := txr.Hash.BIdx()
 				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
-					txrr := txr.Hash.BIdx()
 					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
 						println()
 						println("w4txr", btc.BIdxString(txrr), "removed and then put back with", res, "at idx", idx, "of len", len(wtg.Ids))
@@ -334,34 +334,36 @@ func txAccepted(bidx btc.BIDX) {
 						}
 						print_ids("midway", midway)
 						print_ids("-NOW--", wtg.Ids)
-						println("parent:", btc.BIdxString(bidx))
-						if t2s, ok := TransactionsToSend[bidx]; ok {
-							println("*** parent in mempool")
-							println(" id:", t2s.Hash.String())
-							println(" raw:", hex.EncodeToString(t2s.Tx.Raw))
-						} else {
-							println(" parent not in mempool - ok")
-						}
-						println("xinfo:", txdbg_xtra_info)
-						println("checking mempool:", MempoolCheck())
-						if txr, ok := TransactionsRejected[txrr]; ok {
-							println("TransactionsRejected for", btc.BIdxString(txrr), "contains:")
-							println(" xid:", txr.Id.String())
-							println(" reason:", txr.Reason)
-							println(" added:", time.Since(txr.Time).String(), "ago")
-							if txr.Tx != nil && txr.Tx.Raw != nil {
-								println(" xraw:", hex.EncodeToString(txr.Tx.Raw))
-							}
-							if txr.Waiting4 != nil {
-								println(" waiting4:", txr.Waiting4.String())
-							} else {
-								println("*** waiting4 is nil")
-							}
-							panic("this should not happen")
-						} else {
-							println("*** txrr not in rejected - continue normally\n\n")
-						}
 					}
+				} else {
+					println("w4txr", btc.BIdxString(txrr), "returned", res, " - but no longer in WaitingForInputs")
+				}
+				println("parent:", btc.BIdxString(bidx))
+				if t2s, ok := TransactionsToSend[bidx]; ok {
+					println("*** parent in mempool")
+					println(" id:", t2s.Hash.String())
+					println(" raw:", hex.EncodeToString(t2s.Tx.Raw))
+				} else {
+					println(" parent not in mempool - ok")
+				}
+				println("xinfo:", txdbg_xtra_info)
+				println("checking mempool:", MempoolCheck())
+				if txr, ok := TransactionsRejected[txrr]; ok {
+					println("TransactionsRejected for", btc.BIdxString(txrr), "contains:")
+					println(" xid:", txr.Id.String())
+					println(" reason:", txr.Reason)
+					println(" added:", time.Since(txr.Time).String(), "ago")
+					if txr.Tx != nil && txr.Tx.Raw != nil {
+						println(" xraw:", hex.EncodeToString(txr.Tx.Raw))
+					}
+					if txr.Waiting4 != nil {
+						println(" waiting4:", txr.Waiting4.String())
+					} else {
+						println("*** waiting4 is nil")
+					}
+					panic("this should not happen")
+				} else {
+					println("*** txrr not in rejected - continue normally\n\n")
 				}
 			}
 			common.CountSafePar("TxRetryRjctd-", res)
