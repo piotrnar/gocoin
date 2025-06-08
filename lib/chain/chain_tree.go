@@ -28,7 +28,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	var tot_bytes uint64
 
 	last := ch.LastBlock()
-	if !ch.testnet() {
+	if false && !ch.testnet() {
 		fmt.Println("Applying txs from block", last.Height, last.BlockHash.String(), "\n  to", end.Height, end.BlockHash.String())
 	}
 	for !AbortNow && last != end {
@@ -277,7 +277,7 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 
 func (ch *Chain) UndoLastBlock() {
 	last := ch.LastBlock()
-	if !ch.testnet() {
+	if false && !ch.testnet() {
 		fmt.Println("Undo block", last.Height, last.BlockHash.String(), last.BlockSize>>10, "KB")
 	}
 
