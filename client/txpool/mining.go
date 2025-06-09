@@ -181,7 +181,7 @@ func BlockMined(bl *btc.Block) {
 		if common.Testnet {
 			txdbg_xtra_info = fmt.Sprintf("Block %d %s tx:%d/%d %s", bl.Height, bl.Hash.String(), ii+1, len(bl.Txs), tx.Hash.String())
 		}
-		txAccepted(tx.Hash.BIdx())
+		txAccepted(tx.Hash.BIdx(), true)
 		txdbg_xtra_info = ""
 	}
 	TxMutex.Unlock()

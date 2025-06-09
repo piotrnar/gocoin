@@ -321,7 +321,7 @@ func HandleNetTx(ntx *TxRcvd) bool {
 		delete(TransactionsPending, bidx)
 		result, t2s = processTx(ntx)
 		if t2s != nil {
-			txAccepted(bidx)
+			txAccepted(bidx, false)
 			removeExcessiveTxs()
 		}
 	}
@@ -342,7 +342,7 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 	DeleteRejectedByIdx(bidx, false)
 	res, t2s := processTx(&TxRcvd{Tx: tx, Trusted: true, Local: true})
 	if t2s != nil {
-		txAccepted(bidx)
+		txAccepted(bidx, false)
 		removeExcessiveTxs()
 	}
 	TxMutex.Unlock()

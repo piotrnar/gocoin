@@ -280,7 +280,7 @@ func print_ids(lab string, ids []btc.BIDX) {
 
 // call this function after the tx has been accepted,
 // to re-submit all txs that had been waiting for it
-func txAccepted(bidx btc.BIDX) {
+func txAccepted(bidx btc.BIDX, mined bool) {
 	var delidx int
 	var wtg *OneWaitingList
 	var found bool
@@ -313,7 +313,7 @@ func txAccepted(bidx btc.BIDX) {
 		}
 
 		txr.Delete() // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
-		pendtxrcv := &TxRcvd{Tx: txr.Tx, mined: true}
+		pendtxrcv := &TxRcvd{Tx: txr.Tx, mined: mined}
 		midway := slices.Clone(wtg.Ids)
 		if res, t2s := processTx(pendtxrcv); res == 0 {
 			// if res was 0, t2s is not nil
