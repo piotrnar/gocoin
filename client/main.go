@@ -130,7 +130,10 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.Busy()
 		common.Last.Mutex.Lock()
 		common.Last.Time = time.Now()
-		common.Last.Block = common.BlockChain.LastBlock()
+		if new_last := common.BlockChain.LastBlock(); new_last != common.Last.Block {
+			common.Last.Block = new_last
+			common.Last.Time = time.Now()
+		}
 		common.UpdateScriptFlags(bl.VerifyFlags)
 
 		div := uint32(100e3)
