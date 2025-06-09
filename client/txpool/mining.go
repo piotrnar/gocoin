@@ -179,7 +179,7 @@ func BlockMined(bl *btc.Block) {
 	// now check if any mempool txs are waiting for inputs which were just mined
 	for ii, tx := range bl.Txs[1:] {
 		if common.Testnet {
-			txdbg_xtra_info = fmt.Sprintf("Block %d %s tx:%d/%d %s", bl.Height, bl.Hash.String(), ii+1, len(bl.Txs), tx.Hash.String())
+			txdbg_xtra_info = fmt.Sprintf("Block %d %s tx:%d/%d %s\n", bl.Height, bl.Hash.String(), ii+1, len(bl.Txs), tx.Hash.String())
 		}
 		txAccepted(tx.Hash.BIdx(), true)
 		txdbg_xtra_info = ""

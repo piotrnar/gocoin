@@ -2,6 +2,7 @@ package txpool
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -87,7 +88,7 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 	full_rbf := !common.Get(&common.CFG.TXPool.NotFullRBF)
 
 	if txdbg_xtra_info != "" {
-		txdbg_xtra_info += "\n_inPtx.. "
+		txdbg_xtra_info += " processTx " + ntx.Hash.String() + "\n" + string(debug.Stack()) + "\n"
 	}
 
 	// Check if all the inputs exist in the chain
@@ -156,13 +157,14 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 			pos[i] = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
 				if txdbg_xtra_info != "" {
-					txdbg_xtra_info += fmt.Sprintf("No out %d/%d %s\n 1st:%p 2nd:%p 3rd:%p", i, len(tx.TxIn), tx.TxIn[i].Input.String(),
+					txdbg_xtra_info += fmt.Sprintf("  * No out %d/%d %s\n 1st:%p 2nd:%p 3rd:%p\n", i, len(tx.TxIn), tx.TxIn[i].Input.String(),
 						pos[i], common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input), common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input))
 				}
 				if ntx.mined {
 					println("ERROR: The bug has been triggered - txid:", tx.Hash.String())
 					println("xtrainfo:", txdbg_xtra_info)
 					txdbg_xtra_info = ""
+
 					return TX_REJECTED_NO_TXOU, nil
 				}
 				if ntx.Unmined {
