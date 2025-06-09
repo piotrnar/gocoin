@@ -336,6 +336,9 @@ func txAccepted(bidx btc.BIDX, mined bool) {
 						print_ids("-NOW--", wtg.Ids)
 					}
 				} else {
+					if !mined {
+						continue
+					}
 					println("w4txr", btc.BIdxString(txrr), "returned", res, " - but no longer in WaitingForInputs")
 				}
 				println("parent:", btc.BIdxString(bidx))
