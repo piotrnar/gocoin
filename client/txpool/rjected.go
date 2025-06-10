@@ -54,7 +54,7 @@ const (
 	TX_REJECTED_TOO_BIG      = 101
 	TX_REJECTED_FORMAT       = 102
 	TX_REJECTED_LEN_MISMATCH = 103
-	TX_REJECTED_EMPTY_INPUT  = 104
+	TX_REJECTED_WEIRD        = 104
 
 	TX_REJECTED_OVERSPEND   = 154
 	TX_REJECTED_BAD_INPUT   = 157
@@ -314,17 +314,16 @@ func txAccepted(bidx btc.BIDX, mined bool) {
 
 		txr.Delete() // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
 		pendtxrcv := &TxRcvd{Tx: txr.Tx, mined: mined}
-		midway := slices.Clone(wtg.Ids)
 		if res, t2s := processTx(pendtxrcv); res == 0 {
 			// if res was 0, t2s is not nil
 			recs2do = append(recs2do, t2s.Hash.BIdx())
 			common.CountSafe("TxRetryAccepted")
 		} else if common.Testnet /*&& CheckForErrors()*/ {
 			if res == TX_REJECTED_NO_TXOU {
+				println("---tx", txr.Hash.String(), "returned NO_TXOU again.  mined:", mined)
 				txrr := txr.Hash.BIdx()
 				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
 					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
-						println()
 						println("w4txr", btc.BIdxString(txrr), "removed and then put back with", res, "at idx", idx, "of len", len(wtg.Ids))
 						print_ids("before", before)
 						if w4before != nil {
@@ -332,41 +331,35 @@ func txAccepted(bidx btc.BIDX, mined bool) {
 						} else {
 							println("*** w4before is nil")
 						}
-						print_ids("midway", midway)
 						print_ids("-NOW--", wtg.Ids)
+
+						println("parent:", btc.BIdxString(bidx))
+						if t2s, ok := TransactionsToSend[bidx]; ok {
+							println("*** parent in mempool")
+							println(" id:", t2s.Hash.String())
+							println(" raw:", hex.EncodeToString(t2s.Tx.Raw))
+						} else {
+							println(" parent not in mempool - ok")
+						}
+						println("xinfo:", txdbg_xtra_info)
+						println("checking mempool:", MempoolCheck())
+						if txr, ok := TransactionsRejected[txrr]; ok {
+							println("TransactionsRejected for", btc.BIdxString(txrr), "contains:")
+							println(" xid:", txr.Id.String())
+							println(" reason:", txr.Reason)
+							println(" added:", time.Since(txr.Time).String(), "ago")
+							if txr.Tx != nil && txr.Tx.Raw != nil {
+								println(" xraw:", hex.EncodeToString(txr.Tx.Raw))
+							}
+							if txr.Waiting4 != nil {
+								println(" waiting4:", txr.Waiting4.String())
+							} else {
+								println("*** waiting4 is nil")
+							}
+						} else {
+							panic("not in rejected")
+						}
 					}
-				} else {
-					if !mined {
-						continue
-					}
-					println("w4txr", btc.BIdxString(txrr), "returned", res, " - but no longer in WaitingForInputs")
-				}
-				println("parent:", btc.BIdxString(bidx))
-				if t2s, ok := TransactionsToSend[bidx]; ok {
-					println("*** parent in mempool")
-					println(" id:", t2s.Hash.String())
-					println(" raw:", hex.EncodeToString(t2s.Tx.Raw))
-				} else {
-					println(" parent not in mempool - ok")
-				}
-				println("xinfo:", txdbg_xtra_info)
-				println("checking mempool:", MempoolCheck())
-				if txr, ok := TransactionsRejected[txrr]; ok {
-					println("TransactionsRejected for", btc.BIdxString(txrr), "contains:")
-					println(" xid:", txr.Id.String())
-					println(" reason:", txr.Reason)
-					println(" added:", time.Since(txr.Time).String(), "ago")
-					if txr.Tx != nil && txr.Tx.Raw != nil {
-						println(" xraw:", hex.EncodeToString(txr.Tx.Raw))
-					}
-					if txr.Waiting4 != nil {
-						println(" waiting4:", txr.Waiting4.String())
-					} else {
-						println("*** waiting4 is nil")
-					}
-					panic("this should not happen")
-				} else {
-					println("*** txrr not in rejected - continue normally\n\n")
 				}
 			}
 			common.CountSafePar("TxRetryRjctd-", res)
@@ -397,8 +390,8 @@ func ReasonToString(reason byte) string {
 		return "FORMAT"
 	case TX_REJECTED_LEN_MISMATCH:
 		return "LEN_MISMATCH"
-	case TX_REJECTED_EMPTY_INPUT:
-		return "EMPTY_INPUT"
+	case TX_REJECTED_WEIRD:
+		return "WEIRD"
 	case TX_REJECTED_DATA_PURGED:
 		return "PURGED"
 	case TX_REJECTED_OVERSPEND:

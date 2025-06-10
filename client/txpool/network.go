@@ -164,8 +164,8 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 					println("ERROR: The bug has been triggered - txid:", tx.Hash.String())
 					println("xtrainfo:", txdbg_xtra_info)
 					txdbg_xtra_info = ""
-
-					return TX_REJECTED_NO_TXOU, nil
+					common.CountSafe("Tx*Weird")
+					return TX_REJECTED_WEIRD, nil
 				}
 				if ntx.Unmined {
 					println("ERROR: No UTXO for unmined tx", tx.TxIn[i].Input.String(), txinmem, ok)
