@@ -2,7 +2,6 @@ package txpool
 
 import (
 	"fmt"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -85,10 +84,6 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 
 	var rbf_tx_list map[*OneTxToSend]bool
 	full_rbf := !common.Get(&common.CFG.TXPool.NotFullRBF)
-
-	if txdbg_xtra_info != "" {
-		txdbg_xtra_info += " processTx " + ntx.Hash.String() + "\n" + string(debug.Stack()) + "\n"
-	}
 
 	// Check if all the inputs exist in the chain
 	for i := range tx.TxIn {

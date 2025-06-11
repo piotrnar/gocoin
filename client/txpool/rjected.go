@@ -313,6 +313,7 @@ func txAccepted(bidx btc.BIDX, mined bool) {
 		}
 
 		txr.Delete() // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
+		mistate := slices.Clone(wtg.Ids)
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if res, t2s := processTx(pendtxrcv); res == 0 {
 			// if res was 0, t2s is not nil
@@ -320,7 +321,7 @@ func txAccepted(bidx btc.BIDX, mined bool) {
 			common.CountSafe("TxRetryAccepted")
 		} else if common.Testnet /*&& CheckForErrors()*/ {
 			if res == TX_REJECTED_NO_TXOU {
-				println("---tx", txr.Hash.String(), "returned NO_TXOU again.  mined:", mined)
+				println("====processTx", txr.Hash.String(), "returned NO_TXOU again.  mined:", mined)
 				txrr := txr.Hash.BIdx()
 				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
 					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
@@ -332,6 +333,7 @@ func txAccepted(bidx btc.BIDX, mined bool) {
 						} else {
 							println("*** w4before is nil")
 						}
+						print_ids("middle", mistate)
 						print_ids("-NOW--", wtg.Ids)
 
 						println("parent:", btc.BIdxString(bidx))
