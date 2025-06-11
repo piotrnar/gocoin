@@ -54,7 +54,7 @@ const (
 	TX_REJECTED_TOO_BIG      = 101
 	TX_REJECTED_FORMAT       = 102
 	TX_REJECTED_LEN_MISMATCH = 103
-	TX_REJECTED_WEIRD        = 104
+	TX_REJECTED_EMPTY_INPUT  = 104
 
 	TX_REJECTED_OVERSPEND   = 154
 	TX_REJECTED_BAD_INPUT   = 157
@@ -313,7 +313,7 @@ func txAccepted(bidx btc.BIDX, mined bool) {
 		}
 
 		txr.Delete() // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
-		pendtxrcv := &TxRcvd{Tx: txr.Tx, mined: mined}
+		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if res, t2s := processTx(pendtxrcv); res == 0 {
 			// if res was 0, t2s is not nil
 			recs2do = append(recs2do, t2s.Hash.BIdx())
@@ -324,6 +324,7 @@ func txAccepted(bidx btc.BIDX, mined bool) {
 				txrr := txr.Hash.BIdx()
 				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
 					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
+						common.CountSafe("Tx*Weird")
 						println("w4txr", btc.BIdxString(txrr), "removed and then put back with", res, "at idx", idx, "of len", len(wtg.Ids))
 						print_ids("before", before)
 						if w4before != nil {
@@ -390,8 +391,8 @@ func ReasonToString(reason byte) string {
 		return "FORMAT"
 	case TX_REJECTED_LEN_MISMATCH:
 		return "LEN_MISMATCH"
-	case TX_REJECTED_WEIRD:
-		return "WEIRD"
+	case TX_REJECTED_EMPTY_INPUT:
+		return "EMPTY_INPUT"
 	case TX_REJECTED_DATA_PURGED:
 		return "PURGED"
 	case TX_REJECTED_OVERSPEND:

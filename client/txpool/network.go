@@ -27,7 +27,6 @@ type TxRcvd struct {
 	Trusted    bool
 	Local      bool
 	Unmined    bool
-	mined      bool // TODO: combined mined and unmined
 	Result     byte // this is an output value (sent to callback from HandleNetTx)
 }
 
@@ -159,13 +158,6 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 				if txdbg_xtra_info != "" {
 					txdbg_xtra_info += fmt.Sprintf("  * No out %d/%d %s\n 1st:%p 2nd:%p 3rd:%p\n", i, len(tx.TxIn), tx.TxIn[i].Input.String(),
 						pos[i], common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input), common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input))
-				}
-				if ntx.mined {
-					println("ERROR: The bug has been triggered - txid:", tx.Hash.String())
-					println("xtrainfo:", txdbg_xtra_info)
-					txdbg_xtra_info = ""
-					common.CountSafe("Tx*Weird")
-					return TX_REJECTED_WEIRD, nil
 				}
 				if ntx.Unmined {
 					println("ERROR: No UTXO for unmined tx", tx.TxIn[i].Input.String(), txinmem, ok)
