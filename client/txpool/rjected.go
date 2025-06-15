@@ -314,7 +314,6 @@ func txAccepted(bidx btc.BIDX) {
 		}
 
 		txr.Delete() // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
-		mistate := slices.Clone(wtg.Ids)
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if res, t2s := processTx(pendtxrcv); res == 0 {
 			// if res was 0, t2s is not nil
@@ -333,7 +332,6 @@ func txAccepted(bidx btc.BIDX) {
 						} else {
 							println("*** w4before is nil")
 						}
-						print_ids("middle", mistate)
 						print_ids("-NOW--", wtg.Ids)
 
 						println("parent:", btc.BIdxString(bidx))
