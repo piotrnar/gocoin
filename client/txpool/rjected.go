@@ -286,6 +286,7 @@ func txAccepted(bidx btc.BIDX) {
 	var wtg *OneWaitingList
 	var found bool
 	var txr *OneTxRejected
+	var loop_cnt int
 
 	recs2do := []btc.BIDX{bidx}
 	for {
@@ -360,6 +361,10 @@ func txAccepted(bidx btc.BIDX) {
 						} else {
 							panic("not in rejected")
 						}
+						if loop_cnt > 5 {
+							panic("Stuck in the loop")
+						}
+						loop_cnt++
 					}
 				}
 			}
