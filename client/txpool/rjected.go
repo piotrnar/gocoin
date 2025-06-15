@@ -3,6 +3,7 @@ package txpool
 import (
 	"encoding/hex"
 	"fmt"
+	"runtime/debug"
 	"slices"
 	"sync/atomic"
 	"time"
@@ -280,7 +281,7 @@ func print_ids(lab string, ids []btc.BIDX) {
 
 // call this function after the tx has been accepted,
 // to re-submit all txs that had been waiting for it
-func txAccepted(bidx btc.BIDX, mined bool) {
+func txAccepted(bidx btc.BIDX) {
 	var delidx int
 	var wtg *OneWaitingList
 	var found bool
@@ -321,7 +322,6 @@ func txAccepted(bidx btc.BIDX, mined bool) {
 			common.CountSafe("TxRetryAccepted")
 		} else if common.Testnet /*&& CheckForErrors()*/ {
 			if res == TX_REJECTED_NO_TXOU {
-				println("====processTx", txr.Hash.String(), "returned NO_TXOU again.  mined:", mined)
 				txrr := txr.Hash.BIdx()
 				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
 					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
@@ -346,6 +346,7 @@ func txAccepted(bidx btc.BIDX, mined bool) {
 						}
 						println("xinfo:", txdbg_xtra_info)
 						println("checking mempool:", MempoolCheck())
+						debug.PrintStack()
 						if txr, ok := TransactionsRejected[txrr]; ok {
 							println("TransactionsRejected for", btc.BIdxString(txrr), "contains:")
 							println(" xid:", txr.Id.String())
