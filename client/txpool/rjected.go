@@ -3,7 +3,6 @@ package txpool
 import (
 	"encoding/hex"
 	"fmt"
-	"runtime/debug"
 	"slices"
 	"sync/atomic"
 	"time"
@@ -346,7 +345,6 @@ func txAccepted(bidx btc.BIDX) {
 						}
 						println("xinfo:", txdbg_xtra_info)
 						println("checking mempool:", MempoolCheck())
-						debug.PrintStack()
 						if txr, ok := TransactionsRejected[txrr]; ok {
 							println("TransactionsRejected for", btc.BIdxString(txrr), "contains:")
 							println(" xid:", txr.Id.String())
@@ -358,11 +356,12 @@ func txAccepted(bidx btc.BIDX) {
 							if txr.Waiting4 != nil {
 								println(" waiting4:", txr.Waiting4.String())
 							} else {
-								println("*** waiting4 is nil")
+								println("ERROR: waiting4 is nil")
 							}
 						} else {
-							panic("not in rejected")
+							println("ERROR: not in rejected")
 						}
+						panic("This should not happen")
 					}
 				}
 			}

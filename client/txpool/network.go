@@ -73,6 +73,9 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 	var frommemcnt uint32
 
 	common.CountSafe("Tx Procesed")
+	if txdbg_xtra_info != "" {
+		txdbg_xtra_info += fmt.Sprintf(". process %s\n", ntx.Hash.String())
+	}
 
 	if !ntx.Unmined && ntx.Weight() > int(common.Get(&common.CFG.TXPool.MaxTxWeight)) {
 		rejectTx(tx, TX_REJECTED_TOO_BIG, nil)
