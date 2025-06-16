@@ -286,7 +286,6 @@ func txAccepted(bidx btc.BIDX) {
 	var wtg *OneWaitingList
 	var found bool
 	var txr *OneTxRejected
-	var loop_cnt int
 
 	recs2do := []btc.BIDX{bidx}
 	for {
@@ -326,7 +325,7 @@ func txAccepted(bidx btc.BIDX) {
 				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
 					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
 						common.CountSafe("Tx*Weird")
-						println("w4txr", btc.BIdxString(txrr), "removed and then put back with", res, "at idx", idx, "of len", len(wtg.Ids))
+						println("\nw4txr", btc.BIdxString(txrr), "removed and then put back with", res, "at idx", idx, "of len", len(wtg.Ids))
 						print_ids("before", before)
 						if w4before != nil {
 							println("w4before:", w4before.String())
@@ -356,15 +355,13 @@ func txAccepted(bidx btc.BIDX) {
 							if txr.Waiting4 != nil {
 								println(" waiting4:", txr.Waiting4.String())
 							} else {
-								println("*** waiting4 is nil")
+								println("ERROR: waiting4 is nil")
 							}
 						} else {
-							panic("not in rejected")
+							println("ERROR: not in rejected")
 						}
-						if loop_cnt > 5 {
-							panic("Stuck in the loop")
-						}
-						loop_cnt++
+						println("Aborting the loop to not get stuck")
+						return
 					}
 				}
 			}
