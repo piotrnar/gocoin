@@ -535,6 +535,9 @@ func NetworkTick() {
 	if len(BlocksToGetFailed) > 0 {
 		for idx := range BlocksToGetFailed {
 			if v, ok := BlocksToGet[idx]; ok {
+				if time.Since(v.Started) < 5*time.Minute {
+					continue // give each block 5 minutes, to be annunced by other peers
+				}
 				var still_hope bool
 				for _, fid := range v.OnlyFetchFrom {
 					if slices.Contains(valid_conn_ids, fid) {
