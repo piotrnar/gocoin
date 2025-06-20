@@ -532,11 +532,14 @@ func NetworkTick() {
 	Mutex_net.Unlock()
 
 	MutexRcv.Lock()
-	if len(BlocksToGetFailed) > 0 {
+	if len(BlocksToGetFailed) > 0 && now.After(BlocksToGetFailedCheck) {
+		new_BlocksToGetFailed := make(map[btc.BIDX]struct{})
 		for idx := range BlocksToGetFailed {
 			if v, ok := BlocksToGet[idx]; ok {
 				if time.Since(v.Started) < 5*time.Minute {
-					continue // give each block 5 minutes, to be annunced by other peers
+					// give each block 5 minutes, to be annunced by other peers
+					new_BlocksToGetFailed[idx] = struct{}{}
+					continue
 				}
 				var still_hope bool
 				for _, fid := range v.OnlyFetchFrom {
@@ -560,7 +563,10 @@ func NetworkTick() {
 				}
 			}
 		}
-		BlocksToGetFailed = make(map[btc.BIDX]struct{})
+		BlocksToGetFailed = new_BlocksToGetFailed
+		if len(BlocksToGetFailed) > 0 && BlocksToGetFailedCheck.IsZero() {
+			BlocksToGetFailedCheck = now.Add(time.Minute) // some were not old enough yet. check them again in a minute
+		}
 	}
 	MutexRcv.Unlock()
 

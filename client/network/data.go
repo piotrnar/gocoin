@@ -405,6 +405,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 					v := BlocksToGet[idx]
 					if len(v.OnlyFetchFrom) != 0 && !slices.Contains(v.OnlyFetchFrom, c.ConnID) {
 						BlocksToGetFailed[idx] = struct{}{}
+						BlocksToGetFailedCheck = time.Time{}
 						continue
 					}
 					if uint32(v.InProgress) == cnt_in_progress {

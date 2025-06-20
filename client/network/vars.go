@@ -41,14 +41,15 @@ type OneBlockToGet struct {
 	*btc.Block
 	*chain.BlockTreeNode
 	OnlyFetchFrom []uint32
-	InProgress uint32
-	SendInvs   bool
+	InProgress    uint32
+	SendInvs      bool
 }
 
 var (
 	ReceivedBlocks           map[btc.BIDX]*OneReceivedBlock = make(map[btc.BIDX]*OneReceivedBlock, 400e3)
 	BlocksToGet              map[btc.BIDX]*OneBlockToGet    = make(map[btc.BIDX]*OneBlockToGet)
 	BlocksToGetFailed        map[btc.BIDX]struct{}          = make(map[btc.BIDX]struct{})
+	BlocksToGetFailedCheck   time.Time                      // set to zero to check ASAP
 	IndexToBlocksToGet       map[uint32][]btc.BIDX          = make(map[uint32][]btc.BIDX)
 	LowestIndexToBlocksToGet uint32
 	LastCommitedHeader       *chain.BlockTreeNode
