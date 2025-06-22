@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"slices"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -42,7 +43,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	if b2g, ok = BlocksToGet[bl.Hash.BIdx()]; ok {
 		common.CountSafe("HeaderFresh")
 		//fmt.Println(c.PeerAddr.Ip(), "block", bl.Hash.String(), " not new but get it")
-		if len(b2g.OnlyFetchFrom) > 0 {
+		if len(b2g.OnlyFetchFrom) > 0 && !slices.Contains(b2g.OnlyFetchFrom, c.ConnID) {
 			b2g.OnlyFetchFrom = append(b2g.OnlyFetchFrom, c.ConnID)
 		}
 		return PH_STATUS_FRESH, b2g
