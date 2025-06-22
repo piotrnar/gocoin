@@ -536,7 +536,7 @@ func NetworkTick() {
 		new_BlocksToGetFailed := make(map[btc.BIDX]struct{})
 		for idx := range BlocksToGetFailed {
 			if v, ok := BlocksToGet[idx]; ok {
-				if time.Since(v.Started) < 5*time.Minute {
+				if time.Since(v.Started) < 60*time.Minute {
 					// give each block 5 minutes, to be annunced by other peers
 					new_BlocksToGetFailed[idx] = struct{}{}
 					continue
