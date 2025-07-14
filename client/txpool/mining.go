@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 
@@ -162,6 +163,37 @@ func txMined(tx *btc.Tx) {
 	}
 }
 
+func txVerifyClean(tx *btc.Tx, mode int, bl *btc.Block) {
+	for i1, inp := range tx.TxIn {
+		bidx := btc.BIdx(inp.Input.Hash[:])
+		if w4i, ok := WaitingForInputs[bidx]; ok {
+			for _, txrb := range w4i.Ids {
+				if txr := TransactionsRejected[txrb]; txr.Tx != nil {
+					for i2, tii := range txr.Tx.TxIn {
+						if tii.Input == inp.Input {
+							println("ERROR: Dirty tx", mode, tx.Hash.String(), "at inp", i1,
+								"\n still rejected:", txr.Id.String(), "with inp", i2, txr.Reason, "\n ", tii.Input.String())
+							if txr.Waiting4 != nil {
+								println(" waiting4:", txr.Waiting4.String())
+							} else {
+								println(" not waiting4")
+							}
+							if txr.Raw != nil {
+								println(" raw:", hex.EncodeToString(txr.Raw))
+							} else {
+								println(" NOW raw data!!!")
+							}
+							println(" in block:", bl.Height, bl.Hash.String())
+						}
+					}
+				}
+			}
+		}
+	}
+	//WaitingForInputs
+
+}
+
 // BlockMined removes all the block's tx from the mempool.
 var txdbg_xtra_info string
 
@@ -175,9 +207,11 @@ func BlockMined(bl *btc.Block) {
 	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
 		tx := bl.Txs[i]
 		txMined(tx)
+		txVerifyClean(tx, 1, bl)
 	}
 	// now check if any mempool txs are waiting for inputs which were just mined
 	for ii, tx := range bl.Txs[1:] {
+		txVerifyClean(tx, 2, bl)
 		if common.Testnet {
 			txdbg_xtra_info = fmt.Sprintf("Block %d %s tx:%d/%d %s\n", bl.Height, bl.Hash.String(), ii+1, len(bl.Txs), tx.Hash.String())
 		}
