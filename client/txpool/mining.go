@@ -89,7 +89,7 @@ func (tx *OneTxToSend) unmined() {
 }
 
 // txMined is called for each tx mined in a new block.
-func txMined(tx *btc.Tx) {
+func txMined(tx *btc.Tx) int {
 	bidx := tx.Hash.BIdx()
 
 	if rec, ok := TransactionsToSend[bidx]; ok {
@@ -97,7 +97,7 @@ func txMined(tx *btc.Tx) {
 		common.CountSafe("TxMinedAccepted")
 		rec.mined()
 		rec.Delete(false, 0) // this should take care of the RejectedUsedUTXOs stuff
-		return
+		return 1
 	}
 
 	// if this tx was not in mempool, maybe another one is, that was spending (any of) the outputs?
@@ -148,19 +148,20 @@ func txMined(tx *btc.Tx) {
 	}
 
 	if was_rejected {
-		return
+		return 2
 	}
 
 	if mr, ok := TransactionsRejected[bidx]; ok {
 		common.CountSafePar("TxMinedRjctd-", mr.Reason)
 		mr.Delete()
-		return
+		return 3
 	}
 
 	if TransactionsPending[bidx] {
 		common.CountSafe("TxMinedPending")
 		delete(TransactionsPending, bidx)
 	}
+	return 4
 }
 
 func txVerifyClean(tx *btc.Tx, mode int, bl *btc.Block) {
@@ -171,6 +172,7 @@ func txVerifyClean(tx *btc.Tx, mode int, bl *btc.Block) {
 				if txr := TransactionsRejected[txrb]; txr.Tx != nil {
 					for i2, tii := range txr.Tx.TxIn {
 						if tii.Input == inp.Input {
+							common.CountSafe("Tx**NotClean")
 							println("ERROR: Dirty tx", mode, tx.Hash.String(), "at inp", i1,
 								"\n still rejected:", txr.Id.String(), "with inp", i2, txr.Reason, "\n ", tii.Input.String())
 							if txr.Waiting4 != nil {
@@ -206,12 +208,12 @@ func BlockMined(bl *btc.Block) {
 	FeePackagesDirty = true
 	for i := len(bl.Txs) - 1; i > 0; i-- { // we go in reversed order to remove children before parents
 		tx := bl.Txs[i]
-		txMined(tx)
-		txVerifyClean(tx, 1, bl)
+		res := txMined(tx)
+		txVerifyClean(tx, res, bl)
 	}
 	// now check if any mempool txs are waiting for inputs which were just mined
 	for ii, tx := range bl.Txs[1:] {
-		txVerifyClean(tx, 2, bl)
+		txVerifyClean(tx, -1, bl)
 		if common.Testnet {
 			txdbg_xtra_info = fmt.Sprintf("Block %d %s tx:%d/%d %s\n", bl.Height, bl.Hash.String(), ii+1, len(bl.Txs), tx.Hash.String())
 		}
