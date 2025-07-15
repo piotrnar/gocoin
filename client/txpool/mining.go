@@ -92,46 +92,55 @@ func (tx *OneTxToSend) unmined() {
 func txMined(tx *btc.Tx) int {
 	bidx := tx.Hash.BIdx()
 
-	if rec, ok := TransactionsToSend[bidx]; ok {
+	t2s, was_inpool := TransactionsToSend[bidx]
+	if was_inpool {
 		// if we have this tx in mempool, remove it and it should clean everything up nicely
 		common.CountSafe("TxMinedAccepted")
-		rec.mined()
-		rec.Delete(false, 0) // this should take care of the RejectedUsedUTXOs stuff
-		return 1
+		t2s.mined()
+		t2s.Delete(false, 0) // this should take care of the RejectedUsedUTXOs stuff
+		//return 1
 	}
 
 	// if this tx was not in mempool, maybe another one is, that was spending (any of) the outputs?
 	var was_rejected bool
 	for _, inp := range tx.TxIn {
 		idx := inp.Input.UIdx()
-		if val, ok := SpentOutputs[idx]; ok {
-			// ... in such case, make sure to discard it, along with all its children
-			if rec := TransactionsToSend[val]; rec != nil {
-				// there is this one...
-				common.CountSafePar("TxMinedUTXO-", rec.Local)
-				rec.Delete(true, 0) // this should remove relevant RejectedUsedUTXOs record as well
+		if !was_inpool {
+			if val, ok := SpentOutputs[idx]; ok {
+				// ... in such case, make sure to discard it, along with all its children
+				if rec := TransactionsToSend[val]; rec != nil {
+					// there is this one...
+					common.CountSafePar("TxMinedUTXO-", rec.Local)
+					rec.Delete(true, 0) // this should remove relevant RejectedUsedUTXOs record as well
+					if CheckForErrors() {
+						if _, ok := SpentOutputs[idx]; ok {
+							println("ERROR: SpentOutput was supposed to be deleted, but still here\n  ", inp.Input.String())
+						}
+					}
+				} else {
+					println("ERROR: Input SpentOutputs, but tx not in mempool\n  ", inp.Input.String())
+					delete(SpentOutputs, idx)
+				}
 				if CheckForErrors() {
-					if _, ok := SpentOutputs[idx]; ok {
-						println("ERROR: SpentOutput was supposed to be deleted, but still here\n  ", inp.Input.String())
+					if _, ok := RejectedUsedUTXOs[idx]; ok {
+						println("ERROR: we just removed t2s that was spending out, which is left in RejectedUsedUTXOs\n  ", inp.Input.String())
 					}
 				}
-			} else {
-				println("ERROR: Input SpentOutputs, but tx not in mempool\n  ", inp.Input.String())
-				delete(SpentOutputs, idx)
+				continue
 			}
-			if CheckForErrors() {
-				if _, ok := RejectedUsedUTXOs[idx]; ok {
-					println("ERROR: we just removed t2s that was spending out, which is left in RejectedUsedUTXOs\n  ", inp.Input.String())
-				}
-			}
-			continue
 		}
 
 		// if the input was not in SpentOutputs, then maybe it is still in RejectedUsedUTXOs
 		if lst, ok := RejectedUsedUTXOs[idx]; ok {
 			// it is - remove all rejected tx that would use any of just mined inputs
+			if was_inpool {
+				println("WAS_INPOOL: removing", len(lst), "rejected because of spent", inp.Input.String())
+			}
 			for _, rbidx := range lst {
 				if txr, ok := TransactionsRejected[rbidx]; ok {
+					if was_inpool {
+						println("  -", txr.Id.String())
+					}
 					txr.Delete()
 					if rbidx == bidx {
 						common.CountSafePar("TxMinedRjctdA-", txr.Reason)
@@ -147,7 +156,7 @@ func txMined(tx *btc.Tx) int {
 		}
 	}
 
-	if was_rejected {
+	if was_rejected || was_inpool {
 		return 2
 	}
 
