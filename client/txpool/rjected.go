@@ -269,14 +269,6 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 	//return rec
 }
 
-func print_ids(lab string, ids []btc.BIDX) {
-	print("ids ", lab, ":")
-	for ii, id := range ids {
-		fmt.Print(" ", ii, ":", btc.BIdxString(id))
-	}
-	println()
-}
-
 // call this function after the tx has been accepted,
 // to re-submit all txs that had been waiting for it
 func txAccepted(bidx btc.BIDX) {
