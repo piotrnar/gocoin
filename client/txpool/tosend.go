@@ -149,7 +149,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	for _, txin := range tx.TxIn {
 		uidx := txin.Input.UIdx()
 		delete(SpentOutputs, uidx)
-		// Mind that we do not want to check RejectedUsedUTXOs and remove rejected txs
+		// Mind that we do not want to check RejectedSpentOutputs and remove rejected txs
 		// ... refering to these iputs. We will do it only later, if this tx is mined.
 	}
 

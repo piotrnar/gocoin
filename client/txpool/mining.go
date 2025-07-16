@@ -96,8 +96,8 @@ func txMined(tx *btc.Tx) {
 		// if we have this tx in mempool, remove it and it should clean everything up nicely
 		common.CountSafe("TxMinedAccepted")
 		rec.mined()
-		rec.Delete(false, 0) // NOTE: this does not take care of the RejectedUsedUTXOs stuff
-		// we will continue to check RejectedUsedUTXOs and remove any rejected txs that are waiting for just-spent UTXOs ...
+		rec.Delete(false, 0) // NOTE: this does not take care of the RejectedSpentOutputs stuff
+		// we will continue to check RejectedSpentOutputs and remove any rejected txs that are waiting for just-spent UTXOs ...
 		was_inpool = true
 	}
 
@@ -112,7 +112,7 @@ func txMined(tx *btc.Tx) {
 				if rec := TransactionsToSend[val]; rec != nil {
 					// there is this one...
 					common.CountSafePar("TxMinedUTXO-", rec.Local)
-					rec.Delete(true, 0) // NOTE: this does not remove relevant RejectedUsedUTXOs record(s)
+					rec.Delete(true, 0) // NOTE: this does not remove relevant RejectedSpentOutputs record(s)
 					if CheckForErrors() {
 						if _, ok := SpentOutputs[idx]; ok {
 							println("ERROR: SpentOutput was supposed to be deleted, but still here\n  ", inp.Input.String())
@@ -125,8 +125,8 @@ func txMined(tx *btc.Tx) {
 			}
 		}
 
-		// check for the spent input in RejectedUsedUTXOs
-		if lst, ok := RejectedUsedUTXOs[idx]; ok {
+		// check for the spent input in RejectedSpentOutputs
+		if lst, ok := RejectedSpentOutputs[idx]; ok {
 			// it is - remove all rejected tx that would use any of just mined inputs
 			for _, rbidx := range lst {
 				if txr, ok := TransactionsRejected[rbidx]; ok {
@@ -147,10 +147,10 @@ func txMined(tx *btc.Tx) {
 						}
 					}
 				} else {
-					println("ERROR: UTXO present in RejectedUsedUTXOs, not in TransactionsRejected\n  ", inp.Input.String())
+					println("ERROR: UTXO present in RejectedSpentOutputs, not in TransactionsRejected\n  ", inp.Input.String())
 				}
 			}
-			delete(RejectedUsedUTXOs, idx) // this record will not be needed anymore
+			delete(RejectedSpentOutputs, idx) // this record will not be needed anymore
 		}
 	}
 

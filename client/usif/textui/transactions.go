@@ -401,10 +401,10 @@ func txr_stats(par string) {
 		fmt.Println("    Time from", rec.from.Format("2006-01-02 15:04:05"), "to", rec.to.Format("2006-01-02 15:04:05"))
 	}
 	cnt := 0
-	for _, lst := range txpool.RejectedUsedUTXOs {
+	for _, lst := range txpool.RejectedSpentOutputs {
 		cnt += len(lst)
 	}
-	fmt.Println("RejectedUsedUTXOs count:", cnt, "in", len(txpool.RejectedUsedUTXOs), "records")
+	fmt.Println("RejectedSpentOutputs count:", cnt, "in", len(txpool.RejectedSpentOutputs), "records")
 	txpool.TxMutex.Unlock()
 }
 
@@ -556,7 +556,7 @@ func tx_pool_stats(par string) {
 		len(txpool.TransactionsRejected))
 	fmt.Printf("  Waiting4Input: %d in %d txs\n", txpool.WaitingForInputsSize,
 		len(txpool.WaitingForInputs))
-	fmt.Printf("  Rejected used UTXOs: %d\n", len(txpool.RejectedUsedUTXOs))
+	fmt.Printf("  Rejected used UTXOs: %d\n", len(txpool.RejectedSpentOutputs))
 	fmt.Printf("Pending: %d txs, with %d inside net queue\n",
 		len(txpool.TransactionsPending), len(network.NetTxs))
 	fmt.Printf("  Current script verification flags: 0x%x\n", common.CurrentScriptFlags())

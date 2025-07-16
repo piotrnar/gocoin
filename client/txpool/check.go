@@ -269,27 +269,27 @@ func checkTRSortIndex() (dupa int) {
 	return dupa
 }
 
-func checkRejectedUsedUTXOs() (dupa int) {
+func checkRejectedSpentOutputs() (dupa int) {
 	var spent_cnt int
-	for utxoidx, lst := range RejectedUsedUTXOs {
+	for utxoidx, lst := range RejectedSpentOutputs {
 		spent_cnt += len(lst)
 		for _, bidx := range lst {
 			if txr, ok := TransactionsRejected[bidx]; ok && txr.Tx != nil {
 				var found bool
 				for _, inp := range txr.TxIn {
-					if _, ok := RejectedUsedUTXOs[inp.Input.UIdx()]; ok {
+					if _, ok := RejectedSpentOutputs[inp.Input.UIdx()]; ok {
 						found = true
 						break
 					}
 					if !found {
 						dupa++
-						fmt.Println(dupa, "Tx", txr.Id.String(), "in RejectedUsedUTXOs but without back reference to RejectedUsedUTXOs")
+						fmt.Println(dupa, "Tx", txr.Id.String(), "in RejectedSpentOutputs but without back reference to RejectedSpentOutputs")
 					}
 				}
 
 			} else {
 				dupa++
-				fmt.Println(dupa, "btc.BIDX", btc.BIdxString(bidx), "present in RejectedUsedUTXOs",
+				fmt.Println(dupa, "btc.BIDX", btc.BIdxString(bidx), "present in RejectedSpentOutputs",
 					fmt.Sprintf("%016x", utxoidx), "but not in TransactionsRejected")
 				if t2s, ok := TransactionsToSend[bidx]; ok {
 					fmt.Println("   It is however in T2S", t2s.Hash.String())
@@ -307,7 +307,7 @@ func checkRejectedUsedUTXOs() (dupa int) {
 	}
 	if spent_cnt != tot_utxo_used {
 		dupa++
-		fmt.Println(dupa, "RejectedUsedUTXOs count mismatch", spent_cnt, tot_utxo_used)
+		fmt.Println(dupa, "RejectedSpentOutputs count mismatch", spent_cnt, tot_utxo_used)
 
 		fmt.Println("Checking which txids are missing...")
 		for bidx, txr := range TransactionsRejected {
@@ -316,7 +316,7 @@ func checkRejectedUsedUTXOs() (dupa int) {
 			}
 			for _, inp := range txr.TxIn {
 				uidx := inp.Input.UIdx()
-				if lst, ok := RejectedUsedUTXOs[uidx]; ok {
+				if lst, ok := RejectedSpentOutputs[uidx]; ok {
 					var found bool
 					for _, bi := range lst {
 						if bidx == bi {
@@ -330,7 +330,7 @@ func checkRejectedUsedUTXOs() (dupa int) {
 				} else {
 					fmt.Println(" - Missing record", inp.Input.String(), "\n  for", txr.Id.String())
 				}
-				RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], txr.Id.BIdx())
+				RejectedSpentOutputs[uidx] = append(RejectedSpentOutputs[uidx], txr.Id.BIdx())
 			}
 		}
 	}
@@ -433,7 +433,7 @@ func MempoolCheck() bool {
 	dupa += checkMempoolTxs()
 	dupa += checkRejectedTxs()
 	dupa += checkTRSortIndex()
-	dupa += checkRejectedUsedUTXOs()
+	dupa += checkRejectedSpentOutputs()
 	if checkFeeList() {
 		dupa++
 		fmt.Println(dupa, "checkFeeList failed")

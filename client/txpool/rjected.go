@@ -27,7 +27,7 @@ var (
 
 	// Inputs that are being used by TransactionsRejected
 	// Each record points to one TransactionsRejected with Reason of 200 or more
-	RejectedUsedUTXOs map[uint64][]btc.BIDX = make(map[uint64][]btc.BIDX)
+	RejectedSpentOutputs map[uint64][]btc.BIDX = make(map[uint64][]btc.BIDX)
 )
 
 type OneTxRejected struct {
@@ -140,7 +140,7 @@ func (txr *OneTxRejected) Add() {
 	if txr.Tx != nil {
 		for _, inp := range txr.TxIn {
 			uidx := inp.Input.UIdx()
-			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], bidx)
+			RejectedSpentOutputs[uidx] = append(RejectedSpentOutputs[uidx], bidx)
 		}
 		if txr.Waiting4 != nil {
 			var rec *OneWaitingList
@@ -186,13 +186,13 @@ func DeleteRejectedByIdx(bidx btc.BIDX, musthave bool) {
 	}
 }
 
-// Remove any references to WaitingForInputs and RejectedUsedUTXOs
+// Remove any references to WaitingForInputs and RejectedSpentOutputs
 func (tr *OneTxRejected) cleanup() {
 	bidx := tr.Id.BIdx()
-	// remove references to this tx from RejectedUsedUTXOs
+	// remove references to this tx from RejectedSpentOutputs
 	for _, inp := range tr.TxIn {
 		uidx := inp.Input.UIdx()
-		if ref := RejectedUsedUTXOs[uidx]; ref != nil {
+		if ref := RejectedSpentOutputs[uidx]; ref != nil {
 			newref := make([]btc.BIDX, 0, len(ref)-1)
 			for _, bi := range ref {
 				if bi != bidx {
@@ -201,14 +201,14 @@ func (tr *OneTxRejected) cleanup() {
 			}
 			if len(newref) != len(ref) {
 				if len(newref) == 0 {
-					delete(RejectedUsedUTXOs, uidx)
+					delete(RejectedSpentOutputs, uidx)
 					common.CountSafe("TxUsedUTXOdel")
 				} else {
-					RejectedUsedUTXOs[uidx] = newref
+					RejectedSpentOutputs[uidx] = newref
 					common.CountSafe("TxUsedUTXOrem")
 				}
 			} else {
-				println("ERROR: TxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
+				println("ERROR: TxR", tr.Id.String(), "was in RejectedSpentOutputs, but not on the list. PLEASE REPORT!")
 			}
 		}
 	}
@@ -260,7 +260,7 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 	if why >= 200 {
 		txr.Tx = tx
 		txr.Waiting4 = missingid
-		// Note: WaitingForInputs and RejectedUsedUTXOs will be updated in AddRejectedTx
+		// Note: WaitingForInputs and RejectedSpentOutputs will be updated in AddRejectedTx
 	}
 	tx.Clean()
 	txr.Footprint = uint32(txr.SysSize())
@@ -431,7 +431,7 @@ func limitRejectedSizeIfNeeded() {
 }
 
 func resizeTransactionsRejectedCount(newcnt int) {
-	if checkRejectedTxs() > 0 || checkRejectedUsedUTXOs() > 0 {
+	if checkRejectedTxs() > 0 || checkRejectedSpentOutputs() > 0 {
 		panic("failed  before resizeTransactionsRejectedCount")
 	}
 	old_txrs := make([]*OneTxRejected, 0, len(TransactionsRejected))
@@ -476,7 +476,7 @@ func resizeTransactionsRejectedCount(newcnt int) {
 			}
 		}
 	}
-	if checkRejectedTxs() > 0 || checkRejectedUsedUTXOs() > 0 {
+	if checkRejectedTxs() > 0 || checkRejectedSpentOutputs() > 0 {
 		panic("resizeTransactionsRejectedCount failed")
 	}
 }
@@ -501,5 +501,5 @@ func InitTransactionsRejected() {
 
 	WaitingForInputs = make(map[btc.BIDX]*OneWaitingList)
 	WaitingForInputsSize = 0
-	RejectedUsedUTXOs = make(map[uint64][]btc.BIDX)
+	RejectedSpentOutputs = make(map[uint64][]btc.BIDX)
 }
