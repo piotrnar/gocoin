@@ -12,7 +12,7 @@ import (
 var MPCheckUTXO bool = true
 
 func CheckForErrors() bool {
-	return false
+	return common.Get(&common.CFG.TXPool.CheckForErrors)
 }
 
 func (t *OneTxToSend) isInMap() (yes bool) {

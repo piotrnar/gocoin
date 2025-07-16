@@ -1,9 +1,7 @@
 package txpool
 
 import (
-	"encoding/hex"
 	"fmt"
-	"runtime/debug"
 	"slices"
 	"sync/atomic"
 	"time"
@@ -289,7 +287,6 @@ func txAccepted(bidx btc.BIDX) {
 
 	recs2do := []btc.BIDX{bidx}
 	for {
-		// TODO: Remove all the debugs from this function when done investigating
 		if wtg, found = WaitingForInputs[recs2do[delidx]]; !found {
 			if delidx++; delidx == len(recs2do) {
 				return
@@ -299,9 +296,7 @@ func txAccepted(bidx btc.BIDX) {
 			panic("WaitingForInput record has no Ids")
 		}
 
-		before := slices.Clone(wtg.Ids)
 		txr = TransactionsRejected[wtg.Ids[0]] // always remove the first one ...
-		w4before := txr.Waiting4
 
 		if CheckForErrors() {
 			if txr == nil {
@@ -319,49 +314,14 @@ func txAccepted(bidx btc.BIDX) {
 			// if res was 0, t2s is not nil
 			recs2do = append(recs2do, t2s.Hash.BIdx())
 			common.CountSafe("TxRetryAccepted")
-		} else if common.Testnet /*&& CheckForErrors()*/ {
-			if res == TX_REJECTED_NO_TXOU {
+		} else {
+			if res == TX_REJECTED_NO_TXOU && CheckForErrors() { // TODO: Remove this part when done testing
 				txrr := txr.Hash.BIdx()
 				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
 					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
-						common.CountSafe("Tx*Weird")
-						println("\nw4txr", btc.BIdxString(txrr), "removed and then put back with", res, "at idx", idx, "of len", len(wtg.Ids))
-						print_ids("before", before)
-						if w4before != nil {
-							println("w4before:", w4before.String())
-						} else {
-							println("*** w4before is nil")
-						}
-						print_ids("-NOW--", wtg.Ids)
-
-						println("parent:", btc.BIdxString(bidx))
-						if t2s, ok := TransactionsToSend[bidx]; ok {
-							println("*** parent in mempool")
-							println(" id:", t2s.Hash.String())
-							println(" raw:", hex.EncodeToString(t2s.Tx.Raw))
-						} else {
-							println(" parent not in mempool - ok")
-						}
-						println("checking mempool:", MempoolCheck())
-						debug.PrintStack()
-						if txr, ok := TransactionsRejected[txrr]; ok {
-							println("TransactionsRejected for", btc.BIdxString(txrr), "contains:")
-							println(" xid:", txr.Id.String())
-							println(" reason:", txr.Reason)
-							println(" added:", time.Since(txr.Time).String(), "ago")
-							if txr.Tx != nil && txr.Tx.Raw != nil {
-								println(" xraw:", hex.EncodeToString(txr.Tx.Raw))
-							}
-							if txr.Waiting4 != nil {
-								println(" waiting4:", txr.Waiting4.String())
-							} else {
-								println("ERROR: waiting4 is nil")
-							}
-						} else {
-							println("ERROR: not in rejected")
-						}
-						println("Aborting the loop to not get stuck")
-						return
+						println("w4txr", btc.BIdxString(txrr), "removed and then put back with", res, "at idx", idx, "of len", len(wtg.Ids))
+						panic("This should not happen")
+						//common.CountSafe("Tx*Weird")
 					}
 				}
 			}
