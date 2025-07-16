@@ -122,11 +122,6 @@ func txMined(tx *btc.Tx) {
 					println("ERROR: Input SpentOutputs, but tx not in mempool\n  ", inp.Input.String())
 					delete(SpentOutputs, idx)
 				}
-				if CheckForErrors() {
-					if _, ok := RejectedUsedUTXOs[idx]; ok {
-						println("ERROR: we just removed t2s that was spending out, which is left in RejectedUsedUTXOs\n  ", inp.Input.String())
-					}
-				}
 			}
 		}
 
