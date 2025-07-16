@@ -132,9 +132,6 @@ func txMined(tx *btc.Tx) {
 		// if the input was not in SpentOutputs, then maybe it is still in RejectedUsedUTXOs
 		if lst, ok := RejectedUsedUTXOs[idx]; ok {
 			// it is - remove all rejected tx that would use any of just mined inputs
-			if was_inpool { // TODO: remove this when done testing
-				println("WAS_INPOOL: removing", len(lst), "rejected because of spent", inp.Input.String())
-			}
 			for _, rbidx := range lst {
 				if txr, ok := TransactionsRejected[rbidx]; ok {
 					txr.Delete()
