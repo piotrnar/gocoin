@@ -96,7 +96,7 @@ func txMined(tx *btc.Tx) {
 		// if we have this tx in mempool, remove it and it should clean everything up nicely
 		common.CountSafe("TxMinedAccepted")
 		rec.mined()
-		rec.Delete(false, 0) // this should take care of the RejectedUsedUTXOs stuff
+		rec.Delete(false, 0) // this does not take care of the RejectedUsedUTXOs stuff
 		// we will continue to check RejectedUsedUTXOs and remove any rejected txs that are waiting for just-spent UTXOs ...
 		was_inpool = true
 	}
