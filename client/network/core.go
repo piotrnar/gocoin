@@ -496,7 +496,9 @@ func (c *OneConnection) expire_misbehave(now int64) {
 				break
 			}
 			if idx+1 == len(c.misbehave_history) {
-				println("Un-misbehave "+c.PeerAddr.Ip(), "from", c.misbehave, "to zero")
+				if c.X.Debug || c.X.Authorized {
+					println("Un-misbehave "+c.PeerAddr.Ip(), "from", c.misbehave, "to zero")
+				}
 				c.misbehave = 0
 				c.misbehave_history = nil
 				return
@@ -507,7 +509,9 @@ func (c *OneConnection) expire_misbehave(now int64) {
 		if idx > 0 {
 			c.misbehave -= sub
 			c.misbehave_history = c.misbehave_history[idx:]
-			println("Un-misbehave "+c.PeerAddr.Ip(), "by", sub, "to", c.misbehave)
+			if c.X.Debug || c.X.Authorized {
+				println("Un-misbehave "+c.PeerAddr.Ip(), "by", sub, "to", c.misbehave, "-", len(c.misbehave_history), "left")
+			}
 		}
 	}
 }
@@ -515,10 +519,12 @@ func (c *OneConnection) expire_misbehave(now int64) {
 func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 	c.Mutex.Lock()
 	if c.X.Debug || c.X.Authorized {
-		print("Misbehave " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
+		print("Misbehave ", c.PeerAddr.Ip(), " (", c.Node.Agent, ") because ", why, " - add ", how_much, " to ", c.misbehave, "\n> ")
 	}
 	if !c.banit {
-		common.CountSafe("Bad" + why)
+		counter := "Bad" + why
+		common.CountSafe(counter)
+		c.cntInc(counter)
 		c.misbehave += how_much
 		c.misbehave_history = append(c.misbehave_history, [2]uint16{uint16(time.Now().Unix()), uint16(how_much)})
 		if c.misbehave >= 1000 {
