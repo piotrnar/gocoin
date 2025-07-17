@@ -217,8 +217,9 @@ type OneConnection struct {
 	writing_thread_done      sync.WaitGroup
 	keepBlocksOver           int
 	SendBufProd, SendBufCons int
-	misbehave                int   // When it reaches 1000, ban it
-	lastSec                  int64 // Ping stats
+	misbehave                int         // When it reaches 1000 witin one hour, ban it
+	misbehave_history        [][2]uint16 // [0] : time, [1] value added
+	lastSec                  int64       // Ping stats
 	txsCurIdx                int
 	txsCha                   [TxsCounterBufLen]uint32 // we need this to count txs received only within last hour
 
@@ -481,6 +482,36 @@ func (c *OneConnection) DoS(why string) {
 	c.Mutex.Unlock()
 }
 
+func (c *OneConnection) expire_misbehave(now int64) {
+	c.Mutex.Lock()
+	defer c.Mutex.Unlock()
+	if len(c.misbehave_history) > 0 {
+		var idx, sub int
+		for {
+			tim := (now & 0xffff0000) | int64(c.misbehave_history[idx][0])
+			if tim > now {
+				tim--
+			}
+			if now-tim < 3600 {
+				break
+			}
+			if idx+1 == len(c.misbehave_history) {
+				print("Un-misbehave "+c.PeerAddr.Ip(), "from", c.misbehave, "to zero")
+				c.misbehave = 0
+				c.misbehave_history = nil
+				return
+			}
+			idx++
+			sub += int(c.misbehave_history[idx][1])
+		}
+		if idx > 0 {
+			c.misbehave -= sub
+			c.misbehave_history = c.misbehave_history[idx:]
+			print("Un-misbehave "+c.PeerAddr.Ip(), "by", sub, "to", c.misbehave)
+		}
+	}
+}
+
 func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 	c.Mutex.Lock()
 	if c.X.Debug || c.X.Authorized {
@@ -489,6 +520,7 @@ func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 	if !c.banit {
 		common.CountSafe("Bad" + why)
 		c.misbehave += how_much
+		c.misbehave_history = append(c.misbehave_history, [2]uint16{uint16(time.Now().Unix()), uint16(how_much)})
 		if c.misbehave >= 1000 {
 			common.CountSafe("BanMisbehave")
 			res = true

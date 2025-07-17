@@ -170,6 +170,8 @@ func (c *OneConnection) Tick(now time.Time) {
 			}
 		}
 
+		c.expire_misbehave(tck)
+
 		// Tick the recent transactions counter
 		if now.After(c.txsNxt) {
 			c.Mutex.Lock()
