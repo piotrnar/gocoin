@@ -496,7 +496,7 @@ func (c *OneConnection) expire_misbehave(now int64) {
 				break
 			}
 			if idx+1 == len(c.misbehave_history) {
-				print("Un-misbehave "+c.PeerAddr.Ip(), "from", c.misbehave, "to zero")
+				println("Un-misbehave "+c.PeerAddr.Ip(), "from", c.misbehave, "to zero")
 				c.misbehave = 0
 				c.misbehave_history = nil
 				return
@@ -507,7 +507,7 @@ func (c *OneConnection) expire_misbehave(now int64) {
 		if idx > 0 {
 			c.misbehave -= sub
 			c.misbehave_history = c.misbehave_history[idx:]
-			print("Un-misbehave "+c.PeerAddr.Ip(), "by", sub, "to", c.misbehave)
+			println("Un-misbehave "+c.PeerAddr.Ip(), "by", sub, "to", c.misbehave)
 		}
 	}
 }
