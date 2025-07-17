@@ -33,10 +33,12 @@ func do_the_thing(db *utxo.UnspentDB, i int, tmp *uint32) {
 			},
 		}
 	)
+	var ttt uint32
 	for k, v := range db.HashMap[i] {
 		utxo.NewUtxoRecOwn(k, v, &sta_rec, &sta_cbs)
-		atomic.AddUint32(tmp, sta_rec.InBlock)
+		ttt += sta_rec.InBlock
 	}
+	atomic.AddUint32(tmp, ttt)
 }
 
 func utxo_benchmark(dir string) {
@@ -82,6 +84,7 @@ func utxo_benchmark(dir string) {
 	println("\rGoing through the map for the slice done in", time.Since(sta).String(), tmp)
 
 	var wg sync.WaitGroup
+
 	print("Decoding all records in static parallel 256 ...")
 	tmp = 0
 	sta = time.Now()
@@ -120,6 +123,23 @@ func utxo_benchmark(dir string) {
 		}
 	}
 	println("\rDecoding all records in static mode done in", time.Since(sta).String(), tmp)
+
+	print("Decoding all records in dynamic parallel 256 ...")
+	tmp = 0
+	sta = time.Now()
+	for i := range db.HashMap {
+		wg.Add(1)
+		go func(i int) {
+			var ttt uint32
+			for k, v := range db.HashMap[i] {
+				ttt += utxo.NewUtxoRec(k, v).InBlock
+			}
+			atomic.AddUint32(&tmp, ttt)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	println("\rDecoding all records in dynamic parallel done in", time.Since(sta).String(), tmp)
 
 	print("Decoding all records in dynamic mode ...")
 	tmp = 0
