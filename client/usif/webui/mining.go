@@ -51,10 +51,6 @@ func (x onemiernstat) Swap(i, j int) {
 }
 
 func json_blkver(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	w.Header()["Content-Type"] = []string{"application/json"}
 
 	common.Last.Mutex.Lock()
@@ -78,10 +74,6 @@ func json_blkver(w http.ResponseWriter, r *http.Request) {
 }
 
 func json_miners(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	type one_miner_row struct {
 		Name        string
 		MinedBlocks []OneMinedBlock

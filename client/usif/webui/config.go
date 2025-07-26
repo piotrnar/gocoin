@@ -18,10 +18,6 @@ import (
 )
 
 func p_cfg(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	if common.CFG.WebUI.ServerMode {
 		return
 	}

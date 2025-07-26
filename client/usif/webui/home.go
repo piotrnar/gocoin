@@ -22,10 +22,6 @@ var (
 )
 
 func json_status(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	var out struct {
 		Hash                   string
 		Diff                   float64
@@ -69,10 +65,6 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 }
 
 func json_system(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	var out struct {
 		Heap_sysmem        uint64
 		Qdb_allocs         int

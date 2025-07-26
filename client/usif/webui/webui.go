@@ -19,35 +19,6 @@ import (
 
 var start_time time.Time
 
-func ipchecker(r *http.Request) bool {
-	if common.NetworkClosed.Get() || usif.Exit_now.Get() {
-		return false
-	}
-
-	if r.TLS != nil {
-		r.ParseForm()
-		return true
-	}
-
-	var a, b, c, d uint32
-	n, _ := fmt.Sscanf(r.RemoteAddr, "%d.%d.%d.%d", &a, &b, &c, &d)
-	if n != 4 {
-		return false
-	}
-	addr := (a << 24) | (b << 16) | (c << 8) | d
-	common.LockCfg()
-	for i := range common.WebUIAllowed {
-		if (addr & common.WebUIAllowed[i].Mask) == common.WebUIAllowed[i].Addr {
-			common.UnlockCfg()
-			r.ParseForm()
-			return true
-		}
-	}
-	common.UnlockCfg()
-	println("ipchecker:", r.RemoteAddr, "is blocked")
-	return false
-}
-
 func load_template(fn string) string {
 	dat, er := os.ReadFile("www/templ/" + fn)
 	if er != nil {
@@ -128,10 +99,6 @@ func p_wallet_is_off(w http.ResponseWriter, r *http.Request) {
 }
 
 func p_general(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	var page string
 	if r.URL.Path == "/" {
 		http.Redirect(w, r, "/home", http.StatusFound)
@@ -167,9 +134,6 @@ func p_general(w http.ResponseWriter, r *http.Request) {
 }
 
 func p_authkey(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
 	w.Header()["Content-Type"] = []string{"text/plain"}
 	w.Write([]byte(common.PublicKey))
 }
@@ -210,7 +174,7 @@ func ServerThread() {
 	http.HandleFunc("/authkey.txt", p_authkey)
 
 	go start_ssl_server()
-	http.ListenAndServe(common.CFG.WebUI.Interface, nil)
+	http.ListenAndServe(common.CFG.WebUI.Interface, usif.TrackingMiddleware(http.DefaultServeMux))
 }
 
 type null_logger struct {
@@ -244,7 +208,8 @@ func start_ssl_server() {
 	ssl_serv_addr := fmt.Sprint(":", port)
 
 	server := &http.Server{
-		Addr: ssl_serv_addr,
+		Addr:    ssl_serv_addr,
+		Handler: usif.TrackingMiddleware(http.DefaultServeMux),
 		TLSConfig: &tls.Config{
 			ClientAuth: tls.RequireAndVerifyClientCert,
 		},

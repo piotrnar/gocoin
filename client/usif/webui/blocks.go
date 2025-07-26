@@ -13,10 +13,6 @@ import (
 )
 
 func json_blocks(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	type one_block struct {
 		Hash         string
 		Miner        string
@@ -143,10 +139,6 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 }
 
 func json_blfees(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	if len(r.Form["height"]) == 0 {
 		w.Write([]byte("No hash given"))
 		return

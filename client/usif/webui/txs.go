@@ -254,10 +254,6 @@ var txs2s_sort string = "spb"
 var txs2s_sort_desc bool = true
 
 func xml_txs2s(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	w.Header()["Content-Type"] = []string{"text/xml"}
 
 	if len(r.Form["minedid"]) > 0 && len(r.Form["minedat"]) > 0 {
@@ -369,10 +365,6 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 }
 
 func xml_txsre(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<txbanned>"))
 	txpool.TxMutex.Lock()
@@ -395,10 +387,6 @@ func xml_txsre(w http.ResponseWriter, r *http.Request) {
 }
 
 func xml_txw4i(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<pending>"))
 	txpool.TxMutex.Lock()
@@ -438,10 +426,6 @@ func xml_txw4i(w http.ResponseWriter, r *http.Request) {
 }
 
 func raw_tx(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintln(w, "Error")
@@ -482,9 +466,6 @@ func raw_tx(w http.ResponseWriter, r *http.Request) {
 }
 
 func json_txstat(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
 	w.Header()["Content-Type"] = []string{"application/json"}
 	w.Write([]byte("{"))
 
@@ -514,9 +495,6 @@ func json_txstat(w http.ResponseWriter, r *http.Request) {
 }
 
 func txt_mempool_fees(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
 	w.Header()["Content-Type"] = []string{"text/plain"}
 	w.Write([]byte(usif.MemoryPoolFees()))
 }
@@ -524,10 +502,6 @@ func txt_mempool_fees(w http.ResponseWriter, r *http.Request) {
 func json_mpfees(w http.ResponseWriter, r *http.Request) {
 	var division, maxweight uint64
 	var e error
-
-	if !ipchecker(r) {
-		return
-	}
 
 	txpool.TxMutex.Lock()
 	defer txpool.TxMutex.Unlock()

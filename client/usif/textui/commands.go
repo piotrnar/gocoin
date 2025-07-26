@@ -588,6 +588,10 @@ func kill_node(par string) {
 	os.Exit(1)
 }
 
+func webui_stats(par string) {
+	fmt.Print(usif.GetWebUIStats())
+}
+
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("cach", true, show_cached, "Show cached blocks [del2height]")
@@ -609,4 +613,5 @@ func init() {
 	newUi("trust", true, switch_trust, "Assume all downloaded blocks trusted: 0|1")
 	newUi("undo", true, undo_block, "Undo one block")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
+	newUi("web", true, webui_stats, "Show WebUI access statistics")
 }

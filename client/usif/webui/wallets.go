@@ -48,7 +48,7 @@ func getaddrtype(aa *btc.BtcAddr) string {
 }
 
 func json_balance(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) || !common.Get(&common.WalletON) {
+	if !common.Get(&common.WalletON) {
 		return
 	}
 
@@ -345,7 +345,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 }
 
 func dl_balance(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) || !common.Get(&common.WalletON) {
+	if !common.Get(&common.WalletON) {
 		return
 	}
 
@@ -470,10 +470,6 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 }
 
 func json_wallet_status(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	var out struct {
 		WalletON       bool
 		WalletProgress uint32

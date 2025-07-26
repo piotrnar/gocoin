@@ -13,10 +13,6 @@ import (
 )
 
 func json_netcon(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	defer func() {
 		if r := recover(); r != nil {
 			err, ok := r.(error)
@@ -51,10 +47,6 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 }
 
 func json_peerst(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	if len(r.Form["id"]) == 0 {
 		return
 	}
@@ -78,10 +70,6 @@ func json_peerst(w http.ResponseWriter, r *http.Request) {
 }
 
 func json_bwidth(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	type one_ext_ip struct {
 		Ip               string
 		Count, Timestamp uint
@@ -144,10 +132,6 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 }
 
 func json_bwchar(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
 	var cnt uint64
 
 	if len(r.Form["seconds"]) > 0 {

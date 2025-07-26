@@ -9,9 +9,6 @@ import (
 )
 
 func json_counts(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
 	type one_var_cnt struct {
 		Var string `json:"var"`
 		Cnt uint64 `json:"cnt"`
