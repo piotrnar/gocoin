@@ -79,7 +79,7 @@ func TrackingMiddleware(next http.Handler) http.Handler {
 func GetWebUIStats() (res string) {
 	ipMutex.RLock()
 	for ip, stats := range ipTracker {
-		res += fmt.Sprintf("%s : %d requests, last %s ago\n", ip, stats.Count, time.Since(stats.LastSeen))
+		res += fmt.Sprintf("%15s : %d requests, last %s ago\n", ip, stats.Count, time.Since(stats.LastSeen))
 	}
 	ipMutex.RUnlock()
 	return
