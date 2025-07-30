@@ -200,6 +200,7 @@ func make_signed_tx() {
 	tx := new(btc.Tx)
 	tx.Version = 1
 	tx.Lock_time = uint32(*lock_time)
+	tx.AllocVerVars() // otherwise any reference to tx.Spent_outputs will panic
 
 	// Select as many inputs as we need to pay the full amount (with the fee)
 	var btcsofar uint64
@@ -284,6 +285,7 @@ func process_raw_tx() {
 		return
 	}
 
+	tx.AllocVerVars() // otherwise any reference to tx.Spent_outputs will panic
 	tx.Spent_outputs = make([]*btc.TxOut, len(tx.TxIn))
 	for i := range tx.TxIn {
 		tx.Spent_outputs[i] = getUO(&tx.TxIn[i].Input)
