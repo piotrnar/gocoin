@@ -215,9 +215,6 @@ func BlockUndone(bl *btc.Block) {
 			os.Exit(1)
 		}
 	}
-	c, b := removeExcessiveTxs() // now we can limit the mempool size, if it went too far
-	if c > 0 || b > 0 {
-		println(c, b, "txs removed while undoing block", bl.Height, bl.Hash.String())
-	}
+	removeExcessiveTxs() // now we can limit the mempool size, if it went too far
 	TxMutex.Unlock()
 }

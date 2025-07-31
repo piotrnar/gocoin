@@ -174,7 +174,8 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	}
 }
 
-func removeExcessiveTxs() (cnt, bytes uint64) {
+func removeExcessiveTxs() {
+	var cnt, bytes uint64
 	if len(GetMPInProgressTicket) != 0 {
 		return // don't do it during mpget
 	}
@@ -198,7 +199,6 @@ func removeExcessiveTxs() (cnt, bytes uint64) {
 		common.SetMinFeePerKB(CurrentFeeAdjustedSPKB)
 		lastFeeAdjustedTime = time.Now()
 	}
-	return
 }
 
 func txChecker(tx *btc.Tx) bool {
