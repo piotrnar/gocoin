@@ -754,32 +754,6 @@ func main() {
 				usif.Exit_now.Set()
 				continue
 
-			case newbl := <-network.NetBlocks:
-				common.Busy()
-				HandleNetBlock(newbl)
-
-			case rpcbl := <-rpcapi.RpcBlocks:
-				common.Busy()
-				HandleRpcBlock(rpcbl)
-
-			case rec := <-usif.LocksChan:
-				common.Busy()
-				common.CountSafe("MainLocks")
-				rec.In.Done()
-				rec.Out.Wait()
-
-			case <-SaveBlockChain.C:
-				common.Busy()
-				common.CountSafe("SaveBlockChain")
-				if common.BlockChain.Idle() {
-					common.CountSafe("ChainIdleUsed")
-				}
-
-			case newtx := <-network.NetTxs:
-				common.Busy()
-				common.CountSafe("MainNetTx")
-				txpool.HandleNetTx(newtx)
-
 			case <-netTick:
 				common.Busy()
 				common.CountSafe("MainNetTick")
@@ -814,6 +788,12 @@ func main() {
 					startup_ticks = 5 // snooze by 5 seconds each time we're in here
 				}
 
+			case rec := <-usif.LocksChan:
+				common.Busy()
+				common.CountSafe("MainLocks")
+				rec.In.Done()
+				rec.Out.Wait()
+
 			case cmd := <-usif.UiChannel:
 				common.Busy()
 				common.CountSafe("MainUICmd")
@@ -824,6 +804,26 @@ func main() {
 				common.Busy()
 				peersdb.ExpirePeers()
 				usif.ExpireBlockFees()
+
+			case rpcbl := <-rpcapi.RpcBlocks:
+				common.Busy()
+				HandleRpcBlock(rpcbl)
+
+			case newbl := <-network.NetBlocks:
+				common.Busy()
+				HandleNetBlock(newbl)
+
+			case <-SaveBlockChain.C:
+				common.Busy()
+				common.CountSafe("SaveBlockChain")
+				if common.BlockChain.Idle() {
+					common.CountSafe("ChainIdleUsed")
+				}
+
+			case newtx := <-network.NetTxs:
+				common.Busy()
+				common.CountSafe("MainNetTx")
+				txpool.HandleNetTx(newtx)
 
 			case on := <-wallet.OnOff:
 				common.Busy()
