@@ -708,42 +708,30 @@ func main() {
 			go textui.MainThread()
 		}
 
+		retry_blocks_now := make(chan struct{}, 1)
+
 		startup_ticks := 5 // give 5 seconds for finding out missing blocks
 		for !usif.Exit_now.Get() {
 			common.Busy()
 
 			common.CountSafe("MainThreadLoops")
-			for retryCachedBlocks {
-				retryCachedBlocks = retry_cached_blocks()
-				if !retryCachedBlocks && network.BlocksToGetCnt() != 0 {
-					now := time.Now()
-					if network.Fetch.LastCacheEmpty.IsZero() || now.Sub(network.Fetch.LastCacheEmpty) >= time.Second {
-						network.Fetch.CacheEmpty++
-						network.Fetch.LastCacheEmpty = now
+			if retryCachedBlocks {
+				if retryCachedBlocks = retry_cached_blocks(); retryCachedBlocks {
+					if len(retry_blocks_now) == 0 {
+						retry_blocks_now <- struct{}{}
+					}
+				} else {
+					if len(retry_blocks_now) > 0 {
+						<-retry_blocks_now
+					}
+					if network.BlocksToGetCnt() != 0 {
+						now := time.Now()
+						if network.Fetch.LastCacheEmpty.IsZero() || now.Sub(network.Fetch.LastCacheEmpty) >= time.Second {
+							network.Fetch.CacheEmpty++
+							network.Fetch.LastCacheEmpty = now
+						}
 					}
 				}
-				// We have done one per loop - now do something else if pending...
-				if len(network.NetBlocks) > 0 || len(usif.UiChannel) > 0 {
-					break
-				}
-			}
-
-			// first check for priority messages; kill signal or a new block
-			select {
-			case <-common.KillChan:
-				common.Busy()
-				usif.Exit_now.Set()
-				continue
-
-			case newbl := <-network.NetBlocks:
-				common.Busy()
-				HandleNetBlock(newbl)
-
-			case rpcbl := <-rpcapi.RpcBlocks:
-				common.Busy()
-				HandleRpcBlock(rpcbl)
-
-			default: // timeout immediatelly if no priority message
 			}
 
 			common.Busy()
@@ -753,6 +741,20 @@ func main() {
 				common.Busy()
 				usif.Exit_now.Set()
 				continue
+
+			case rpcbl := <-rpcapi.RpcBlocks:
+				common.Busy()
+				HandleRpcBlock(rpcbl)
+
+			case newbl := <-network.NetBlocks:
+				common.Busy()
+				HandleNetBlock(newbl)
+
+			case rec := <-usif.LocksChan:
+				common.Busy()
+				common.CountSafe("MainLocks")
+				rec.In.Done()
+				rec.Out.Wait()
 
 			case <-netTick:
 				common.Busy()
@@ -788,30 +790,16 @@ func main() {
 					startup_ticks = 5 // snooze by 5 seconds each time we're in here
 				}
 
-			case rec := <-usif.LocksChan:
-				common.Busy()
-				common.CountSafe("MainLocks")
-				rec.In.Done()
-				rec.Out.Wait()
-
 			case cmd := <-usif.UiChannel:
 				common.Busy()
 				common.CountSafe("MainUICmd")
 				cmd.Handler(cmd.Param)
 				cmd.Done.Done()
 
-			case <-peersTick:
+			case newtx := <-network.NetTxs:
 				common.Busy()
-				peersdb.ExpirePeers()
-				usif.ExpireBlockFees()
-
-			case rpcbl := <-rpcapi.RpcBlocks:
-				common.Busy()
-				HandleRpcBlock(rpcbl)
-
-			case newbl := <-network.NetBlocks:
-				common.Busy()
-				HandleNetBlock(newbl)
+				common.CountSafe("MainNetTx")
+				txpool.HandleNetTx(newtx)
 
 			case <-SaveBlockChain.C:
 				common.Busy()
@@ -820,10 +808,10 @@ func main() {
 					common.CountSafe("ChainIdleUsed")
 				}
 
-			case newtx := <-network.NetTxs:
+			case <-peersTick:
 				common.Busy()
-				common.CountSafe("MainNetTx")
-				txpool.HandleNetTx(newtx)
+				peersdb.ExpirePeers()
+				usif.ExpireBlockFees()
 
 			case on := <-wallet.OnOff:
 				common.Busy()
@@ -839,6 +827,8 @@ func main() {
 					wallet.Disable()
 					common.Set(&common.WalletOnIn, 0)
 				}
+
+			case <-retry_blocks_now: // quickly continue to submit next cached block
 			}
 		}
 
