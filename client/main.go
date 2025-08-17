@@ -742,19 +742,17 @@ func main() {
 				usif.Exit_now.Set()
 				continue
 
-			case rpcbl := <-rpcapi.RpcBlocks:
-				common.Busy()
-				HandleRpcBlock(rpcbl)
-
-			case newbl := <-network.NetBlocks:
-				common.Busy()
-				HandleNetBlock(newbl)
-
 			case rec := <-usif.LocksChan:
 				common.Busy()
 				common.CountSafe("MainLocks")
 				rec.In.Done()
 				rec.Out.Wait()
+
+			case cmd := <-usif.UiChannel:
+				common.Busy()
+				common.CountSafe("MainUICmd")
+				cmd.Handler(cmd.Param)
+				cmd.Done.Done()
 
 			case <-netTick:
 				common.Busy()
@@ -790,11 +788,13 @@ func main() {
 					startup_ticks = 5 // snooze by 5 seconds each time we're in here
 				}
 
-			case cmd := <-usif.UiChannel:
+			case rpcbl := <-rpcapi.RpcBlocks:
 				common.Busy()
-				common.CountSafe("MainUICmd")
-				cmd.Handler(cmd.Param)
-				cmd.Done.Done()
+				HandleRpcBlock(rpcbl)
+
+			case newbl := <-network.NetBlocks:
+				common.Busy()
+				HandleNetBlock(newbl)
 
 			case newtx := <-network.NetTxs:
 				common.Busy()
