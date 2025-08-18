@@ -15,7 +15,7 @@ It keeps the entire UTXO set in RAM, providing an instant access to all its reco
 and - in consequece - an extraordinary blochchain processing performance.
 
 System memory and time Gocoin client needs to sync the blockchain up to
-the given block number, with comparision to Bitcoin Core 28.1:
+the given block number, with comparision to Bitcoin Core 29.0:
 
 ![SyncChart](website/quick_sync_gocoin_vs_core_aug25.png)
 *The above data was collected using [Hetzner](https://hetzner.com) dedicated server
