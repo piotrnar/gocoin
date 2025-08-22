@@ -12,25 +12,28 @@ Gocoin uses (configurable) <code>LastTrustedBlock</code> to avoid verifying scri
 Referenced Bitcoin Core uses an identical mechanism (configurable with <code>assumevalid</code> parameter).<br>
 Both implementations come with a recent trusted block built into their code (no need to configure them explicitly).<br></i>
 
-<h2>Gocoin 1.11.0</b>, built with Go 1.24.0</h2>
+<h2>Gocoin 1.11.0</b>, built with Go 1.25.0<sup>*</sup></h2>
 
 Benchmarks were run on <a href="https://hetzner.com">Hetzner</a> dedicated server
 with 3.2GHz Intel i7-8700 CPU, 128GB RAM, 2x1TB SSD and 1Gbit internet connection,
 running Debian 12 (bookworm).<br>
 
+*) Built with <code>GOAMD64=v3</code> and <code>GOEXPERIMENT=greenteagc</code>.<br>
+
 <h3>Effect of <code>Memory.CacheOnDisk</code> config value on blockchain sync speed</h3>
 
-<img src="2503-fi-cod_effect.png" width="50%"><br>
+<img src="2508-fi-cod_effect.png" width="50%"><br>
 
 <h3>Possible chain sync speed with a tweaked<sup>*</sup> configuration</h3>
-<img src="2503-fi-twaek_effect.png" width="50%"><br>
+<img src="2508-fi-twaek_effect.png" width="50%"><br>
 *) Changed config values:<br>
 <ul>
  <li><code>Net.MaxOutCons: 40</code><br>
  <li><code>Memory.GCPercTrshold: -1</code><br>
  <li><code>Memory.MemoryLimitMB: 120000</code><br>
+ <li><code>Memory.UseGoHeap: true</code><br>
  <li><code>Memory.CacheOnDisk: false</code><br>
- <li><code>MaxSyncCacheMB: 4000</code><br>
+ <li><code>MaxSyncCacheMB: 6000</code><br>
  <li><code>CompressBlockDB: false</code><br>
 </ul>
 
