@@ -9,7 +9,7 @@ Run <code>wallet -h</code> to see all available command line switches.
 
 <h2>Setup your seed</h2>
 Wallet is deterministic and the only thing you need to set it up is the seed password.<br>
-As long as you remember the password, you do not need to backup the wallet ever.<br>
+As long as you remember the password, you do not need to backup the wallet.<br>
 You can either enter this password each time when running the wallet, or you can store it in a file called <code>.secret </code>and never be asked to enter it again.<br>
 <br>
 
@@ -26,30 +26,27 @@ In order to do this, just run <code>wallet -l</code> and your wallet's public ad
 
 
 <h2>Security precautions</h2>
-Make sure that the disk with <code>.secret</code> file is encrypted.<br>
-<br>
 
-The seed password is the key to your entire wallet and the function used to calculate it is double SHA256<sup>*</sup>, which is pretty easy to compute.<br>
+<b>The seed password is your entire wallet</b> and the function used to turn it into private keys is double SHA256<sup>*</sup>, which is pretty easy to compute.<br>
 That is why it is very important for you to make sure that the password you're choosing will be resistant to brute force and dictionary attacks.<br>
+If you choose to use a memorable seed password (aka <i>brain wallet</i>),
+make it <u>at least</u> 20 characters long, preferably more than 30.<br>
+Avoid using words that can be found in a dictionary, as well as using simple sentences, or even more complex ones if they are known.<br>
 <br>
-If you choose to use a memorable seed-password (aka <i>brain wallet</i>),
-make it <u>at least</u> 20 characters long, preferably more than 30.
-Use both cases of letters, digits and sepcial characters.
-Try to avoid using words that can be found in a dictionary and never use sentences that can be found in Google.<br>
-<br>
-If you decide to write down the password, because you are affraid of forgetting it,
-try to describe it as a puzzle that only you can understad. Avoid writing down the password as is.<br>
+If you are affraid of forgetting the password and decide to write it down,
+try to describe it as a puzzle that only you can understad.<br>
+<b>Avoid writing down the password as is.</b><br>
 <br>
 
-<b>Are brain wallets less secure from those based on a random number generator?</b><br>
-It is debatable.<br>
-There are people claiming that brain wallets aren't secure because <i>brains cannot be a good source of entropy</i>.<br>
-If you have such a brain, make sure to consider this risk (e.g. use a random generator to create the content of the <code>.secret</code> file).<br>
-Otherwise coming out with a memorable though <u>uncrackable</u> seed, gives you quite a secure and convenient solution,
-as you get rid of backups that are a week point of the wallet's security. On top of that you never have to carry the wallet file with you.<br>
+There are claims that brain wallets are not secure because <i>"brains cannot be a good source of entropy"</i>.<br>
+If you belive that you have such a brain, use a secure random generator to create the <code>.secret</code> file for you.<br>
+At the other hand, <b>backups are a week point of the wallet's security, so having a memorable though <u>uncrackable</u> seed provides secure and convenient solution.</b> <br>
+Moreover, <b>by choosing a <i>brain wallet</i> you will not have to carry any wallet with you, making it impossible for anyone to see that you are carrying any coins.</b><br>
+<br>
+If you decide to store your seed in the <code>.secret</code> file, make sure to protect it accordingly (e.g. have the disk with it encrypted).<br>
 <br>
 <hr width="50" align="left">
-*) Wallets version 1.10.1 (or higher) support using an optional <b>scrypt</b> function to convert the password into private keys, 
+*) Wallets version 1.10.1 (or higher) support using an optional <b>scrypt</b> function to convert the password into private keys,
     making your  brain wallet far more resistant to bruteforce attacks.
     See the <code>scrypt</code> config value (inside your <code>wallet.cfg</code> file) for more info.<br>
 <br>
