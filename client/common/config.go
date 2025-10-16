@@ -184,9 +184,9 @@ func InitConfig() {
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
-	CFG.TXPool.FeePerByte = 1.0
+	CFG.TXPool.FeePerByte = 0.001
 	CFG.TXPool.MaxTxWeight = 400e3
-	CFG.TXPool.MaxSizeMB = 300
+	CFG.TXPool.MaxSizeMB = 500
 	CFG.TXPool.ExpireInDays = 14
 	CFG.TXPool.MaxRejectMB = 25.0
 	CFG.TXPool.MaxNoUtxoMB = 5.0
@@ -194,7 +194,7 @@ func InitConfig() {
 	CFG.TXPool.SaveOnDisk = true
 
 	CFG.TXRoute.Enabled = true
-	CFG.TXRoute.FeePerByte = 0.0
+	CFG.TXRoute.FeePerByte = 0.1
 	CFG.TXRoute.MaxTxWeight = 400e3
 	CFG.TXRoute.MemInputs = false
 
