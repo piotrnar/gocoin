@@ -1,4 +1,4 @@
-1.11.0:
+1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
 * Support for non-segwit nodes and pre-segwit network commands have been completely removed
 
