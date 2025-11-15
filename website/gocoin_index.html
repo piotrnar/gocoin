@@ -3,15 +3,30 @@
 <link rel="stylesheet" href="style.css" type="text/css">
 </head>
 <body>
-<h1>Gocoin</h1>
-<b>Gocoin</b> is a full <b>Bitcoin</b> solution written in <a href="http://golang.org/">Go language</a> (golang).<br>
+<h1>About Gocoin</h1>
+<b>Gocoin</b> is a full <b>Bitcoin</b> solution, written entirely from scratch in <a href="http://golang.org/" target="_blank">Go language</a> (golang).<br>
+The initial version was released in 2013 and it has been actively maintained ever since.<br>
 <br>
-The software's architecture is focused on maximum security and good performance.<br>
+The software's architecture is focused on high security and maximum performance.<br>
+Unlike the architecture chosen by Bitcoin Core,
+Gocoin's full node (called <b>client</b>) is an application independent from the <b>wallet</b>.<br>
 <br>
-The <b>client</b> (p2p node) is an application independent from the <b>wallet</b>.<br>
+The entire software was created and has been maintained by <a href="https://github.com/piotrnar" target="_blank">Piotr Narewski</a>.<br>
 <br>
-The <b>wallet</b> is deterministic and password seeded. As long as you remember the password, you do not need any backups of your wallet.<br>
+<h2>Client</h2>
+
+It implements full bitcoin node functionality, including the network communication and the memory pool.<br>
+The user interface is controlled via HTTP and a web browser, allowing a smooth remote access.<br>
+It implements all the up-to-date consensus rules, including Taproot.<br>
+It is capable of mining, although no proper mining API is currenty provided, for the lack of interest.<br>
 <br>
-In addition there is also a set of more and less useful tools. They are all inside the <b>tools/</b> folder. Each source file in that folder is a separate tool.<br>
+<h2>Wallet</h2>
+The <b>wallet</b> is deterministic and password seeded. As long as you remember the password, you do not need any backups of your wallet.
+For maximum security, it is designed to be used on an offline computer.
+The recent versions are also compatible with BIP-39, allowing it to be used interchangeably with all the popular software and hardware wallets.<br>
+<br>
+<h2>Tools</h2>
+In addition there is also a set of more and less useful tools. They are all inside the <b>tools/</b> folder. 
+Each sub-directory in that folder is a separate tool.<br>
 </body>
 </html>
