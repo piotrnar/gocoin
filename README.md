@@ -110,7 +110,7 @@ The official web page of the project is served at <a href="http://gocoin.pl">goc
 where you can find extended documentation, including **User Manual**.
 
 Please do not log github issues when you only have questions concerning this software.
-Instead see [Contact](http://gocoin.pl/gocoin_links.html) page at [gocoin.pl](http://gocoin.pl) website
+Instead see [Contact](http://gocoin.pl/links) page at [gocoin.pl](http://gocoin.pl) website
 for possible ways of contacting me.
 
 If you want to support this project, I ask you to run your own Gocoin node, prefably with TCP port 8333
