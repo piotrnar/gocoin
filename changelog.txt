@@ -1,3 +1,6 @@
+1.11.1:
+* Wallet: new command line switch "p39" to aks for the BIP39 password (for the 12/18/24 words mnemonic)
+
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
 * Support for non-segwit nodes and pre-segwit network commands have been completely removed
@@ -42,7 +45,7 @@
 * Client/WebUI/Home: Shows the percentage occupancy of the ord inscriptions for each block
 * Tools/bdb - new command "-ord" to see ord inscriptions occupancy per block (use with "-ox" to extract the files)
 * Client: fixed lock problems releted to geting mempool content (only for peers we're authenticated with)
-* Lib: Chenges in "others/bip39" (invalid mnemonic error is more descriptiove, removed some warnings)
+* Lib: Chenges in "others/bip39" (invalid mnemonic error is more descriptive, removed some warnings)
 * Lib/Utxo: New option for NewUnspentDb() allowing to specify how many map records to preallocate in case of rescan
 * Client: Different pre-defined values of preallocated records for Mainnet and Testnet (saves RAM)
 * Client: Free each block's bl.Txs after bl.CommitBlock(), during deep chain syncs (saves RAM)

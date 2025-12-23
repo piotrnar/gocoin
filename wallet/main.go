@@ -71,6 +71,8 @@ var (
 	rfc6979 *bool = flag.Bool("rfc6979", false, "Use deterministic signatures as per RFC6979")
 
 	lock_time *uint = flag.Uint("locktime", 0, "Specify lock time value (timestamp if 500000000 or more, otherwise block number)")
+
+	bip39pass *bool = flag.Bool("p39", false, "Ask for BIP39 password (use with bip39 set to -1)")
 )
 
 // cleanExit exits after cleaning up private data from memory.

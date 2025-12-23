@@ -208,7 +208,7 @@ func make_wallet() {
 	} else /*if waltype==4*/ {
 		if bip39wrds != 0 {
 			var er error
-			var mnemonic string
+			var mnemonic, password string
 			if bip39wrds == -1 {
 				mnemonic = strings.ToLower(string(pass))
 				sys.ClearBuffer(pass)
@@ -223,6 +223,16 @@ func make_wallet() {
 						} else {
 							mnemonic = l
 						}
+					}
+				}
+				if *bip39pass {
+					var pass [1024]byte
+					fmt.Print("Enter the BIP39 password: ")
+					if n := sys.ReadPassword(pass[:]); n <= 0 {
+						fmt.Println("You entered empty password. Just do not use -p switch if there is no password.")
+						cleanExit(0)
+					} else {
+						password = string(pass[:n])
 					}
 				}
 			} else {
@@ -244,8 +254,9 @@ func make_wallet() {
 			if *dumpwords {
 				fmt.Println("BIP39:", mnemonic)
 			}
-			seed_key, er = bip39.NewSeedWithErrorChecking(mnemonic, "")
+			seed_key, er = bip39.NewSeedWithErrorChecking(mnemonic, password)
 			sys.ClearBuffer([]byte(mnemonic))
+			sys.ClearBuffer([]byte(password))
 			if er != nil {
 				println(er.Error())
 				cleanExit(1)
