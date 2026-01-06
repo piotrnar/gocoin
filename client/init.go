@@ -88,9 +88,9 @@ func host_init() {
 	}
 
 	if common.Testnet {
-		ext.UTXOPrealloc = 1e6 // New testnet4
+		ext.UTXOPrealloc = 11e6 // New testnet4 around block #117k
 	} else {
-		ext.UTXOPrealloc = 120e6 // Around block #838k
+		ext.UTXOPrealloc = 116e6 // Around block #931k
 	}
 
 	sta := time.Now()
