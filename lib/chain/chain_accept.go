@@ -277,6 +277,8 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 		}
 
 		// Add each tx outs from the currently executed TX to the temporary pool
+		// Clone required as signature verification goroutines access this data
+		// concurrently while main thread marks outputs spent (t[inp.Vout] = nil)
 		blUnsp[tx.Hash.Hash] = slices.Clone(tx.TxOut)
 	}
 
