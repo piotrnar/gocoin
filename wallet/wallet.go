@@ -252,7 +252,15 @@ func make_wallet() {
 				}
 			}
 			if *dumpwords {
-				fmt.Println("BIP39:", mnemonic)
+				fmt.Println("===================== BIP39 mnemonic =====================")
+				words := strings.Split(mnemonic, " ")
+				for i := range words {
+					fmt.Printf(" %2d: %-8s ", i+1, words[i])
+					if (i & 3) == 3 {
+						fmt.Println()
+					}
+				}
+				fmt.Println("==========================================================")
 			}
 			seed_key, er = bip39.NewSeedWithErrorChecking(mnemonic, password)
 			sys.ClearBuffer([]byte(mnemonic))
