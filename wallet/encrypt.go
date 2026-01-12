@@ -5,12 +5,12 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"io"
-	"io/ioutil"
+	"os"
 	"strings"
 )
 
 func encrypt_file(fn string, key []byte) (outfn string) {
-	dat, er := ioutil.ReadFile(fn)
+	dat, er := os.ReadFile(fn)
 	if er != nil {
 		println(er.Error())
 		cleanExit(1)
@@ -36,7 +36,7 @@ func encrypt_file(fn string, key []byte) (outfn string) {
 
 	outfn = fn + ".enc"
 
-	if er = ioutil.WriteFile(outfn, gcm.Seal(nonce, nonce, dat, nil), 0600); er != nil {
+	if er = os.WriteFile(outfn, gcm.Seal(nonce, nonce, dat, nil), 0600); er != nil {
 		println(er.Error())
 		cleanExit(1)
 	}
@@ -45,7 +45,7 @@ func encrypt_file(fn string, key []byte) (outfn string) {
 }
 
 func decrypt_file(fn string, key []byte) (outfn string) {
-	ciphertext, er := ioutil.ReadFile(fn)
+	ciphertext, er := os.ReadFile(fn)
 	if er != nil {
 		println(er.Error())
 		cleanExit(1)
@@ -85,7 +85,7 @@ func decrypt_file(fn string, key []byte) (outfn string) {
 		outfn = fn + ".dec"
 	}
 
-	if er = ioutil.WriteFile(outfn, plaintext, 0600); er != nil {
+	if er = os.WriteFile(outfn, plaintext, 0600); er != nil {
 		println(er.Error())
 		cleanExit(1)
 	}
