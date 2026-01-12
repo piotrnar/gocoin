@@ -37,7 +37,7 @@ func ask_yes_no(msg string) bool {
 	}
 }
 
-func no_sign_mode() bool {
+func wallet_generation_mode() bool {
 	return *list || *dumpwords || *dumpxprv
 }
 
@@ -84,7 +84,7 @@ func getpass() ([]byte, error) {
 		return nil, errors.New("empty seed password entered by the user")
 	}
 
-	if no_sign_mode() {
+	if wallet_generation_mode() {
 		if !*singleask {
 			fmt.Print("Re-enter the seed password (to be sure): ")
 			var pass2 [1024]byte

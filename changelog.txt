@@ -1,6 +1,7 @@
 1.11.1:
 * Wallet: new command line switch "p39" to aks for the BIP39 password (for the 12/18/24 words mnemonic)
 * Wallet: Improved the way how BIP39 mnemonic is printed (when -words command line switch used)
+* Wallet: Changed the way/order how differend wallet commands are handled
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

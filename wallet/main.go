@@ -78,7 +78,7 @@ var (
 // cleanExit exits after cleaning up private data from memory.
 func cleanExit(code int) {
 	if *verbose {
-		fmt.Println("Cleaning up private keys")
+		fmt.Println("Cleaning up", len(keys), "private keys")
 	}
 	for k := range keys {
 		sys.ClearBuffer(keys[k].Key)
@@ -108,6 +108,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if *encrypt != "" && *decrypt != "" {
+		println("ERROR: you cannot do -encrypt and -decrypt at the same time")
+		os.Exit(1)
+	}
+
 	btc.EcdsaSignWithRFC6979 = *rfc6979
 
 	check_atype()
@@ -132,15 +137,6 @@ func main() {
 		cleanExit(0)
 	}
 
-	// list public addresses?
-	if no_sign_mode() {
-		make_wallet()
-		if *list {
-			dump_addrs()
-		}
-		cleanExit(0)
-	}
-
 	// dump privete key?
 	if *dumppriv != "" {
 		make_wallet()
@@ -158,7 +154,7 @@ func main() {
 		}
 	}
 
-	// raw transaction?
+	// sign raw transaction?
 	if *rawtx != "" {
 		// add p2sh sript to it?
 		if *p2sh != "" {
@@ -180,8 +176,17 @@ func main() {
 		cleanExit(0)
 	}
 
-	// make the wallet nad print balance
+	// make the wallet...
+	// this will handle: *dumpwords, *dumpxprv, *encrypt and *decrypt
 	make_wallet()
+
+	// list public addresses?
+	if *list {
+		dump_addrs()
+		cleanExit(0)
+	}
+
+	// if we got so far, we load the banace
 	if e := load_balance(); e != nil {
 		fmt.Println("ERROR:", e.Error())
 		fmt.Println("Failed to load wallet's balance data. Execute 'wallet -h' for help.")
@@ -194,6 +199,7 @@ func main() {
 		cleanExit(0)
 	}
 
+	// no send was requested so just show the balance
 	show_balance()
 	cleanExit(0)
 }

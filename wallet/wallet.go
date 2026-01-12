@@ -108,6 +108,8 @@ func make_wallet() {
 	var hd_hardend bool
 	var currhdsub uint // default 0
 	var aes_key []byte
+	var os_exit int = -1
+	var would_exit bool
 
 	load_others()
 	defer func() {
@@ -116,24 +118,33 @@ func make_wallet() {
 			sys.ClearBuffer(hdwal.Key)
 			sys.ClearBuffer(hdwal.ChCode)
 		}
+		if aes_key != nil {
+			sys.ClearBuffer(aes_key)
+		}
+		if os_exit != -1 {
+			cleanExit(os_exit)
+		}
 	}()
 
 	if waltype < 1 || waltype > 4 {
 		println("ERROR: Unsupported wallet type", waltype)
-		os.Exit(1)
+		os_exit = 1
+		return
 	}
 
 	if waltype < 3 {
-		println("Wallets Type", waltype, " are no longer supported. Use Gocoin wallet 1.9.8 or earlier.")
-		os.Exit(1)
+		println("ERROR: Wallets Type", waltype, "are no longer supported. Use Gocoin wallet 1.9.8 or earlier.")
+		os_exit = 1
+		return
 	}
 
 	if waltype == 4 {
 		// parse hdpath
 		ts := strings.Split(hdpath, "/")
 		if len(ts) < 2 || ts[0] != "m" {
-			println("hdpath - top level syntax error:", hdpath, len(ts))
-			os.Exit(1)
+			println("ERROR: hdpath - top level syntax error:", hdpath, len(ts))
+			os_exit = 1
+			return
 		}
 		hd_label_prefix = "m"
 		for i := 1; i < len(ts); i++ {
@@ -144,8 +155,9 @@ func make_wallet() {
 				hd_hardend = true
 			}
 			if v, e := strconv.ParseInt(strings.TrimSuffix(ti, "'"), 10, 32); e != nil || v < 0 {
-				println("hdpath - syntax error. non-negative integer expected:", ti)
-				os.Exit(1)
+				println("ERROR: hdpath - syntax error. non-negative integer expected:", ti)
+				os_exit = 1
+				return
 			} else {
 				xval |= uint32(v)
 			}
@@ -165,7 +177,8 @@ func make_wallet() {
 			fmt.Println("The seed password is considered to be BIP39 mnemonic")
 		} else if bip39wrds < 12 || bip39wrds > 24 || (bip39wrds%3) != 0 {
 			println("ERROR: Incorrect value for BIP39 words count", bip39wrds)
-			os.Exit(1)
+			os_exit = 1
+			return
 		}
 		if waltype != 4 {
 			fmt.Println("WARNING: Not HD-Wallet type. BIP39 mode ignored.")
@@ -175,13 +188,15 @@ func make_wallet() {
 	pass, er := getpass()
 	if er != nil {
 		println("Error reading seed password:", er.Error())
-		cleanExit(0)
+		os_exit = 0
+		return
 	}
 
 	if usescrypt != 0 {
 		if bip39wrds == -1 {
 			println("ERROR: Cannot use scrypt function in BIP39 mnemonic mode")
-			cleanExit(1)
+			os_exit = 1
+			return
 		}
 		fmt.Print("Running scrypt function with complexity ", 1<<usescrypt, " ... ")
 		sta := time.Now()
@@ -190,7 +205,8 @@ func make_wallet() {
 		sys.ClearBuffer(pass)
 		if len(dk) != 32 || er != nil {
 			println("scrypt.Key failed")
-			cleanExit(0)
+			os_exit = 0
+			return
 		}
 		pass = dk
 		fmt.Println("took", tim.String())
@@ -230,7 +246,8 @@ func make_wallet() {
 					fmt.Print("Enter the BIP39 password: ")
 					if n := sys.ReadPassword(pass[:]); n <= 0 {
 						fmt.Println("You entered empty password. Just do not use -p switch if there is no password.")
-						cleanExit(0)
+						os_exit = 0
+						return
 					} else {
 						password = string(pass[:n])
 					}
@@ -248,7 +265,8 @@ func make_wallet() {
 				sys.ClearBuffer(seed_key)
 				if er != nil {
 					println(er.Error())
-					cleanExit(1)
+					os_exit = 1
+					return
 				}
 			}
 			if *dumpwords {
@@ -261,13 +279,15 @@ func make_wallet() {
 					}
 				}
 				fmt.Println("==========================================================")
+				would_exit = true
 			}
 			seed_key, er = bip39.NewSeedWithErrorChecking(mnemonic, password)
 			sys.ClearBuffer([]byte(mnemonic))
 			sys.ClearBuffer([]byte(password))
 			if er != nil {
 				println(er.Error())
-				cleanExit(1)
+				os_exit = 1
+				return
 			}
 			hdwal = btc.MasterKey(seed_key, testnet)
 			sys.ClearBuffer(seed_key)
@@ -281,6 +301,7 @@ func make_wallet() {
 		hdwal.Prefix = hdwal_private_prefix()
 		if *dumpxprv {
 			fmt.Println("Root:", hdwal.String())
+			would_exit = true
 		}
 		if !hd_hardend {
 			// list root xpub...
@@ -303,14 +324,23 @@ func make_wallet() {
 		}
 	}
 
-	if *encrypt != "" {
-		fmt.Println("Encryped file saved as", encrypt_file(*encrypt, aes_key))
-		cleanExit(0)
+	if aes_key != nil {
+		fmt.Println("# Deterministic Walet Type", waltype)
+		for _, x := range hd_wallet_xtra {
+			fmt.Println("#", x)
+		}
+		if *encrypt != "" {
+			fmt.Println("Encryped file saved as", encrypt_file(*encrypt, aes_key))
+			fmt.Println("WARNING: verify that the x-pub-keys above match with your wallet")
+		} else {
+			fmt.Println("Decryped file saved as", decrypt_file(*decrypt, aes_key))
+		}
+		would_exit = true
 	}
 
-	if *decrypt != "" {
-		fmt.Println("Decryped file saved as", decrypt_file(*decrypt, aes_key))
-		cleanExit(0)
+	if would_exit && !*list { // if we did execute any request above and list is not requested, just exit
+		os_exit = 0
+		return
 	}
 
 	if *verbose {
