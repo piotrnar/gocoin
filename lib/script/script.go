@@ -836,14 +836,7 @@ func evalScript(p []byte, stack *scrStack, checker *SigChecker, ver_flags uint32
 					}
 					return false
 				}
-				d := stack.pop()
-				if checkMinVals && len(d) > 1 {
-					if DBG_ERR {
-						fmt.Println("Not minimal bool value", hex.EncodeToString(d))
-					}
-					return false
-				}
-				stack.pushBool(bts2bool(d))
+				stack.pushBool(stack.popInt(checkMinVals) != 0)
 
 			case opcode == 0x93 || //OP_ADD
 				opcode == 0x94 || //OP_SUB
