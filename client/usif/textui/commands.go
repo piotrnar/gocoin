@@ -328,11 +328,7 @@ func blchain_stats(par string) {
 }
 
 func blchain_utxodb(par string) {
-	if par == "mem" {
-		fmt.Println(common.BlockChain.Unspent.UTXOStatsDetailed())
-	} else {
-		fmt.Println(common.BlockChain.Unspent.UTXOStats())
-	}
+	fmt.Println(common.BlockChain.Unspent.UTXOStats())
 }
 
 func set_ulmax(par string) {

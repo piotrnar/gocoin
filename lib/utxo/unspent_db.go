@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -725,300 +724,10 @@ func (db *UnspentDB) abortWriting() {
 	}
 }
 
-// UTXOStatsDetailed provides comprehensive statistical analysis of UTXO record sizes
-// This is the enhanced version for memory optimization analysis
-func (db *UnspentDB) UTXOStatsDetailed() (s string) {
+func (db *UnspentDB) UTXOStats() string {
 	var outcnt, sum, sumcb, lele uint64
 	var filesize, unspendable, unspendable_recs, unspendable_bytes uint64
-
-	filesize = 8 + 32 + 8 // UTXO.db: block_no + block_hash + rec_cnt
-
-	// Size distribution tracking
-	type SizeStats struct {
-		sync.Mutex
-		histogram    map[int]uint64 // exact size -> count
-		totalRecords uint64
-		totalBytes   uint64
-		minSize      int
-		maxSize      int
-		sizes        []int // for percentile calculation
-	}
-
-	sizeStats := &SizeStats{
-		histogram: make(map[int]uint64),
-		minSize:   int(^uint(0) >> 1), // max int
-		maxSize:   0,
-	}
-
-	var wg sync.WaitGroup
-	for _i := range db.HashMap {
-		wg.Add(1)
-		go func(_i int) {
-			var (
-				sta_rec  UtxoRec
-				rec_outs = make([]*UtxoTxOut, MAX_OUTS_SEEN)
-				rec_pool = make([]UtxoTxOut, MAX_OUTS_SEEN)
-				rec_idx  int
-				sta_cbs  = NewUtxoOutAllocCbs{
-					OutsList: func(cnt int) (res []*UtxoTxOut) {
-						if len(rec_outs) < cnt {
-							println("utxo.MAX_OUTS_SEEN", len(rec_outs), "->", cnt)
-							rec_outs = make([]*UtxoTxOut, cnt)
-							rec_pool = make([]UtxoTxOut, cnt)
-						}
-						rec_idx = 0
-						res = rec_outs[:cnt]
-						for i := range res {
-							res[i] = nil
-						}
-						return
-					},
-					OneOut: func() (res *UtxoTxOut) {
-						res = &rec_pool[rec_idx]
-						rec_idx++
-						return
-					},
-				}
-			)
-
-			// Local histogram for this goroutine
-			localHistogram := make(map[int]uint64)
-			localSizes := make([]int, 0, len(db.HashMap[_i]))
-			localMin := int(^uint(0) >> 1)
-			localMax := 0
-
-			rec := &sta_rec
-			db.MapMutex[_i].RLock()
-			atomic.AddUint64(&lele, uint64(len(db.HashMap[_i])))
-
-			for k, v := range db.HashMap[_i] {
-				// THIS IS THE KEY PART: len(v) is the allocation size
-				recordSize := len(v)
-
-				// Track in local histogram
-				localHistogram[recordSize]++
-				localSizes = append(localSizes, recordSize)
-				if recordSize < localMin {
-					localMin = recordSize
-				}
-				if recordSize > localMax {
-					localMax = recordSize
-				}
-
-				reclen := uint64(len(v) + UtxoIdxLen)
-				atomic.AddUint64(&filesize, uint64(btc.VLenSize(reclen))+reclen)
-				NewUtxoRecOwn(k, v, rec, &sta_cbs)
-				var spendable_found bool
-				for _, r := range rec.Outs {
-					if r != nil {
-						atomic.AddUint64(&outcnt, 1)
-						atomic.AddUint64(&sum, r.Value)
-						if rec.Coinbase {
-							atomic.AddUint64(&sumcb, r.Value)
-						}
-						if script.IsUnspendable(r.PKScr) {
-							atomic.AddUint64(&unspendable, 1)
-							atomic.AddUint64(&unspendable_bytes, uint64(8+len(r.PKScr)))
-						} else {
-							spendable_found = true
-						}
-					}
-				}
-				if !spendable_found {
-					atomic.AddUint64(&unspendable_recs, 1)
-				}
-			}
-			db.MapMutex[_i].RUnlock()
-
-			// Merge local stats into global
-			sizeStats.Lock()
-			for size, count := range localHistogram {
-				sizeStats.histogram[size] += count
-			}
-			sizeStats.sizes = append(sizeStats.sizes, localSizes...)
-			if localMin < sizeStats.minSize {
-				sizeStats.minSize = localMin
-			}
-			if localMax > sizeStats.maxSize {
-				sizeStats.maxSize = localMax
-			}
-			sizeStats.Unlock()
-
-			wg.Done()
-		}(_i)
-	}
-	wg.Wait()
-
-	// Calculate statistics
-	sizeStats.totalRecords = uint64(len(sizeStats.sizes))
-	for size, count := range sizeStats.histogram {
-		sizeStats.totalBytes += uint64(size) * count
-	}
-
-	// Sort sizes for percentile calculation
-	sort.Ints(sizeStats.sizes)
-
-	// Calculate percentiles
-	getPercentile := func(p float64) int {
-		if len(sizeStats.sizes) == 0 {
-			return 0
-		}
-		idx := int(float64(len(sizeStats.sizes)-1) * p)
-		return sizeStats.sizes[idx]
-	}
-
-	p1 := getPercentile(0.01)
-	p5 := getPercentile(0.05)
-	p10 := getPercentile(0.10)
-	p25 := getPercentile(0.25)
-	p50 := getPercentile(0.50)
-	p75 := getPercentile(0.75)
-	p90 := getPercentile(0.90)
-	p95 := getPercentile(0.95)
-	p99 := getPercentile(0.99)
-
-	avgSize := float64(sizeStats.totalBytes) / float64(sizeStats.totalRecords)
-
-	// Build report
-	s = fmt.Sprintf("================================================================================\n")
-	s += fmt.Sprintf("UTXO DETAILED SIZE ANALYSIS\n")
-	s += fmt.Sprintf("================================================================================\n\n")
-
-	s += fmt.Sprintf("BASIC STATS:\n")
-	s += fmt.Sprintf("  Total Records:     %d\n", sizeStats.totalRecords)
-	s += fmt.Sprintf("  Total Bytes:       %d (%.2f MB)\n", sizeStats.totalBytes, float64(sizeStats.totalBytes)/1024/1024)
-	s += fmt.Sprintf("  Average Size:      %.2f bytes\n", avgSize)
-	s += fmt.Sprintf("  Min Size:          %d bytes\n", sizeStats.minSize)
-	s += fmt.Sprintf("  Max Size:          %d bytes\n\n", sizeStats.maxSize)
-
-	s += fmt.Sprintf("PERCENTILES:\n")
-	s += fmt.Sprintf("  P1  (1%%):          %d bytes\n", p1)
-	s += fmt.Sprintf("  P5  (5%%):          %d bytes\n", p5)
-	s += fmt.Sprintf("  P10 (10%%):         %d bytes\n", p10)
-	s += fmt.Sprintf("  P25 (25%%):         %d bytes\n", p25)
-	s += fmt.Sprintf("  P50 (50%%, median): %d bytes\n", p50)
-	s += fmt.Sprintf("  P75 (75%%):         %d bytes\n", p75)
-	s += fmt.Sprintf("  P90 (90%%):         %d bytes\n", p90)
-	s += fmt.Sprintf("  P95 (95%%):         %d bytes\n", p95)
-	s += fmt.Sprintf("  P99 (99%%):         %d bytes\n\n", p99)
-
-	// Find most common sizes
-	type SizeCount struct {
-		Size  int
-		Count uint64
-	}
-	var sizeList []SizeCount
-	for size, count := range sizeStats.histogram {
-		sizeList = append(sizeList, SizeCount{Size: size, Count: count})
-	}
-	sort.Slice(sizeList, func(i, j int) bool {
-		return sizeList[i].Count > sizeList[j].Count
-	})
-
-	s += fmt.Sprintf("TOP 30 MOST COMMON SIZES:\n")
-	s += fmt.Sprintf("  Size (bytes)    Count         Percentage    Cumulative%%\n")
-	s += fmt.Sprintf("  ------------    ---------     ----------    -----------\n")
-	var cumulative uint64
-	for i := 0; i < 30 && i < len(sizeList); i++ {
-		sc := sizeList[i]
-		cumulative += sc.Count
-		pct := float64(sc.Count) * 100.0 / float64(sizeStats.totalRecords)
-		cumPct := float64(cumulative) * 100.0 / float64(sizeStats.totalRecords)
-		s += fmt.Sprintf("  %-12d    %-9d     %6.2f%%        %6.2f%%\n",
-			sc.Size, sc.Count, pct, cumPct)
-	}
-	s += "\n"
-
-	// Size ranges for optimization planning
-	s += fmt.Sprintf("SIZE RANGE DISTRIBUTION:\n")
-	ranges := []struct {
-		min, max int
-		name     string
-	}{
-		{0, 32, "0-32 bytes"},
-		{33, 64, "33-64 bytes"},
-		{65, 80, "65-80 bytes"},
-		{81, 96, "81-96 bytes"},
-		{97, 112, "97-112 bytes"},
-		{113, 128, "113-128 bytes"},
-		{129, 144, "129-144 bytes"},
-		{145, 160, "145-160 bytes"},
-		{161, 192, "161-192 bytes"},
-		{193, 256, "193-256 bytes"},
-		{257, 512, "257-512 bytes"},
-		{513, 1024, "513-1024 bytes"},
-		{1025, 2048, "1025-2048 bytes"},
-		{2049, 999999, "2049+ bytes"},
-	}
-
-	for _, r := range ranges {
-		var count uint64
-		var bytes uint64
-		for size, cnt := range sizeStats.histogram {
-			if size >= r.min && size <= r.max {
-				count += cnt
-				bytes += cnt * uint64(size)
-			}
-		}
-		if count > 0 {
-			pct := float64(count) * 100.0 / float64(sizeStats.totalRecords)
-			avgInRange := float64(bytes) / float64(count)
-			s += fmt.Sprintf("  %-20s: %9d records (%6.2f%%)  avg: %.1f bytes\n",
-				r.name, count, pct, avgInRange)
-		}
-	}
-	s += "\n"
-
-	// Memory allocation overhead analysis
-	s += fmt.Sprintf("MEMORY ALLOCATION ANALYSIS (Power-of-2 allocator):\n")
-	var totalWaste uint64
-	nextPowerOf2 := func(n int) int {
-		if n <= 0 {
-			return 0
-		}
-		// Round up to next power of 2
-		p := 1
-		for p < n {
-			p *= 2
-		}
-		return p
-	}
-
-	for size, count := range sizeStats.histogram {
-		allocated := nextPowerOf2(size)
-		waste := allocated - size
-		totalWaste += uint64(waste) * count
-	}
-
-	actualMemory := sizeStats.totalBytes
-	allocatedMemory := actualMemory + totalWaste
-	wastePercent := float64(totalWaste) * 100.0 / float64(allocatedMemory)
-
-	s += fmt.Sprintf("  Actual data size:         %d bytes (%.2f MB)\n", actualMemory, float64(actualMemory)/1024/1024)
-	s += fmt.Sprintf("  Allocated (power-of-2):   %d bytes (%.2f MB)\n", allocatedMemory, float64(allocatedMemory)/1024/1024)
-	s += fmt.Sprintf("  Internal fragmentation:   %d bytes (%.2f MB)\n", totalWaste, float64(totalWaste)/1024/1024)
-	s += fmt.Sprintf("  Waste percentage:         %.2f%%\n\n", wastePercent)
-
-	// Original stats
-	s += fmt.Sprintf("================================================================================\n")
-	s += fmt.Sprintf("ORIGINAL UTXO STATS:\n")
-	s += fmt.Sprintf("================================================================================\n")
-	s += fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
-		float64(sum)/1e8, outcnt, lele, float64(sumcb)/1e8)
-	s += fmt.Sprintf(" MaxTxOutCnt: %d  DirtyDB: %t  Writing: %t  Abort: %t  Compressed: %t\n",
-		len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(), len(db.abortwritingnow) > 0,
-		db.ComprssedUTXO)
-	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
-		db.LastBlockHeight)
-	s += fmt.Sprintf(" Unspendable Outputs: %d (%dKB)  txs:%d    UTXO.db file size: %d\n",
-		unspendable, unspendable_bytes>>10, unspendable_recs, filesize)
-
-	return
-}
-
-func (db *UnspentDB) UTXOStats() (s string) {
-	var outcnt, sum, sumcb, lele uint64
-	var filesize, unspendable, unspendable_recs, unspendable_bytes uint64
+	o := new(bytes.Buffer)
 
 	filesize = 8 + 32 + 8 // UTXO.db: block_no + block_hash + rec_cnt
 
@@ -1085,17 +794,17 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	}
 	wg.Wait()
 
-	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
+	fmt.Fprintf(o, "UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, lele, float64(sumcb)/1e8)
-	s += fmt.Sprintf(" MaxTxOutCnt: %d  DirtyDB: %t  Writing: %t  Abort: %t  Compressed: %t\n",
+	fmt.Fprintf(o, " MaxTxOutCnt: %d  DirtyDB: %t  Writing: %t  Abort: %t  Compressed: %t\n",
 		len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(), len(db.abortwritingnow) > 0,
 		db.ComprssedUTXO)
-	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
+	fmt.Fprintf(o, " Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	s += fmt.Sprintf(" Unspendable Outputs: %d (%dKB)  txs:%d    UTXO.db file size: %d\n",
+	fmt.Fprintf(o, " Unspendable Outputs: %d (%dKB)  txs:%d    UTXO.db file size: %d\n",
 		unspendable, unspendable_bytes>>10, unspendable_recs, filesize)
 
-	return
+	return o.String()
 }
 
 // GetStats returns DB statistics.
