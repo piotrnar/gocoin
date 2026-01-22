@@ -1017,9 +1017,6 @@ func (db *UnspentDB) UTXOStatsDetailed() (s string) {
 }
 
 func (db *UnspentDB) UTXOStats() (s string) {
-	if s != "" {
-		return db.UTXOStatsDetailed()
-	}
 	var outcnt, sum, sumcb, lele uint64
 	var filesize, unspendable, unspendable_recs, unspendable_bytes uint64
 

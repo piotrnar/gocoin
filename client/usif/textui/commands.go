@@ -328,7 +328,11 @@ func blchain_stats(par string) {
 }
 
 func blchain_utxodb(par string) {
-	fmt.Println(common.BlockChain.Unspent.UTXOStats())
+	if par == "mem" {
+		fmt.Println(common.BlockChain.Unspent.UTXOStatsDetailed())
+	} else {
+		fmt.Println(common.BlockChain.Unspent.UTXOStats())
+	}
 }
 
 func set_ulmax(par string) {
@@ -612,6 +616,6 @@ func init() {
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
 	newUi("trust", true, switch_trust, "Assume all downloaded blocks trusted: 0|1")
 	newUi("undo", true, undo_block, "Undo one block")
-	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
+	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics [mem]")
 	newUi("web", true, webui_stats, "Show WebUI access statistics")
 }
