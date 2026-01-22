@@ -26,7 +26,7 @@ const (
 
 // Custom size classes optimized for UTXO allocation patterns:
 // Based on statistics: 69 bytes (32.3%), 57 bytes (24.8%), 55 bytes (15.3%), 59 bytes (10.2%)
-//
+// 
 // Size classes: 16, 32, 48, 64, 72, 80, 88, 96, 104, 112, 128, 256, 512, ...
 // Class indices: 0,  1,  2,  3,  4,  5,  6,  7,   8,   9,  10,  11,  12, ...
 const numSizeClasses = 32
@@ -37,7 +37,7 @@ var sizeClassSlotSize = [numSizeClasses]int{
 	1:  32,
 	2:  48,
 	3:  64,
-	4:  72, // Optimized for 69-byte allocations (36.8M records)
+	4:  72,  // Optimized for 69-byte allocations (36.8M records)
 	5:  80,
 	6:  88,
 	7:  96,
@@ -52,10 +52,8 @@ var sizeClassSlotSize = [numSizeClasses]int{
 	16: 8192,
 	17: 16384,
 	18: 32768,
-	19: 65536,
-	20: 131072,
-	21: 262144,
-	// Indices 22-31 reserved for future use (will use index as power-of-2)
+	// Classes 19+ not used - allocations > 32KB use dedicated pages
+	// This ensures compatibility with Windows (64KB pages)
 }
 
 // getSizeClass returns the size class index for a given allocation size.
@@ -63,7 +61,7 @@ var sizeClassSlotSize = [numSizeClasses]int{
 func getSizeClass(size int) int {
 	// Align to minimum allocation alignment (16 bytes on 64-bit)
 	alignedSize := (size + int(mallocAllign) - 1) &^ (int(mallocAllign) - 1)
-
+	
 	// Fast path for common UTXO sizes
 	switch {
 	case alignedSize <= 16:
@@ -100,17 +98,26 @@ func getSizeClass(size int) int {
 		return 15
 	case alignedSize <= 8192:
 		return 16
-	case alignedSize <= 16384:
-		return 17
-	case alignedSize <= 32768:
-		return 18
-	case alignedSize <= 65536:
-		return 19
-	case alignedSize <= 131072:
-		return 20
-	case alignedSize <= 262144:
-		return 21
 	default:
+		// For larger allocations, check against page size.
+		// Windows uses 64KB pages, Unix uses 1MB pages.
+		// We need at least 2 slots per page to be worthwhile.
+		slotSize := alignedSize
+		if alignedSize <= 16384 {
+			slotSize = 16384
+		} else if alignedSize <= 32768 {
+			slotSize = 32768
+		}
+		// If slot size is more than half the available page space, use dedicated page
+		if slotSize > int(pageAvail)/2 {
+			return -1
+		}
+		if alignedSize <= 16384 {
+			return 17
+		}
+		if alignedSize <= 32768 {
+			return 18
+		}
 		return -1 // Too large for shared pages, use dedicated page
 	}
 }
@@ -138,8 +145,8 @@ type node struct {
 
 type page struct {
 	brk      int
-	slotSize int // Actual slot size in bytes. 0 = dedicated page (large allocation)
-	size     int // Total page size from mmap
+	slotSize int  // Actual slot size in bytes. 0 = dedicated page (large allocation)
+	size     int  // Total page size from mmap
 	used     int
 }
 
@@ -185,12 +192,6 @@ func getClassFromSlotSize(slotSize int) int {
 		return 17
 	case 32768:
 		return 18
-	case 65536:
-		return 19
-	case 131072:
-		return 20
-	case 262144:
-		return 21
 	default:
 		return -1 // Dedicated page or unknown
 	}
@@ -233,7 +234,7 @@ func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
 		return 0, err
 	}
 
-	(*page)(unsafe.Pointer(p)).slotSize = 0 // Mark as dedicated page
+	(*page)(unsafe.Pointer(p)).slotSize = 0  // Mark as dedicated page
 	return p, nil
 }
 
@@ -243,11 +244,11 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	if slotSize == 0 {
 		panic(fmt.Sprintf("invalid size class: %d", class))
 	}
-
+	
 	if a.cap[class] == 0 {
 		a.cap[class] = int(pageAvail) / slotSize
 	}
-
+	
 	totalSize := int(headerSize) + a.cap[class]*slotSize
 	p, err := a.mmap(totalSize)
 	if err != nil {
@@ -298,10 +299,10 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	if counters {
 		a.Allocs--
 	}
-
+	
 	pg := p &^ uintptr(pageMask)
 	slotSize := (*page)(unsafe.Pointer(pg)).slotSize
-
+	
 	// Dedicated page (large allocation) - slotSize == 0
 	if slotSize == 0 {
 		if counters {
@@ -324,7 +325,7 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	}
 	a.lists[class] = p
 	(*page)(unsafe.Pointer(pg)).used--
-
+	
 	if (*page)(unsafe.Pointer(pg)).used != 0 {
 		return nil
 	}
@@ -375,9 +376,9 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	if counters {
 		a.Allocs++
 	}
-
+	
 	class := getSizeClass(size)
-
+	
 	// Large allocation - use dedicated page
 	if class < 0 {
 		p, err := a.newPage(size)
@@ -463,12 +464,12 @@ func UintptrUsableSize(p uintptr) (r int) {
 func usableSize(p uintptr) (r int) {
 	pg := p &^ uintptr(pageMask)
 	slotSize := (*page)(unsafe.Pointer(pg)).slotSize
-
+	
 	// Dedicated page - slotSize == 0
 	if slotSize == 0 {
 		return (*page)(unsafe.Pointer(pg)).size - int(headerSize)
 	}
-
+	
 	// Shared page - return the stored slot size
 	return slotSize
 }
