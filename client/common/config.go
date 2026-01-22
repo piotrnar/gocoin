@@ -95,7 +95,7 @@ var (
 		}
 		Memory struct {
 			GCPercTrshold        int
-			MemoryLimitMB        int64
+			MemoryLimitMB        uint32
 			UseGoHeap            bool // Use Go Heap and Garbage Collector for UTXO records
 			MaxCachedBlks        uint32
 			CacheOnDisk          bool
@@ -333,6 +333,7 @@ func InitConfig() {
 		fmt.Println("Using native Go heap with Garbage Collector for UTXO records")
 	} else {
 		fmt.Println("Using modernc.org/memory package to skip GC for UTXO records ")
+		MemoryModUsed = true
 		utxo.Memory_Malloc = func(le int) (res []byte) {
 			MemMutex.Lock()
 			res, _ = Memory.Malloc(le)
@@ -379,6 +380,13 @@ func SaveConfig() bool {
 func Reset() {
 	SetUploadLimit(uint64(CFG.Net.MaxUpKBps) << 10)
 	SetDownloadLimit(uint64(CFG.Net.MaxDownKBps) << 10)
+	if CFG.Memory.GCPercTrshold < -1 {
+		fmt.Println("INFO: GCPercTrshold config value changed from", CFG.Memory.GCPercTrshold, "to -1")
+		CFG.Memory.GCPercTrshold = -1
+	} else if CFG.Memory.GCPercTrshold == 0 {
+		fmt.Println("INFO: GCPercTrshold config value changed from", CFG.Memory.GCPercTrshold, "to 1")
+		CFG.Memory.GCPercTrshold = 1
+	}
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	UpdateMemoryLimit()
 	if AllBalMinVal() != CFG.AllBalances.MinValue {
@@ -478,9 +486,28 @@ func Reset() {
 	ApplyLastTrustedBlock()
 }
 
+// Mind that this is called with config mutex locked.
 func UpdateMemoryLimit() {
 	if CFG.Memory.MemoryLimitMB != 0 {
-		debug.SetMemoryLimit(CFG.Memory.MemoryLimitMB << 20)
+		MemMutex.Lock()
+		utxo_bytes_used := int64(Memory.Bytes)
+		MemMutex.Unlock()
+		new_limit := int64(CFG.Memory.MemoryLimitMB) << 20
+		if new_limit > utxo_bytes_used {
+			debug.SetMemoryLimit(new_limit - utxo_bytes_used)
+			if warningShown {
+				debug.SetGCPercent(CFG.Memory.GCPercTrshold)
+				warningShown = false
+			}
+		} else {
+			debug.SetMemoryLimit(0)
+			debug.SetGCPercent(1)
+			if !warningShown {
+				fmt.Println("WARNING: Disabled MemoryLimitMB as it is too low:", new_limit, "<", utxo_bytes_used)
+				fmt.Println(" Called SetGCPercent(1) instead")
+				warningShown = true
+			}
+		}
 	} else {
 		debug.SetMemoryLimit(defaultMemoryLimit)
 	}

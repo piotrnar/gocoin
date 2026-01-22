@@ -230,7 +230,7 @@ func show_mem(p string) {
 	}
 
 	if strings.HasSuffix(p, "MB") {
-		i, e := strconv.ParseInt(p[:len(p)-2], 10, 64)
+		i, e := strconv.ParseUint(p[:len(p)-2], 10, 32)
 		if e != nil {
 			println(e.Error())
 			return
@@ -238,7 +238,7 @@ func show_mem(p string) {
 		fmt.Println("CFG.Memory.MemoryLimitMB =", i)
 		fmt.Println("Execute 'sc' to save the config.")
 		common.LockCfg()
-		common.CFG.Memory.MemoryLimitMB = i
+		common.CFG.Memory.MemoryLimitMB = uint32(i)
 		common.UpdateMemoryLimit()
 		common.UnlockCfg()
 		return

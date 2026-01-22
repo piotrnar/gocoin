@@ -83,8 +83,10 @@ var (
 	lastTrustedBlock       *btc.Uint256
 	LastTrustedBlockHeight uint32
 
-	Memory   memory.Allocator
-	MemMutex sync.Mutex
+	Memory        memory.Allocator
+	MemMutex      sync.Mutex
+	MemoryModUsed bool
+	warningShown  bool
 
 	NoCounters sys.SyncBool
 
@@ -93,9 +95,9 @@ var (
 
 type TheLastBlock struct {
 	time.Time
-	Block     *chain.BlockTreeNode
-	ParseTill *chain.BlockTreeNode
-	sync.Mutex // use it for writing and reading from non-chain thread
+	Block       *chain.BlockTreeNode
+	ParseTill   *chain.BlockTreeNode
+	sync.Mutex  // use it for writing and reading from non-chain thread
 	ScriptFlags uint32
 }
 
