@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -59,7 +60,7 @@ type UnspentDB struct {
 	LastBlockHash   []byte
 	lastFileClosed  sync.WaitGroup
 	writingDone     sync.WaitGroup
-	MapMutex        [256]sync.RWMutex  // used to access HashMap
+	MapMutex        [256]sync.RWMutex // used to access HashMap
 	sync.Mutex
 	DirtyDB             sys.SyncBool
 	WritingInProgress   sys.SyncBool
@@ -724,18 +725,6 @@ func (db *UnspentDB) abortWriting() {
 	}
 }
 
-package utxo
-
-import (
-	"fmt"
-	"sort"
-	"sync"
-	"sync/atomic"
-
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/script"
-)
-
 // UTXOStatsDetailed provides comprehensive statistical analysis of UTXO record sizes
 // This is the enhanced version for memory optimization analysis
 func (db *UnspentDB) UTXOStatsDetailed() (s string) {
@@ -747,12 +736,12 @@ func (db *UnspentDB) UTXOStatsDetailed() (s string) {
 	// Size distribution tracking
 	type SizeStats struct {
 		sync.Mutex
-		histogram     map[int]uint64 // exact size -> count
-		totalRecords  uint64
-		totalBytes    uint64
-		minSize       int
-		maxSize       int
-		sizes         []int // for percentile calculation
+		histogram    map[int]uint64 // exact size -> count
+		totalRecords uint64
+		totalBytes   uint64
+		minSize      int
+		maxSize      int
+		sizes        []int // for percentile calculation
 	}
 
 	sizeStats := &SizeStats{
@@ -801,11 +790,11 @@ func (db *UnspentDB) UTXOStatsDetailed() (s string) {
 			rec := &sta_rec
 			db.MapMutex[_i].RLock()
 			atomic.AddUint64(&lele, uint64(len(db.HashMap[_i])))
-			
+
 			for k, v := range db.HashMap[_i] {
 				// THIS IS THE KEY PART: len(v) is the allocation size
 				recordSize := len(v)
-				
+
 				// Track in local histogram
 				localHistogram[recordSize]++
 				localSizes = append(localSizes, recordSize)
@@ -1029,8 +1018,7 @@ func (db *UnspentDB) UTXOStatsDetailed() (s string) {
 
 func (db *UnspentDB) UTXOStats() (s string) {
 	if s != "" {
-		db.UTXOStatsDetailed("")
-		return
+		return db.UTXOStatsDetailed()
 	}
 	var outcnt, sum, sumcb, lele uint64
 	var filesize, unspendable, unspendable_recs, unspendable_bytes uint64
