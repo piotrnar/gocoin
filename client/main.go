@@ -118,11 +118,11 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused
 	}
 
-	common.LockCfg()
 	if common.MemoryModUsed {
+		common.LockCfg()
 		common.UpdateMemoryLimit()
+		common.UnlockCfg()
 	}
-	common.UnlockCfg()
 
 	if e == nil {
 		if bl.Height > highestAcceptedBlock {
