@@ -41,16 +41,15 @@ var sizeClassSlotSize = [numSizeClasses]int{
 	8:  104,
 	9:  112,
 	10: 128,
-	11: 256,
-	12: 512,
-	13: 1024,
-	14: 2048,
+	11: 248,   // 264 slots per 64KB page, 32 bytes waste
+	12: 496,   // 132 slots per 64KB page, 32 bytes waste
+	13: 992,   // 66 slots per 64KB page, 32 bytes waste
+	14: 1984,  // 33 slots per 64KB page, 32 bytes waste
 	15: 4088,  // 16 slots per 64KB page (8-byte aligned)
 	16: 8184,  // 8 slots per 64KB page (8-byte aligned)
 	17: 16376, // 4 slots per 64KB page
 	18: 32752, // 2 slots per 64KB page
 	// Classes 19+ not used - allocations > 32KB use dedicated pages
-	// This ensures compatibility with Windows (64KB pages)
 }
 
 // getSizeClass returns the size class index for a given allocation size.
@@ -89,13 +88,13 @@ func getSizeClass(size int) int {
 		return 2
 	case alignedSize <= 64:
 		return 3
-	case alignedSize <= 256:
+	case alignedSize <= 248:
 		return 11
-	case alignedSize <= 512:
+	case alignedSize <= 496:
 		return 12
-	case alignedSize <= 1024:
+	case alignedSize <= 992:
 		return 13
-	case alignedSize <= 2048:
+	case alignedSize <= 1984:
 		return 14
 	case alignedSize <= 4088:
 		return 15
@@ -164,13 +163,13 @@ func getClassFromSlotSize(slotSize int) int {
 		return 9
 	case 128:
 		return 10
-	case 256:
+	case 248:
 		return 11
-	case 512:
+	case 496:
 		return 12
-	case 1024:
+	case 992:
 		return 13
-	case 2048:
+	case 1984:
 		return 14
 	case 4088:
 		return 15
