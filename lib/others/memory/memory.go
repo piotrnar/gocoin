@@ -59,37 +59,43 @@ var sizeClassSlotSize = [numSizeClasses]int{
 // getSizeClass returns the size class index for a given allocation size.
 // This is the core routing function that determines which slot size to use.
 func getSizeClass(size int) int {
-	// Align to minimum allocation alignment (16 bytes on 64-bit)
+	// Fast path for common UTXO sizes (65-128 byte range)
+	// Check raw size to ensure 69-byte records get 72-byte slots
+	if size >= 65 && size <= 128 {
+		switch {
+		case size <= 72:
+			return 4 // 72 bytes
+		case size <= 80:
+			return 5 // 80 bytes
+		case size <= 88:
+			return 6 // 88 bytes
+		case size <= 96:
+			return 7 // 96 bytes
+		case size <= 104:
+			return 8 // 104 bytes
+		case size <= 112:
+			return 9 // 112 bytes
+		default:
+			return 10 // 128 bytes
+		}
+	}
+	
+	// For sizes outside UTXO hot range, align to 16 bytes
 	alignedSize := (size + int(mallocAllign) - 1) &^ (int(mallocAllign) - 1)
 	
-	// Fast path for common UTXO sizes
 	switch {
 	case alignedSize <= 16:
-		return 0 // 16 bytes
+		return 0
 	case alignedSize <= 32:
-		return 1 // 32 bytes
+		return 1
 	case alignedSize <= 48:
-		return 2 // 48 bytes
+		return 2
 	case alignedSize <= 64:
-		return 3 // 64 bytes - covers 55, 57, 59 byte allocations
-	case alignedSize <= 72:
-		return 4 // 72 bytes - covers 69 byte allocations (32.3% of total!)
-	case alignedSize <= 80:
-		return 5 // 80 bytes
-	case alignedSize <= 88:
-		return 6 // 88 bytes
-	case alignedSize <= 96:
-		return 7 // 96 bytes
-	case alignedSize <= 104:
-		return 8 // 104 bytes
-	case alignedSize <= 112:
-		return 9 // 112 bytes
-	case alignedSize <= 128:
-		return 10 // 128 bytes
+		return 3
 	case alignedSize <= 256:
-		return 11 // 256 bytes
+		return 11
 	case alignedSize <= 512:
-		return 12 // 512 bytes
+		return 12
 	case alignedSize <= 1024:
 		return 13
 	case alignedSize <= 2048:
@@ -98,27 +104,18 @@ func getSizeClass(size int) int {
 		return 15
 	case alignedSize <= 8192:
 		return 16
-	default:
-		// For larger allocations, check against page size.
-		// Windows uses 64KB pages, Unix uses 1MB pages.
-		// We need at least 2 slots per page to be worthwhile.
-		slotSize := alignedSize
-		if alignedSize <= 16384 {
-			slotSize = 16384
-		} else if alignedSize <= 32768 {
-			slotSize = 32768
-		}
-		// If slot size is more than half the available page space, use dedicated page
-		if slotSize > int(pageAvail)/2 {
+	case alignedSize <= 16384:
+		if 16384 > int(pageAvail)/2 {
 			return -1
 		}
-		if alignedSize <= 16384 {
-			return 17
+		return 17
+	case alignedSize <= 32768:
+		if 32768 > int(pageAvail)/2 {
+			return -1
 		}
-		if alignedSize <= 32768 {
-			return 18
-		}
-		return -1 // Too large for shared pages, use dedicated page
+		return 18
+	default:
+		return -1
 	}
 }
 
