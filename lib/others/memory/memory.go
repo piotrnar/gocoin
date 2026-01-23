@@ -45,10 +45,10 @@ var sizeClassSlotSize = [numSizeClasses]int{
 	12: 512,
 	13: 1024,
 	14: 2048,
-	15: 4096,
-	16: 8192,
-	17: 16384,
-	18: 32768,
+	15: 4088,  // 16 slots per 64KB page (8-byte aligned)
+	16: 8184,  // 8 slots per 64KB page (8-byte aligned)
+	17: 16376, // 4 slots per 64KB page
+	18: 32752, // 2 slots per 64KB page
 	// Classes 19+ not used - allocations > 32KB use dedicated pages
 	// This ensures compatibility with Windows (64KB pages)
 }
@@ -97,19 +97,13 @@ func getSizeClass(size int) int {
 		return 13
 	case alignedSize <= 2048:
 		return 14
-	case alignedSize <= 4096:
+	case alignedSize <= 4088:
 		return 15
-	case alignedSize <= 8192:
+	case alignedSize <= 8184:
 		return 16
-	case alignedSize <= 16384:
-		if 16384 > int(pageAvail)/2 {
-			return -1
-		}
+	case alignedSize <= 16376:
 		return 17
-	case alignedSize <= 32768:
-		if 32768 > int(pageAvail)/2 {
-			return -1
-		}
+	case alignedSize <= 32752:
 		return 18
 	default:
 		return -1
@@ -178,13 +172,13 @@ func getClassFromSlotSize(slotSize int) int {
 		return 13
 	case 2048:
 		return 14
-	case 4096:
+	case 4088:
 		return 15
-	case 8192:
+	case 8184:
 		return 16
-	case 16384:
+	case 16376:
 		return 17
-	case 32768:
+	case 32752:
 		return 18
 	default:
 		return -1 // Dedicated page or unknown
