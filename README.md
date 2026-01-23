@@ -14,8 +14,8 @@ The **client** (p2p node) is an application independent from the **wallet**.
 It keeps the entire UTXO set in RAM, providing an instant access to all its records
 and - in consequece - an extraordinary blochchain processing performance.
 
-System memory and time Gocoin client needs to sync the blockchain up to
-the given block number, with comparision to Bitcoin Core 29.0:
+System memory and time Gocoin node needs to sync the blockchain up to
+the given block number, with comparision to Bitcoin Core 30.2:
 
 ![SyncChart](https://github.com/piotrnar/gocoin_website/blob/main/quick_sync_gocoin_vs_core_jan26.jpg?raw=true)
 *The above data was collected using [Hetzner](https://hetzner.com) dedicated server
