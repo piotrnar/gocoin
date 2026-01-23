@@ -10,23 +10,20 @@ package memory // import "modernc.org/memory"
 import (
 	"fmt"
 	"os"
-	"reflect"
 	"unsafe"
 )
 
 const (
-	headerSize     = unsafe.Sizeof(page{})
-	mallocAllign   = 2 * unsafe.Sizeof(uintptr(0))
-	maxSlotSize    = 1 << maxSlotSizeLog
-	maxSlotSizeLog = pageSizeLog - 2
-	pageAvail      = pageSize - headerSize
-	pageMask       = pageSize - 1
-	pageSize       = 1 << pageSizeLog
+	headerSize   = unsafe.Sizeof(page{})
+	mallocAllign = 2 * unsafe.Sizeof(uintptr(0))
+	pageAvail    = pageSize - headerSize
+	pageMask     = pageSize - 1
+	pageSize     = 1 << pageSizeLog
 )
 
 // Custom size classes optimized for UTXO allocation patterns:
 // Based on statistics: 69 bytes (32.3%), 57 bytes (24.8%), 55 bytes (15.3%), 59 bytes (10.2%)
-// 
+//
 // Size classes: 16, 32, 48, 64, 72, 80, 88, 96, 104, 112, 128, 256, 512, ...
 // Class indices: 0,  1,  2,  3,  4,  5,  6,  7,   8,   9,  10,  11,  12, ...
 const numSizeClasses = 32
@@ -37,7 +34,7 @@ var sizeClassSlotSize = [numSizeClasses]int{
 	1:  32,
 	2:  48,
 	3:  64,
-	4:  72,  // Optimized for 69-byte allocations (36.8M records)
+	4:  72, // Optimized for 69-byte allocations (36.8M records)
 	5:  80,
 	6:  88,
 	7:  96,
@@ -79,10 +76,10 @@ func getSizeClass(size int) int {
 			return 10 // 128 bytes
 		}
 	}
-	
+
 	// For sizes outside UTXO hot range, align to 16 bytes
 	alignedSize := (size + int(mallocAllign) - 1) &^ (int(mallocAllign) - 1)
-	
+
 	switch {
 	case alignedSize <= 16:
 		return 0
@@ -142,8 +139,8 @@ type node struct {
 
 type page struct {
 	brk      int
-	slotSize int  // Actual slot size in bytes. 0 = dedicated page (large allocation)
-	size     int  // Total page size from mmap
+	slotSize int // Actual slot size in bytes. 0 = dedicated page (large allocation)
+	size     int // Total page size from mmap
 	used     int
 }
 
@@ -231,7 +228,7 @@ func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
 		return 0, err
 	}
 
-	(*page)(unsafe.Pointer(p)).slotSize = 0  // Mark as dedicated page
+	(*page)(unsafe.Pointer(p)).slotSize = 0 // Mark as dedicated page
 	return p, nil
 }
 
@@ -241,11 +238,11 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	if slotSize == 0 {
 		panic(fmt.Sprintf("invalid size class: %d", class))
 	}
-	
+
 	if a.cap[class] == 0 {
 		a.cap[class] = int(pageAvail) / slotSize
 	}
-	
+
 	totalSize := int(headerSize) + a.cap[class]*slotSize
 	p, err := a.mmap(totalSize)
 	if err != nil {
@@ -296,10 +293,10 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	if counters {
 		a.Allocs--
 	}
-	
+
 	pg := p &^ uintptr(pageMask)
 	slotSize := (*page)(unsafe.Pointer(pg)).slotSize
-	
+
 	// Dedicated page (large allocation) - slotSize == 0
 	if slotSize == 0 {
 		if counters {
@@ -322,7 +319,7 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	}
 	a.lists[class] = p
 	(*page)(unsafe.Pointer(pg)).used--
-	
+
 	if (*page)(unsafe.Pointer(pg)).used != 0 {
 		return nil
 	}
@@ -373,9 +370,9 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	if counters {
 		a.Allocs++
 	}
-	
+
 	class := getSizeClass(size)
-	
+
 	// Large allocation - use dedicated page
 	if class < 0 {
 		p, err := a.newPage(size)
@@ -461,12 +458,12 @@ func UintptrUsableSize(p uintptr) (r int) {
 func usableSize(p uintptr) (r int) {
 	pg := p &^ uintptr(pageMask)
 	slotSize := (*page)(unsafe.Pointer(pg)).slotSize
-	
+
 	// Dedicated page - slotSize == 0
 	if slotSize == 0 {
 		return (*page)(unsafe.Pointer(pg)).size - int(headerSize)
 	}
-	
+
 	// Shared page - return the stored slot size
 	return slotSize
 }
@@ -478,12 +475,8 @@ func (a *Allocator) Calloc(size int) (r []byte, err error) {
 		return nil, err
 	}
 
-	var b []byte
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	sh.Cap = usableSize(p)
-	sh.Data = p
-	sh.Len = size
-	return b, nil
+	b := unsafe.Slice((*byte)(unsafe.Pointer(p)), usableSize(p))
+	return b[:size], nil
 }
 
 // Close releases all OS resources used by a and sets it to its zero value.
@@ -513,11 +506,8 @@ func (a *Allocator) Malloc(size int) (r []byte, err error) {
 		return nil, err
 	}
 
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&r))
-	sh.Cap = usableSize(p)
-	sh.Data = p
-	sh.Len = size
-	return r, nil
+	r = unsafe.Slice((*byte)(unsafe.Pointer(p)), usableSize(p))
+	return r[:size], nil
 }
 
 // Realloc changes the size of the backing array of b to size bytes.
@@ -530,11 +520,8 @@ func (a *Allocator) Realloc(b []byte, size int) (r []byte, err error) {
 		return nil, err
 	}
 
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&r))
-	sh.Cap = usableSize(p)
-	sh.Data = p
-	sh.Len = size
-	return r, nil
+	r = unsafe.Slice((*byte)(unsafe.Pointer(p)), usableSize(p))
+	return r[:size], nil
 }
 
 // UsableSize reports the size of the memory block allocated at p.
