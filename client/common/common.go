@@ -382,3 +382,10 @@ func MemUsed() (bts int, alcs int) {
 	MemMutex.Unlock()
 	return
 }
+
+func MemUsedX() (bts int, alcs int, mmaps int) {
+	MemMutex.Lock()
+	bts, alcs, mmaps = Memory.Bytes, Memory.Allocs, Memory.Mmaps
+	MemMutex.Unlock()
+	return
+}
