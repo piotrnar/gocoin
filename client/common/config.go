@@ -198,7 +198,7 @@ func InitConfig() {
 	CFG.TXRoute.MaxTxWeight = 400e3
 	CFG.TXRoute.MemInputs = false
 
-	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)
+	CFG.Memory.GCPercTrshold = 10 // 30% (To save mem)
 	CFG.Memory.MaxCachedBlks = 200
 	CFG.Memory.CacheOnDisk = true
 	CFG.Memory.SyncCacheSize = 500
