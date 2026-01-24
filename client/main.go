@@ -23,6 +23,7 @@ import (
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/memsize"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
@@ -147,7 +148,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		}
 		if common.Last.ParseTill != nil && (common.Last.Block.Height%div) == 0 {
 			b, a, m := common.MemUsed()
-			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(), len(network.NetBlocks), b>>10, a, m)
+			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(), len(network.NetBlocks), b>>10, a, m, memsize.MustResidentMemory()>>10)
 		}
 
 		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
