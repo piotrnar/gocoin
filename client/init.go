@@ -133,7 +133,7 @@ func host_init() {
 		sto.Sub(sta).String(), al>>20, by>>20, sy>>20)
 	fmt.Println("Highest known block is", common.Last.Block.Height, "from",
 		common.Last.Time.Format("2006-01-02 15:04:05"))
-
+	common.PrintMemused()
 	common.StartTime = time.Now()
 
 }
