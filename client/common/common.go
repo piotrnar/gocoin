@@ -83,7 +83,7 @@ var (
 	lastTrustedBlock       *btc.Uint256
 	LastTrustedBlockHeight uint32
 
-	Memory        memory.Allocator
+	Memory        *memory.Allocator = memory.NewAllocator()
 	MemMutex      sync.Mutex
 	MemoryModUsed bool
 	warningShown  bool

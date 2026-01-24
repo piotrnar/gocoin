@@ -1,35 +1,82 @@
 package main
 
 import (
+	"bufio"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
+	"sort"
 
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 func decode_utxo_header(fn string) {
 	var buf [48]byte
-	f, er := os.Open(fn)
+	var spare [1024 * 1024]byte
+	fi, er := os.Open(fn)
 	if er != nil {
 		fmt.Println(er.Error())
 		return
 	}
+	defer fi.Close()
+	f := bufio.NewReaderSize(fi, 0x40000) // read ahed buffer size
 	_, er = io.ReadFull(f, buf[:])
-	f.Close()
 	if er != nil {
 		fmt.Println(er.Error())
 		return
 	}
-	u64 := binary.LittleEndian.Uint64(buf[:8])
-	if (u64 & 0x8000000000000000) != 0 {
+	le := binary.LittleEndian.Uint64(buf[:8])
+	if (le & 0x8000000000000000) != 0 {
 		fmt.Println("Records: Compressed")
 	} else {
 		fmt.Println("Records: Not compressed")
 	}
-	fmt.Println("Last Block Height:", uint32(u64))
+	fmt.Println("Last Block Height:", uint32(le))
 	fmt.Println("Last Block Hash:", btc.NewUint256(buf[8:40]).String())
-	fmt.Println("Number of UTXO records:", binary.LittleEndian.Uint64(buf[40:48]))
-	os.Exit(0)
+	rec_cnt := binary.LittleEndian.Uint64(buf[40:48])
+	fmt.Println("Number of UTXO records:", rec_cnt)
+
+	println("Gathering UTXO records size statistics...")
+	lens := make(map[int]int)
+	for i := uint64(0); i < rec_cnt; i++ {
+		if (i & 0xfffff) == 0xfffff {
+			fmt.Print("\r", 100*i/rec_cnt, "%...")
+		}
+		le, er = btc.ReadVLen(f)
+		if er != nil {
+			println(er.Error())
+			return
+		}
+		if _, er = io.ReadFull(f, spare[:int(le)]); er != nil {
+			println(er.Error())
+			return
+		}
+		if le < 256 {
+			le = (le + 7) & 0xfffffff8
+		} else if le < 1024 {
+			le = (le + 15) & 0xfffffff0
+		} else if le < 4096 {
+			le = (le + 255) & 0xffffff00
+		} else if le < 65536 {
+			le = (le + 1023) & 0xfffff000
+		} else {
+			le = 65536
+		}
+		lens[int(le)]++
+	}
+	fmt.Println("\rMap length:", len(lens))
+	type onerec struct {
+		siz, cnt int
+	}
+	sss := make([]onerec, 0, len(lens))
+	for k, v := range lens {
+		sss = append(sss, onerec{siz: k, cnt: v})
+	}
+	sort.Slice(sss, func(i, j int) bool {
+		return sss[i].cnt > sss[j].cnt
+	})
+	for i, r := range sss {
+		fmt.Println(i+1, "", r.siz, "->", r.cnt, "time(s)")
+	}
 }

@@ -88,6 +88,7 @@ func main() {
 	if dir != "" {
 		if fi, er := os.Stat(dir); er == nil && !fi.IsDir() {
 			decode_utxo_header(dir)
+			return
 		}
 	}
 

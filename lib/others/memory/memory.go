@@ -24,100 +24,36 @@ const (
 	pageSize     = 1 << pageSizeLog
 )
 
-// Custom size classes optimized for UTXO allocation patterns:
-// Based on simulation of 113.8M real UTXO records:
-//   - 57-byte allocations: 52.0M records (45.7%) -> 60-byte slots (2.32% waste)
-//   - 69-byte allocations: 40.6M records (35.7%) -> 72-byte slots (4.11% waste)
-//   - Other common sizes mapped to 64, 80, 96, 128, 256, 512 byte slots
-//
-// Size classes: 16, 32, 48, 60, 64, 72, 80, 96, 128, 256, 512, 1024, 2048, ...
-// Class indices: 0,  1,  2,  3,  4,  5,  6,  7,   8,   9,  10,   11,   12, ...
-//
-// This configuration achieves 7.66% total waste vs 12.20% in previous version.
-// Memory savings: ~480 MB on full UTXO database.
-const numSizeClasses = 32
-
 // sizeClassSlotSize maps class index -> actual slot size in bytes
-var sizeClassSlotSize = [numSizeClasses]int{
-	0:  16,
-	1:  32,
-	2:  48,
-	3:  60, // CRITICAL: Handles 57-byte allocations (45% of all records)
-	4:  64,
-	5:  72, // Handles 69-byte allocations (35% of all records)
-	6:  80,
-	7:  96,
-	8:  128,
-	9:  256,
-	10: 512,
-	11: 1024,
-	12: 2048,
-	13: 4088,  // 16 slots per 64KB page (8-byte aligned)
-	14: 8184,  // 8 slots per 64KB page (8-byte aligned)
-	15: 16376, // 4 slots per 64KB page
-	16: 32752, // 2 slots per 64KB page
-	// Classes 17+ not used - allocations > 32KB use dedicated pages
+var sizeClassSlotSize = []int{
+	64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192,
+	200, 208, 216, 224, 232, 240, 248, 256, 272, 288,
+	304, 320, 336, 352, 368, 400, 416, 432, 464, 480,
+	512, 592, 704,
+	1024, 1280, 1536, 1792, 2048, 2304, 2816,
+	4096, 8192, 16378, 32768,
+}
+
+func init() {
+	for i := range sizeClassSlotSize {
+		sizeClassSlotSize[i] -= 8
+	}
 }
 
 // getSizeClass returns the size class index for a given allocation size.
 // This is the core routing function that determines which slot size to use.
 func getSizeClass(size int) int {
-	// Fast path for common UTXO sizes (50-128 byte range)
-	// This range handles ~95% of all UTXO allocations
-	if size >= 50 && size <= 128 {
-		switch {
-		case size <= 60:
-			return 3 // 60 bytes - handles 57-byte records (45% of allocations)
-		case size <= 64:
-			return 4 // 64 bytes
-		case size <= 72:
-			return 5 // 72 bytes - handles 69-byte records (35% of allocations)
-		case size <= 80:
-			return 6 // 80 bytes
-		case size <= 96:
-			return 7 // 96 bytes
-		default:
-			return 8 // 128 bytes
+	for i, v := range sizeClassSlotSize {
+		if size <= v {
+			return i
 		}
 	}
-
-	// For sizes outside UTXO hot range, align to 16 bytes
-	alignedSize := (size + int(mallocAllign) - 1) &^ (int(mallocAllign) - 1)
-
-	if pageSizeLog == 16 && alignedSize >= 4092 {
-		return -1 // For Windows that uses 64KB pages (instead of 1MB)
-	}
-	switch {
-	case alignedSize <= 16:
-		return 0
-	case alignedSize <= 32:
-		return 1
-	case alignedSize <= 48:
-		return 2
-	case alignedSize <= 256:
-		return 9
-	case alignedSize <= 512:
-		return 10
-	case alignedSize <= 1024:
-		return 11
-	case alignedSize <= 2048:
-		return 12
-	case alignedSize <= 4088:
-		return 13
-	case alignedSize <= 8184:
-		return 14
-	case alignedSize <= 16376:
-		return 15
-	case alignedSize <= 32752:
-		return 16
-	default:
-		return -1
-	}
+	return -1
 }
 
 // getSlotSize returns the actual slot size for a size class index
 func getSlotSize(class int) int {
-	if class >= 0 && class < numSizeClasses {
+	if class >= 0 && class < len(sizeClassSlotSize) {
 		return sizeClassSlotSize[class]
 	}
 	return 0
@@ -146,55 +82,31 @@ type page struct {
 // getClassFromSlotSize returns the size class index for a given slot size.
 // Used when freeing memory to find the correct free list.
 func getClassFromSlotSize(slotSize int) int {
-	switch slotSize {
-	case 16:
-		return 0
-	case 32:
-		return 1
-	case 48:
-		return 2
-	case 60:
-		return 3
-	case 64:
-		return 4
-	case 72:
-		return 5
-	case 80:
-		return 6
-	case 96:
-		return 7
-	case 128:
-		return 8
-	case 256:
-		return 9
-	case 512:
-		return 10
-	case 1024:
-		return 11
-	case 2048:
-		return 12
-	case 4088:
-		return 13
-	case 8184:
-		return 14
-	case 16376:
-		return 15
-	case 32752:
-		return 16
-	default:
-		return -1 // Dedicated page or unknown
+	for i, v := range sizeClassSlotSize {
+		if slotSize == v {
+			return i
+		}
 	}
+	panic("Unexpected slot size")
 }
 
 // Allocator allocates and frees memory. Its zero value is ready for use.
 type Allocator struct {
 	Allocs int // # of allocs.
 	Bytes  int // Asked from OS.
-	cap    [numSizeClasses]int
-	lists  [numSizeClasses]uintptr // *node - free lists per size class
-	Mmaps  int                     // Asked from OS.
-	pages  [numSizeClasses]uintptr // *page - current page per size class
-	regs   map[uintptr]struct{}    // map[*page]struct{} - all registered pages
+	cap    []int
+	lists  []uintptr            // *node - free lists per size class
+	Mmaps  int                  // Asked from OS.
+	pages  []uintptr            // *page - current page per size class
+	regs   map[uintptr]struct{} // map[*page]struct{} - all registered pages
+}
+
+func NewAllocator() (a *Allocator) {
+	a = new(Allocator)
+	a.cap = make([]int, len(sizeClassSlotSize))
+	a.lists = make([]uintptr, len(sizeClassSlotSize))
+	a.pages = make([]uintptr, len(sizeClassSlotSize))
+	return
 }
 
 func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
