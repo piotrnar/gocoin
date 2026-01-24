@@ -20,6 +20,7 @@ import (
 	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/memsize"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
@@ -135,10 +136,10 @@ func show_info(par string) {
 		common.Get(&common.BlockChainSynchronized), network.HeadersReceived.Get(), os.Getpid(),
 		time.Since(common.StartTime).String())
 	// Memory used
-	al, sy := sys.MemUsed()
+	al, _ := sys.MemUsed()
 	cb, ca, ms := common.MemUsed()
 	fmt.Printf("HeapUsed: %d MB,  SysUsed: %d MB,  UTXO-X-mem: %dMB in %d/%d\n",
-		al>>20, sy>>20, cb>>20, ca, ms)
+		al>>20, memsize.MustResidentMemory()>>20, cb>>20, ca, ms)
 	fmt.Printf("Peers: %d,  ECDSAs: %d %d %d,  AvgFee: %.1f SPB,  Saving: %t\n",
 		peersdb.PeerDB.Count(),
 		btc.EcdsaVerifyCnt(), btc.SchnorrVerifyCnt(), btc.CheckPay2ContractCnt(),
