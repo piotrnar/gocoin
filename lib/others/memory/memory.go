@@ -13,6 +13,7 @@ package memory // import "modernc.org/memory"
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"unsafe"
 )
 
@@ -36,7 +37,7 @@ var sizeClassSlotSize = []uint32{
 
 func init() {
 	for i := range sizeClassSlotSize {
-		sizeClassSlotSize[i] -= 8
+		sizeClassSlotSize[i] += 24 - 8
 	}
 }
 
@@ -382,14 +383,20 @@ func usableSize(p uintptr) (r int) {
 }
 
 // Calloc is like Malloc except the allocated memory is zeroed.
-func (a *Allocator) Calloc(size int) (r []byte, err error) {
+func (a *Allocator) Calloc(size int) (r *[]byte, err error) {
+	size += 24
 	p, err := a.UintptrCalloc(size)
 	if err != nil {
 		return nil, err
 	}
 
-	b := unsafe.Slice((*byte)(unsafe.Pointer(p)), usableSize(p))
-	return b[:size], nil
+	//b := unsafe.Slice((*byte)(unsafe.Pointer(p)), usableSize(p))
+	//return b[:size], nil
+	sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
+	sh.Cap = size - 24
+	sh.Data = uintptr(p + 24)
+	sh.Len = size - 24
+	return (*[]byte)(unsafe.Pointer(sh)), nil
 }
 
 // Close releases all OS resources used by a and sets it to its zero value.
@@ -404,28 +411,35 @@ func (a *Allocator) Close() (err error) {
 }
 
 // Free deallocates memory (as in C.free).
-func (a *Allocator) Free(b []byte) (err error) {
-	if b = b[:cap(b)]; len(b) == 0 {
+func (a *Allocator) Free(b *[]byte) (err error) {
+	/*if b = b[:cap(b)]; len(b) == 0 {
 		return nil
-	}
+	}*/
 
-	return a.UintptrFree(uintptr(unsafe.Pointer(&b[0])))
+	return a.UintptrFree(uintptr(unsafe.Pointer(b)))
 }
 
 // Malloc allocates size bytes and returns a byte slice.
-func (a *Allocator) Malloc(size int) (r []byte, err error) {
+func (a *Allocator) Malloc(size int) (r *[]byte, err error) {
+	size += 24
 	p, err := a.UintptrMalloc(size)
 	if p == 0 || err != nil {
 		return nil, err
 	}
 
-	r = unsafe.Slice((*byte)(unsafe.Pointer(p)), usableSize(p))
-	return r[:size], nil
+	//r = unsafe.Slice((*byte)(unsafe.Pointer(p)), usableSize(p))
+	//return r[:size], nil
+	sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
+	sh.Cap = size - 24
+	sh.Data = uintptr(p + 24)
+	sh.Len = size - 24
+	return (*[]byte)(unsafe.Pointer(sh)), nil
 }
 
 // Realloc changes the size of the backing array of b to size bytes.
-func (a *Allocator) Realloc(b []byte, size int) (r []byte, err error) {
+func (a *Allocator) Realloc(b []byte, size int) (r *[]byte, err error) {
 	var p uintptr
+	size += 24
 	if b = b[:cap(b)]; len(b) != 0 {
 		p = uintptr(unsafe.Pointer(&b[0]))
 	}
@@ -433,8 +447,13 @@ func (a *Allocator) Realloc(b []byte, size int) (r []byte, err error) {
 		return nil, err
 	}
 
-	r = unsafe.Slice((*byte)(unsafe.Pointer(p)), usableSize(p))
-	return r[:size], nil
+	//r = unsafe.Slice((*byte)(unsafe.Pointer(p)), usableSize(p))
+	//return r[:size], nil
+	sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
+	sh.Cap = size - 24
+	sh.Data = uintptr(p + 24)
+	sh.Len = size - 24
+	return (*[]byte)(unsafe.Pointer(sh)), nil
 }
 
 // UsableSize reports the size of the memory block allocated at p.

@@ -35,7 +35,7 @@ func do_the_thing(db *utxo.UnspentDB, i int, tmp *uint32) {
 	)
 	var ttt uint32
 	for k, v := range db.HashMap[i] {
-		utxo.NewUtxoRecOwn(k, v, &sta_rec, &sta_cbs)
+		utxo.NewUtxoRecOwn(k, *v, &sta_rec, &sta_cbs)
 		ttt += sta_rec.InBlock
 	}
 	atomic.AddUint32(tmp, ttt)

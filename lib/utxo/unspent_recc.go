@@ -122,7 +122,7 @@ func OneUtxoRecC(key UtxoKeyType, dat []byte, vout uint32) *btc.TxOut {
 	return nil
 }
 
-func SerializeC(rec *UtxoRec, full bool, use_buf []byte) (buf []byte) {
+func SerializeC(rec *UtxoRec, full bool, use_buf []byte) (buf *[]byte) {
 	var le, of int
 	var any_out bool
 
@@ -177,28 +177,29 @@ func SerializeC(rec *UtxoRec, full bool, use_buf []byte) (buf []byte) {
 	if use_buf == nil {
 		buf = Memory_Malloc(le)
 	} else {
-		buf = use_buf[:le]
+		x := use_buf[:le]
+		buf = &x
 	}
 	if full {
-		copy(buf[:32], rec.TxID[:])
+		copy((*buf)[:32], rec.TxID[:])
 		of = 32
 	} else {
 		of = 32 - UtxoIdxLen
-		copy(buf[:of], rec.TxID[UtxoIdxLen:])
+		copy((*buf)[:of], rec.TxID[UtxoIdxLen:])
 	}
 
-	of += btc.PutULe(buf[of:], uint64(rec.InBlock))
-	of += btc.PutULe(buf[of:], outcnt)
+	of += btc.PutULe((*buf)[of:], uint64(rec.InBlock))
+	of += btc.PutULe((*buf)[of:], outcnt)
 	for i, r := range rec.Outs {
 		if rec.Outs[i] != nil {
-			of += btc.PutULe(buf[of:], uint64(i))
-			of += btc.PutULe(buf[of:], comp_val[i])
+			of += btc.PutULe((*buf)[of:], uint64(i))
+			of += btc.PutULe((*buf)[of:], comp_val[i])
 			if comp_scr[i] != nil {
-				copy(buf[of:], comp_scr[i])
+				copy((*buf)[of:], comp_scr[i])
 				of += len(comp_scr[i])
 			} else {
-				of += btc.PutULe(buf[of:], uint64(6+len(r.PKScr)))
-				copy(buf[of:], r.PKScr)
+				of += btc.PutULe((*buf)[of:], uint64(6+len(r.PKScr)))
+				copy((*buf)[of:], r.PKScr)
 				of += len(r.PKScr)
 			}
 		}

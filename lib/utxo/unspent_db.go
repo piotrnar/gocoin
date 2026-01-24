@@ -24,11 +24,12 @@ var (
 	UTXO_PURGE_UNSPENDABLE   bool   = false
 )
 
-var Memory_Malloc = func(le int) []byte {
-	return make([]byte, le)
+var Memory_Malloc = func(le int) *[]byte {
+	p := make([]byte, le)
+	return &p
 }
 
-var Memory_Free = func([]byte) {
+var Memory_Free = func(*[]byte) {
 }
 
 type FunctionWalkUnspent func(*UtxoRec)
@@ -50,7 +51,7 @@ type BlockChanges struct {
 }
 
 type UnspentDB struct {
-	HashMap         [256](map[UtxoKeyType][]byte)
+	HashMap         [256](map[UtxoKeyType]*[]byte)
 	CB              CallbackFunctions
 	hurryup         chan bool
 	abortwritingnow chan bool
@@ -103,7 +104,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	db.ComprssedUTXO = opts.CompressRecords
 	if opts.Rescan {
 		for i := range db.HashMap {
-			db.HashMap[i] = make(map[UtxoKeyType][]byte, opts.RecordsPrealloc/256)
+			db.HashMap[i] = make(map[UtxoKeyType]*[]byte, opts.RecordsPrealloc/256)
 		}
 		return
 	}
@@ -121,7 +122,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	const RECS_PACK_SIZE = 0x10000
 	var wg sync.WaitGroup
 	type one_rec struct {
-		b []byte
+		b *[]byte
 		k UtxoKeyType
 	}
 	//var rec *one_rec
@@ -164,7 +165,7 @@ redo:
 	perc = 0
 
 	for i := range db.HashMap {
-		db.HashMap[i] = make(map[UtxoKeyType][]byte, int(u64)/256)
+		db.HashMap[i] = make(map[UtxoKeyType]*[]byte, int(u64)/256)
 	}
 	if db.ComprssedUTXO {
 		info = fmt.Sprint("\rLoading ", u64, " compressed txs from ", fname, " - ")
@@ -204,7 +205,7 @@ redo:
 		}
 
 		rec.b = Memory_Malloc(int(le) - UtxoIdxLen)
-		if _, er = io.ReadFull(rd, rec.b); er != nil {
+		if _, er = io.ReadFull(rd, *rec.b); er != nil {
 			goto fatal_error
 		}
 
@@ -256,7 +257,7 @@ fatal_error:
 	db.LastBlockHeight = 0
 	db.LastBlockHash = nil
 	for i := range db.HashMap {
-		db.HashMap[i] = make(map[UtxoKeyType][]byte, opts.RecordsPrealloc/256)
+		db.HashMap[i] = make(map[UtxoKeyType]*[]byte, opts.RecordsPrealloc/256)
 	}
 
 	return
@@ -371,9 +372,9 @@ func (db *UnspentDB) save() {
 				}
 			}
 
-			btc.WriteVlen(buf, uint64(UtxoIdxLen+len(v)))
+			btc.WriteVlen(buf, uint64(UtxoIdxLen+len(*v)))
 			buf.Write(k[:])
-			buf.Write(v)
+			buf.Write(*v)
 			if buf.Len() >= save_buffer_min {
 				data_channel <- buf.Bytes()
 				if !hurryup {
@@ -420,8 +421,8 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 			if changes.UndoData != nil {
 				for _, xx := range changes.UndoData {
 					bin := Serialize(xx, true, tmp[:])
-					btc.WriteVlen(bu, uint64(len(bin)))
-					bu.Write(bin)
+					btc.WriteVlen(bu, uint64(len(*bin)))
+					bu.Write(*bin)
 				}
 			}
 			if !db.undo_dir_created { // (try to) create undo folder before writing the first file
@@ -507,7 +508,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 		v := db.HashMap[ind[0]][ind]
 		db.MapMutex[ind[0]].RUnlock()
 		if v != nil {
-			oldrec := NewUtxoRec(ind, v)
+			oldrec := NewUtxoRec(ind, *v)
 			for a := range rec.Outs {
 				if rec.Outs[a] == nil {
 					rec.Outs[a] = oldrec.Outs[a]
@@ -572,14 +573,14 @@ func (db *UnspentDB) Close() {
 // UnspentGet gets the given unspent output.
 func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 	var ind UtxoKeyType
-	var v []byte
+	var v *[]byte
 	copy(ind[:], po.Hash[:])
 
 	db.MapMutex[ind[0]].RLock()
 	v = db.HashMap[ind[0]][ind]
 	db.MapMutex[ind[0]].RUnlock()
 	if v != nil {
-		res = OneUtxoRec(ind, v, po.Vout)
+		res = OneUtxoRec(ind, *v, po.Vout)
 	}
 
 	return
@@ -602,7 +603,7 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 	if v == nil {
 		return // no such txid in UTXO (just ignore delete request)
 	}
-	rec := NewUtxoRec(ind, v)
+	rec := NewUtxoRec(ind, *v)
 	if db.CB.NotifyTxDel != nil {
 		db.CB.NotifyTxDel(rec, outs)
 	}
@@ -765,9 +766,9 @@ func (db *UnspentDB) UTXOStats() string {
 			db.MapMutex[_i].RLock()
 			atomic.AddUint64(&lele, uint64(len(db.HashMap[_i])))
 			for k, v := range db.HashMap[_i] {
-				reclen := uint64(len(v) + UtxoIdxLen)
+				reclen := uint64(len(*v) + UtxoIdxLen)
 				atomic.AddUint64(&filesize, uint64(btc.VLenSize(reclen))+reclen)
-				NewUtxoRecOwn(k, v, rec, &sta_cbs)
+				NewUtxoRecOwn(k, *v, rec, &sta_cbs)
 				var spendable_found bool
 				for _, r := range rec.Outs {
 					if r != nil {
@@ -832,7 +833,7 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 	for _i := range db.HashMap {
 		db.MapMutex[_i].Lock()
 		for k, v := range db.HashMap[_i] {
-			rec := NewUtxoRecStatic(k, v)
+			rec := NewUtxoRecStatic(k, *v)
 			var spendable_found bool
 			var record_removed uint64
 			for idx, r := range rec.Outs {

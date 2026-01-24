@@ -52,7 +52,7 @@ func TestFullUtxoRec(t *testing.T) {
 	if len(rec.Outs[2].PKScr) != 25 {
 		t.Error("Outs[2] bad script")
 	}
-	if !bytes.Equal(raw, Serialize(rec, true, nil)) {
+	if !bytes.Equal(raw, *Serialize(rec, true, nil)) {
 		t.Error("Serialize error")
 	}
 }
