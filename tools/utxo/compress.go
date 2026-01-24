@@ -20,7 +20,7 @@ var (
 	db      *utxo.UnspentDB
 	tickets chan bool
 
-	Memory   memory.Allocator
+	Memory   *memory.Allocator = memory.NewAllocator()
 	MemMutex sync.Mutex
 )
 

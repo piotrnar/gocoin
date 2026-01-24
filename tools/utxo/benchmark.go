@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/piotrnar/gocoin/lib/others/memsize"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/utxo"
 )
@@ -59,7 +60,7 @@ func utxo_benchmark(dir string) {
 	}
 	println(cnt, "UTXO records/txs loaded in", time.Since(sta).String())
 	al, sy := sys.MemUsed()
-	println("Mem Used:", al>>20, "/", sy>>20, "/", Memory.Bytes>>20)
+	println("Mem Used:", al>>20, "/", sy>>20, "/", Memory.Bytes>>20, "->", memsize.MustResidentMemory()>>20)
 
 	print("Going through the map...")
 	sta = time.Now()
@@ -78,7 +79,7 @@ func utxo_benchmark(dir string) {
 	sta = time.Now()
 	for i := range db.HashMap {
 		for _, v := range db.HashMap[i] {
-			tmp += binary.LittleEndian.Uint32(v)
+			tmp += binary.LittleEndian.Uint32(*v)
 		}
 	}
 	println("\rGoing through the map for the slice done in", time.Since(sta).String(), tmp)
@@ -119,7 +120,7 @@ func utxo_benchmark(dir string) {
 	sta = time.Now()
 	for i := range db.HashMap {
 		for k, v := range db.HashMap[i] {
-			tmp += utxo.NewUtxoRecStatic(k, v).InBlock
+			tmp += utxo.NewUtxoRecStatic(k, *v).InBlock
 		}
 	}
 	println("\rDecoding all records in static mode done in", time.Since(sta).String(), tmp)
@@ -132,7 +133,7 @@ func utxo_benchmark(dir string) {
 		go func(i int) {
 			var ttt uint32
 			for k, v := range db.HashMap[i] {
-				ttt += utxo.NewUtxoRec(k, v).InBlock
+				ttt += utxo.NewUtxoRec(k, *v).InBlock
 			}
 			atomic.AddUint32(&tmp, ttt)
 			wg.Done()
@@ -146,12 +147,12 @@ func utxo_benchmark(dir string) {
 	sta = time.Now()
 	for i := range db.HashMap {
 		for k, v := range db.HashMap[i] {
-			tmp += utxo.NewUtxoRec(k, v).InBlock
+			tmp += utxo.NewUtxoRec(k, *v).InBlock
 		}
 	}
 	println("\rDecoding all records in dynamic mode done in", time.Since(sta).String(), tmp)
 
 	al, sy = sys.MemUsed()
-	println("Mem Used:", al>>20, "/", sy>>20, "/", Memory.Bytes>>20)
+	println("Mem Used:", al>>20, "/", sy>>20, "/", Memory.Bytes>>20, "->", memsize.MustResidentMemory()>>20)
 	db.Close()
 }
