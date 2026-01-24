@@ -23,6 +23,7 @@ import (
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/memsize"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
@@ -71,9 +72,9 @@ func blockUndone(bl *btc.Block) {
 func print_sync_stats() {
 	_, mu := sys.MemUsed()
 	cb, _, _ := common.MemUsed()
-	fmt.Printf("Sync to %d took %s,  Que: %d/%d,  Mem: %d+%d,  Cach: %d/%d/%d - cachempty: %d\n",
+	fmt.Printf("Sync to %d took %s,  Que: %d/%d,  Mem: %d/%d/%d,  Cach: %d/%d/%d - cachempty: %d\n",
 		common.Last.Block.Height, time.Since(common.StartTime).String(),
-		len(network.NetBlocks), network.CachedBlocksLen(), mu>>20, cb>>20,
+		len(network.NetBlocks), network.CachedBlocksLen(), mu>>20, cb>>20, memsize.MustResidentMemory()>>20,
 		network.CachedBlocksBytes.Get()>>20, network.MaxCachedBlocksSize.Get()>>20,
 		common.SyncMaxCacheBytes.Get()>>20, network.Fetch.CacheEmpty)
 }
@@ -146,8 +147,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			div = 50e3
 		}
 		if common.Last.ParseTill != nil && (common.Last.Block.Height%div) == 0 {
-			b, a, m := common.MemUsed()
-			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(), len(network.NetBlocks), b>>10, a, m)
+			b, _, _ := common.MemUsed()
+			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(),
+				"->", len(network.NetBlocks), b>>20, "/", memsize.MustResidentMemory()>>20, "MB used")
 		}
 
 		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
