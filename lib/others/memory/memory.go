@@ -25,7 +25,7 @@ const (
 )
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
-var sizeClassSlotSize = []int{
+var sizeClassSlotSize = []uint32{
 	64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192,
 	200, 208, 216, 224, 232, 240, 248, 256, 272, 288,
 	304, 320, 336, 352, 368, 400, 416, 432, 464, 480,
@@ -47,7 +47,7 @@ func getSizeClass(size int) int {
 		return -1 // For Windows that uses 64KB pages (instead of 1MB)
 	}
 	for i, v := range sizeClassSlotSize {
-		if size <= v {
+		if size <= int(v) {
 			return i
 		}
 	}
@@ -55,7 +55,7 @@ func getSizeClass(size int) int {
 }
 
 // getSlotSize returns the actual slot size for a size class index
-func getSlotSize(class int) int {
+func getSlotSize(class int) uint32 {
 	if class >= 0 && class < len(sizeClassSlotSize) {
 		return sizeClassSlotSize[class]
 	}
@@ -76,15 +76,15 @@ type node struct {
 }
 
 type page struct {
-	brk      int
-	slotSize int // Actual slot size in bytes. 0 = dedicated page (large allocation)
-	size     int // Total page size from mmap
-	used     int
+	brk      uint32
+	slotSize uint32 // Actual slot size in bytes. 0 = dedicated page (large allocation)
+	size     uint32 // Total page size from mmap
+	used     uint32
 }
 
 // getClassFromSlotSize returns the size class index for a given slot size.
 // Used when freeing memory to find the correct free list.
-func getClassFromSlotSize(slotSize int) int {
+func getClassFromSlotSize(slotSize uint32) int {
 	for i, v := range sizeClassSlotSize {
 		if slotSize == v {
 			return i
@@ -97,7 +97,7 @@ func getClassFromSlotSize(slotSize int) int {
 type Allocator struct {
 	Allocs int // # of allocs.
 	Bytes  int // Asked from OS.
-	cap    []int
+	cap    []uint32
 	lists  []uintptr            // *node - free lists per size class
 	Mmaps  int                  // Asked from OS.
 	pages  []uintptr            // *page - current page per size class
@@ -106,7 +106,7 @@ type Allocator struct {
 
 func NewAllocator() (a *Allocator) {
 	a = new(Allocator)
-	a.cap = make([]int, len(sizeClassSlotSize))
+	a.cap = make([]uint32, len(sizeClassSlotSize))
 	a.lists = make([]uintptr, len(sizeClassSlotSize))
 	a.pages = make([]uintptr, len(sizeClassSlotSize))
 	return
@@ -125,7 +125,10 @@ func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 	if a.regs == nil {
 		a.regs = map[uintptr]struct{}{}
 	}
-	(*page)(unsafe.Pointer(p)).size = size
+	if size > 0xffffffff {
+		panic("mmap to big")
+	}
+	(*page)(unsafe.Pointer(p)).size = uint32(size)
 	a.regs[p] = struct{}{}
 	return p, nil
 }
@@ -150,11 +153,11 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	}
 
 	if a.cap[class] == 0 {
-		a.cap[class] = int(pageAvail) / slotSize
+		a.cap[class] = uint32(pageAvail) / slotSize
 	}
 
-	totalSize := int(headerSize) + a.cap[class]*slotSize
-	p, err := a.mmap(totalSize)
+	totalSize := uint32(headerSize) + a.cap[class]*slotSize
+	p, err := a.mmap(int(totalSize))
 	if err != nil {
 		return 0, err
 	}
@@ -169,7 +172,7 @@ func (a *Allocator) unmap(p uintptr /* *page */) error {
 	if counters {
 		a.Mmaps--
 	}
-	return unmap(p, (*page)(unsafe.Pointer(p)).size)
+	return unmap(p, int((*page)(unsafe.Pointer(p)).size))
 }
 
 // UintptrCalloc is like Calloc except it returns an uintptr.
@@ -210,7 +213,7 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	// Dedicated page (large allocation) - slotSize == 0
 	if slotSize == 0 {
 		if counters {
-			a.Bytes -= (*page)(unsafe.Pointer(pg)).size
+			a.Bytes -= int((*page)(unsafe.Pointer(pg)).size)
 		}
 		return a.unmap(pg)
 	}
@@ -235,7 +238,7 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	}
 
 	// Page is completely free - unmap it
-	for i := 0; i < (*page)(unsafe.Pointer(pg)).brk; i++ {
+	for i := 0; i < int((*page)(unsafe.Pointer(pg)).brk); i++ {
 		n := pg + headerSize + uintptr(i)*uintptr(slotSize)
 		next := (*node)(unsafe.Pointer(n)).next
 		prev := (*node)(unsafe.Pointer(n)).prev
@@ -257,7 +260,7 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 		a.pages[class] = 0
 	}
 	if counters {
-		a.Bytes -= (*page)(unsafe.Pointer(pg)).size
+		a.Bytes -= int((*page)(unsafe.Pointer(pg)).size)
 	}
 	return a.unmap(pg)
 }
@@ -371,11 +374,11 @@ func usableSize(p uintptr) (r int) {
 
 	// Dedicated page - slotSize == 0
 	if slotSize == 0 {
-		return (*page)(unsafe.Pointer(pg)).size - int(headerSize)
+		return int((*page)(unsafe.Pointer(pg)).size) - int(headerSize)
 	}
 
 	// Shared page - return the stored slot size
-	return slotSize
+	return int(slotSize)
 }
 
 // Calloc is like Malloc except the allocated memory is zeroed.
