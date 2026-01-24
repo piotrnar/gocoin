@@ -136,7 +136,7 @@ func show_info(par string) {
 		time.Since(common.StartTime).String())
 	// Memory used
 	al, sy := sys.MemUsed()
-	cb, ca, ms := common.MemUsedX()
+	cb, ca, ms := common.MemUsed()
 	fmt.Printf("HeapUsed: %d MB,  SysUsed: %d MB,  UTXO-X-mem: %dMB in %d/%d\n",
 		al>>20, sy>>20, cb>>20, ca, ms)
 	fmt.Printf("Peers: %d,  ECDSAs: %d %d %d,  AvgFee: %.1f SPB,  Saving: %t\n",

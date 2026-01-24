@@ -128,7 +128,7 @@ func host_init() {
 	sto := time.Now()
 
 	al, sy := sys.MemUsed()
-	by, _ := common.MemUsed()
+	by, _, _ := common.MemUsed()
 	fmt.Printf("Blockchain open in %s.  %d + %d MB of RAM used (%d)\n",
 		sto.Sub(sta).String(), al>>20, by>>20, sy>>20)
 	fmt.Println("Highest known block is", common.Last.Block.Height, "from",

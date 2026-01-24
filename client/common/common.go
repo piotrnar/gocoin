@@ -376,14 +376,7 @@ func CurrentScriptFlags() uint32 {
 	return atomic.LoadUint32(&Last.ScriptFlags)
 }
 
-func MemUsed() (bts int, alcs int) {
-	MemMutex.Lock()
-	bts, alcs = Memory.Bytes, Memory.Allocs
-	MemMutex.Unlock()
-	return
-}
-
-func MemUsedX() (bts int, alcs int, mmaps int) {
+func MemUsed() (bts int, alcs int, mmaps int) {
 	MemMutex.Lock()
 	bts, alcs, mmaps = Memory.Bytes, Memory.Allocs, Memory.Mmaps
 	MemMutex.Unlock()

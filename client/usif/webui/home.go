@@ -77,6 +77,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 		ProcessPID         int
 		Blocks_cached      int
 		Qdb_extramem       int
+		Qdb_mmaps          int
 		Ecdsa_verify_cnt   uint64
 		Average_block_size int
 		Average_fee        float64
@@ -100,7 +101,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	out.Node_uptime = uint64(time.Since(common.StartTime).Seconds())
 	out.Net_block_qsize = len(network.NetBlocks)
 	out.Net_tx_qsize = len(network.NetTxs)
-	out.Qdb_extramem, out.Qdb_allocs = common.MemUsed()
+	out.Qdb_extramem, out.Qdb_allocs, out.Qdb_mmaps = common.MemUsed()
 	out.Ecdsa_verify_cnt = btc.EcdsaVerifyCnt()
 	out.Average_block_size = common.AverageBlockSize.Get()
 	out.Average_fee = usif.GetAverageFee()
