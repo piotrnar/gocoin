@@ -14,6 +14,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/memory"
+	"github.com/piotrnar/gocoin/lib/others/memsize"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/utils"
 )
@@ -381,4 +382,14 @@ func MemUsed() (bts int, alcs int, mmaps int) {
 	bts, alcs, mmaps = Memory.Bytes, Memory.Allocs, Memory.Mmaps
 	MemMutex.Unlock()
 	return
+}
+
+func PrintMemused() {
+	// Get initial memory
+	rss, err := memsize.ResidentMemory()
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	fmt.Printf("Physical Memory used: %s (%d bytes)\n", memsize.FormatBytes(rss), rss)
 }
