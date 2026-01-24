@@ -43,6 +43,9 @@ func init() {
 // getSizeClass returns the size class index for a given allocation size.
 // This is the core routing function that determines which slot size to use.
 func getSizeClass(size int) int {
+	if pageSizeLog == 16 && size >= 4092 {
+		return -1 // For Windows that uses 64KB pages (instead of 1MB)
+	}
 	for i, v := range sizeClassSlotSize {
 		if size <= v {
 			return i
