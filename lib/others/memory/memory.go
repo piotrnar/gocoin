@@ -29,7 +29,6 @@ var (
 type Allocator struct {
 	Allocs int // # of allocs.
 	Bytes  int // Asked from OS.
-	cap    []uint32
 	Mmaps  int // Asked from OS.
 
 	firstPage []*page_header // first page
@@ -55,7 +54,7 @@ type page_header struct {
 	slotSize   uint16 // Actual slot size in bytes. 0 = dedicated page (large allocation)
 	brk        uint16
 	used       uint16
-	_paddingA  uint16
+	cap        uint16
 }
 
 type node struct {
@@ -109,7 +108,6 @@ func getClassFromSlotSize(slotSize uint16) int {
 
 func NewAllocator() (a *Allocator) {
 	a = new(Allocator)
-	a.cap = make([]uint32, len(sizeClassSlotSize))
 	a.firstPage = make([]*page_header, len(sizeClassSlotSize))
 	a.lastPage = make([]*page_header, len(sizeClassSlotSize))
 	a.freePage = make([]*page_header, len(sizeClassSlotSize))
@@ -154,11 +152,8 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		panic(fmt.Sprintf("invalid size class: %d", class))
 	}
 
-	if a.cap[class] == 0 {
-		a.cap[class] = uint32(pageAvail) / uint32(slotSize)
-	}
-
-	totalSize := uint32(headerSize) + a.cap[class]*uint32(slotSize)
+	records_cnt := uint32(pageAvail) / uint32(slotSize)
+	totalSize := uint32(headerSize) + records_cnt*uint32(slotSize)
 	p, err := a.mmap(int(totalSize))
 	if err != nil {
 		return 0, err
@@ -176,6 +171,7 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	}
 	a.lastPage[class] = pag
 	pag.slotSize = uint16(slotSize)
+	pag.cap = uint16(records_cnt)
 	return p, nil
 }
 
@@ -298,11 +294,20 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	if p := a.freePage[class]; p != nil {
 		// Allocate from freePage's free list (remove from head)
 		n := p.freeList
-		p.freeList = (*node)(unsafe.Pointer(n)).next
+		if n != 0 {
+			p.freeList = (*node)(unsafe.Pointer(n)).next
+		} else {
+			if p.brk < p.cap {
+				n = uintptr(unsafe.Pointer(p)) + headerSize + uintptr(p.brk)*uintptr(p.slotSize)
+				p.brk++
+			} else {
+				panic("p.freeList is 0 and p.brk >= p.cap")
+			}
+		}
 		p.used++
 
 		// If page has no more free slots, find next best freePage starting from p.next
-		if p.freeList == 0 {
+		if p.freeList == 0 && p.brk == p.cap {
 			a.freePage[class] = nil
 			for pg := p.next; pg != nil; pg = pg.next {
 				if pg.freeList != 0 {
@@ -314,20 +319,14 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 		return n, nil
 	}
 
-	// No free slots available, try bump allocation from lastPage
-	if p := a.lastPage[class]; p != nil && uint32(p.brk) < a.cap[class] {
-		p.used++
-		p.brk++
-		return uintptr(unsafe.Pointer(p)) + headerSize + uintptr(p.brk-1)*uintptr(p.slotSize), nil
-	}
-
-	// lastPage is full or doesn't exist, allocate a new page
+	// if we got heer, we have no pages or all are full
 	if _, err := a.newSharedPage(class); err != nil {
 		return 0, err
 	}
 
 	// Allocate from the new page via bump
 	p := a.lastPage[class]
+	a.freePage[class] = p
 	p.used++
 	p.brk++
 	return uintptr(unsafe.Pointer(p)) + headerSize + uintptr(p.brk-1)*uintptr(p.slotSize), nil
