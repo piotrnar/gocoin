@@ -47,14 +47,14 @@ var sizeClassSlotSize = []uint16{
 }
 
 type page_header struct {
-	prev, next *page_header
-	freeList   uintptr // *node - free list for this page
-	seq        uint32
-	siz        uint32 // Total page size from mmap
-	slotSize   uint16 // Actual slot size in bytes. 0 = dedicated page (large allocation)
+	class      uint16 // Actual slot size in bytes. 0 = dedicated page (large allocation)
 	brk        uint16
 	used       uint16
 	cap        uint16
+	seq        uint32
+	prev, next *page_header
+	freeList   uintptr // *node - free list for this page
+	siz        uint32  // Total page size from mmap
 }
 
 type node struct {
@@ -141,7 +141,7 @@ func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
 		return 0, err
 	}
 
-	(*page_header)(unsafe.Pointer(p)).slotSize = 0 // Mark as dedicated page
+	(*page_header)(unsafe.Pointer(p)).class = 0xffff // Mark as dedicated page
 	return p, nil
 }
 
@@ -170,20 +170,20 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		a.firstPage[class] = pag
 	}
 	a.lastPage[class] = pag
-	pag.slotSize = uint16(slotSize)
+	pag.class = uint16(class)
 	pag.cap = uint16(records_cnt)
 	return p, nil
 }
 
-func (a *Allocator) unmap(p uintptr /* *page */) error {
+func (a *Allocator) unmap(p uintptr, l int) error {
 	if counters {
 		a.Mmaps--
 	}
-	return unmap(p, int((*page_header)(unsafe.Pointer(p)).siz))
+	return unmap(p, l)
 }
 
 // UintptrFree is like Free except its argument is an uintptr
-func (a *Allocator) UintptrFree(p uintptr) (err error) {
+func (a *Allocator) UintptrFree(p uintptr, siz int) (err error) {
 	if trace {
 		defer func() {
 			fmt.Fprintf(os.Stderr, "Free(%#x) %v\n", p, err)
@@ -199,21 +199,17 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 
 	pg := p &^ uintptr(pageMask)
 	pag := (*page_header)(unsafe.Pointer(pg))
-	slotSize := pag.slotSize
 
 	// Dedicated page (large allocation) - slotSize == 0
-	if slotSize == 0 {
+	if pag.class == 0xffff {
 		if counters {
-			a.Bytes -= int(pag.siz)
+			a.Bytes -= siz
 		}
-		return a.unmap(pg)
+		return a.unmap(pg, siz)
 	}
 
 	// Shared page - find class from slotSize
-	class := getClassFromSlotSize(slotSize)
-	if class < 0 {
-		panic(fmt.Sprintf("UintptrFree: unknown slotSize %d", slotSize))
-	}
+	class := (int(pag.class))
 
 	// Add to page's free list (insert at head)
 	(*node)(unsafe.Pointer(p)).next = pag.freeList
@@ -256,7 +252,7 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	if counters {
 		a.Bytes -= int(pag.siz)
 	}
-	return a.unmap(pg)
+	return a.unmap(pg, int(pag.siz))
 }
 
 // UintptrMalloc is like Malloc except it returns an uintptr.
@@ -298,7 +294,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 			p.freeList = (*node)(unsafe.Pointer(n)).next
 		} else {
 			if p.brk < p.cap {
-				n = uintptr(unsafe.Pointer(p)) + headerSize + uintptr(p.brk)*uintptr(p.slotSize)
+				n = uintptr(unsafe.Pointer(p)) + headerSize + uintptr(p.brk)*uintptr(getSlotSize(class))
 				p.brk++
 			} else {
 				panic("p.freeList is 0 and p.brk >= p.cap")
@@ -327,14 +323,13 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	// Allocate from the new page via bump
 	p := a.lastPage[class]
 	a.freePage[class] = p
-	p.used++
-	p.brk++
-	return uintptr(unsafe.Pointer(p)) + headerSize + uintptr(p.brk-1)*uintptr(p.slotSize), nil
+	p.used, p.brk = 1, 1
+	return uintptr(unsafe.Pointer(p)) + headerSize, nil
 }
 
 // Free deallocates memory (as in C.free).
 func (a *Allocator) Free(b *[]byte) (err error) {
-	return a.UintptrFree(uintptr(unsafe.Pointer(b)))
+	return a.UintptrFree(uintptr(unsafe.Pointer(b)), 24+2+len(*b))
 }
 
 // Malloc allocates size bytes and returns a byte slice.
