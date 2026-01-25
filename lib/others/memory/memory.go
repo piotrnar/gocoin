@@ -59,7 +59,7 @@ type page_header struct {
 }
 
 type node struct {
-	prev, next uintptr // *node
+	next uintptr // *node
 }
 
 func init() {
@@ -219,12 +219,8 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 		panic(fmt.Sprintf("UintptrFree: unknown slotSize %d", slotSize))
 	}
 
-	// Add to page's free list
-	(*node)(unsafe.Pointer(p)).prev = 0
+	// Add to page's free list (insert at head)
 	(*node)(unsafe.Pointer(p)).next = pag.freeList
-	if next := pag.freeList; next != 0 {
-		(*node)(unsafe.Pointer(next)).prev = p
-	}
 	pag.freeList = p
 	pag.used--
 
@@ -300,12 +296,9 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	// Small allocation - use shared page
 	// First try freePage (page with lowest seq that has free slots)
 	if p := a.freePage[class]; p != nil {
-		// Allocate from freePage's free list
+		// Allocate from freePage's free list (remove from head)
 		n := p.freeList
 		p.freeList = (*node)(unsafe.Pointer(n)).next
-		if next := p.freeList; next != 0 {
-			(*node)(unsafe.Pointer(next)).prev = 0
-		}
 		p.used++
 
 		// If page has no more free slots, find next best freePage starting from p.next
