@@ -30,10 +30,9 @@ type Allocator struct {
 	Allocs int // # of allocs.
 	Bytes  int // Asked from OS.
 	cap    []uint32
-	lists  []uintptr            // *node - free lists per size class
-	Mmaps  int                  // Asked from OS.
-	pages  []uintptr            // *page - current page per size class
-	regs   map[uintptr]struct{} // map[*page]struct{} - all registered pages
+	lists  []uintptr // *node - free lists per size class
+	Mmaps  int       // Asked from OS.
+	pages  []uintptr // *page - current page per size class
 }
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
@@ -122,14 +121,10 @@ func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 		a.Mmaps++
 		a.Bytes += size
 	}
-	if a.regs == nil {
-		a.regs = map[uintptr]struct{}{}
-	}
 	if size > 0xffffffff {
 		panic("mmap to big")
 	}
 	(*page)(unsafe.Pointer(p)).size = uint32(size)
-	a.regs[p] = struct{}{}
 	return p, nil
 }
 
@@ -168,7 +163,6 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 }
 
 func (a *Allocator) unmap(p uintptr /* *page */) error {
-	delete(a.regs, p)
 	if counters {
 		a.Mmaps--
 	}
