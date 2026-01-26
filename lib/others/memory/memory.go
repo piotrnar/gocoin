@@ -33,6 +33,7 @@ type Allocator struct {
 	lastPage  []*page_header // last page
 	freePage  []*page_header // page with lowest sequence and any free records
 	slotSize  []int          // quickly get slot size from the class value
+	classIdx  []byte         // quickly get class value from the size
 }
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
@@ -83,7 +84,14 @@ func (h *page_header) updateFreeList(rec uintptr) {
 
 // getSizeClass returns the size class index for a given allocation size.
 // This is the core routing function that determines which slot size to use.
-func getSizeClass(size int) int {
+func (a *Allocator) getSizeClass(size int) int {
+	if size >= len(a.classIdx) {
+		return -1
+	}
+	return int(a.classIdx[size])
+}
+
+func getSizeClassX(size int) int {
 	for i, v := range sizeClassSlotSize {
 		if size <= int(v) {
 			return i
@@ -115,9 +123,21 @@ func NewAllocator() (a *Allocator) {
 	a.firstPage = make([]*page_header, len(sizeClassSlotSize))
 	a.lastPage = make([]*page_header, len(sizeClassSlotSize))
 	a.freePage = make([]*page_header, len(sizeClassSlotSize))
+
+	var max_size int
 	a.slotSize = make([]int, len(sizeClassSlotSize))
 	for i := range a.slotSize {
-		a.slotSize[i] = a.getSlotSizeX(i)
+		max_size = a.getSlotSizeX(i)
+		a.slotSize[i] = max_size
+	}
+
+	a.classIdx = make([]byte, max_size+1)
+	for i := range a.classIdx {
+		cl := getSizeClassX(i)
+		if cl < 0 || cl > 255 {
+			panic("incorrect class value")
+		}
+		a.classIdx[i] = byte(cl)
 	}
 	return
 }
@@ -272,7 +292,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 		a.Allocs++
 	}
 
-	class := getSizeClass(size)
+	class := a.getSizeClass(size)
 
 	// Large allocation - use dedicated page
 	if class < 0 {
