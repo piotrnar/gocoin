@@ -147,9 +147,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			div = 50e3
 		}
 		if common.Last.ParseTill != nil && (common.Last.Block.Height%div) == 0 {
-			b, _, _ := common.MemUsed()
+			b, _, ms := common.MemUsed()
 			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(),
-				"->", len(network.NetBlocks), b>>20, "/", memsize.MustResidentMemory()>>20, "MB used")
+				"->", len(network.NetBlocks), b>>20, "/", memsize.MustResidentMemory()>>20, "MB used /", ms)
 		}
 
 		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
