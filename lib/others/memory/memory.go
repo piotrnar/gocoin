@@ -7,6 +7,7 @@
 package memory
 
 import (
+	"encoding/binary"
 	"fmt"
 	"os"
 	"reflect"
@@ -14,7 +15,8 @@ import (
 )
 
 const (
-	headerSize   = unsafe.Sizeof(page_header{})
+	headerSize   = unsafe.Sizeof(shared_page_header{})
+	privHdrSize  = 4
 	mallocAllign = unsafe.Sizeof(uintptr(0))
 	pageAvail    = pageSize - headerSize
 	pageMask     = pageSize - 1
@@ -31,9 +33,9 @@ type Allocator struct {
 	Bytes  int // Asked from OS.
 	Mmaps  int // Asked from OS.
 
-	firstPage []*page_header // first page
-	lastPage  []*page_header // last page
-	freePage  []*page_header // page with lowest sequence and any free records
+	firstPage []*shared_page_header // first page
+	lastPage  []*shared_page_header // last page
+	freePage  []*shared_page_header // page with lowest sequence and any free records
 }
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
@@ -46,15 +48,19 @@ var sizeClassSlotSize = []uint16{
 	4096, 8192, 16378, 32768,
 }
 
-type page_header struct {
-	class      uint16 // Actual slot size in bytes. 0 = dedicated page (large allocation)
-	brk        uint16
+type shared_page_header struct {
+	marker     uint8 // if this is zero, the next 3 bytes are the record's length
+	class      uint8 // Actual slot size in bytes. 0 = dedicated page (large allocation)
+	taken      uint16
 	used       uint16
 	cap        uint16
 	seq        uint32
-	prev, next *page_header
+	prev, next *shared_page_header
 	freeList   uintptr // *node - free list for this page
-	siz        uint32  // Total page size from mmap
+}
+
+type private_page_header struct {
+	msb_size [4]byte
 }
 
 type node struct {
@@ -62,8 +68,11 @@ type node struct {
 }
 
 func init() {
-	if unsafe.Sizeof(page_header{})%mallocAllign != 0 {
-		panic(fmt.Sprint("memory: bad header size: ", unsafe.Sizeof(page_header{})))
+	if unsafe.Sizeof(shared_page_header{})%mallocAllign != 0 {
+		panic(fmt.Sprint("memory: bad header size: ", unsafe.Sizeof(shared_page_header{})))
+	}
+	if len(sizeClassSlotSize) > 255 {
+		panic("too manu classes")
 	}
 	for i := range sizeClassSlotSize {
 		sizeClassSlotSize[i] += 24 - 8
@@ -95,22 +104,11 @@ func getSlotSize(class int) int {
 // if n%m != 0 { n += m-n%m }. m must be a power of 2.
 func roundup(n, m int) int { return (n + m - 1) &^ (m - 1) }
 
-// getClassFromSlotSize returns the size class index for a given slot size.
-// Used when freeing memory to find the correct free list.
-func getClassFromSlotSize(slotSize uint16) int {
-	for i, v := range sizeClassSlotSize {
-		if slotSize == v {
-			return i
-		}
-	}
-	panic("Unexpected slot size")
-}
-
 func NewAllocator() (a *Allocator) {
 	a = new(Allocator)
-	a.firstPage = make([]*page_header, len(sizeClassSlotSize))
-	a.lastPage = make([]*page_header, len(sizeClassSlotSize))
-	a.freePage = make([]*page_header, len(sizeClassSlotSize))
+	a.firstPage = make([]*shared_page_header, len(sizeClassSlotSize))
+	a.lastPage = make([]*shared_page_header, len(sizeClassSlotSize))
+	a.freePage = make([]*shared_page_header, len(sizeClassSlotSize))
 	return
 }
 
@@ -124,24 +122,22 @@ func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 		a.Mmaps++
 		a.Bytes += size
 	}
-	if size > 0xffffffff {
-		panic("mmap to big")
-	}
-	(*page_header)(unsafe.Pointer(p)).siz = uint32(size)
-	(*page_header)(unsafe.Pointer(p)).seq = currentSequence
+	(*shared_page_header)(unsafe.Pointer(p)).seq = currentSequence
 	currentSequence++
 	return p, nil
 }
 
-// newPage creates a dedicated page for a single large allocation
-func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
-	size += int(headerSize)
+// newPrivatePage creates a dedicated page for a single large allocation
+func (a *Allocator) newPrivatePage(size int) (uintptr /* *page */, error) {
+	size += int(privHdrSize)
 	p, err := a.mmap(size)
 	if err != nil {
 		return 0, err
 	}
-
-	(*page_header)(unsafe.Pointer(p)).class = 0xffff // Mark as dedicated page
+	if size > 0x7fffffff {
+		panic("too big alloc")
+	}
+	binary.BigEndian.PutUint32((*private_page_header)(unsafe.Pointer(p)).msb_size[:], uint32(size))
 	return p, nil
 }
 
@@ -159,7 +155,7 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		return 0, err
 	}
 
-	pag := (*page_header)(unsafe.Pointer(p))
+	pag := (*shared_page_header)(unsafe.Pointer(p))
 	if a.lastPage[class] != nil {
 		a.lastPage[class].next = pag
 		pag.prev = a.lastPage[class]
@@ -170,7 +166,8 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		a.firstPage[class] = pag
 	}
 	a.lastPage[class] = pag
-	pag.class = uint16(class)
+	pag.marker = 0xff
+	pag.class = uint8(class)
 	pag.cap = uint16(records_cnt)
 	return p, nil
 }
@@ -183,7 +180,9 @@ func (a *Allocator) unmap(p uintptr, l int) error {
 }
 
 // UintptrFree is like Free except its argument is an uintptr
-func (a *Allocator) UintptrFree(p uintptr, siz int) (err error) {
+func (a *Allocator) UintptrFree(p uintptr) (err error) {
+	var siz, class int
+
 	if trace {
 		defer func() {
 			fmt.Fprintf(os.Stderr, "Free(%#x) %v\n", p, err)
@@ -198,18 +197,16 @@ func (a *Allocator) UintptrFree(p uintptr, siz int) (err error) {
 	}
 
 	pg := p &^ uintptr(pageMask)
-	pag := (*page_header)(unsafe.Pointer(pg))
+	pag := (*shared_page_header)(unsafe.Pointer(pg))
 
 	// Dedicated page (large allocation) - slotSize == 0
-	if pag.class == 0xffff {
-		if counters {
-			a.Bytes -= siz
-		}
-		return a.unmap(pg, siz)
+	if pag.marker != 0xff {
+		siz = int(binary.BigEndian.Uint32((*private_page_header)(unsafe.Pointer(pg)).msb_size[:]))
+		goto do_unmap
 	}
 
 	// Shared page - find class from slotSize
-	class := (int(pag.class))
+	class = (int(pag.class))
 
 	// Add to page's free list (insert at head)
 	(*node)(unsafe.Pointer(p)).next = pag.freeList
@@ -249,10 +246,13 @@ func (a *Allocator) UintptrFree(p uintptr, siz int) (err error) {
 	} else {
 		a.lastPage[class] = pag.prev // this was the last page - set the previous one
 	}
+	siz = int(headerSize) + int(pag.cap)*getSlotSize(int(pag.class))
+
+do_unmap:
 	if counters {
-		a.Bytes -= int(pag.siz)
+		a.Bytes -= siz
 	}
-	return a.unmap(pg, int(pag.siz))
+	return a.unmap(pg, siz)
 }
 
 // UintptrMalloc is like Malloc except it returns an uintptr.
@@ -278,11 +278,11 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 
 	// Large allocation - use dedicated page
 	if class < 0 {
-		p, err := a.newPage(size)
+		p, err := a.newPrivatePage(size)
 		if err != nil {
 			return 0, err
 		}
-		return p + headerSize, nil
+		return p + privHdrSize, nil // first 4 bytes store MSB size
 	}
 
 	// Small allocation - use shared page
@@ -293,9 +293,9 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 		if n != 0 {
 			p.freeList = (*node)(unsafe.Pointer(n)).next
 		} else {
-			if p.brk < p.cap {
-				n = uintptr(unsafe.Pointer(p)) + headerSize + uintptr(p.brk)*uintptr(getSlotSize(class))
-				p.brk++
+			if p.taken < p.cap {
+				n = uintptr(unsafe.Pointer(p)) + headerSize + uintptr(p.taken)*uintptr(getSlotSize(class))
+				p.taken++
 			} else {
 				panic("p.freeList is 0 and p.brk >= p.cap")
 			}
@@ -303,7 +303,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 		p.used++
 
 		// If page has no more free slots, find next best freePage starting from p.next
-		if p.freeList == 0 && p.brk == p.cap {
+		if p.freeList == 0 && p.taken == p.cap {
 			a.freePage[class] = nil
 			for pg := p.next; pg != nil; pg = pg.next {
 				if pg.freeList != 0 {
@@ -323,13 +323,13 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	// Allocate from the new page via bump
 	p := a.lastPage[class]
 	a.freePage[class] = p
-	p.used, p.brk = 1, 1
+	p.used, p.taken = 1, 1
 	return uintptr(unsafe.Pointer(p)) + headerSize, nil
 }
 
 // Free deallocates memory (as in C.free).
 func (a *Allocator) Free(b *[]byte) (err error) {
-	return a.UintptrFree(uintptr(unsafe.Pointer(b)), 24+2+len(*b))
+	return a.UintptrFree(uintptr(unsafe.Pointer(b)))
 }
 
 // Malloc allocates size bytes and returns a byte slice.
