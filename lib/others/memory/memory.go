@@ -47,14 +47,14 @@ var sizeClassSlotSize = []uint16{
 }
 
 type page_header struct {
+	class      int16
+	cap        uint16
+	siz        uint32 // Total page size from mmap
 	prev, next *page_header
 	freeList   uintptr // *node - free list for this page
 	seq        uint32
-	siz        uint32 // Total page size from mmap
-	class      int16
 	brk        uint16
 	used       uint16
-	cap        uint16
 }
 
 type node struct {
@@ -62,8 +62,9 @@ type node struct {
 }
 
 func init() {
+	println("memory: page_header len is", unsafe.Sizeof(page_header{}))
 	if unsafe.Sizeof(page_header{})%mallocAllign != 0 {
-		panic(fmt.Sprint("memory: bad header size: ", unsafe.Sizeof(page_header{})))
+		panic(fmt.Sprint("memory: bad page_header size: ", unsafe.Sizeof(page_header{})))
 	}
 	for i := range sizeClassSlotSize {
 		sizeClassSlotSize[i] += 24 - 8
@@ -128,14 +129,12 @@ func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 		panic("mmap to big")
 	}
 	(*page_header)(unsafe.Pointer(p)).siz = uint32(size)
-	(*page_header)(unsafe.Pointer(p)).seq = currentSequence
-	currentSequence++
 	return p, nil
 }
 
 // newPage creates a dedicated page for a single large allocation
 func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
-	size += int(headerSize)
+	size += 8 //int(headerSize)
 	p, err := a.mmap(size)
 	if err != nil {
 		return 0, err
@@ -172,6 +171,8 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	a.lastPage[class] = pag
 	pag.class = int16(class)
 	pag.cap = uint16(records_cnt)
+	(*page_header)(unsafe.Pointer(p)).seq = currentSequence
+	currentSequence++
 	return p, nil
 }
 
