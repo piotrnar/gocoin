@@ -59,7 +59,11 @@ type page_header struct {
 	used         uint16 // how many records are used now
 }
 
-// this will retirn 0 if offs is zero, otherwise the sum of the two uints
+type free_record struct {
+	next_free_record uintptr
+}
+
+// this will return 0 if offs is zero, otherwise the sum of the two uints
 func addOffset(p uintptr, offs uint32) uintptr {
 	if offs == 0 {
 		return 0
@@ -74,10 +78,6 @@ func (h *page_header) updateFreeList(rec uintptr) {
 	} else {
 		h.freeListOffs = uint32(rec - uintptr(unsafe.Pointer(&h.cap)))
 	}
-}
-
-type free_record struct {
-	next_free_record uintptr // *node
 }
 
 // getSizeClass returns the size class index for a given allocation size.
