@@ -557,3 +557,12 @@ func (a *Allocator) UnsafeRealloc(p unsafe.Pointer, size int) (r unsafe.Pointer,
 
 // UnsafeUsableSize is like UsableSize except its argument is an unsafe.Pointer.
 func UnsafeUsableSize(p unsafe.Pointer) (r int) { return UintptrUsableSize(uintptr(p)) }
+
+func init() {
+	println("memory: page_header len is", unsafe.Sizeof(page{}))
+	print("slot sizes: ")
+	for _, ss := range sizeClassSlotSize {
+		print(ss, ", ")
+	}
+	println()
+}
