@@ -13,7 +13,7 @@ import (
 
 const (
 	shareHdrSize = unsafe.Sizeof(page_header{})
-	dedicHdrSize = 8
+	dedicHdrSize = unsafe.Sizeof(page_header_common{})
 	pageAvail    = pageSize - shareHdrSize
 	pageMask     = pageSize - 1
 	pageSize     = 1 << pageSizeLog
@@ -44,26 +44,40 @@ var sizeClassSlotSize = []uint16{
 	4096, 8192, 16378, 32768,
 }
 
+type page_header_common struct {
+	class int16  // -1 for private page
+	cap   uint16 // number of records (not used for private page)
+	siz   uint32 // total page size from mmap (including header)
+}
+
 type page_header struct {
-	class      int32
-	siz        uint32 // Total page size from mmap
-	prev, next *page_header
-	freeList   uintptr // *node - free list for this page
-	seq        uint64
-	brk        uint16
-	used       uint16
-	cap        uint16
+	page_header_common
+	seq          uint64
+	prev, next   *page_header
+	freeListOffs uint32 // offset to the first free record (or 0 nor nil)
+	dirty        uint16 // how many records were ever used
+	used         uint16 // how many records are used now
 }
 
-type node struct {
-	next uintptr // *node
-}
-
-func init() {
-	println("memory: page_header len is", unsafe.Sizeof(page_header{}))
-	for i := range sizeClassSlotSize {
-		sizeClassSlotSize[i] += 24 - 8
+// this will retirn 0 if offs is zero, otherwise the sum of the two uints
+func addOffset(p uintptr, offs uint32) uintptr {
+	if offs == 0 {
+		return 0
 	}
+	return p + uintptr(offs)
+}
+
+// sets page's freeListOffset to point to the given record
+func (h *page_header) updateFreeList(rec uintptr) {
+	if rec == 0 {
+		h.freeListOffs = 0
+	} else {
+		h.freeListOffs = uint32(rec - uintptr(unsafe.Pointer(&h.cap)))
+	}
+}
+
+type free_record struct {
+	next_free_record uintptr // *node
 }
 
 // getSizeClass returns the size class index for a given allocation size.
@@ -90,17 +104,6 @@ func getSlotSize(class int) int {
 
 // if n%m != 0 { n += m-n%m }. m must be a power of 2.
 func roundup(n, m int) int { return (n + m - 1) &^ (m - 1) }
-
-// getClassFromSlotSize returns the size class index for a given slot size.
-// Used when freeing memory to find the correct free list.
-func getClassFromSlotSize(slotSize uint16) int {
-	for i, v := range sizeClassSlotSize {
-		if slotSize == v {
-			return i
-		}
-	}
-	panic("Unexpected slot size")
-}
 
 func NewAllocator() (a *Allocator) {
 	a = new(Allocator)
@@ -164,7 +167,7 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		a.firstPage[class] = pag
 	}
 	a.lastPage[class] = pag
-	pag.class = int32(class)
+	pag.class = int16(class)
 	pag.cap = uint16(records_cnt)
 	(*page_header)(unsafe.Pointer(p)).seq = currentSequence
 	currentSequence++
@@ -203,8 +206,8 @@ func (a *Allocator) UintptrFree(p uintptr, siz int) (err error) {
 	class := (int(pag.class))
 
 	// Add to page's free list (insert at head)
-	(*node)(unsafe.Pointer(p)).next = pag.freeList
-	pag.freeList = p
+	(*free_record)(unsafe.Pointer(p)).next_free_record = addOffset(uintptr(unsafe.Pointer(&pag.cap)), pag.freeListOffs)
+	pag.updateFreeList(p)
 	pag.used--
 
 	// Update freePage if this page has lower sequence than current freePage
@@ -222,7 +225,7 @@ func (a *Allocator) UintptrFree(p uintptr, siz int) (err error) {
 	if a.freePage[class] == pag {
 		a.freePage[class] = nil
 		for pg := pag.next; pg != nil; pg = pg.next {
-			if pg.freeList != 0 {
+			if pg.freeListOffs != 0 {
 				a.freePage[class] = pg
 				break // pages are in sequence order, first one found is the lowest
 			}
@@ -275,13 +278,14 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	// First try freePage (page with lowest seq that has free slots)
 	if p := a.freePage[class]; p != nil {
 		// Allocate from freePage's free list (remove from head)
-		n := p.freeList
-		if n != 0 {
-			p.freeList = (*node)(unsafe.Pointer(n)).next
+		var n uintptr
+		if p.freeListOffs != 0 {
+			n = addOffset(uintptr(unsafe.Pointer(&p.cap)), p.freeListOffs)
+			p.updateFreeList((*free_record)(unsafe.Pointer(n)).next_free_record)
 		} else {
-			if p.brk < p.cap {
-				n = uintptr(unsafe.Pointer(p)) + shareHdrSize + uintptr(p.brk)*uintptr(getSlotSize(class))
-				p.brk++
+			if p.dirty < p.cap {
+				n = uintptr(unsafe.Pointer(p)) + shareHdrSize + uintptr(p.dirty)*uintptr(getSlotSize(class))
+				p.dirty++
 			} else {
 				panic("p.freeList is 0 and p.brk >= p.cap")
 			}
@@ -289,10 +293,10 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 		p.used++
 
 		// If page has no more free slots, find next best freePage starting from p.next
-		if p.freeList == 0 && p.brk == p.cap {
+		if p.freeListOffs == 0 && p.dirty == p.cap {
 			a.freePage[class] = nil
 			for pg := p.next; pg != nil; pg = pg.next {
-				if pg.freeList != 0 {
+				if pg.freeListOffs != 0 {
 					a.freePage[class] = pg
 					break // pages are in sequence order, first one found is the lowest
 				}
@@ -309,7 +313,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	// Allocate from the new page via bump
 	p := a.lastPage[class]
 	a.freePage[class] = p
-	p.used, p.brk = 1, 1
+	p.used, p.dirty = 1, 1
 	return uintptr(unsafe.Pointer(p)) + shareHdrSize, nil
 }
 
@@ -333,4 +337,11 @@ func (a *Allocator) Malloc(size int) (r *[]byte, err error) {
 	sh.Data = uintptr(p + 24)
 	sh.Len = size - 24
 	return (*[]byte)(unsafe.Pointer(sh)), nil
+}
+
+func init() {
+	println("memory: page_header len is", unsafe.Sizeof(page_header{}))
+	for i := range sizeClassSlotSize {
+		sizeClassSlotSize[i] += 24 - 8
+	}
 }
