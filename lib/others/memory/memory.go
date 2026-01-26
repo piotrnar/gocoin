@@ -32,12 +32,11 @@ type Allocator struct {
 	firstPage []*page_header // first page
 	lastPage  []*page_header // last page
 	freePage  []*page_header // page with lowest sequence and any free records
-	slotSize  []int          // quickly get slot size from the class value
 	classIdx  []byte         // quickly get class value from the size
 }
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
-var sizeClassSlotSize = []uint16{
+var sizeClassSlotSize = []int{
 	64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192,
 	200, 208, 216, 224, 232, 240, 248, 256, 272, 288,
 	304, 320, 336, 352, 368, 400, 416, 432, 464, 480,
@@ -85,34 +84,18 @@ func (h *page_header) updateFreeList(rec uintptr) {
 // getSizeClass returns the size class index for a given allocation size.
 // This is the core routing function that determines which slot size to use.
 func (a *Allocator) getSizeClass(size int) int {
-	if size >= len(a.classIdx) {
+	if uint(size) >= uint(len(a.classIdx)) { // casting to uint handles negative sizes
 		return -1
 	}
 	return int(a.classIdx[size])
 }
 
-func getSizeClassX(size int) int {
-	for i, v := range sizeClassSlotSize {
-		if size <= int(v) {
-			return i
-		}
-	}
-	return -1
-}
-
 // getSlotSize returns the actual slot size for a size class index
 func (a *Allocator) getSlotSize(class int) int {
-	if class >= len(a.slotSize) {
-		panic("illegal class vallie")
-	}
-	return a.slotSize[class]
-}
-
-func (a *Allocator) getSlotSizeX(class int) int {
 	if class >= 0 && class < len(sizeClassSlotSize) {
-		return int(sizeClassSlotSize[class])
+		return sizeClassSlotSize[class]
 	}
-	panic("invalid size class")
+	return -1
 }
 
 // if n%m != 0 { n += m-n%m }. m must be a power of 2.
@@ -124,20 +107,16 @@ func NewAllocator() (a *Allocator) {
 	a.lastPage = make([]*page_header, len(sizeClassSlotSize))
 	a.freePage = make([]*page_header, len(sizeClassSlotSize))
 
-	var max_size int
-	a.slotSize = make([]int, len(sizeClassSlotSize))
-	for i := range a.slotSize {
-		max_size = a.getSlotSizeX(i)
-		a.slotSize[i] = max_size
-	}
+	max_size := int(sizeClassSlotSize[len(sizeClassSlotSize)-1])
 
 	a.classIdx = make([]byte, max_size+1)
-	for i := range a.classIdx {
-		cl := getSizeClassX(i)
-		if cl < 0 || cl > 255 {
-			panic("incorrect class value")
+	for size := range a.classIdx {
+		for i, v := range sizeClassSlotSize {
+			if size <= int(v) {
+				a.classIdx[size] = byte(i)
+				break
+			}
 		}
-		a.classIdx[i] = byte(cl)
 	}
 	return
 }
@@ -372,5 +351,8 @@ func init() {
 	println("memory: page_header len is", unsafe.Sizeof(page_header{}))
 	for i := range sizeClassSlotSize {
 		sizeClassSlotSize[i] += 24 - 8
+	}
+	if len(sizeClassSlotSize) > 255 {
+		panic("too many records in sizeClassSlotSize")
 	}
 }
