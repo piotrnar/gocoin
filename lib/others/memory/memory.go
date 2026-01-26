@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	headerSize   = unsafe.Sizeof(page_header{})
+	shareHdrSize = unsafe.Sizeof(page_header{})
+	dedicHdrSize = 8
 	mallocAllign = unsafe.Sizeof(uintptr(0))
-	pageAvail    = pageSize - headerSize
+	pageAvail    = pageSize - shareHdrSize
 	pageMask     = pageSize - 1
 	pageSize     = 1 << pageSizeLog
 )
@@ -134,7 +135,7 @@ func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 
 // newPage creates a dedicated page for a single large allocation
 func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
-	size += 8 //int(headerSize)
+	size += int(dedicHdrSize)
 	p, err := a.mmap(size)
 	if err != nil {
 		return 0, err
@@ -152,7 +153,7 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	}
 
 	records_cnt := uint32(pageAvail) / uint32(slotSize)
-	totalSize := uint32(headerSize) + records_cnt*uint32(slotSize)
+	totalSize := uint32(shareHdrSize) + records_cnt*uint32(slotSize)
 	p, err := a.mmap(int(totalSize))
 	if err != nil {
 		return 0, err
@@ -283,7 +284,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 		if err != nil {
 			return 0, err
 		}
-		return p + headerSize, nil
+		return p + dedicHdrSize, nil
 	}
 
 	// Small allocation - use shared page
@@ -295,7 +296,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 			p.freeList = (*node)(unsafe.Pointer(n)).next
 		} else {
 			if p.brk < p.cap {
-				n = uintptr(unsafe.Pointer(p)) + headerSize + uintptr(p.brk)*uintptr(getSlotSize(class))
+				n = uintptr(unsafe.Pointer(p)) + shareHdrSize + uintptr(p.brk)*uintptr(getSlotSize(class))
 				p.brk++
 			} else {
 				panic("p.freeList is 0 and p.brk >= p.cap")
@@ -325,7 +326,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	p := a.lastPage[class]
 	a.freePage[class] = p
 	p.used, p.brk = 1, 1
-	return uintptr(unsafe.Pointer(p)) + headerSize, nil
+	return uintptr(unsafe.Pointer(p)) + shareHdrSize, nil
 }
 
 // Free deallocates memory (as in C.free).
