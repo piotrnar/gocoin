@@ -7,8 +7,6 @@
 package memory
 
 import (
-	"fmt"
-	"os"
 	"reflect"
 	"unsafe"
 )
@@ -16,14 +14,13 @@ import (
 const (
 	shareHdrSize = unsafe.Sizeof(page_header{})
 	dedicHdrSize = 8
-	mallocAllign = unsafe.Sizeof(uintptr(0))
 	pageAvail    = pageSize - shareHdrSize
 	pageMask     = pageSize - 1
 	pageSize     = 1 << pageSizeLog
 )
 
 var (
-	currentSequence uint32
+	currentSequence uint64
 )
 
 // Allocator allocates and frees memory. Its zero value is ready for use.
@@ -48,14 +45,14 @@ var sizeClassSlotSize = []uint16{
 }
 
 type page_header struct {
-	class      int16
-	cap        uint16
+	class      int32
 	siz        uint32 // Total page size from mmap
 	prev, next *page_header
 	freeList   uintptr // *node - free list for this page
-	seq        uint32
+	seq        uint64
 	brk        uint16
 	used       uint16
+	cap        uint16
 }
 
 type node struct {
@@ -64,9 +61,6 @@ type node struct {
 
 func init() {
 	println("memory: page_header len is", unsafe.Sizeof(page_header{}))
-	if unsafe.Sizeof(page_header{})%mallocAllign != 0 {
-		panic(fmt.Sprint("memory: bad page_header size: ", unsafe.Sizeof(page_header{})))
-	}
 	for i := range sizeClassSlotSize {
 		sizeClassSlotSize[i] += 24 - 8
 	}
@@ -91,7 +85,7 @@ func getSlotSize(class int) int {
 	if class >= 0 && class < len(sizeClassSlotSize) {
 		return int(sizeClassSlotSize[class])
 	}
-	return 0
+	panic("invalid size class")
 }
 
 // if n%m != 0 { n += m-n%m }. m must be a power of 2.
@@ -149,7 +143,7 @@ func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
 func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	slotSize := getSlotSize(class)
 	if slotSize == 0 {
-		panic(fmt.Sprintf("invalid size class: %d", class))
+		panic("invalid size class")
 	}
 
 	records_cnt := uint32(pageAvail) / uint32(slotSize)
@@ -170,7 +164,7 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		a.firstPage[class] = pag
 	}
 	a.lastPage[class] = pag
-	pag.class = int16(class)
+	pag.class = int32(class)
 	pag.cap = uint16(records_cnt)
 	(*page_header)(unsafe.Pointer(p)).seq = currentSequence
 	currentSequence++
@@ -186,11 +180,6 @@ func (a *Allocator) unmap(p uintptr, l int) error {
 
 // UintptrFree is like Free except its argument is an uintptr
 func (a *Allocator) UintptrFree(p uintptr, siz int) (err error) {
-	if trace {
-		defer func() {
-			fmt.Fprintf(os.Stderr, "Free(%#x) %v\n", p, err)
-		}()
-	}
 	if p == 0 {
 		return nil
 	}
@@ -259,11 +248,6 @@ func (a *Allocator) UintptrFree(p uintptr, siz int) (err error) {
 
 // UintptrMalloc is like Malloc except it returns an uintptr.
 func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
-	if trace {
-		defer func() {
-			fmt.Fprintf(os.Stderr, "Malloc(%#x) %#x, %v\n", size, r, err)
-		}()
-	}
 	if size < 0 {
 		panic("invalid malloc size")
 	}
