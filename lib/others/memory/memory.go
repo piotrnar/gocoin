@@ -32,6 +32,7 @@ type Allocator struct {
 	firstPage []*page_header // first page
 	lastPage  []*page_header // last page
 	freePage  []*page_header // page with lowest sequence and any free records
+	slotSize  []int          // quickly get slot size from the class value
 }
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
@@ -83,9 +84,6 @@ func (h *page_header) updateFreeList(rec uintptr) {
 // getSizeClass returns the size class index for a given allocation size.
 // This is the core routing function that determines which slot size to use.
 func getSizeClass(size int) int {
-	if pageSizeLog == 16 && size >= 4092 {
-		return -1 // For Windows that uses 64KB pages (instead of 1MB)
-	}
 	for i, v := range sizeClassSlotSize {
 		if size <= int(v) {
 			return i
@@ -95,7 +93,14 @@ func getSizeClass(size int) int {
 }
 
 // getSlotSize returns the actual slot size for a size class index
-func getSlotSize(class int) int {
+func (a *Allocator) getSlotSize(class int) int {
+	if class >= len(a.slotSize) {
+		panic("illegal class vallie")
+	}
+	return a.slotSize[class]
+}
+
+func (a *Allocator) getSlotSizeX(class int) int {
 	if class >= 0 && class < len(sizeClassSlotSize) {
 		return int(sizeClassSlotSize[class])
 	}
@@ -110,6 +115,10 @@ func NewAllocator() (a *Allocator) {
 	a.firstPage = make([]*page_header, len(sizeClassSlotSize))
 	a.lastPage = make([]*page_header, len(sizeClassSlotSize))
 	a.freePage = make([]*page_header, len(sizeClassSlotSize))
+	a.slotSize = make([]int, len(sizeClassSlotSize))
+	for i := range a.slotSize {
+		a.slotSize[i] = a.getSlotSizeX(i)
+	}
 	return
 }
 
@@ -144,7 +153,7 @@ func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
 
 // newSharedPage creates a new shared page for a specific size class
 func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
-	slotSize := getSlotSize(class)
+	slotSize := a.getSlotSize(class)
 	if slotSize == 0 {
 		panic("invalid size class")
 	}
@@ -284,7 +293,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 			p.updateFreeList((*free_record)(unsafe.Pointer(n)).next_free_record)
 		} else {
 			if p.dirty < p.cap {
-				n = uintptr(unsafe.Pointer(p)) + shareHdrSize + uintptr(p.dirty)*uintptr(getSlotSize(class))
+				n = uintptr(unsafe.Pointer(p)) + shareHdrSize + uintptr(p.dirty)*uintptr(a.getSlotSize(class))
 				p.dirty++
 			} else {
 				panic("p.freeList is 0 and p.brk >= p.cap")
