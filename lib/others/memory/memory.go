@@ -218,8 +218,8 @@ func (a *Allocator) UintptrFree(p uintptr, siz int) (err error) {
 	pag.updateFreeList(p)
 	pag.used--
 
-	// Update freePage if this page has lower sequence than current freePage
-	if a.freePage[class] == nil || pag.seq < a.freePage[class].seq {
+	// Only set freePage if we don't have one - stick with current page for better cache locality
+	if a.freePage[class] == nil {
 		a.freePage[class] = pag
 	}
 
@@ -229,13 +229,14 @@ func (a *Allocator) UintptrFree(p uintptr, siz int) (err error) {
 
 	// Page is completely free - unmap it
 
-	// If we're removing freePage, find the next best page starting from pag.next
+	// If we're removing freePage, find any page with free slots
+	// Prefer newer pages (search from end) for better cache locality
 	if a.freePage[class] == pag {
 		a.freePage[class] = nil
-		for pg := pag.next; pg != nil; pg = pg.next {
-			if pg.freeListOffs != 0 {
+		for pg := a.lastPage[class]; pg != nil; pg = pg.prev {
+			if pg != pag && pg.freeListOffs != 0 {
 				a.freePage[class] = pg
-				break // pages are in sequence order, first one found is the lowest
+				break
 			}
 		}
 	}
@@ -283,7 +284,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	}
 
 	// Small allocation - use shared page
-	// First try freePage (page with lowest seq that has free slots)
+	// Stick with current freePage until it's full for better cache locality
 	if p := a.freePage[class]; p != nil {
 		// Allocate from freePage's free list (remove from head)
 		var n uintptr
@@ -300,13 +301,14 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 		}
 		p.used++
 
-		// If page has no more free slots, find next best freePage starting from p.next
+		// If page has no more free slots, find any page with free slots
+		// Prefer newer pages (search from end) for better cache locality
 		if p.freeListOffs == 0 && p.dirty == p.cap {
 			a.freePage[class] = nil
-			for pg := p.next; pg != nil; pg = pg.next {
+			for pg := a.lastPage[class]; pg != nil; pg = pg.prev {
 				if pg.freeListOffs != 0 {
 					a.freePage[class] = pg
-					break // pages are in sequence order, first one found is the lowest
+					break
 				}
 			}
 		}
