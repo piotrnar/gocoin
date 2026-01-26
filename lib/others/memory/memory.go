@@ -47,14 +47,14 @@ var sizeClassSlotSize = []uint16{
 }
 
 type page_header struct {
-	class      uint16 // Actual slot size in bytes. 0 = dedicated page (large allocation)
+	prev, next *page_header
+	freeList   uintptr // *node - free list for this page
+	seq        uint32
+	siz        uint32 // Total page size from mmap
+	class      int16
 	brk        uint16
 	used       uint16
 	cap        uint16
-	seq        uint32
-	prev, next *page_header
-	freeList   uintptr // *node - free list for this page
-	siz        uint32  // Total page size from mmap
 }
 
 type node struct {
@@ -141,7 +141,7 @@ func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
 		return 0, err
 	}
 
-	(*page_header)(unsafe.Pointer(p)).class = 0xffff // Mark as dedicated page
+	(*page_header)(unsafe.Pointer(p)).class = -1 // Mark as dedicated page
 	return p, nil
 }
 
@@ -170,7 +170,7 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		a.firstPage[class] = pag
 	}
 	a.lastPage[class] = pag
-	pag.class = uint16(class)
+	pag.class = int16(class)
 	pag.cap = uint16(records_cnt)
 	return p, nil
 }
@@ -201,9 +201,9 @@ func (a *Allocator) UintptrFree(p uintptr, siz int) (err error) {
 	pag := (*page_header)(unsafe.Pointer(pg))
 
 	// Dedicated page (large allocation) - slotSize == 0
-	if pag.class == 0xffff {
+	if pag.class < 0 {
 		if counters {
-			a.Bytes -= siz
+			a.Bytes -= int(pag.siz)
 		}
 		return a.unmap(pg, siz)
 	}
