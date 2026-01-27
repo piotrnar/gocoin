@@ -12,13 +12,12 @@ package memory // import "modernc.org/memory"
 
 import (
 	"fmt"
-	"os"
 	"unsafe"
 )
 
 const (
 	headerSize   = unsafe.Sizeof(page{})
-	mallocAllign = 2 * unsafe.Sizeof(uintptr(0))
+	mallocAllign = unsafe.Sizeof(uintptr(0))
 	pageAvail    = pageSize - headerSize
 	pageMask     = pageSize - 1
 	pageSize     = 1 << pageSizeLog
@@ -35,6 +34,12 @@ var sizeClassSlotSize = []uint32{
 }
 
 func init() {
+	println("memory: page_header len is", unsafe.Sizeof(page{}))
+	print("slot sizes: ")
+	for _, ss := range sizeClassSlotSize {
+		print(ss, ", ")
+	}
+	println()
 	for i := range sizeClassSlotSize {
 		sizeClassSlotSize[i] -= 8
 	}
@@ -60,12 +65,6 @@ func getSlotSize(class int) uint32 {
 		return sizeClassSlotSize[class]
 	}
 	return 0
-}
-
-func init() {
-	if unsafe.Sizeof(page{})%mallocAllign != 0 {
-		panic("internal error")
-	}
 }
 
 // if n%m != 0 { n += m-n%m }. m must be a power of 2.
@@ -98,10 +97,9 @@ type Allocator struct {
 	Allocs int // # of allocs.
 	Bytes  int // Asked from OS.
 	cap    []uint32
-	lists  []uintptr            // *node - free lists per size class
-	Mmaps  int                  // Asked from OS.
-	pages  []uintptr            // *page - current page per size class
-	regs   map[uintptr]struct{} // map[*page]struct{} - all registered pages
+	lists  []uintptr // *node - free lists per size class
+	Mmaps  int       // Asked from OS.
+	pages  []uintptr // *page - current page per size class
 }
 
 func NewAllocator() (a *Allocator) {
@@ -122,14 +120,10 @@ func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 		a.Mmaps++
 		a.Bytes += size
 	}
-	if a.regs == nil {
-		a.regs = map[uintptr]struct{}{}
-	}
 	if size > 0xffffffff {
 		panic("mmap to big")
 	}
 	(*page)(unsafe.Pointer(p)).size = uint32(size)
-	a.regs[p] = struct{}{}
 	return p, nil
 }
 
@@ -168,37 +162,14 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 }
 
 func (a *Allocator) unmap(p uintptr /* *page */) error {
-	delete(a.regs, p)
 	if counters {
 		a.Mmaps--
 	}
 	return unmap(p, int((*page)(unsafe.Pointer(p)).size))
 }
 
-// UintptrCalloc is like Calloc except it returns an uintptr.
-func (a *Allocator) UintptrCalloc(size int) (r uintptr, err error) {
-	if trace {
-		defer func() {
-			fmt.Fprintf(os.Stderr, "Calloc(%#x) %#x, %v\n", size, r, err)
-		}()
-	}
-	if r, err = a.UintptrMalloc(size); r == 0 || err != nil {
-		return 0, err
-	}
-	b := ((*rawmem)(unsafe.Pointer(r)))[:size:size]
-	for i := range b {
-		b[i] = 0
-	}
-	return r, nil
-}
-
 // UintptrFree is like Free except its argument is an uintptr
 func (a *Allocator) UintptrFree(p uintptr) (err error) {
-	if trace {
-		defer func() {
-			fmt.Fprintf(os.Stderr, "Free(%#x) %v\n", p, err)
-		}()
-	}
 	if p == 0 {
 		return nil
 	}
@@ -267,11 +238,6 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 
 // UintptrMalloc is like Malloc except it returns an uintptr.
 func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
-	if trace {
-		defer func() {
-			fmt.Fprintf(os.Stderr, "Malloc(%#x) %#x, %v\n", size, r, err)
-		}()
-	}
 	if size < 0 {
 		panic("invalid malloc size")
 	}
@@ -324,85 +290,6 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	return n, nil
 }
 
-// UintptrRealloc is like Realloc except its first argument is an uintptr
-func (a *Allocator) UintptrRealloc(p uintptr, size int) (r uintptr, err error) {
-	if trace {
-		defer func() {
-			fmt.Fprintf(os.Stderr, "UnsafeRealloc(%#x, %#x) %#x, %v\n", p, size, r, err)
-		}()
-	}
-	switch {
-	case p == 0:
-		return a.UintptrMalloc(size)
-	case size == 0 && p != 0:
-		return 0, a.UintptrFree(p)
-	}
-
-	us := UintptrUsableSize(p)
-	if us >= size {
-		return p, nil
-	}
-
-	if r, err = a.UintptrMalloc(size); err != nil {
-		return 0, err
-	}
-
-	if us < size {
-		size = us
-	}
-	copy((*rawmem)(unsafe.Pointer(r))[:size:size], (*rawmem)(unsafe.Pointer(p))[:size:size])
-	return r, a.UintptrFree(p)
-}
-
-// UintptrUsableSize returns the usable size of an allocation
-func UintptrUsableSize(p uintptr) (r int) {
-	if trace {
-		defer func() {
-			fmt.Fprintf(os.Stderr, "UsableSize(%#x) %#x\n", p, r)
-		}()
-	}
-	if p == 0 {
-		return 0
-	}
-
-	return usableSize(p)
-}
-
-func usableSize(p uintptr) (r int) {
-	pg := p &^ uintptr(pageMask)
-	slotSize := (*page)(unsafe.Pointer(pg)).slotSize
-
-	// Dedicated page - slotSize == 0
-	if slotSize == 0 {
-		return int((*page)(unsafe.Pointer(pg)).size) - int(headerSize)
-	}
-
-	// Shared page - return the stored slot size
-	return int(slotSize)
-}
-
-// Calloc is like Malloc except the allocated memory is zeroed.
-func (a *Allocator) Calloc(size int) (r []byte, err error) {
-	p, err := a.UintptrCalloc(size)
-	if err != nil {
-		return nil, err
-	}
-
-	b := unsafe.Slice((*byte)(unsafe.Pointer(p)), usableSize(p))
-	return b[:size], nil
-}
-
-// Close releases all OS resources used by a and sets it to its zero value.
-func (a *Allocator) Close() (err error) {
-	for p := range a.regs {
-		if e := a.unmap(p); e != nil && err == nil {
-			err = e
-		}
-	}
-	*a = Allocator{}
-	return err
-}
-
 // Free deallocates memory (as in C.free).
 func (a *Allocator) Free(b []byte) (err error) {
 	if b = b[:cap(b)]; len(b) == 0 {
@@ -419,59 +306,6 @@ func (a *Allocator) Malloc(size int) (r []byte, err error) {
 		return nil, err
 	}
 
-	r = unsafe.Slice((*byte)(unsafe.Pointer(p)), usableSize(p))
+	r = unsafe.Slice((*byte)(unsafe.Pointer(p)), size)
 	return r[:size], nil
 }
-
-// Realloc changes the size of the backing array of b to size bytes.
-func (a *Allocator) Realloc(b []byte, size int) (r []byte, err error) {
-	var p uintptr
-	if b = b[:cap(b)]; len(b) != 0 {
-		p = uintptr(unsafe.Pointer(&b[0]))
-	}
-	if p, err = a.UintptrRealloc(p, size); p == 0 || err != nil {
-		return nil, err
-	}
-
-	r = unsafe.Slice((*byte)(unsafe.Pointer(p)), usableSize(p))
-	return r[:size], nil
-}
-
-// UsableSize reports the size of the memory block allocated at p.
-func UsableSize(p *byte) (r int) { return UintptrUsableSize(uintptr(unsafe.Pointer(p))) }
-
-// UnsafeCalloc is like Calloc except it returns an unsafe.Pointer.
-func (a *Allocator) UnsafeCalloc(size int) (r unsafe.Pointer, err error) {
-	p, err := a.UintptrCalloc(size)
-	if err != nil {
-		return nil, err
-	}
-
-	return unsafe.Pointer(p), nil
-}
-
-// UnsafeFree is like Free except its argument is an unsafe.Pointer.
-func (a *Allocator) UnsafeFree(p unsafe.Pointer) (err error) { return a.UintptrFree(uintptr(p)) }
-
-// UnsafeMalloc is like Malloc except it returns an unsafe.Pointer.
-func (a *Allocator) UnsafeMalloc(size int) (r unsafe.Pointer, err error) {
-	p, err := a.UintptrMalloc(size)
-	if err != nil {
-		return nil, err
-	}
-
-	return unsafe.Pointer(p), nil
-}
-
-// UnsafeRealloc is like Realloc except its first argument is an unsafe.Pointer.
-func (a *Allocator) UnsafeRealloc(p unsafe.Pointer, size int) (r unsafe.Pointer, err error) {
-	q, err := a.UintptrRealloc(uintptr(p), size)
-	if err != nil {
-		return nil, err
-	}
-
-	return unsafe.Pointer(q), nil
-}
-
-// UnsafeUsableSize is like UsableSize except its argument is an unsafe.Pointer.
-func UnsafeUsableSize(p unsafe.Pointer) (r int) { return UintptrUsableSize(uintptr(p)) }
