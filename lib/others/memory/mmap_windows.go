@@ -49,6 +49,7 @@ var (
 
 // 1MB aligned using VirtualAlloc2
 func mmap(size int) (uintptr, int, error) {
+	originalSize := size              // Save original requested size
 	size = roundup(size, mmapAlignment) // Round up to 1MB alignment
 
 	var addressReqs MEM_ADDRESS_REQUIREMENTS
@@ -69,9 +70,9 @@ func mmap(size int) (uintptr, int, error) {
 	)
 
 	if err.(syscall.Errno) != 0 || addr == 0 {
-		return addr, size, err
+		return addr, originalSize, err
 	}
-	return addr, size, nil
+	return addr, originalSize, nil // Return original size, not rounded size
 }
 
 func unmap(addr uintptr, size int) error {
