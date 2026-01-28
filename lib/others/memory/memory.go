@@ -25,7 +25,7 @@ var sizeClassSlotSize = []uint32{
 }
 
 func init() {
-	println("memory: page_header len is", unsafe.Sizeof(page{}))
+	println("memory: page_header len is", unsafe.Sizeof(page{}), len(sizeClassSlotSize))
 	print("slot sizes: ")
 	for _, ss := range sizeClassSlotSize {
 		print(ss, ", ")
