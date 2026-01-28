@@ -30,7 +30,7 @@ func init() {
 	for _, ss := range sizeClassSlotSize {
 		print(ss, ", ")
 	}
-	println()
+	println("\nnumber of slots:", len(sizeClassSlotSize))
 	for i := range sizeClassSlotSize {
 		sizeClassSlotSize[i] -= 8
 	}
