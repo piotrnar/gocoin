@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	headerSize   = unsafe.Sizeof(page{})
-	mallocAllign = unsafe.Sizeof(uintptr(0))
+	headerSize   = unsafe.Sizeof(page_header{})
+	dedicHdrSize = unsafe.Sizeof(page_header_common{})
 	pageAvail    = pageSize - headerSize
 	pageMask     = pageSize - 1
 	pageSize     = 1 << pageSizeLog
@@ -28,11 +28,16 @@ type node struct {
 	prev, next uintptr // *node
 }
 
-type page struct {
-	brk   uint32
-	size  uint32 // Total page size from mmap
-	used  uint32
-	class int32 // Actual slot size in bytes. 0 = dedicated page (large allocation)
+type page_header_common struct {
+	class int16  // -1 for private page
+	cap   uint16 // number of records (not used for private page)
+	siz   uint32 // total page size from mmap (including header)
+}
+
+type page_header struct {
+	page_header_common
+	brk  uint16
+	used uint16
 }
 
 // Allocator allocates and frees memory. Its zero value is ready for use.
@@ -80,19 +85,19 @@ func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 	if size > 0xffffffff {
 		panic("mmap to big")
 	}
-	(*page)(unsafe.Pointer(p)).size = uint32(size)
+	(*page_header)(unsafe.Pointer(p)).siz = uint32(size)
 	return p, nil
 }
 
 // newPage creates a dedicated page for a single large allocation
 func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
-	size += int(headerSize)
+	size += int(dedicHdrSize)
 	p, err := a.mmap(size)
 	if err != nil {
 		return 0, err
 	}
 
-	(*page)(unsafe.Pointer(p)).class = -1 // Mark as dedicated page
+	(*page_header)(unsafe.Pointer(p)).class = -1 // Mark as dedicated page
 	return p, nil
 }
 
@@ -103,10 +108,6 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		panic(fmt.Sprintf("invalid size class: %d", class))
 	}
 
-	if a.cap[class] == 0 {
-		a.cap[class] = uint32(pageAvail) / slotSize
-	}
-
 	totalSize := uint32(headerSize) + a.cap[class]*slotSize
 	p, err := a.mmap(int(totalSize))
 	if err != nil {
@@ -114,7 +115,7 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	}
 
 	a.pages[class] = p
-	(*page)(unsafe.Pointer(p)).class = int32(class)
+	(*page_header)(unsafe.Pointer(p)).class = int16(class)
 	return p, nil
 }
 
@@ -122,7 +123,7 @@ func (a *Allocator) unmap(p uintptr /* *page */) error {
 	if counters {
 		a.Mmaps--
 	}
-	return unmap(p, int((*page)(unsafe.Pointer(p)).size))
+	return unmap(p, int((*page_header)(unsafe.Pointer(p)).siz))
 }
 
 // UintptrFree is like Free except its argument is an uintptr
@@ -136,12 +137,12 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	}
 
 	pg := p &^ uintptr(pageMask)
-	class := int((*page)(unsafe.Pointer(pg)).class)
+	class := int((*page_header)(unsafe.Pointer(pg)).class)
 
 	// Dedicated page (large allocation) - slotSize == 0
 	if class < 0 {
 		if counters {
-			a.Bytes -= int((*page)(unsafe.Pointer(pg)).size)
+			a.Bytes -= int((*page_header)(unsafe.Pointer(pg)).siz)
 		}
 		return a.unmap(pg)
 	}
@@ -153,15 +154,15 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 		(*node)(unsafe.Pointer(next)).prev = p
 	}
 	a.lists[class] = p
-	(*page)(unsafe.Pointer(pg)).used--
+	(*page_header)(unsafe.Pointer(pg)).used--
 
-	if (*page)(unsafe.Pointer(pg)).used != 0 {
+	if (*page_header)(unsafe.Pointer(pg)).used != 0 {
 		return nil
 	}
 
 	slotSize := sizeClassSlotSize[class]
 	// Page is completely free - unmap it
-	for i := 0; i < int((*page)(unsafe.Pointer(pg)).brk); i++ {
+	for i := 0; i < int((*page_header)(unsafe.Pointer(pg)).brk); i++ {
 		n := pg + headerSize + uintptr(i)*uintptr(slotSize)
 		next := (*node)(unsafe.Pointer(n)).next
 		prev := (*node)(unsafe.Pointer(n)).prev
@@ -183,7 +184,7 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 		a.pages[class] = 0
 	}
 	if counters {
-		a.Bytes -= int((*page)(unsafe.Pointer(pg)).size)
+		a.Bytes -= int((*page_header)(unsafe.Pointer(pg)).siz)
 	}
 	return a.unmap(pg)
 }
@@ -210,7 +211,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 		if err != nil {
 			return 0, err
 		}
-		return p + headerSize, nil
+		return p + dedicHdrSize, nil
 	}
 
 	// Small allocation - use shared page
@@ -222,13 +223,13 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 
 	// Try to allocate from current page
 	if p := a.pages[class]; p != 0 {
-		(*page)(unsafe.Pointer(p)).used++
-		(*page)(unsafe.Pointer(p)).brk++
-		if (*page)(unsafe.Pointer(p)).brk == a.cap[class] {
+		(*page_header)(unsafe.Pointer(p)).used++
+		(*page_header)(unsafe.Pointer(p)).brk++
+		if int((*page_header)(unsafe.Pointer(p)).brk) == int(a.cap[class]) {
 			a.pages[class] = 0
 		}
 		slotSize := sizeClassSlotSize[class]
-		return p + headerSize + uintptr((*page)(unsafe.Pointer(p)).brk-1)*uintptr(slotSize), nil
+		return p + headerSize + uintptr((*page_header)(unsafe.Pointer(p)).brk-1)*uintptr(slotSize), nil
 	}
 
 	// Allocate from free list
@@ -238,7 +239,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	if next := (*node)(unsafe.Pointer(n)).next; next != 0 {
 		(*node)(unsafe.Pointer(next)).prev = 0
 	}
-	(*page)(unsafe.Pointer(pg)).used++
+	(*page_header)(unsafe.Pointer(pg)).used++
 	return n, nil
 }
 
@@ -268,6 +269,10 @@ func NewAllocator() (a *Allocator) {
 	a.lists = make([]uintptr, len(sizeClassSlotSize))
 	a.pages = make([]uintptr, len(sizeClassSlotSize))
 
+	for i := range a.cap {
+		a.cap[i] = uint32(pageAvail) / sizeClassSlotSize[i]
+	}
+
 	a.maxSharedSize = int(sizeClassSlotSize[len(sizeClassSlotSize)-1])
 	a.classIdx = make([]byte, a.maxSharedSize+1)
 	for size := range a.classIdx {
@@ -282,7 +287,7 @@ func NewAllocator() (a *Allocator) {
 }
 
 func init() {
-	println("memory: page_header len is", unsafe.Sizeof(page{}), len(sizeClassSlotSize))
+	println("memory: page_header len is", unsafe.Sizeof(page_header{}), len(sizeClassSlotSize))
 	print("slot sizes: ")
 	for _, ss := range sizeClassSlotSize {
 		print(ss, ", ")
