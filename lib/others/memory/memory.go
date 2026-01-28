@@ -3,10 +3,6 @@
 // license that can be found in the LICENSE file.
 
 // Package memory implements a memory allocator.
-// MODIFIED: Optimized for UTXO workloads with custom size classes.
-// OPTIMIZATION v2: Added 60-byte class for 57-byte allocations (45% of records)
-//                  Simplified to 11 core size classes based on simulation results
-//                  Expected waste reduction: 480 MB (12.20% -> 7.66%)
 
 package memory // import "modernc.org/memory"
 
@@ -25,12 +21,7 @@ const (
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
 var sizeClassSlotSize = []uint32{
-	64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192,
-	200, 208, 216, 224, 232, 240, 248, 256, 272, 288,
-	304, 320, 336, 352, 368, 400, 416, 432, 464, 480,
-	512, 592, 704,
-	1024, 1280, 1536, 1792, 2048, 2304, 2816,
-	4096, 8192, 16378, 32768,
+	72, 80, 96, 104, 120, 128, 136, 152, 160, 184, 200, 240, 272, 288, 320, 368, 432, 512, 640, 768, 896, 1024, 1216, 1408, 1728, 2048, 2560, 2944, 3712, 4096, 5120, 6144, 7936, 9216, 11264, 13312, 17408, 21504, 28672, 32768,
 }
 
 func init() {
