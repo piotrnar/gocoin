@@ -36,8 +36,8 @@ type page_header_common struct {
 
 type page_header struct {
 	page_header_common
-	brk  uint16
-	used uint16
+	brk  uint32 // it would be enough to have it 16-bits, but we
+	used uint32 // want the header size to be multiple of 8 bytes
 }
 
 // Allocator allocates and frees memory. Its zero value is ready for use.
@@ -148,15 +148,14 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	}
 
 	// Shared page - Add to free list
-	(*node)(unsafe.Pointer(p)).prev = 0
-	(*node)(unsafe.Pointer(p)).next = a.lists[class]
-	if next := (*node)(unsafe.Pointer(p)).next; next != 0 {
-		(*node)(unsafe.Pointer(next)).prev = p
-	}
-	a.lists[class] = p
-	(*page_header)(unsafe.Pointer(pg)).used--
-
-	if (*page_header)(unsafe.Pointer(pg)).used != 0 {
+	if (*page_header)(unsafe.Pointer(pg)).used != 1 {
+		(*node)(unsafe.Pointer(p)).prev = 0
+		(*node)(unsafe.Pointer(p)).next = a.lists[class]
+		if next := (*node)(unsafe.Pointer(p)).next; next != 0 {
+			(*node)(unsafe.Pointer(next)).prev = p
+		}
+		a.lists[class] = p
+		(*page_header)(unsafe.Pointer(pg)).used--
 		return nil
 	}
 
