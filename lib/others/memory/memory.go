@@ -323,7 +323,7 @@ func init() {
 		print(ss, ", ")
 	}
 	println()
-	if pageSizeLog < 20 {
+	if sizeClassSlotSize[len(sizeClassSlotSize)-1]-sizeAdjustement > max_class_size {
 		for mx := len(sizeClassSlotSize) - 1; mx > 0; mx-- {
 			if sizeClassSlotSize[mx-1]-sizeAdjustement <= max_class_size {
 				sizeClassSlotSize = sizeClassSlotSize[:mx]
