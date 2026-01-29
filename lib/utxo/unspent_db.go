@@ -199,14 +199,11 @@ redo:
 		}
 
 		rec := &recs[rec_idx]
-		if _, er = io.ReadFull(rd, rec.k[:]); er != nil {
-			goto fatal_error
-		}
-
-		rec.b = Memory_Malloc(int(le) - UtxoIdxLen)
+		rec.b = Memory_Malloc(int(le))
 		if _, er = io.ReadFull(rd, rec.b); er != nil {
 			goto fatal_error
 		}
+		copy(rec.k[:], rec.b[:])
 
 		if rec_idx == len(recs)-1 {
 			ch <- recs
@@ -419,7 +416,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 			bu.Write(blhash)
 			if changes.UndoData != nil {
 				for _, xx := range changes.UndoData {
-					bin := Serialize(xx, true, tmp[:])
+					bin := Serialize(xx, tmp[:])
 					btc.WriteVlen(bu, uint64(len(bin)))
 					bu.Write(bin)
 				}
@@ -507,7 +504,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 		v := db.HashMap[ind[0]][ind]
 		db.MapMutex[ind[0]].RUnlock()
 		if v != nil {
-			oldrec := NewUtxoRec(ind, v)
+			oldrec := NewUtxoRec(v)
 			for a := range rec.Outs {
 				if rec.Outs[a] == nil {
 					rec.Outs[a] = oldrec.Outs[a]
@@ -515,7 +512,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 			}
 		}
 		db.MapMutex[ind[0]].Lock()
-		db.HashMap[ind[0]][ind] = Serialize(rec, false, nil)
+		db.HashMap[ind[0]][ind] = Serialize(rec, nil)
 		db.MapMutex[ind[0]].Unlock()
 	}
 
@@ -579,7 +576,7 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 	v = db.HashMap[ind[0]][ind]
 	db.MapMutex[ind[0]].RUnlock()
 	if v != nil {
-		res = OneUtxoRec(ind, v, po.Vout)
+		res = OneUtxoRec(v, po.Vout)
 	}
 
 	return
@@ -602,7 +599,7 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 	if v == nil {
 		return // no such txid in UTXO (just ignore delete request)
 	}
-	rec := NewUtxoRec(ind, v)
+	rec := NewUtxoRec(v)
 	if db.CB.NotifyTxDel != nil {
 		db.CB.NotifyTxDel(rec, outs)
 	}
@@ -616,7 +613,7 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 	}
 	db.MapMutex[ind[0]].Lock()
 	if anyout {
-		db.HashMap[ind[0]][ind] = Serialize(rec, false, nil)
+		db.HashMap[ind[0]][ind] = Serialize(rec, nil)
 	} else {
 		delete(db.HashMap[ind[0]], ind)
 	}
@@ -660,7 +657,7 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 			}
 			if add_this_tx {
 				ind := *(*UtxoKeyType)(unsafe.Pointer(&rec.TxID[0]))
-				v := Serialize(rec, false, nil)
+				v := Serialize(rec, nil)
 				db.MapMutex[ind[0]].Lock()
 				db.HashMap[ind[0]][ind] = v
 				db.MapMutex[ind[0]].Unlock()
@@ -764,10 +761,10 @@ func (db *UnspentDB) UTXOStats() string {
 			rec := &sta_rec
 			db.MapMutex[_i].RLock()
 			atomic.AddUint64(&lele, uint64(len(db.HashMap[_i])))
-			for k, v := range db.HashMap[_i] {
+			for _, v := range db.HashMap[_i] {
 				reclen := uint64(len(v) + UtxoIdxLen)
 				atomic.AddUint64(&filesize, uint64(btc.VLenSize(reclen))+reclen)
-				NewUtxoRecOwn(k, v, rec, &sta_cbs)
+				NewUtxoRecOwn(v, rec, &sta_cbs)
 				var spendable_found bool
 				for _, r := range rec.Outs {
 					if r != nil {
@@ -832,7 +829,7 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 	for _i := range db.HashMap {
 		db.MapMutex[_i].Lock()
 		for k, v := range db.HashMap[_i] {
-			rec := NewUtxoRecStatic(k, v)
+			rec := NewUtxoRecStatic(v)
 			var spendable_found bool
 			var record_removed uint64
 			for idx, r := range rec.Outs {
@@ -852,7 +849,7 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 				delete(db.HashMap[k[0]], k)
 				unspendable_txs++
 			} else if record_removed > 0 {
-				db.HashMap[k[0]][k] = Serialize(rec, false, nil)
+				db.HashMap[k[0]][k] = Serialize(rec, nil)
 				Memory_Free(v)
 				unspendable_recs += record_removed
 			}
