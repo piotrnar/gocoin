@@ -150,19 +150,23 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	// Shared page - Add to free list
 	if (*page_header)(unsafe.Pointer(pg)).used >= 1 {
 		(*node)(unsafe.Pointer(p)).prev = 0
-		(*node)(unsafe.Pointer(p)).next = a.lists[class]
-		if next := (*node)(unsafe.Pointer(p)).next; next != 0 {
+		if next := a.lists[class]; next != 0 {
+			(*node)(unsafe.Pointer(p)).next = next
 			(*node)(unsafe.Pointer(next)).prev = p
+		} else {
+			(*node)(unsafe.Pointer(p)).next = a.lists[class]
 		}
 		a.lists[class] = p
 		(*page_header)(unsafe.Pointer(pg)).used--
 		return nil
 	}
 
-	slotSize := sizeClassSlotSize[class]
 	// Page is completely free - unmap it
-	for i := 0; i < int((*page_header)(unsafe.Pointer(pg)).brk); i++ {
-		n := pg + headerSize + uintptr(i)*uintptr(slotSize)
+	slotSize := sizeClassSlotSize[class]
+	n := pg + headerSize
+	bi := (*page_header)(unsafe.Pointer(pg)).brk
+	for {
+		n += uintptr(slotSize)
 		next := (*node)(unsafe.Pointer(n)).next
 		prev := (*node)(unsafe.Pointer(n)).prev
 		switch {
@@ -177,7 +181,31 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 			(*node)(unsafe.Pointer(prev)).next = next
 			(*node)(unsafe.Pointer(next)).prev = prev
 		}
+		if bi == 1 {
+			break
+		}
+		bi--
 	}
+
+	/*
+		for i := 0; i < int((*page_header)(unsafe.Pointer(pg)).brk); i++ {
+			n := pg + headerSize + uintptr(i)*uintptr(slotSize)
+			next := (*node)(unsafe.Pointer(n)).next
+			prev := (*node)(unsafe.Pointer(n)).prev
+			switch {
+			case prev == 0:
+				a.lists[class] = next
+				if next != 0 {
+					(*node)(unsafe.Pointer(next)).prev = 0
+				}
+			case next == 0:
+				(*node)(unsafe.Pointer(prev)).next = 0
+			default:
+				(*node)(unsafe.Pointer(prev)).next = next
+				(*node)(unsafe.Pointer(next)).prev = prev
+			}
+		}
+	*/
 
 	if a.pages[class] == pg {
 		a.pages[class] = 0
