@@ -317,7 +317,7 @@ func NewAllocator() (a *Allocator) {
 func init() {
 	// discard records that would be less then half of available page space
 	max_class_size := ((1<<pageSizeLog)-uint32(headerSize))/2 + sizeAdjustement
-	println("page size:", (1 << pageSizeLog), " page header size:", headerSize, "  max class szie:", max_class_size)
+	println("page size:", (1 << pageSizeLog), " page header size:", headerSize, "  max class size:", max_class_size)
 	print(len(sizeClassSlotSize), " slot sizes: ")
 	for _, ss := range sizeClassSlotSize {
 		print(ss, ", ")
@@ -327,7 +327,7 @@ func init() {
 		for mx := len(sizeClassSlotSize) - 1; mx > 0; mx-- {
 			if sizeClassSlotSize[mx-1]-sizeAdjustement <= max_class_size {
 				sizeClassSlotSize = sizeClassSlotSize[:mx]
-				println("sizeClassSlotSize trimmed to", len(sizeClassSlotSize))
+				println("sizeClassSlotSize trimmed to", len(sizeClassSlotSize), "records")
 				break
 			}
 		}
