@@ -148,7 +148,7 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	}
 
 	// Shared page - Add to free list
-	if (*page_header)(unsafe.Pointer(pg)).used != 1 {
+	if (*page_header)(unsafe.Pointer(pg)).used >= 1 {
 		(*node)(unsafe.Pointer(p)).prev = 0
 		(*node)(unsafe.Pointer(p)).next = a.lists[class]
 		if next := (*node)(unsafe.Pointer(p)).next; next != 0 {
