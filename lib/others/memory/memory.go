@@ -318,12 +318,13 @@ func init() {
 	// discard records that would be less then half of available page space
 	max_class_size := ((1<<pageSizeLog)-uint32(headerSize))/2 + sizeAdjustement
 	println("page size:", (1 << pageSizeLog), " page header size:", headerSize, "  max class szie:", max_class_size)
-	print(len(sizeClassSlotSize), "slot sizes: ")
+	print(len(sizeClassSlotSize), " slot sizes: ")
 	for _, ss := range sizeClassSlotSize {
 		print(ss, ", ")
 	}
+	println()
 	if pageSizeLog < 20 {
-		for mx := len(sizeClassSlotSize); mx > 0; mx-- {
+		for mx := len(sizeClassSlotSize) - 1; mx > 0; mx-- {
 			if sizeClassSlotSize[mx-1]-sizeAdjustement <= max_class_size {
 				sizeClassSlotSize = sizeClassSlotSize[:mx]
 				println("sizeClassSlotSize trimmed to", len(sizeClassSlotSize))
@@ -331,7 +332,6 @@ func init() {
 			}
 		}
 	}
-	println()
 
 	// adjust slot sizes according to the actually expected alloc sizes
 	for i := range sizeClassSlotSize {
