@@ -12,11 +12,12 @@ import (
 )
 
 const (
-	headerSize   = unsafe.Sizeof(page_header{})
-	dedicHdrSize = unsafe.Sizeof(page_header_common{})
-	pageAvail    = pageSize - headerSize
-	pageMask     = pageSize - 1
-	pageSize     = 1 << pageSizeLog
+	headerSize      = unsafe.Sizeof(page_header{})
+	dedicHdrSize    = unsafe.Sizeof(page_header_common{})
+	pageAvail       = pageSize - headerSize
+	pageMask        = pageSize - 1
+	pageSize        = 1 << pageSizeLog
+	sizeAdjustement = 8 // part of the UTXO record may be stored as map's key and need to be substracted
 )
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
@@ -31,7 +32,7 @@ type node struct {
 type page_header_common struct {
 	class int16  // -1 for private page
 	cap   uint16 // number of records (not used for private page)
-	siz   uint32 // total page size from mmap (including header)
+	siz   uint32 // total page size from mmap, including header, padded to osPageSize
 }
 
 type page_header struct {
@@ -314,6 +315,15 @@ func NewAllocator() (a *Allocator) {
 }
 
 func init() {
+	if pageSizeLog == 16 {
+		// for Windows 64KB page sizes
+		for mx := len(sizeClassSlotSize); mx > 0; mx-- {
+			if sizeClassSlotSize[mx-1] >= 4092-sizeAdjustement {
+				sizeClassSlotSize = sizeClassSlotSize[:mx]
+				break
+			}
+		}
+	}
 	println("memory: page_header len is", unsafe.Sizeof(page_header{}), len(sizeClassSlotSize))
 	print("slot sizes: ")
 	for _, ss := range sizeClassSlotSize {
@@ -321,6 +331,6 @@ func init() {
 	}
 	println("\nnumber of slots:", len(sizeClassSlotSize))
 	for i := range sizeClassSlotSize {
-		sizeClassSlotSize[i] -= 8
+		sizeClassSlotSize[i] -= sizeAdjustement
 	}
 }
