@@ -21,10 +21,9 @@ const (
 
 	MemExtendedParameterAddressRequirements = 1
 
-	mmapAlignment = 1 << 20 // 1MB alignment
+	pageSizeLog   = 20
+	mmapAlignment = 1 << pageSizeLog // always align to page size
 )
-
-const pageSizeLog = 20
 
 type MEM_ADDRESS_REQUIREMENTS struct {
 	LowestStartingAddress uintptr
@@ -49,8 +48,7 @@ var (
 
 // 1MB aligned using VirtualAlloc2
 func mmap(size int) (uintptr, int, error) {
-	originalSize := size              // Save original requested size
-	size = roundup(size, mmapAlignment) // Round up to 1MB alignment
+	size = roundup(size, osPageSize)
 
 	var addressReqs MEM_ADDRESS_REQUIREMENTS
 	addressReqs.Alignment = mmapAlignment
@@ -60,19 +58,19 @@ func mmap(size int) (uintptr, int, error) {
 	param.Pointer = uintptr(unsafe.Pointer(&addressReqs))
 
 	addr, _, err := procVirtualAlloc2.Call(
-		0,                              // Process (NULL = current process)
-		0,                              // BaseAddress (NULL = let system choose)
-		uintptr(size),                  // Size
-		_MEM_COMMIT|_MEM_RESERVE,       // AllocationType
-		_PAGE_READWRITE,                // PageProtection
+		0,                               // Process (NULL = current process)
+		0,                               // BaseAddress (NULL = let system choose)
+		uintptr(size),                   // Size
+		_MEM_COMMIT|_MEM_RESERVE,        // AllocationType
+		_PAGE_READWRITE,                 // PageProtection
 		uintptr(unsafe.Pointer(&param)), // ExtendedParameters
-		1,                              // ParameterCount
+		1,                               // ParameterCount
 	)
 
 	if err.(syscall.Errno) != 0 || addr == 0 {
-		return addr, originalSize, err
+		return addr, size, err
 	}
-	return addr, originalSize, nil // Return original size, not rounded size
+	return addr, size, nil // Return original size, not rounded size
 }
 
 func unmap(addr uintptr, size int) error {

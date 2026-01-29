@@ -12,16 +12,17 @@ import (
 )
 
 const (
-	headerSize   = unsafe.Sizeof(page_header{})
-	dedicHdrSize = unsafe.Sizeof(page_header_common{})
-	pageAvail    = pageSize - headerSize
-	pageMask     = pageSize - 1
-	pageSize     = 1 << pageSizeLog
+	headerSize      = unsafe.Sizeof(page_header{})
+	dedicHdrSize    = unsafe.Sizeof(page_header_common{})
+	pageAvail       = pageSize - headerSize
+	pageMask        = pageSize - 1
+	pageSize        = 1 << pageSizeLog
+	sizeAdjustement = 8 // part of the UTXO record may be stored as map's key and need to be substracted
 )
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
 var sizeClassSlotSize = []uint32{
-	72, 80, 96, 104, 112, 120, 128, 136, 152, 160, 168, 184, 200, 216, 240, 272, 288, 320, 368, 400, 432, 512, 576, 640, 704, 768, 896, 1024, 1216, 1408, 1728, 2048, 2304, 2560, 2944, 3200, 3712, 4096, 5120, 6144, 6912, 7936, 9216, 10240, 11264, 13312, 15360, 17408, 21504, 28672, 32768,
+	72, 80, 96, 104, 112, 120, 128, 136, 152, 160, 168, 184, 200, 216, 240, 272, 288, 320, 368, 400, 432, 512, 576, 640, 704, 768, 896, 1024, 1216, 1408, 1728, 2048, 2304, 2560, 2944, 3200, 3712, 4096, 5120, 6144, 6912, 8192, 9216, 10240, 11264, 13312, 15360, 17408, 21504, 28672, 32768,
 }
 
 type node struct {
@@ -31,7 +32,7 @@ type node struct {
 type page_header_common struct {
 	class int16  // -1 for private page
 	cap   uint16 // number of records (not used for private page)
-	siz   uint32 // total page size from mmap (including header)
+	siz   uint32 // total page size from mmap, including header, padded to osPageSize
 }
 
 type page_header struct {
@@ -314,13 +315,26 @@ func NewAllocator() (a *Allocator) {
 }
 
 func init() {
-	println("memory: page_header len is", unsafe.Sizeof(page_header{}), len(sizeClassSlotSize))
-	print("slot sizes: ")
+	// discard records that would be less then half of available page space
+	max_class_size := ((1<<pageSizeLog)-uint32(headerSize))/2 + sizeAdjustement
+	println("page size:", (1 << pageSizeLog), " page header size:", headerSize, "  max class size:", max_class_size)
+	print(len(sizeClassSlotSize), " slot sizes: ")
 	for _, ss := range sizeClassSlotSize {
 		print(ss, ", ")
 	}
-	println("\nnumber of slots:", len(sizeClassSlotSize))
+	println()
+	if sizeClassSlotSize[len(sizeClassSlotSize)-1]-sizeAdjustement > max_class_size {
+		for mx := len(sizeClassSlotSize) - 1; mx > 0; mx-- {
+			if sizeClassSlotSize[mx-1]-sizeAdjustement <= max_class_size {
+				sizeClassSlotSize = sizeClassSlotSize[:mx]
+				println("sizeClassSlotSize trimmed to", len(sizeClassSlotSize), "records")
+				break
+			}
+		}
+	}
+
+	// adjust slot sizes according to the actually expected alloc sizes
 	for i := range sizeClassSlotSize {
-		sizeClassSlotSize[i] -= 8
+		sizeClassSlotSize[i] -= sizeAdjustement
 	}
 }
