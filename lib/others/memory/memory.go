@@ -22,7 +22,7 @@ const (
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
 var sizeClassSlotSize = []uint32{
-	72, 80, 96, 104, 112, 120, 128, 136, 152, 160, 168, 184, 200, 216, 240, 272, 288, 320, 368, 400, 432, 512, 576, 640, 704, 768, 896, 1024, 1216, 1408, 1728, 2048, 2304, 2560, 2944, 3200, 3712, 4096, 5120, 6144, 6912, 7936, 9216, 10240, 11264, 13312, 15360, 17408, 21504, 28672, 32768,
+	72, 80, 96, 104, 112, 120, 128, 136, 152, 160, 168, 184, 200, 216, 240, 272, 288, 320, 368, 400, 432, 512, 576, 640, 704, 768, 896, 1024, 1216, 1408, 1728, 2048, 2304, 2560, 2944, 3200, 3712, 4096, 5120, 6144, 6912, 8192, 9216, 10240, 11264, 13312, 15360, 17408, 21504, 24576, 31744,
 }
 
 type node struct {
@@ -315,16 +315,14 @@ func NewAllocator() (a *Allocator) {
 }
 
 func init() {
-	if pageSizeLog == 16 {
-		// for Windows 64KB page sizes
-		for mx := len(sizeClassSlotSize); mx > 0; mx-- {
-			if sizeClassSlotSize[mx-1] >= 4092-sizeAdjustement {
-				sizeClassSlotSize = sizeClassSlotSize[:mx]
-				break
-			}
+	// discard records that would be less then half of available page space
+	for mx := len(sizeClassSlotSize); mx > 0; mx-- {
+		if sizeClassSlotSize[mx-1]-sizeAdjustement <= ((1<<pageSizeLog)-uint32(headerSize))/2 {
+			sizeClassSlotSize = sizeClassSlotSize[:mx]
+			break
 		}
 	}
-	println("memory: page_header len is", unsafe.Sizeof(page_header{}), len(sizeClassSlotSize))
+	println("memory: page_header len is", headerSize, len(sizeClassSlotSize))
 	print("slot sizes: ")
 	for _, ss := range sizeClassSlotSize {
 		print(ss, ", ")
