@@ -593,6 +593,12 @@ func webui_stats(par string) {
 	fmt.Print(usif.GetWebUIStats())
 }
 
+func utxo_mem(par string) {
+	common.MemMutex.Lock()
+	common.Memory.PrintStats()
+	common.MemMutex.Unlock()
+}
+
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("cach", true, show_cached, "Show cached blocks [del2height]")
@@ -615,4 +621,5 @@ func init() {
 	newUi("undo", true, undo_block, "Undo one block")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics [mem]")
 	newUi("web", true, webui_stats, "Show WebUI access statistics")
+	newUi("m utxomem", true, utxo_mem, "Show UTXO memory heap stats")
 }

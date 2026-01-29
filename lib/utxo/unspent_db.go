@@ -340,7 +340,7 @@ func (db *UnspentDB) save() {
 	for _i := range db.HashMap {
 		db.MapMutex[_i].RLock()
 		defer db.MapMutex[_i].RUnlock()
-		for k, v := range db.HashMap[_i] {
+		for _, v := range db.HashMap[_i] {
 			if check_time {
 				check_time = false
 				data_progress = int64(current_record<<20) / int64(total_records)
@@ -368,8 +368,7 @@ func (db *UnspentDB) save() {
 				}
 			}
 
-			btc.WriteVlen(buf, uint64(UtxoIdxLen+len(v)))
-			buf.Write(k[:])
+			btc.WriteVlen(buf, uint64(len(v)))
 			buf.Write(v)
 			if buf.Len() >= save_buffer_min {
 				data_channel <- buf.Bytes()
@@ -762,7 +761,7 @@ func (db *UnspentDB) UTXOStats() string {
 			db.MapMutex[_i].RLock()
 			atomic.AddUint64(&lele, uint64(len(db.HashMap[_i])))
 			for _, v := range db.HashMap[_i] {
-				reclen := uint64(len(v) + UtxoIdxLen)
+				reclen := uint64(len(v))
 				atomic.AddUint64(&filesize, uint64(btc.VLenSize(reclen))+reclen)
 				NewUtxoRecOwn(v, rec, &sta_cbs)
 				var spendable_found bool
