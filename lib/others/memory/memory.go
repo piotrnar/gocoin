@@ -316,13 +316,16 @@ func NewAllocator() (a *Allocator) {
 
 func init() {
 	// discard records that would be less then half of available page space
-	for mx := len(sizeClassSlotSize); mx > 0; mx-- {
-		if sizeClassSlotSize[mx-1]-sizeAdjustement <= ((1<<pageSizeLog)-uint32(headerSize))/2 {
-			sizeClassSlotSize = sizeClassSlotSize[:mx]
-			break
+	println("page size:", (1<<pageSizeLog), "  page header size:", headerSize)
+	if pageSizeLog < 20 {
+		for mx := len(sizeClassSlotSize); mx > 0; mx-- {
+			if sizeClassSlotSize[mx-1]-sizeAdjustement <= ((1<<pageSizeLog)-uint32(headerSize))/2 {
+				sizeClassSlotSize = sizeClassSlotSize[:mx]
+				break
+			}
 		}
 	}
-	println("memory: page_header len is", headerSize, len(sizeClassSlotSize))
+
 	print("slot sizes: ")
 	for _, ss := range sizeClassSlotSize {
 		print(ss, ", ")
