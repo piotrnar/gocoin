@@ -283,9 +283,9 @@ func (a *Allocator) Malloc(size int) (r []byte, err error) {
 
 func (a *Allocator) PrintStats() {
 	for i := range a.fcnt {
-		fmt.Printf("%3d) up to %5d bytes: %10d (%d%%) free slots in %6d pages %d %d\n",
-			i, sizeClassSlotSize[i], a.fcnt[i], a.pcnt[i], 100*a.fcnt[i]/(a.pcnt[i]*a.cap[i]),
-			a.pcnt[i], a.cap[i])
+		fmt.Printf("%3d) up to %5d bytes: %10d (%3d%%) free slots in %6d pages - %6.2f pages can be free\n",
+			i, sizeClassSlotSize[i], a.fcnt[i], 100*a.fcnt[i]/(a.pcnt[i]*a.cap[i]),
+			a.pcnt[i], float64(a.fcnt[i])/float64(a.cap[i]))
 	}
 }
 

@@ -621,5 +621,5 @@ func init() {
 	newUi("undo", true, undo_block, "Undo one block")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics [mem]")
 	newUi("web", true, webui_stats, "Show WebUI access statistics")
-	newUi("m utxomem", true, utxo_mem, "Show UTXO memory heap stats")
+	newUi("um utxomem", true, utxo_mem, "Show UTXO memory heap stats")
 }
