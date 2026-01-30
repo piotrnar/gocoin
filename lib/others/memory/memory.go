@@ -131,13 +131,18 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	new_page := (*page_header)(unsafe.Pointer(p))
 	new_page.cap = uint16(cap) // it's redundant, but we have a spare 16 bits
 	new_page.class = int16(class)
-	/*if a.firstPage == nil {
+	if a.firstPage[class] == nil {
+		if a.lastPage[class] != nil {
+			panic("lastPage not nil but expected")
+		}
 		a.firstPage[class] = new_page
 		a.lastPage[class] = new_page
 	} else {
+		// we already have some pages, so just add it at the end
 		a.lastPage[class].next = new_page
+		new_page.prev = a.lastPage[class]
 		a.lastPage[class] = new_page
-	}*/
+	}
 
 	a.pages[class] = p
 	return p, nil
