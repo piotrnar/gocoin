@@ -407,8 +407,20 @@ func (a *Allocator) Defrag(class int) (res []uintptr) {
 			//println(" ...", len(res), "after page seq", page.seq)
 			page = page.next
 			if page == nil {
-				panic("reached last page but not enoygh records")
+				println("class:", class, "  free_pages:", free_pages,
+					"  r2free:", r2free, "  sofar:", len(res), "  cap:", a.Capacity[class])
+
+				var tot int
+				for page = a.firstPage[class]; page != nil; page = page.next {
+					tot += int(page.cap - page.used)
+					println(" - page", page.seq, "- used / cap / dirty:", page.used, page.cap, page.dirty,
+						"  sofar:", tot)
+				}
+				panic("reached last page but not enought records")
 			}
+		}
+		if len(res) < r2free {
+			panic("did not gather enough")
 		}
 		//println("Class", class, "re-allocate", len(res), "records!")
 	}

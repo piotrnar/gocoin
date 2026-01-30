@@ -496,7 +496,12 @@ func DefragUTXOMem() {
 		BlockChain.Unspent.Defrag(records)
 		MemMutex.Lock()
 		DefragCount++
-		DefragBytes += bts_before - Memory.Bytes
+		bts := bts_before - Memory.Bytes
+		if bts > 0 {
+			DefragBytes += bts
+		} else {
+			println("DUPA: zero bytes in defrag of", len(records))
+		}
 		DefragTime += time.Since(sta)
 		MemMutex.Unlock()
 	}
