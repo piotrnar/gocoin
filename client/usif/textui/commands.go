@@ -601,8 +601,8 @@ func utxo_mem(par string) {
 
 func utxo_defrag_info(par string) {
 	common.MemMutex.Lock()
-	fmt.Printf(" Defragmented %d bytes in %d records - took %s\n",
-		common.DefragBytes, common.DefragCount, common.DefragTime.String())
+	fmt.Printf(" Defragmented %dKB in %d records - took %s\n",
+		common.DefragBytes>>10, common.DefragCount, common.DefragTime.String())
 	common.MemMutex.Unlock()
 }
 

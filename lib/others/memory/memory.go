@@ -230,11 +230,17 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	if page2free.prev != nil {
 		page2free.prev.next = page2free.next
 	} else {
+		if a.firstPage[class] != page2free {
+			panic("a.firstPage != page2free")
+		}
 		a.firstPage[class] = page2free.next // this was the first page - set the next one
 	}
 	if page2free.next != nil {
 		page2free.next.prev = page2free.prev
 	} else {
+		if a.lastPage[class] != page2free {
+			panic("a.lastPage != page2free")
+		}
 		a.lastPage[class] = page2free.prev // this was the last page - set the previous one
 	}
 
