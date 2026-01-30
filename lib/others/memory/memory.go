@@ -25,8 +25,8 @@ var sizeClassSlotSize = []uint32{
 	//72, 80, 96, 104, 112, 120, 128, 136, 152, 160, 168, 184, 200, 216, 240, 272, 288, 320, 368, 400, 432, 512, 576, 640, 704, 768, 896, 1024, 1216, 1408, 1728, 2048, 2304, 2560, 2944, 3200, 3712, 4096, 5120, 6144, 6912, 8192, 9216, 10240, 11264, 13312, 15360, 17408, 21504, 28672, 32768,
 }
 
-type node struct {
-	prev, next uintptr // *node
+type free_record struct {
+	next_free_record uintptr
 }
 
 type page_header_common struct {
@@ -37,10 +37,11 @@ type page_header_common struct {
 
 type page_header struct {
 	page_header_common
-	next, prev *page_header
-	dirty      uint16 // how many records were ever used
-	used       uint16 // how many records are used now
-	_unused    uint32
+	next, prev   *page_header
+	seq          uint64
+	freeListOffs uint32 // offset to the first free record (or 0 nor nil)
+	dirty        uint16 // how many records were ever used
+	used         uint16 // how many records are used now
 }
 
 // Allocator allocates and frees memory. Its zero value is ready for use.
@@ -52,7 +53,8 @@ type Allocator struct {
 	ClassIdx      []byte   // record size to class number
 	MaxSharedSize int
 
-	lists []uintptr // *node - free lists per size class
+	currentSequence uint64
+
 	pages []uintptr // *page - current page per size class
 
 	fcnt []uint32 // how many free slots in all the pages
@@ -60,6 +62,24 @@ type Allocator struct {
 
 	firstPage []*page_header // first page
 	lastPage  []*page_header // last page
+	freePage  []*page_header // page with lowest sequence and any free records
+}
+
+// this will return 0 if offs is zero, otherwise the sum of the two uints
+func addOffset(p uintptr, offs uint32) uintptr {
+	if offs == 0 {
+		return 0
+	}
+	return p + uintptr(offs)
+}
+
+// sets page's freeListOffset to point to the given record
+func (h *page_header) updateFreeList(rec uintptr) {
+	if rec == 0 {
+		h.freeListOffs = 0
+	} else {
+		h.freeListOffs = uint32(rec - uintptr(unsafe.Pointer(&h.cap)))
+	}
 }
 
 // getSizeClass returns the size class index for a given allocation size.
@@ -129,20 +149,21 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	a.pcnt[class]++
 
 	new_page := (*page_header)(unsafe.Pointer(p))
-	new_page.cap = uint16(cap) // it's redundant, but we have a spare 16 bits
-	new_page.class = int16(class)
 	if a.firstPage[class] == nil {
 		if a.lastPage[class] != nil {
 			panic("lastPage not nil but expected")
 		}
 		a.firstPage[class] = new_page
-		a.lastPage[class] = new_page
 	} else {
 		// we already have some pages, so just add it at the end
 		a.lastPage[class].next = new_page
 		new_page.prev = a.lastPage[class]
-		a.lastPage[class] = new_page
 	}
+	a.lastPage[class] = new_page
+	new_page.cap = uint16(cap) // it's redundant, but we have a spare 16 bits
+	new_page.class = int16(class)
+	new_page.seq = a.currentSequence
+	a.currentSequence++
 
 	a.pages[class] = p
 	return p, nil
@@ -165,7 +186,6 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 		a.Allocs--
 	}
 
-	node2free := (*node)(unsafe.Pointer(p))
 	pg := p &^ uintptr(pageMask)
 	page2free := (*page_header)(unsafe.Pointer(pg))
 	class := int(page2free.class)
@@ -179,45 +199,43 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	}
 
 	a.fcnt[class]++
+	// Add to page's free list (insert at head)
+	(*free_record)(unsafe.Pointer(p)).next_free_record = addOffset(uintptr(unsafe.Pointer(&page2free.cap)), page2free.freeListOffs)
+	page2free.updateFreeList(p)
+	page2free.used--
 
-	// Shared page - Add to free list
-	if page2free.used >= 1 {
-		node2free.prev = 0
-		if next := a.lists[class]; next != 0 {
-			node2free.next = next
-			(*node)(unsafe.Pointer(next)).prev = p
-		} else {
-			node2free.next = a.lists[class]
-		}
-		a.lists[class] = p
-		page2free.used--
+	// Update freePage if this page has lower sequence than current freePage
+	if a.freePage[class] == nil || page2free.seq < a.freePage[class].seq {
+		a.freePage[class] = page2free
+	}
+
+	if page2free.used != 0 {
 		return nil
 	}
 
 	// Page is completely free - unmap it
-	slotSize := sizeClassSlotSize[class]
-	n := pg + headerSize
-	bi := page2free.dirty
-	for {
-		n += uintptr(slotSize)
-		next := (*node)(unsafe.Pointer(n)).next
-		prev := (*node)(unsafe.Pointer(n)).prev
-		switch {
-		case prev == 0:
-			a.lists[class] = next
-			if next != 0 {
-				(*node)(unsafe.Pointer(next)).prev = 0
+
+	// If we're removing freePage, find the next best page starting from pag.next
+	if a.freePage[class] == page2free {
+		a.freePage[class] = nil
+		for pg := page2free.next; pg != nil; pg = pg.next {
+			if pg.freeListOffs != 0 {
+				a.freePage[class] = pg
+				break // pages are in sequence order, first one found is the lowest
 			}
-		case next == 0:
-			(*node)(unsafe.Pointer(prev)).next = 0
-		default:
-			(*node)(unsafe.Pointer(prev)).next = next
-			(*node)(unsafe.Pointer(next)).prev = prev
 		}
-		if bi == 1 {
-			break
-		}
-		bi--
+	}
+
+	// Remove from linked list
+	if page2free.prev != nil {
+		page2free.prev.next = page2free.next
+	} else {
+		a.firstPage[class] = page2free.next // this was the first page - set the next one
+	}
+	if page2free.next != nil {
+		page2free.next.prev = page2free.prev
+	} else {
+		a.lastPage[class] = page2free.prev // this was the last page - set the previous one
 	}
 
 	if a.pages[class] == pg {
@@ -258,13 +276,14 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 
 	a.fcnt[class]--
 	// Small allocation - use shared page
-	if a.lists[class] == 0 && a.pages[class] == 0 {
+	if a.freePage[class] == nil && a.pages[class] == 0 {
 		if _, err := a.newSharedPage(class); err != nil {
 			return 0, err
 		}
 	}
 
 	// Try to allocate from current page
+	// First use all the records from the most recently allocated page, before reuing freed slots
 	if p := a.pages[class]; p != 0 {
 		page := (*page_header)(unsafe.Pointer(p))
 		page.used++
@@ -276,14 +295,32 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 		return p + headerSize + uintptr((*page_header)(unsafe.Pointer(p)).dirty-1)*uintptr(slotSize), nil
 	}
 
-	// Allocate from free list
-	n := a.lists[class]
-	pg := n &^ uintptr(pageMask)
-	a.lists[class] = (*node)(unsafe.Pointer(n)).next
-	if next := (*node)(unsafe.Pointer(n)).next; next != 0 {
-		(*node)(unsafe.Pointer(next)).prev = 0
+	// Allocate from freePage's free list (remove from head)
+	p := a.freePage[class]
+	var n uintptr
+	if p.freeListOffs != 0 {
+		n = addOffset(uintptr(unsafe.Pointer(&p.cap)), p.freeListOffs)
+		p.updateFreeList((*free_record)(unsafe.Pointer(n)).next_free_record)
+	} else {
+		if p.dirty < p.cap {
+			n = uintptr(unsafe.Pointer(p)) + headerSize + uintptr(p.dirty)*uintptr(getSlotSize(class))
+			p.dirty++
+		} else {
+			panic("p.freeList is 0 and p.brk >= p.cap")
+		}
 	}
-	(*page_header)(unsafe.Pointer(pg)).used++
+	p.used++
+
+	// If page has no more free slots, find next best freePage starting from p.next
+	if p.freeListOffs == 0 && p.dirty == p.cap {
+		a.freePage[class] = nil
+		for pg := p.next; pg != nil; pg = pg.next {
+			if pg.freeListOffs != 0 {
+				a.freePage[class] = pg
+				break // pages are in sequence order, first one found is the lowest
+			}
+		}
+	}
 	return n, nil
 }
 
@@ -312,22 +349,29 @@ func (a *Allocator) Defrag(class int, max_wasted_pages int) (res []uintptr) {
 }
 
 func (a *Allocator) PrintStats() {
+	var to_save int
 	for i := range a.fcnt {
-		fmt.Printf("%3d) up to %5d bytes: %10d (%3d%%) free slots in %6d pages - %6.2f pages can be free\n",
+		var ts int
+		if a.fcnt[i] > a.Capacity[i] {
+			ts = int(a.fcnt[i] / a.Capacity[i])
+		}
+		fmt.Printf("%3d) ... %5d: %10d (%3d%%) free slots in %6d pgs - %6.2f pages can be free: %5d\n",
 			i, sizeClassSlotSize[i], a.fcnt[i], 100*a.fcnt[i]/(a.pcnt[i]*a.Capacity[i]),
-			a.pcnt[i], float64(a.fcnt[i])/float64(a.Capacity[i]))
+			a.pcnt[i], float64(a.fcnt[i])/float64(a.Capacity[i]), ts)
+		to_save += ts
 	}
+	fmt.Println("Total to save if all defragmented:", (to_save*pageSize)>>20, "MB")
 }
 
 func NewAllocator() (a *Allocator) {
 	a = new(Allocator)
 	a.Capacity = make([]uint32, len(sizeClassSlotSize))
-	a.lists = make([]uintptr, len(sizeClassSlotSize))
 	a.pages = make([]uintptr, len(sizeClassSlotSize))
 	a.pcnt = make([]uint32, len(sizeClassSlotSize))
 	a.fcnt = make([]uint32, len(sizeClassSlotSize))
 	a.firstPage = make([]*page_header, len(sizeClassSlotSize))
 	a.lastPage = make([]*page_header, len(sizeClassSlotSize))
+	a.freePage = make([]*page_header, len(sizeClassSlotSize))
 
 	for i := range a.Capacity {
 		a.Capacity[i] = uint32(pageAvail) / sizeClassSlotSize[i]
