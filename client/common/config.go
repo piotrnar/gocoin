@@ -486,6 +486,15 @@ func Reset() {
 	ApplyLastTrustedBlock()
 }
 
+func DefragUTXOMem() {
+	MemMutex.Lock()
+	records := Memory.DefragAll()
+	MemMutex.Unlock()
+	if len(records) > 0 {
+		BlockChain.Unspent.Defrag(records)
+	}
+}
+
 // Mind that this is called with config mutex locked.
 func UpdateMemoryLimit() {
 	if CFG.Memory.MemoryLimitMB != 0 {

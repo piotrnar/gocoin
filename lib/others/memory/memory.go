@@ -30,8 +30,8 @@ type free_record struct {
 }
 
 type page_header_common struct {
-	class int16  // -1 for private page
 	cap   uint16 // number of records (not used for private page)
+	class int16  // -1 for private page
 	siz   uint32 // total page size from mmap, including header, padded to osPageSize
 }
 
@@ -344,20 +344,78 @@ func (a *Allocator) Malloc(size int) (r []byte, err error) {
 	return r[:size], nil
 }
 
-func (a *Allocator) Defrag(class int, max_wasted_pages int) (res []uintptr) {
+func (a *Allocator) DefragAll() (res []uintptr) {
+	for i := range sizeClassSlotSize {
+		recs := a.Defrag(i)
+		if len(recs) > 0 {
+			res = append(res, recs...)
+		}
+	}
+	return
+}
+
+func (a *Allocator) Defrag(class int) (res []uintptr) {
+	const keep_pages = 10
+	free_pages := int(a.fcnt[class] / a.Capacity[class])
+	if free_pages > keep_pages {
+		r2free := (int(free_pages) - keep_pages) * int(a.Capacity[class])
+		//println("Class", class, "will try to re-allocate", r2free, "records:", a.fcnt[class], a.pcnt[class], a.Capacity[class])
+		res = make([]uintptr, 0, r2free+int(a.Capacity[class])-1)
+		page := a.firstPage[class]
+		slot_size := uintptr(sizeClassSlotSize[class])
+		for len(res) < r2free {
+			if page.used == 0 {
+				panic("no used records")
+			}
+			if page.used < page.cap {
+				if page.freeListOffs == 0 {
+					panic("page.freeListOffs is zero, but should not")
+				}
+
+				//println(" .. page", page.seq, "has", page.used, "/", page.cap, "used record")
+				freed := make(map[uintptr]struct{}, page.cap-page.used)
+
+				// first let's build map of all the records inside the page
+				rec := addOffset(uintptr(unsafe.Pointer(&page.cap)), page.freeListOffs)
+				for rec != 0 {
+					freed[rec] = struct{}{}
+					frec := (*free_record)(unsafe.Pointer(rec))
+					rec = uintptr(unsafe.Pointer(frec))
+					rec = frec.next_free_record
+				}
+				//println(" ... freed map_size:", len(freed))
+
+				// now go through all the records and add the non-free ones to the list
+				rec = addOffset(uintptr(unsafe.Pointer(&page.cap)), uint32(headerSize))
+				for cnt := 0; cnt < int(page.used); {
+					if _, free := freed[rec]; !free {
+						res = append(res, rec)
+						cnt++
+					}
+					rec += slot_size
+				}
+				if len(res) == 0 {
+					panic("no records found")
+				}
+			}
+			//println(" ...", len(res), "after page seq", page.seq)
+			page = page.next
+		}
+		//println("Class", class, "re-allocate", len(res), "records!")
+	}
 	return
 }
 
 func (a *Allocator) PrintStats() {
 	var to_save int
-	for i := range a.fcnt {
+	for class := range a.fcnt {
 		var ts int
-		if a.fcnt[i] > a.Capacity[i] {
-			ts = int(a.fcnt[i] / a.Capacity[i])
+		if a.fcnt[class] > a.Capacity[class] {
+			ts = int(a.fcnt[class] / a.Capacity[class])
 		}
 		fmt.Printf("%3d) ... %5d: %10d (%3d%%) free slots in %6d pgs - %6.2f pages can be free: %5d\n",
-			i, sizeClassSlotSize[i], a.fcnt[i], 100*a.fcnt[i]/(a.pcnt[i]*a.Capacity[i]),
-			a.pcnt[i], float64(a.fcnt[i])/float64(a.Capacity[i]), ts)
+			class, sizeClassSlotSize[class], a.fcnt[class], 100*a.fcnt[class]/(a.pcnt[class]*a.Capacity[class]),
+			a.pcnt[class], float64(a.fcnt[class])/float64(a.Capacity[class]), ts)
 		to_save += ts
 	}
 	fmt.Println("Total to save if all defragmented:", (to_save*pageSize)>>20, "MB")

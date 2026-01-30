@@ -38,6 +38,8 @@ var (
 	highestAcceptedBlock uint32
 	retryCachedBlocks    bool
 	syncDoneAnnounced    bool
+
+	lastDefragDone time.Time
 )
 
 const (
@@ -120,6 +122,10 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	}
 
 	if common.MemoryModUsed {
+		if time.Since(lastDefragDone) > time.Second {
+			common.DefragUTXOMem()
+			lastDefragDone = time.Now()
+		}
 		common.LockCfg()
 		common.UpdateMemoryLimit()
 		common.UnlockCfg()
