@@ -488,10 +488,17 @@ func Reset() {
 
 func DefragUTXOMem() {
 	MemMutex.Lock()
+	sta := time.Now()
+	bts_before := Memory.Bytes
 	records := Memory.DefragAll()
 	MemMutex.Unlock()
 	if len(records) > 0 {
 		BlockChain.Unspent.Defrag(records)
+		MemMutex.Lock()
+		DefragCount++
+		DefragBytes += Memory.Bytes - bts_before
+		DefragTime = time.Since(sta)
+		MemMutex.Unlock()
 	}
 }
 

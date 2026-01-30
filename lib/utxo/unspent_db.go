@@ -70,10 +70,6 @@ type UnspentDB struct {
 	ComprssedUTXO       bool
 	DoNotWriteUndoFiles bool
 	undo_dir_created    bool
-
-	defragTotalRecs  int
-	defragTotalBytes int
-	defragTotalTime  time.Duration
 }
 
 type NewUnspentOpts struct {
@@ -452,8 +448,6 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 }
 
 func (db *UnspentDB) Defrag(recs []uintptr) {
-	//println("Defragmenting", len(recs), "records")
-	sta := time.Now()
 	var rcs, bts int
 	for _, r := range recs {
 		ind := *(*UtxoKeyType)(unsafe.Pointer(r))
@@ -467,12 +461,6 @@ func (db *UnspentDB) Defrag(recs []uintptr) {
 		Memory_Free(v)
 		db.MapMutex[ind[0]].Unlock()
 	}
-	db.Mutex.Lock()
-	db.defragTotalRecs += rcs
-	db.defragTotalBytes += bts
-	db.defragTotalTime += time.Since(sta)
-	db.Mutex.Unlock()
-	//println("Defrag", len(recs), "done in", time.Since(sta).String())
 }
 
 func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
@@ -845,10 +833,6 @@ func (db *UnspentDB) GetStats() (s string) {
 		len(db.abortwritingnow) > 0, db.ComprssedUTXO)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	db.Mutex.Lock()
-	s += fmt.Sprintf(" Defragmented %d bytes in %d records - took %s\n",
-		db.defragTotalBytes, db.defragTotalRecs, db.defragTotalTime.String())
-	db.Mutex.Unlock()
 	return
 }
 

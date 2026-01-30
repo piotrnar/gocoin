@@ -88,6 +88,9 @@ var (
 	MemMutex      sync.Mutex
 	MemoryModUsed bool
 	warningShown  bool
+	DefragCount   int
+	DefragBytes   int
+	DefragTime    time.Duration
 
 	NoCounters sys.SyncBool
 
