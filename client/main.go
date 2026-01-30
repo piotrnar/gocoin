@@ -122,6 +122,10 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	}
 
 	if common.MemoryModUsed {
+		if common.CheckMemory() {
+			println("Memory corrupt after block", bl.Height)
+			os.Exit(1)
+		}
 		if time.Since(lastDefragDone) > time.Second {
 			common.DefragUTXOMem()
 			lastDefragDone = time.Now()
@@ -607,6 +611,11 @@ func main() {
 	}
 
 	host_init() // This will create the DB lock file and keep it open
+
+	if common.MemoryModUsed && common.CheckMemory() {
+		println("memory corrupt after init")
+		os.Exit(1)
+	}
 
 	os.RemoveAll(common.TempBlocksDir())
 	common.MkTempBlocksDir()

@@ -507,6 +507,13 @@ func DefragUTXOMem() {
 	}
 }
 
+func CheckMemory() (is_corrupt bool) {
+	MemMutex.Lock()
+	is_corrupt = Memory.IsCorrupt()
+	MemMutex.Unlock()
+	return
+}
+
 // Mind that this is called with config mutex locked.
 func UpdateMemoryLimit() {
 	if CFG.Memory.MemoryLimitMB != 0 {
