@@ -400,6 +400,9 @@ func (a *Allocator) Defrag(class int) (res []uintptr) {
 			}
 			//println(" ...", len(res), "after page seq", page.seq)
 			page = page.next
+			if page == nil {
+				panic("reached last page but not enoygh records")
+			}
 		}
 		//println("Class", class, "re-allocate", len(res), "records!")
 	}
