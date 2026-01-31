@@ -91,6 +91,7 @@ var (
 	DefragCount   int
 	DefragBytes   int
 	DefragTime    time.Duration
+	DefragTotime  time.Duration
 
 	NoCounters sys.SyncBool
 

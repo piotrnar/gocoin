@@ -511,6 +511,9 @@ func DefragUTXOMem() {
 		DefragTime += time.Since(sta)
 		MemMutex.Unlock()
 	}
+	MemMutex.Lock()
+	DefragTotime += time.Since(sta)
+	MemMutex.Unlock()
 }
 
 func CheckMemory() (is_corrupt bool) {
