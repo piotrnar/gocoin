@@ -447,17 +447,20 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	return
 }
 
-func (db *UnspentDB) Defrag(recs []uintptr) {
-	var rcs, bts int
+func (db *UnspentDB) Defrag(recs [][]byte) {
+	new_vs := make([][]byte, 0, len(recs))
+	// first we allocare all the new pointer
 	for _, r := range recs {
-		ind := *(*UtxoKeyType)(unsafe.Pointer(r))
+		v := Memory_Malloc(len(r))
+		copy(v, r)
+		new_vs = append(new_vs, v)
+	}
+	for idx, r := range recs {
+		var ind UtxoKeyType
+		copy(ind[:], r)
 		db.MapMutex[ind[0]].Lock()
 		v := db.HashMap[ind[0]][ind]
-		rcs++
-		bts += len(v)
-		new_v := Memory_Malloc(len(v))
-		copy(new_v, v)
-		db.HashMap[ind[0]][ind] = new_v
+		db.HashMap[ind[0]][ind] = new_vs[idx][:len(v)]
 		Memory_Free(v)
 		db.MapMutex[ind[0]].Unlock()
 	}

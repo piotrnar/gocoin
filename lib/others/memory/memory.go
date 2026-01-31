@@ -63,6 +63,8 @@ type Allocator struct {
 	firstPage []*page_header // first page
 	lastPage  []*page_header // last page
 	freePage  []*page_header // page with lowest sequence and any free records
+
+	DerfagClass int
 }
 
 // this will return 0 if offs is zero, otherwise the sum of the two uints
@@ -350,25 +352,30 @@ func (a *Allocator) Malloc(size int) (r []byte, err error) {
 	return r[:size], nil
 }
 
-func (a *Allocator) DefragAll() (res []uintptr) {
+func (a *Allocator) DefragAll() (res [][]byte) {
+	a.DerfagClass = -1
 	for i := range sizeClassSlotSize {
 		recs := a.Defrag(i)
 		if len(recs) > 0 {
-			res = append(res, recs...)
+			res = recs // append(res, recs...)
+			a.DerfagClass = i
+			break // TODO: go on...
 		}
 	}
 	return
 }
 
-func (a *Allocator) Defrag(class int) (res []uintptr) {
+func (a *Allocator) Defrag(class int) (res [][]byte) {
 	const keep_pages = 10
-	free_pages := int(a.fcnt[class] / a.Capacity[class])
+	cap := int(a.Capacity[class])
+	free_pages := int(a.fcnt[class]) / cap
 	if free_pages > keep_pages {
-		r2free := (int(free_pages) - keep_pages) * int(a.Capacity[class])
-		//println("Class", class, "will try to re-allocate", r2free, "records:", a.fcnt[class], a.pcnt[class], a.Capacity[class])
-		res = make([]uintptr, 0, r2free+int(a.Capacity[class])-1)
-		page := a.firstPage[class]
 		slot_size := uintptr(sizeClassSlotSize[class])
+		r2free := (int(free_pages) - keep_pages) * cap
+		println("Class", class, "will try to re-allocate", r2free, "records:", a.fcnt[class], a.pcnt[class], cap)
+		a.DumpClass(class)
+		res = make([][]byte, 0, r2free+cap-1)
+		page := a.firstPage[class]
 		for len(res) < r2free {
 			if page.used == 0 {
 				panic("no used records")
@@ -378,7 +385,7 @@ func (a *Allocator) Defrag(class int) (res []uintptr) {
 					panic("page.freeListOffs is zero, but should not")
 				}
 
-				//println(" .. page", page.seq, "has", page.used, "/", page.cap, "used record")
+				println(" .. page", page.seq, "has", page.used, "/", page.cap, "used record")
 				freed := make(map[uintptr]struct{}, page.cap-page.used)
 
 				// first let's build map of all the records inside the page
@@ -388,13 +395,13 @@ func (a *Allocator) Defrag(class int) (res []uintptr) {
 					frec := (*free_record)(unsafe.Pointer(rec))
 					rec = frec.next_free_record
 				}
-				//println(" ... freed map_size:", len(freed))
+				println(" ... freed map_size:", len(freed))
 
 				// now go through all the records and add the non-free ones to the list
 				rec = addOffset(uintptr(unsafe.Pointer(&page.cap)), uint32(headerSize))
 				for cnt := 0; cnt < int(page.used); {
 					if _, free := freed[rec]; !free {
-						res = append(res, rec)
+						res = append(res, unsafe.Slice((*byte)(unsafe.Pointer(rec)), int(slot_size)))
 						cnt++
 					}
 					rec += slot_size
@@ -403,11 +410,11 @@ func (a *Allocator) Defrag(class int) (res []uintptr) {
 					panic("no records found")
 				}
 			}
-			//println(" ...", len(res), "after page seq", page.seq)
+			println(" ...", len(res), "after page seq", page.seq)
 			page = page.next
 			if page == nil {
 				println("class:", class, "  free_pages:", free_pages,
-					"  r2free:", r2free, "  sofar:", len(res), "  cap:", a.Capacity[class])
+					"  r2free:", r2free, "  sofar:", len(res), "  cap:", cap)
 
 				var tot int
 				for page = a.firstPage[class]; page != nil; page = page.next {
@@ -421,7 +428,7 @@ func (a *Allocator) Defrag(class int) (res []uintptr) {
 		if len(res) < r2free {
 			panic("did not gather enough")
 		}
-		//println("Class", class, "re-allocate", len(res), "records!")
+		println("Class", class, "re-allocate", len(res), "records!")
 	}
 	return
 }
@@ -512,20 +519,25 @@ func (a *Allocator) isCorrupt(class int) bool {
 	return false
 }
 
-func (a *Allocator) dump_class(class int) {
+func (a *Allocator) DumpClass(class int) {
 	var cnt int
+	fmt.Println("Dumping class", class)
 	for page := a.firstPage[class]; page != nil; page = page.next {
 		cnt++
-		fmt.Printf(" %d)  seq:%d  cap:%d  dirty:%d  used:%d  free:%d\n", cnt, page.seq,
+		fmt.Printf(" %d)  ptr:%p  seq:%d  cap:%d  dirty:%d  used:%d  free:%d\n", cnt, page, page.seq,
 			page.cap, page.dirty, page.used, count_free_slots(page))
 	}
+}
+
+func (a *Allocator) GetInfo() string {
+	return fmt.Sprintf("%d/%d/%d", a.Bytes, a.Allocs, a.Mmaps)
 }
 
 func (a *Allocator) IsCorrupt() bool {
 	for class := range sizeClassSlotSize {
 		if a.isCorrupt(class) {
 			println("Class", class, "is corrupt as above. Dumping:")
-			a.dump_class(class)
+			a.DumpClass(class)
 			return true
 		}
 	}
