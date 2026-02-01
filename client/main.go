@@ -159,12 +159,12 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		if common.Last.ParseTill != nil && (common.Last.Block.Height%div) == 0 {
 			b, _, ms := common.MemUsed()
 			common.MemMutex.Lock()
-			b, c, t, tt := common.DefragBytes, common.DefragCount, common.DefragTime, common.DefragTotime
+			db, c, t, tt := common.DefragBytes, common.DefragCount, common.DefragTime, common.DefragTotime
 			common.MemMutex.Unlock()
 			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(),
 				"Queue:", len(network.NetBlocks),
 				" UTXO:", b>>20, "/", ms, " SYS:", memsize.MustResidentMemory()>>20, "MB",
-				" Def", c, "/", b>>20, "MB -", tt.String(), "/", t.String())
+				" Def", c, "/", db>>20, "MB -", tt.String(), "/", t.String())
 		}
 
 		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
