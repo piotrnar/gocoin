@@ -135,15 +135,35 @@ func (a *Allocator) relocatePageRecords(pg *page_header, slotSize int, class int
 	pgAddr := uintptr(unsafe.Pointer(pg))
 
 	// CRITICAL: Prevent allocations into this page during evacuation
-	// Save the current state and temporarily mark this page as unavailable
+	// The allocator can allocate from this page in two ways:
+	// 1. a.pages[class] - current allocation page (allocates from unallocated slots)
+	// 2. a.freePage[class] - page with lowest seq that has freed slots (allocates from free list)
+	// 3. During freePage search, any page with freeListOffs != 0
+	//
+	// Solution: Temporarily clear the page's freeListOffs so it appears to have no free slots
+
 	savedFreePage := a.freePage[class]
 	savedPages := a.pages[class]
+	savedFreeListOffs := pg.freeListOffs
 
-	if a.freePage[class] == pg {
-		a.freePage[class] = nil
-	}
+	// Remove from current allocation page
 	if a.pages[class] == pgAddr {
 		a.pages[class] = 0
+	}
+
+	// Clear the page's free list temporarily (makes it invisible to allocator)
+	pg.freeListOffs = 0
+
+	// Remove from freePage if it points to this page
+	if a.freePage[class] == pg {
+		a.freePage[class] = nil
+		// Find next best freePage (excluding the one we're evacuating)
+		for candidate := a.firstPage[class]; candidate != nil; candidate = candidate.next {
+			if candidate != pg && candidate.freeListOffs != 0 {
+				a.freePage[class] = candidate
+				break
+			}
+		}
 	}
 
 	// Track if page was unmapped during freeing
@@ -153,11 +173,17 @@ func (a *Allocator) relocatePageRecords(pg *page_header, slotSize int, class int
 	defer func() {
 		// Only restore if the page wasn't unmapped
 		if !pageWasUnmapped {
-			if savedFreePage == pg {
-				a.freePage[class] = pg
-			}
+			// Restore free list
+			pg.freeListOffs = savedFreeListOffs
+
+			// Restore pages pointer
 			if savedPages == pgAddr {
 				a.pages[class] = pgAddr
+			}
+
+			// Restore freePage if needed
+			if savedFreePage == pg {
+				a.freePage[class] = pg
 			}
 		}
 	}()
@@ -189,14 +215,6 @@ func (a *Allocator) relocatePageRecords(pg *page_header, slotSize int, class int
 				panic(fmt.Sprintf("Failed to allocate during defrag: %v", err))
 			}
 
-			// CRITICAL: Verify we didn't allocate into the page we're evacuating!
-			newPageAddr := newAddr &^ uintptr(pageMask)
-			oldPageAddr := uintptr(unsafe.Pointer(pg))
-			if newPageAddr == oldPageAddr {
-				panic(fmt.Sprintf("FATAL: Allocated into page being evacuated! old=%#x new=%#x page=%#x",
-					oldAddr, newAddr, oldPageAddr))
-			}
-
 			// Copy data from old to new location
 			oldSlice := unsafe.Slice((*byte)(unsafe.Pointer(oldAddr)), slotSize)
 			newSlice := unsafe.Slice((*byte)(unsafe.Pointer(newAddr)), slotSize)
@@ -211,13 +229,8 @@ func (a *Allocator) relocatePageRecords(pg *page_header, slotSize int, class int
 	}
 
 	if len(relocations) != int(originalUsed) {
-		// Debug: count free slots to understand the discrepancy
-		freeCount := len(freed)
-		dirtyCount := int(pg.dirty)
-		fmt.Printf("DEBUG: Page seq=%d: originalUsed=%d, relocations=%d, dirty=%d, freeSlots=%d\n",
-			pg.seq, originalUsed, len(relocations), dirtyCount, freeCount)
-		panic(fmt.Sprintf("Expected %d relocations, found %d in page seq=%d (dirty=%d, free=%d)",
-			originalUsed, len(relocations), pg.seq, dirtyCount, freeCount))
+		panic(fmt.Sprintf("Expected %d relocations, found %d in page seq=%d",
+			originalUsed, len(relocations), pg.seq))
 	}
 
 	// Now free all the old records (this may unmap the page, so we do it AFTER iteration)
