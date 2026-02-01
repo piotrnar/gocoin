@@ -36,8 +36,10 @@ type page_header_common struct {
 
 type page_header struct {
 	page_header_common
-	brk  uint32 // it would be enough to have it 16-bits, but we
-	used uint32 // want the header size to be multiple of 8 bytes
+	brk        uint16 // high water mark of allocated slots
+	used       uint16 // number of currently used slots
+	evacuating uint16 // 1 during defragmentation to prevent freed slots from re-entering free list
+	_padding   uint16 // explicit padding to maintain 8-byte alignment
 }
 
 // Allocator allocates and frees memory. Its zero value is ready for use.

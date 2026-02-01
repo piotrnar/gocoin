@@ -30,8 +30,18 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 		return a.unmap(pg)
 	}
 
-	// Shared page - Add to free list
-	if (*page_header)(unsafe.Pointer(pg)).used >= 1 {
+	// Shared page - Add to free list (unless page is being evacuated)
+	header := (*page_header)(unsafe.Pointer(pg))
+
+	if header.used >= 1 {
+		header.used--
+
+		// If page is being evacuated, don't add to free list
+		if header.evacuating != 0 {
+			return nil
+		}
+
+		// Normal path: add to free list
 		(*node)(unsafe.Pointer(p)).prev = 0
 		if next := a.lists[class]; next != 0 {
 			(*node)(unsafe.Pointer(p)).next = next
@@ -40,7 +50,6 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 			(*node)(unsafe.Pointer(p)).next = a.lists[class]
 		}
 		a.lists[class] = p
-		(*page_header)(unsafe.Pointer(pg)).used--
 		return nil
 	}
 

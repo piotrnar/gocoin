@@ -23,7 +23,7 @@ func (a *Allocator) Defrag(class int) [][]byte {
 
 	cap := int(a.cap[class])
 
-	// Step 1: Discover all pages and their utilization by scanning free list
+	// Step 1: Discover all pages and their utilization
 	pageMap := make(map[uintptr]*pageUtilization)
 	freeSlotsByPage := make(map[uintptr]int)
 
@@ -33,17 +33,16 @@ func (a *Allocator) Defrag(class int) [][]byte {
 		freeSlotsByPage[pg]++
 	}
 
-	// Check current page if it exists
+	// Check current page
 	if pg := a.pages[class]; pg != 0 {
 		header := (*page_header)(unsafe.Pointer(pg))
-		// Free slots in current page = capacity - brk
 		freeInCurrentPage := int(a.cap[class]) - int(header.brk)
 		if freeInCurrentPage > 0 {
 			freeSlotsByPage[pg] += freeInCurrentPage
 		}
 	}
 
-	// Build utilization map for pages with partial usage
+	// Build utilization map
 	var totalFreeSlots int
 	for pg, freeCount := range freeSlotsByPage {
 		totalFreeSlots += freeCount
@@ -61,7 +60,6 @@ func (a *Allocator) Defrag(class int) [][]byte {
 		}
 	}
 
-	// Calculate potential free pages
 	potentialFreePages := totalFreeSlots / cap
 
 	if potentialFreePages <= minFreePages {
@@ -106,28 +104,27 @@ func (a *Allocator) Defrag(class int) [][]byte {
 	}
 
 	if trace {
-		fmt.Printf("Defrag class %d: will relocate %d records from %d pages (target: free %d pages)\n",
+		fmt.Printf("Defrag class %d: relocating %d records from %d pages (target: free %d pages)\n",
 			class, recordsToMove, len(pagesToEvacuate), targetFreedPages)
 	}
 
-	// Step 4: CRITICAL - Hide ALL pages being evacuated from the allocator BEFORE starting
-	// This prevents circular allocation where new records go into pages we're about to evacuate
-
-	type evacPageInfo struct {
+	// Step 4: Mark all pages as evacuating and remove their free slots
+	type evacInfo struct {
 		pg           uintptr
 		removedNodes []uintptr
 		originalUsed uint32
 	}
 
-	evacPages := make([]evacPageInfo, len(pagesToEvacuate))
+	evacPages := make([]evacInfo, len(pagesToEvacuate))
 
-	// Initialize evacPages and build set of pages being evacuated
-	evacPageSet := make(map[uintptr]int, len(pagesToEvacuate))
 	for idx, pg := range pagesToEvacuate {
 		header := (*page_header)(unsafe.Pointer(pg))
+
+		// Mark page as evacuating
+		header.evacuating = 1
+
 		evacPages[idx].pg = pg
-		evacPages[idx].originalUsed = header.used
-		evacPageSet[pg] = idx
+		evacPages[idx].originalUsed = uint32(header.used)
 
 		// Remove from current allocation page
 		if a.pages[class] == pg {
@@ -135,16 +132,25 @@ func (a *Allocator) Defrag(class int) [][]byte {
 		}
 	}
 
-	// CRITICAL: Remove free slots from ALL evacuating pages in a SINGLE pass
-	// This is O(total_free_slots) instead of O(num_pages × total_free_slots)
+	// Remove free slots from evacuating pages in single pass
 	var prev uintptr = 0
 	for n := a.lists[class]; n != 0; {
 		next := (*node)(unsafe.Pointer(n)).next
 		pg := n &^ uintptr(pageMask)
 
-		if idx, isEvacuating := evacPageSet[pg]; isEvacuating {
-			// This slot belongs to a page we're evacuating - remove it
-			evacPages[idx].removedNodes = append(evacPages[idx].removedNodes, n)
+		// Check if this slot belongs to an evacuating page
+		isEvacuating := false
+		var evacIdx int
+		for i := range evacPages {
+			if evacPages[i].pg == pg {
+				isEvacuating = true
+				evacIdx = i
+				break
+			}
+		}
+
+		if isEvacuating {
+			evacPages[evacIdx].removedNodes = append(evacPages[evacIdx].removedNodes, n)
 
 			// Unlink from list
 			if prev == 0 {
@@ -155,23 +161,20 @@ func (a *Allocator) Defrag(class int) [][]byte {
 			if next != 0 {
 				(*node)(unsafe.Pointer(next)).prev = prev
 			}
-			// Don't update prev - we removed this node
 		} else {
-			// Keep this node, update prev
 			prev = n
 		}
 		n = next
 	}
 
-	// Step 5: Perform relocation
-	// Step 5: Perform relocation
+	// Step 5: Evacuate all pages
 	slotSize := int(sizeClassSlotSize[class])
 	relocations := make([][]byte, 0, recordsToMove)
 
 	for idx := range evacPages {
 		info := &evacPages[idx]
 
-		// Build free slots map
+		// Build free slots set
 		freeSlots := make(map[uintptr]bool, len(info.removedNodes))
 		for _, n := range info.removedNodes {
 			freeSlots[n] = true
@@ -180,9 +183,8 @@ func (a *Allocator) Defrag(class int) [][]byte {
 		// Evacuate this page
 		baseAddr := info.pg + headerSize
 		header := (*page_header)(unsafe.Pointer(info.pg))
-		oldAddresses := make([]uintptr, 0, info.originalUsed)
 
-		for i := uint32(0); i < header.brk; i++ {
+		for i := uint16(0); i < header.brk; i++ {
 			slotAddr := baseAddr + uintptr(i)*uintptr(slotSize)
 
 			if !freeSlots[slotAddr] {
@@ -198,29 +200,77 @@ func (a *Allocator) Defrag(class int) [][]byte {
 				copy(newSlice, oldSlice)
 
 				relocations = append(relocations, newSlice)
-				oldAddresses = append(oldAddresses, slotAddr)
-			}
-		}
 
-		if len(oldAddresses) != int(info.originalUsed) {
-			panic(fmt.Sprintf("Expected %d used slots, found %d in page=%#x",
-				info.originalUsed, len(oldAddresses), info.pg))
-		}
-
-		// Free all old records
-		for _, oldAddr := range oldAddresses {
-			if err := a.UintptrFree(oldAddr); err != nil {
-				panic(fmt.Sprintf("Failed to free during defrag: %v", err))
+				// Free old slot - evacuation flag prevents it from re-entering free list
+				if err := a.UintptrFree(slotAddr); err != nil {
+					panic(fmt.Sprintf("Failed to free during defrag: %v", err))
+				}
 			}
 		}
 	}
 
-	if len(relocations) != recordsToMove {
-		panic(fmt.Sprintf("Expected %d relocations, got %d", recordsToMove, len(relocations)))
+	// Step 6: Clean up - unmap evacuated pages
+	for idx := range evacPages {
+		pg := evacPages[idx].pg
+		header := (*page_header)(unsafe.Pointer(pg))
+
+		// Page should be empty now
+		if header.used != 0 {
+			panic(fmt.Sprintf("Page %#x still has %d used slots after evacuation!", pg, header.used))
+		}
+
+		// Clear evacuation flag
+		header.evacuating = 0
+
+		// Unmap the page
+		slotSize := sizeClassSlotSize[class]
+		n := pg + headerSize
+		bi := header.brk
+
+		// Remove all slots from free list (should already be removed, but be safe)
+		for {
+			n += uintptr(slotSize)
+			if (*node)(unsafe.Pointer(n)).next == 0 && (*node)(unsafe.Pointer(n)).prev == 0 {
+				// Not in list
+			} else {
+				next := (*node)(unsafe.Pointer(n)).next
+				prev := (*node)(unsafe.Pointer(n)).prev
+				switch {
+				case prev == 0:
+					a.lists[class] = next
+					if next != 0 {
+						(*node)(unsafe.Pointer(next)).prev = 0
+					}
+				case next == 0:
+					(*node)(unsafe.Pointer(prev)).next = 0
+				default:
+					(*node)(unsafe.Pointer(prev)).next = next
+					(*node)(unsafe.Pointer(next)).prev = prev
+				}
+			}
+			if bi == 1 {
+				break
+			}
+			bi--
+		}
+
+		if a.pages[class] == pg {
+			a.pages[class] = 0
+		}
+
+		if counters {
+			a.Bytes -= int(header.siz)
+			a.Mmaps--
+		}
+
+		if err := unmap(pg, int(header.siz)); err != nil {
+			panic(fmt.Sprintf("Failed to unmap page %#x: %v", pg, err))
+		}
 	}
 
 	if trace {
-		fmt.Printf("Defrag class %d: relocated %d records\n", class, len(relocations))
+		fmt.Printf("Defrag class %d: relocated %d records, freed %d pages\n",
+			class, len(relocations), len(evacPages))
 	}
 
 	return relocations
@@ -229,7 +279,6 @@ func (a *Allocator) Defrag(class int) [][]byte {
 // DefragAllImproved defragments all classes
 func (a *Allocator) DefragAllImproved() [][]byte {
 	var allRelocations [][]byte
-
 	bytesBefore := a.Bytes
 
 	for class := range sizeClassSlotSize {
@@ -243,11 +292,14 @@ func (a *Allocator) DefragAllImproved() [][]byte {
 	}
 
 	if len(allRelocations) > 0 {
-		if a.Bytes <= bytesBefore {
-			panic(fmt.Sprintf("%d records moved, but no improvement: %d -> %d", len(allRelocations), bytesBefore, a.Bytes))
+		bytesFreed := bytesBefore - a.Bytes
+		if bytesFreed <= 0 {
+			panic(fmt.Sprintf("%d records moved, but no memory freed: %d -> %d",
+				len(allRelocations), bytesBefore, a.Bytes))
 		}
 		if trace {
-			fmt.Printf("Total: %d records relocated\n", len(allRelocations))
+			fmt.Printf("Total: %d records relocated, freed %d bytes (%.2f MB)\n",
+				len(allRelocations), bytesFreed, float64(bytesFreed)/(1024*1024))
 		}
 	}
 

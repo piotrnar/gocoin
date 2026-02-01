@@ -86,13 +86,15 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 
 	// Try to allocate from current page
 	if p := a.pages[class]; p != 0 {
-		(*page_header)(unsafe.Pointer(p)).used++
-		(*page_header)(unsafe.Pointer(p)).brk++
-		if int((*page_header)(unsafe.Pointer(p)).brk) == int(a.cap[class]) {
+		header := (*page_header)(unsafe.Pointer(p))
+		header.used++
+		header.brk++
+
+		if int(header.brk) == int(a.cap[class]) {
 			a.pages[class] = 0
 		}
 		slotSize := sizeClassSlotSize[class]
-		return p + headerSize + uintptr((*page_header)(unsafe.Pointer(p)).brk-1)*uintptr(slotSize), nil
+		return p + headerSize + uintptr(header.brk-1)*uintptr(slotSize), nil
 	}
 
 	// Allocate from free list
