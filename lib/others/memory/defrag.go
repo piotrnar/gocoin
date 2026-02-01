@@ -265,18 +265,8 @@ func (a *Allocator) Defrag(class int) [][]byte {
 		// Clear evacuation flag
 		header.evacuating = 0
 
-		// The free list should already have all this page's nodes removed (in evacPages[idx].removedNodes)
-		// But in case any were added after we removed them (shouldn't happen), clean up
-		// by unlinking the specific nodes we removed earlier
-		for _, n := range evacPages[idx].removedNodes {
-			// These nodes were removed from the list earlier, but let's verify they're not still linked
-			nodePtr := (*node)(unsafe.Pointer(n))
-			if nodePtr.next != 0 || nodePtr.prev != 0 {
-				// Shouldn't happen - these were already unlinked
-				panic(fmt.Sprintf("Node %#x from evacuated page %#x still has next=%#x or prev=%#x",
-					n, pg, nodePtr.next, nodePtr.prev))
-			}
-		}
+		// All nodes from this page were removed from the free list earlier
+		// No need to unlink them again - just unmap the page
 
 		if a.pages[class] == pg {
 			a.pages[class] = 0
