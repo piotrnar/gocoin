@@ -144,7 +144,7 @@ func (a *Allocator) Defrag(class int) [][]byte {
 			class, recordsToMove, len(pagesToEvacuate), targetFreedPages)
 	}
 
-	// Step 4: Mark all pages as evacuating and remove their free slots
+	// Step 4: Mark all pages as evacuating and build evacuation info
 	type evacInfo struct {
 		pg           uintptr
 		removedNodes []uintptr
@@ -156,7 +156,7 @@ func (a *Allocator) Defrag(class int) [][]byte {
 	for idx, pg := range pagesToEvacuate {
 		header := (*page_header)(unsafe.Pointer(pg))
 		
-		// Mark page as evacuating
+		// Mark page as evacuating - prevents UintptrFree from adding freed slots back to free list
 		header.evacuating = 1
 		
 		evacPages[idx].pg = pg
@@ -174,30 +174,20 @@ func (a *Allocator) Defrag(class int) [][]byte {
 		evacPageMap[evacPages[idx].pg] = idx
 	}
 
-	// Remove free slots from evacuating pages in single pass
+	// Step 6: Remove free slots from evacuating pages in single pass
 	var prev uintptr = 0
 	for n := a.lists[class]; n != 0; {
-		// Check if the node itself is from an evacuating page (shouldn't happen!)
-		nodePage := n &^ uintptr(pageMask)
-		if _, isEvac := evacPageMap[nodePage]; isEvac {
-			nodeHeader := (*page_header)(unsafe.Pointer(nodePage))
-			panic(fmt.Sprintf("Free list contains node %#x from evacuating page %#x (evacuating=%d, used=%d)",
-				n, nodePage, nodeHeader.evacuating, nodeHeader.used))
-		}
+		pg := n &^ uintptr(pageMask)
 		
-		// Safety check for corrupted pointers
-		if n == ^uintptr(0) { // 0xffffffffffffffff
-			panic(fmt.Sprintf("Corrupted free list: node at %#x is 0xffffffffffffffff", prev))
-		}
-		
+		// Read next pointer - might be corrupted if from evacuating page with uninitialized memory
 		next := (*node)(unsafe.Pointer(n)).next
 		
-		// Safety check
+		// Validate next pointer before using it
 		if next == ^uintptr(0) {
-			panic(fmt.Sprintf("Corrupted free list: node %#x has next=0xffffffffffffffff", n))
+			// This can happen if a page had uninitialized slots that were never freed properly
+			panic(fmt.Sprintf("Class %d: Node %#x (page %#x) has corrupted next=0x%x. "+
+				"This suggests uninitialized memory in free list.", class, n, pg, next))
 		}
-		
-		pg := n &^ uintptr(pageMask)
 
 		// Check if this slot belongs to an evacuating page (O(1) lookup)
 		if evacIdx, isEvacuating := evacPageMap[pg]; isEvacuating {
@@ -275,36 +265,17 @@ func (a *Allocator) Defrag(class int) [][]byte {
 		// Clear evacuation flag
 		header.evacuating = 0
 
-		// Unmap the page
-		slotSize := sizeClassSlotSize[class]
-		n := pg + headerSize
-		bi := header.brk
-
-		// Remove all slots from free list (should already be removed, but be safe)
-		for {
-			n += uintptr(slotSize)
-			if (*node)(unsafe.Pointer(n)).next == 0 && (*node)(unsafe.Pointer(n)).prev == 0 {
-				// Not in list
-			} else {
-				next := (*node)(unsafe.Pointer(n)).next
-				prev := (*node)(unsafe.Pointer(n)).prev
-				switch {
-				case prev == 0:
-					a.lists[class] = next
-					if next != 0 {
-						(*node)(unsafe.Pointer(next)).prev = 0
-					}
-				case next == 0:
-					(*node)(unsafe.Pointer(prev)).next = 0
-				default:
-					(*node)(unsafe.Pointer(prev)).next = next
-					(*node)(unsafe.Pointer(next)).prev = prev
-				}
+		// The free list should already have all this page's nodes removed (in evacPages[idx].removedNodes)
+		// But in case any were added after we removed them (shouldn't happen), clean up
+		// by unlinking the specific nodes we removed earlier
+		for _, n := range evacPages[idx].removedNodes {
+			// These nodes were removed from the list earlier, but let's verify they're not still linked
+			nodePtr := (*node)(unsafe.Pointer(n))
+			if nodePtr.next != 0 || nodePtr.prev != 0 {
+				// Shouldn't happen - these were already unlinked
+				panic(fmt.Sprintf("Node %#x from evacuated page %#x still has next=%#x or prev=%#x",
+					n, pg, nodePtr.next, nodePtr.prev))
 			}
-			if bi == 1 {
-				break
-			}
-			bi--
 		}
 
 		if a.pages[class] == pg {
