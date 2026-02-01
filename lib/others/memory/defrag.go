@@ -132,6 +132,33 @@ func (a *Allocator) relocatePageRecords(pg *page_header, slotSize int, class int
 		return nil
 	}
 
+	pgAddr := uintptr(unsafe.Pointer(pg))
+
+	// CRITICAL: Prevent allocations into this page during evacuation
+	// Save the current state and temporarily mark this page as unavailable
+	savedFreePage := a.freePage[class]
+	savedPages := a.pages[class]
+
+	if a.freePage[class] == pg {
+		a.freePage[class] = nil
+	}
+	if a.pages[class] == pgAddr {
+		a.pages[class] = 0
+	}
+
+	// Ensure we restore state even if panic occurs
+	defer func() {
+		// Only restore if the page still exists (wasn't unmapped)
+		if pg.used > 0 {
+			if savedFreePage == pg {
+				a.freePage[class] = pg
+			}
+			if savedPages == pgAddr {
+				a.pages[class] = pgAddr
+			}
+		}
+	}()
+
 	// Capture the original used count BEFORE we start freeing (which decrements pg.used)
 	originalUsed := pg.used
 
