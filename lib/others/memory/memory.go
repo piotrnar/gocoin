@@ -52,6 +52,9 @@ type Allocator struct {
 	maxSharedSize int
 }
 
+// if n%m != 0 { n += m-n%m }. m must be a power of 2.
+func roundup(n, m int) int { return (n + m - 1) &^ (m - 1) }
+
 // getSizeClass returns the size class index for a given allocation size.
 // This is the core routing function that determines which slot size to use.
 func (a *Allocator) getSizeClass(size int) int {

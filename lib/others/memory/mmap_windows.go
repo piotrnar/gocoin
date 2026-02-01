@@ -44,10 +44,31 @@ var (
 	procVirtualAlloc  = modkernel32.NewProc("VirtualAlloc")
 	procVirtualAlloc2 = modkernelbase.NewProc("VirtualAlloc2")
 	procVirtualFree   = modkernel32.NewProc("VirtualFree")
+	mmap func(int) (uintptr, int, error)
 )
 
-// 1MB aligned using VirtualAlloc2
-func mmap(size int) (uintptr, int, error) {
+func init() {
+	if pageSizeLog==16 {
+		mmap = mmap64
+		println("Using VirtualAlloc for 64 KB pages")
+	} else {
+		mmap = mmapX
+		println("Using VirtualAlloc2 for", 1<<(pageSizeLog-10), "KB pages")
+	}
+}
+
+// pageSize aligned.
+func mmap64(size int) (uintptr, int, error) {
+	size = roundup(size, osPageSize) // Round to OS page (4KB), not allocator pageSize (64KB)
+	addr, _, err := procVirtualAlloc.Call(0, uintptr(size), _MEM_COMMIT|_MEM_RESERVE, _PAGE_READWRITE)
+	if err.(syscall.Errno) != 0 || addr == 0 {
+		return addr, size, err
+	}
+	return addr, size, nil
+}
+
+// aby value aligned using VirtualAlloc2
+func mmapX(size int) (uintptr, int, error) {
 	size = roundup(size, osPageSize)
 
 	var addressReqs MEM_ADDRESS_REQUIREMENTS
