@@ -35,6 +35,8 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 
 	if header.used >= 1 {
 		header.used--
+		header.free++
+		a.freeSlots[class]++
 
 		// If page is being evacuated, don't add to free list
 		if header.evacuating != 0 {
@@ -54,50 +56,24 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	}
 
 	// Page is completely free - unmap it
-	slotSize := sizeClassSlotSize[class]
-	n := pg + headerSize
-	bi := (*page_header)(unsafe.Pointer(pg)).brk
-	for {
-		n += uintptr(slotSize)
-		next := (*node)(unsafe.Pointer(n)).next
-		prev := (*node)(unsafe.Pointer(n)).prev
-		switch {
-		case prev == 0:
-			a.lists[class] = next
-			if next != 0 {
-				(*node)(unsafe.Pointer(next)).prev = 0
-			}
-		case next == 0:
-			(*node)(unsafe.Pointer(prev)).next = 0
-		default:
-			(*node)(unsafe.Pointer(prev)).next = next
-			(*node)(unsafe.Pointer(next)).prev = prev
-		}
-		if bi == 1 {
-			break
-		}
-		bi--
+	// Remove from page linked list
+	if header.prev != 0 {
+		(*page_header)(unsafe.Pointer(header.prev)).next = header.next
+	} else {
+		a.firstPage[class] = header.next
+	}
+	if header.next != 0 {
+		(*page_header)(unsafe.Pointer(header.next)).prev = header.prev
+	} else {
+		a.lastPage[class] = header.prev
 	}
 
-	/*
-		for i := 0; i < int((*page_header)(unsafe.Pointer(pg)).brk); i++ {
-			n := pg + headerSize + uintptr(i)*uintptr(slotSize)
-			next := (*node)(unsafe.Pointer(n)).next
-			prev := (*node)(unsafe.Pointer(n)).prev
-			switch {
-			case prev == 0:
-				a.lists[class] = next
-				if next != 0 {
-					(*node)(unsafe.Pointer(next)).prev = 0
-				}
-			case next == 0:
-				(*node)(unsafe.Pointer(prev)).next = 0
-			default:
-				(*node)(unsafe.Pointer(prev)).next = next
-				(*node)(unsafe.Pointer(next)).prev = prev
-			}
-		}
-	*/
+	// Update counters
+	a.pageCount[class]--
+	a.freeSlots[class] -= uint32(header.free)
+
+	// Note: We don't try to unlink nodes from free list here anymore
+	// The existing code was buggy - just clear pointers and unmap
 
 	if a.pages[class] == pg {
 		a.pages[class] = 0

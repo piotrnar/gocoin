@@ -36,22 +36,30 @@ type page_header_common struct {
 
 type page_header struct {
 	page_header_common
-	brk        uint16 // high water mark of allocated slots
-	used       uint16 // number of currently used slots
-	evacuating uint16 // 1 during defragmentation to prevent freed slots from re-entering free list
-	_padding   uint16 // explicit padding to maintain 8-byte alignment
+	brk        uint16  // high water mark of allocated slots
+	used       uint16  // number of currently used slots
+	evacuating uint16  // 1 during defragmentation to prevent freed slots from re-entering free list
+	free       uint16  // number of free slots in this page (for quick defrag decisions)
+	prev       uintptr // previous page in class (linked list of all pages)
+	next       uintptr // next page in class (linked list of all pages)
 }
 
 // Allocator allocates and frees memory. Its zero value is ready for use.
 type Allocator struct {
-	Allocs        int // # of allocs.
-	Bytes         int // Asked from OS.
+	Allocs        int      // # of allocs.
+	Bytes         int      // Asked from OS.
 	cap           []uint32
 	lists         []uintptr // *node - free lists per size class
 	Mmaps         int       // Asked from OS.
 	pages         []uintptr // *page - current page per size class
 	classIdx      []byte
 	maxSharedSize int
+	
+	// Defragmentation optimization fields
+	firstPage []uintptr // first page in linked list per class
+	lastPage  []uintptr // last page in linked list per class
+	pageCount []uint32  // number of pages per class
+	freeSlots []uint32  // total free slots per class
 }
 
 // if n%m != 0 { n += m-n%m }. m must be a power of 2.
@@ -79,6 +87,12 @@ func NewAllocator() (a *Allocator) {
 	a.cap = make([]uint32, len(sizeClassSlotSize))
 	a.lists = make([]uintptr, len(sizeClassSlotSize))
 	a.pages = make([]uintptr, len(sizeClassSlotSize))
+	
+	// Initialize defragmentation optimization fields
+	a.firstPage = make([]uintptr, len(sizeClassSlotSize))
+	a.lastPage = make([]uintptr, len(sizeClassSlotSize))
+	a.pageCount = make([]uint32, len(sizeClassSlotSize))
+	a.freeSlots = make([]uint32, len(sizeClassSlotSize))
 
 	for i := range a.cap {
 		a.cap[i] = uint32(pageAvail) / sizeClassSlotSize[i]

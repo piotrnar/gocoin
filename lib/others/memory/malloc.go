@@ -47,8 +47,27 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		return 0, err
 	}
 
+	header := (*page_header)(unsafe.Pointer(p))
+	header.class = int16(class)
+	header.free = uint16(a.cap[class]) // All slots initially free
+	
+	// Link into page list
+	header.prev = a.lastPage[class]
+	header.next = 0
+	
+	if a.lastPage[class] != 0 {
+		(*page_header)(unsafe.Pointer(a.lastPage[class])).next = p
+	}
+	if a.firstPage[class] == 0 {
+		a.firstPage[class] = p
+	}
+	a.lastPage[class] = p
+	
+	// Update counters
+	a.pageCount[class]++
+	a.freeSlots[class] += a.cap[class]
+	
 	a.pages[class] = p
-	(*page_header)(unsafe.Pointer(p)).class = int16(class)
 	return p, nil
 }
 
@@ -89,7 +108,9 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 		header := (*page_header)(unsafe.Pointer(p))
 		header.used++
 		header.brk++
-
+		header.free--
+		a.freeSlots[class]--
+		
 		if int(header.brk) == int(a.cap[class]) {
 			a.pages[class] = 0
 		}
@@ -104,7 +125,10 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	if next := (*node)(unsafe.Pointer(n)).next; next != 0 {
 		(*node)(unsafe.Pointer(next)).prev = 0
 	}
-	(*page_header)(unsafe.Pointer(pg)).used++
+	header := (*page_header)(unsafe.Pointer(pg))
+	header.used++
+	header.free--
+	a.freeSlots[class]--
 	return n, nil
 }
 
