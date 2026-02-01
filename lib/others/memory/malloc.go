@@ -50,11 +50,11 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	header := (*page_header)(unsafe.Pointer(p))
 	header.class = int16(class)
 	header.free = uint16(a.cap[class]) // All slots initially free
-	
+
 	// Link into page list
 	header.prev = a.lastPage[class]
 	header.next = 0
-	
+
 	if a.lastPage[class] != 0 {
 		(*page_header)(unsafe.Pointer(a.lastPage[class])).next = p
 	}
@@ -62,11 +62,11 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		a.firstPage[class] = p
 	}
 	a.lastPage[class] = p
-	
+
 	// Update counters
 	a.pageCount[class]++
 	a.freeSlots[class] += a.cap[class]
-	
+
 	a.pages[class] = p
 	return p, nil
 }
@@ -110,7 +110,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 		header.brk++
 		header.free--
 		a.freeSlots[class]--
-		
+
 		if int(header.brk) == int(a.cap[class]) {
 			a.pages[class] = 0
 		}
@@ -121,11 +121,32 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	// Allocate from free list
 	n := a.lists[class]
 	pg := n &^ uintptr(pageMask)
+	header := (*page_header)(unsafe.Pointer(pg))
+
+	// Remove from global free list
 	a.lists[class] = (*node)(unsafe.Pointer(n)).next
 	if next := (*node)(unsafe.Pointer(n)).next; next != 0 {
 		(*node)(unsafe.Pointer(next)).prev = 0
 	}
-	header := (*page_header)(unsafe.Pointer(pg))
+
+	// Remove from per-page free list
+	nextInPage := (*node)(unsafe.Pointer(n)).nextInPage
+	prevInPage := (*node)(unsafe.Pointer(n)).prevInPage
+
+	if prevInPage == 0 {
+		// We're removing the head of the per-page list
+		header.freeList = nextInPage
+		if nextInPage != 0 {
+			(*node)(unsafe.Pointer(nextInPage)).prevInPage = 0
+		}
+	} else {
+		// We're in the middle or end of the per-page list
+		(*node)(unsafe.Pointer(prevInPage)).nextInPage = nextInPage
+		if nextInPage != 0 {
+			(*node)(unsafe.Pointer(nextInPage)).prevInPage = prevInPage
+		}
+	}
+
 	header.used++
 	header.free--
 	a.freeSlots[class]--

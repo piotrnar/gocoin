@@ -25,7 +25,8 @@ var sizeClassSlotSize = []uint32{
 }
 
 type node struct {
-	prev, next uintptr // *node
+	prev, next uintptr // *node - global free list (across all pages in class)
+	prevInPage, nextInPage uintptr // *node - per-page free list (only slots from same page)
 }
 
 type page_header_common struct {
@@ -42,6 +43,7 @@ type page_header struct {
 	free       uint16  // number of free slots in this page (for quick defrag decisions)
 	prev       uintptr // previous page in class (linked list of all pages)
 	next       uintptr // next page in class (linked list of all pages)
+	freeList   uintptr // head of per-page free list (using nextInPage/prevInPage pointers)
 }
 
 // Allocator allocates and frees memory. Its zero value is ready for use.

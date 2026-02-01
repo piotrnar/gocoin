@@ -43,7 +43,7 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 			return nil
 		}
 
-		// Normal path: add to free list
+		// Add to global free list
 		(*node)(unsafe.Pointer(p)).prev = 0
 		if next := a.lists[class]; next != 0 {
 			(*node)(unsafe.Pointer(p)).next = next
@@ -52,6 +52,17 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 			(*node)(unsafe.Pointer(p)).next = a.lists[class]
 		}
 		a.lists[class] = p
+
+		// Add to per-page free list
+		(*node)(unsafe.Pointer(p)).prevInPage = 0
+		if nextInPage := header.freeList; nextInPage != 0 {
+			(*node)(unsafe.Pointer(p)).nextInPage = nextInPage
+			(*node)(unsafe.Pointer(nextInPage)).prevInPage = p
+		} else {
+			(*node)(unsafe.Pointer(p)).nextInPage = 0
+		}
+		header.freeList = p
+
 		return nil
 	}
 
