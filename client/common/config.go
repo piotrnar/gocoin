@@ -490,28 +490,20 @@ func DefragUTXOMem() {
 	MemMutex.Lock()
 	sta := time.Now()
 	bts_before := Memory.Bytes
-	ss := Memory.GetInfo()
 	records := Memory.DefragAllImproved()
-	MemMutex.Unlock()
+
 	if len(records) > 0 {
+		MemMutex.Unlock()
 		BlockChain.Unspent.Defrag(records)
 		MemMutex.Lock()
-		bts := bts_before - Memory.Bytes
-		if bts > 0 {
-			DefragCount++
-			DefragBytes += bts
-			//println("Defrag OK", bts>>20, DefragCount)
-		} else {
-			println("DUPA: zero bytes in defrag of", len(records), "   is_corrupt", Memory.IsCorrupt(), DefragCount)
-			println("before:", ss)
-			println("after :", Memory.GetInfo())
-			println(BlockChain.Stats())
-			os.Exit(1)
-		}
-		DefragTime += time.Since(sta)
-		MemMutex.Unlock()
 	}
-	MemMutex.Lock()
+
+	if len(records) > 0 {
+		DefragCount++
+		DefragBytes += bts_before - Memory.Bytes
+		DefragTime += time.Since(sta)
+		DefragTotime += time.Since(sta)
+	}
 	DefragTotime += time.Since(sta)
 	MemMutex.Unlock()
 }
