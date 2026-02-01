@@ -67,6 +67,29 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	}
 
 	// Page is completely free - unmap it
+	// Remove all free slots from global free list using per-page list - O(F_page) not O(brk)!
+	for n := header.freeList; n != 0; {
+		nextInPage := (*node)(unsafe.Pointer(n)).nextInPage
+
+		// Remove from global free list
+		next := (*node)(unsafe.Pointer(n)).next
+		prev := (*node)(unsafe.Pointer(n)).prev
+
+		if prev == 0 {
+			a.lists[class] = next
+			if next != 0 {
+				(*node)(unsafe.Pointer(next)).prev = 0
+			}
+		} else {
+			(*node)(unsafe.Pointer(prev)).next = next
+			if next != 0 {
+				(*node)(unsafe.Pointer(next)).prev = prev
+			}
+		}
+
+		n = nextInPage
+	}
+
 	// Remove from page linked list
 	if header.prev != 0 {
 		(*page_header)(unsafe.Pointer(header.prev)).next = header.next
@@ -82,9 +105,6 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	// Update counters
 	a.pageCount[class]--
 	a.freeSlots[class] -= uint32(header.free)
-
-	// Note: We don't try to unlink nodes from free list here anymore
-	// The existing code was buggy - just clear pointers and unmap
 
 	if a.pages[class] == pg {
 		a.pages[class] = 0
