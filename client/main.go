@@ -126,7 +126,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			println("Memory corrupt after block", bl.Height)
 			os.Exit(1)
 		}
-		if time.Since(lastDefragDone) > time.Second {
+		if time.Since(lastDefragDone) > time.Minute {
 			common.DefragUTXOMem()
 			lastDefragDone = time.Now()
 		}
