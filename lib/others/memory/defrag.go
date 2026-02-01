@@ -195,8 +195,9 @@ func (a *Allocator) relocatePageRecords(pg *page_header, slotSize int, class int
 	oldAddresses := make([]uintptr, 0, originalUsed)
 
 	// Build a map of freed slots for O(1) lookup
+	// IMPORTANT: Use savedFreeListOffs because we cleared pg.freeListOffs to prevent allocations
 	freed := make(map[uintptr]bool, pg.cap-pg.used)
-	rec := addOffset(uintptr(unsafe.Pointer(&pg.cap)), pg.freeListOffs)
+	rec := addOffset(uintptr(unsafe.Pointer(&pg.cap)), savedFreeListOffs)
 	for rec != 0 {
 		freed[rec] = true
 		frec := (*free_record)(unsafe.Pointer(rec))
@@ -229,6 +230,31 @@ func (a *Allocator) relocatePageRecords(pg *page_header, slotSize int, class int
 	}
 
 	if len(relocations) != int(originalUsed) {
+		// Debug: understand the discrepancy
+		freeCount := len(freed)
+		dirtyCount := int(pg.dirty)
+		capCount := int(pg.cap)
+		currentUsed := int(pg.used)
+
+		fmt.Printf("DEBUG: Page seq=%d count mismatch:\n", pg.seq)
+		fmt.Printf("  originalUsed (captured): %d\n", originalUsed)
+		fmt.Printf("  pg.used (current):       %d\n", currentUsed)
+		fmt.Printf("  relocations (found):     %d\n", len(relocations))
+		fmt.Printf("  pg.dirty:                %d\n", dirtyCount)
+		fmt.Printf("  pg.cap:                  %d\n", capCount)
+		fmt.Printf("  freed map size:          %d\n", freeCount)
+		fmt.Printf("  expected free:           %d (cap - used)\n", capCount-int(originalUsed))
+
+		// Verify the freed map was built correctly
+		freeListCount := 0
+		rec := addOffset(uintptr(unsafe.Pointer(&pg.cap)), savedFreeListOffs)
+		for rec != 0 {
+			freeListCount++
+			frec := (*free_record)(unsafe.Pointer(rec))
+			rec = frec.next_free_record
+		}
+		fmt.Printf("  free list count:         %d\n", freeListCount)
+
 		panic(fmt.Sprintf("Expected %d relocations, found %d in page seq=%d",
 			originalUsed, len(relocations), pg.seq))
 	}
