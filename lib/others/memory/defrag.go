@@ -30,27 +30,27 @@ func (a *Allocator) Defrag(class int) [][]byte {
 	if trace {
 		fmt.Printf("Defrag class %d: scanning free list (head=%#x)\n", class, a.lists[class])
 	}
-	
+
 	// Scan free list to discover pages and count free slots
 	nodeCount := 0
 	for n := a.lists[class]; n != 0; {
 		nodeCount++
-		if nodeCount > 1000000 {
-			panic(fmt.Sprintf("Free list for class %d appears infinite (>1M nodes)", class))
+		if nodeCount > 1e9 {
+			panic(fmt.Sprintf("Free list for class %d appears infinite (>1e9 nodes)", class))
 		}
-		
+
 		// Validate node pointer
 		if n&uintptr(pageMask) < headerSize {
 			panic(fmt.Sprintf("Invalid node pointer %#x (below header size)", n))
 		}
-		
+
 		pg := n &^ uintptr(pageMask)
 		freeSlotsByPage[pg]++
-		
+
 		// Read next carefully
 		nodePtr := (*node)(unsafe.Pointer(n))
 		next := nodePtr.next
-		
+
 		// Validate next pointer
 		if next != 0 {
 			if next == ^uintptr(0) {
@@ -60,10 +60,10 @@ func (a *Allocator) Defrag(class int) [][]byte {
 				panic(fmt.Sprintf("Node %#x has invalid next pointer: %#x", n, next))
 			}
 		}
-		
+
 		n = next
 	}
-	
+
 	if trace {
 		fmt.Printf("Defrag class %d: found %d nodes in free list across %d pages\n",
 			class, nodeCount, len(freeSlotsByPage))
@@ -155,10 +155,10 @@ func (a *Allocator) Defrag(class int) [][]byte {
 
 	for idx, pg := range pagesToEvacuate {
 		header := (*page_header)(unsafe.Pointer(pg))
-		
+
 		// Mark page as evacuating - prevents UintptrFree from adding freed slots back to free list
 		header.evacuating = 1
-		
+
 		evacPages[idx].pg = pg
 		evacPages[idx].originalUsed = uint32(header.used)
 
@@ -178,10 +178,10 @@ func (a *Allocator) Defrag(class int) [][]byte {
 	var prev uintptr = 0
 	for n := a.lists[class]; n != 0; {
 		pg := n &^ uintptr(pageMask)
-		
+
 		// Read next pointer - might be corrupted if from evacuating page with uninitialized memory
 		next := (*node)(unsafe.Pointer(n)).next
-		
+
 		// Validate next pointer before using it
 		if next == ^uintptr(0) {
 			// This can happen if a page had uninitialized slots that were never freed properly
@@ -256,7 +256,7 @@ func (a *Allocator) Defrag(class int) [][]byte {
 	for idx := range evacPages {
 		pg := evacPages[idx].pg
 		header := (*page_header)(unsafe.Pointer(pg))
-		
+
 		// Page should be empty now
 		if header.used != 0 {
 			panic(fmt.Sprintf("Page %#x still has %d used slots after evacuation!", pg, header.used))
@@ -271,12 +271,12 @@ func (a *Allocator) Defrag(class int) [][]byte {
 		if a.pages[class] == pg {
 			a.pages[class] = 0
 		}
-		
+
 		if counters {
 			a.Bytes -= int(header.siz)
 			a.Mmaps--
 		}
-		
+
 		if err := unmap(pg, int(header.siz)); err != nil {
 			panic(fmt.Sprintf("Failed to unmap page %#x: %v", pg, err))
 		}
