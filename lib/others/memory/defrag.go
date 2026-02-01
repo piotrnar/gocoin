@@ -146,10 +146,13 @@ func (a *Allocator) relocatePageRecords(pg *page_header, slotSize int, class int
 		a.pages[class] = 0
 	}
 
+	// Track if page was unmapped during freeing
+	pageWasUnmapped := false
+
 	// Ensure we restore state even if panic occurs
 	defer func() {
-		// Only restore if the page still exists (wasn't unmapped)
-		if pg.used > 0 {
+		// Only restore if the page wasn't unmapped
+		if !pageWasUnmapped {
 			if savedFreePage == pg {
 				a.freePage[class] = pg
 			}
@@ -222,6 +225,12 @@ func (a *Allocator) relocatePageRecords(pg *page_header, slotSize int, class int
 		if err := a.UintptrFree(oldAddr); err != nil {
 			panic(fmt.Sprintf("Failed to free old record during defrag: %v", err))
 		}
+	}
+
+	// Check if the page was unmapped (all records were freed)
+	if len(oldAddresses) == int(originalUsed) {
+		// We freed all records, so the page should be unmapped
+		pageWasUnmapped = true
 	}
 
 	return relocations
