@@ -1,0 +1,118 @@
+package memory
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
+	p, size, err := mmap(size)
+	if err != nil {
+		return 0, err
+	}
+
+	if counters {
+		a.Mmaps++
+		a.Bytes += size
+	}
+	if size > 0xffffffff {
+		panic("mmap to big")
+	}
+	(*page_header)(unsafe.Pointer(p)).siz = uint32(size)
+	return p, nil
+}
+
+// newPage creates a dedicated page for a single large allocation
+func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
+	size += int(dedicHdrSize)
+	p, err := a.mmap(size)
+	if err != nil {
+		return 0, err
+	}
+
+	(*page_header)(unsafe.Pointer(p)).class = -1 // Mark as dedicated page
+	return p, nil
+}
+
+// newSharedPage creates a new shared page for a specific size class
+func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
+	slotSize := getSlotSize(class)
+	if slotSize == 0 {
+		panic(fmt.Sprintf("invalid size class: %d", class))
+	}
+
+	totalSize := uint32(headerSize) + a.cap[class]*slotSize
+	p, err := a.mmap(int(totalSize))
+	if err != nil {
+		return 0, err
+	}
+
+	a.pages[class] = p
+	(*page_header)(unsafe.Pointer(p)).class = int16(class)
+	return p, nil
+}
+
+// UintptrMalloc is like Malloc except it returns an uintptr.
+func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
+	if size < 0 {
+		panic("invalid malloc size")
+	}
+
+	if size == 0 {
+		return 0, nil
+	}
+
+	if counters {
+		a.Allocs++
+	}
+
+	class := a.getSizeClass(size)
+
+	// Large allocation - use dedicated page
+	if class < 0 {
+		p, err := a.newPage(size)
+		if err != nil {
+			return 0, err
+		}
+		return p + dedicHdrSize, nil
+	}
+
+	// Small allocation - use shared page
+	if a.lists[class] == 0 && a.pages[class] == 0 {
+		if _, err := a.newSharedPage(class); err != nil {
+			return 0, err
+		}
+	}
+
+	// Try to allocate from current page
+	if p := a.pages[class]; p != 0 {
+		(*page_header)(unsafe.Pointer(p)).used++
+		(*page_header)(unsafe.Pointer(p)).brk++
+		if int((*page_header)(unsafe.Pointer(p)).brk) == int(a.cap[class]) {
+			a.pages[class] = 0
+		}
+		slotSize := sizeClassSlotSize[class]
+		return p + headerSize + uintptr((*page_header)(unsafe.Pointer(p)).brk-1)*uintptr(slotSize), nil
+	}
+
+	// Allocate from free list
+	n := a.lists[class]
+	pg := n &^ uintptr(pageMask)
+	a.lists[class] = (*node)(unsafe.Pointer(n)).next
+	if next := (*node)(unsafe.Pointer(n)).next; next != 0 {
+		(*node)(unsafe.Pointer(next)).prev = 0
+	}
+	(*page_header)(unsafe.Pointer(pg)).used++
+	return n, nil
+}
+
+// Malloc allocates size bytes and returns a byte slice.
+func (a *Allocator) Malloc(size int) (r []byte, err error) {
+	p, err := a.UintptrMalloc(size)
+	if p == 0 || err != nil {
+		return nil, err
+	}
+
+	r = unsafe.Slice((*byte)(unsafe.Pointer(p)), size)
+	return r[:size], nil
+}

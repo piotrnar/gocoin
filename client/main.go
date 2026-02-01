@@ -38,6 +38,8 @@ var (
 	highestAcceptedBlock uint32
 	retryCachedBlocks    bool
 	syncDoneAnnounced    bool
+
+	lastDefragDone time.Time
 )
 
 const (
@@ -120,6 +122,14 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	}
 
 	if common.MemoryModUsed {
+		if common.CheckMemory() {
+			println("Memory corrupt after block", bl.Height)
+			os.Exit(1)
+		}
+		if time.Since(lastDefragDone) > time.Second {
+			common.DefragUTXOMem()
+			lastDefragDone = time.Now()
+		}
 		common.LockCfg()
 		common.UpdateMemoryLimit()
 		common.UnlockCfg()
@@ -148,9 +158,13 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		}
 		if common.Last.ParseTill != nil && (common.Last.Block.Height%div) == 0 {
 			b, _, ms := common.MemUsed()
+			common.MemMutex.Lock()
+			b, c, t, tt := common.DefragBytes, common.DefragCount, common.DefragTime, common.DefragTotime
+			common.MemMutex.Unlock()
 			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(),
 				"Queue:", len(network.NetBlocks),
-				" UTXO:", b>>20, "/", ms, " SYS:", memsize.MustResidentMemory()>>20, "MB")
+				" UTXO:", b>>20, "/", ms, " SYS:", memsize.MustResidentMemory()>>20, "MB",
+				" Def", c, "/", b>>20, "MB -", tt.String(), "/", t.String())
 		}
 
 		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
@@ -597,6 +611,11 @@ func main() {
 	}
 
 	host_init() // This will create the DB lock file and keep it open
+
+	if common.MemoryModUsed && common.CheckMemory() {
+		println("memory corrupt after init")
+		os.Exit(1)
+	}
 
 	os.RemoveAll(common.TempBlocksDir())
 	common.MkTempBlocksDir()
