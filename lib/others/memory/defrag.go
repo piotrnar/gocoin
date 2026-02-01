@@ -110,13 +110,109 @@ func (a *Allocator) Defrag(class int) [][]byte {
 			class, recordsToMove, len(pagesToEvacuate), targetFreedPages)
 	}
 
-	// Step 4: Perform relocation
+	// Step 4: CRITICAL - Hide ALL pages being evacuated from the allocator BEFORE starting
+	// This prevents circular allocation where new records go into pages we're about to evacuate
+
+	type evacPageInfo struct {
+		pg           uintptr
+		removedNodes []uintptr
+		originalUsed uint32
+	}
+
+	evacPages := make([]evacPageInfo, len(pagesToEvacuate))
+
+	// Initialize evacPages and build set of pages being evacuated
+	evacPageSet := make(map[uintptr]int, len(pagesToEvacuate))
+	for idx, pg := range pagesToEvacuate {
+		header := (*page_header)(unsafe.Pointer(pg))
+		evacPages[idx].pg = pg
+		evacPages[idx].originalUsed = header.used
+		evacPageSet[pg] = idx
+
+		// Remove from current allocation page
+		if a.pages[class] == pg {
+			a.pages[class] = 0
+		}
+	}
+
+	// CRITICAL: Remove free slots from ALL evacuating pages in a SINGLE pass
+	// This is O(total_free_slots) instead of O(num_pages × total_free_slots)
+	var prev uintptr = 0
+	for n := a.lists[class]; n != 0; {
+		next := (*node)(unsafe.Pointer(n)).next
+		pg := n &^ uintptr(pageMask)
+
+		if idx, isEvacuating := evacPageSet[pg]; isEvacuating {
+			// This slot belongs to a page we're evacuating - remove it
+			evacPages[idx].removedNodes = append(evacPages[idx].removedNodes, n)
+
+			// Unlink from list
+			if prev == 0 {
+				a.lists[class] = next
+			} else {
+				(*node)(unsafe.Pointer(prev)).next = next
+			}
+			if next != 0 {
+				(*node)(unsafe.Pointer(next)).prev = prev
+			}
+			// Don't update prev - we removed this node
+		} else {
+			// Keep this node, update prev
+			prev = n
+		}
+		n = next
+	}
+
+	// Step 5: Perform relocation
+	// Step 5: Perform relocation
 	slotSize := int(sizeClassSlotSize[class])
 	relocations := make([][]byte, 0, recordsToMove)
 
-	for _, pg := range pagesToEvacuate {
-		pageRelocations := a.relocatePageRecords(pg, slotSize, class)
-		relocations = append(relocations, pageRelocations...)
+	for idx := range evacPages {
+		info := &evacPages[idx]
+
+		// Build free slots map
+		freeSlots := make(map[uintptr]bool, len(info.removedNodes))
+		for _, n := range info.removedNodes {
+			freeSlots[n] = true
+		}
+
+		// Evacuate this page
+		baseAddr := info.pg + headerSize
+		header := (*page_header)(unsafe.Pointer(info.pg))
+		oldAddresses := make([]uintptr, 0, info.originalUsed)
+
+		for i := uint32(0); i < header.brk; i++ {
+			slotAddr := baseAddr + uintptr(i)*uintptr(slotSize)
+
+			if !freeSlots[slotAddr] {
+				// Allocate new location
+				newAddr, err := a.UintptrMalloc(slotSize)
+				if err != nil {
+					panic(fmt.Sprintf("Failed to allocate during defrag: %v", err))
+				}
+
+				// Copy data
+				oldSlice := unsafe.Slice((*byte)(unsafe.Pointer(slotAddr)), slotSize)
+				newSlice := unsafe.Slice((*byte)(unsafe.Pointer(newAddr)), slotSize)
+				copy(newSlice, oldSlice)
+
+				relocations = append(relocations, newSlice)
+				oldAddresses = append(oldAddresses, slotAddr)
+			}
+		}
+
+		if len(oldAddresses) != int(info.originalUsed) {
+			panic(fmt.Sprintf("Expected %d used slots, found %d in page=%#x",
+				info.originalUsed, len(oldAddresses), info.pg))
+		}
+
+		// Free all old records
+		for _, oldAddr := range oldAddresses {
+			if err := a.UintptrFree(oldAddr); err != nil {
+				panic(fmt.Sprintf("Failed to free during defrag: %v", err))
+			}
+		}
 	}
 
 	if len(relocations) != recordsToMove {
@@ -125,130 +221,6 @@ func (a *Allocator) Defrag(class int) [][]byte {
 
 	if trace {
 		fmt.Printf("Defrag class %d: relocated %d records\n", class, len(relocations))
-	}
-
-	return relocations
-}
-
-// relocatePageRecords relocates all used records from a page to new locations
-func (a *Allocator) relocatePageRecords(pg uintptr, slotSize int, class int) [][]byte {
-	header := (*page_header)(unsafe.Pointer(pg))
-
-	if header.used == 0 {
-		return nil
-	}
-
-	// CRITICAL: Prevent allocations into this page during evacuation
-	// Strategy: Temporarily remove all free slots from this page from a.lists[class]
-
-	// Save state
-	savedPages := a.pages[class]
-
-	// Remove from current page
-	if a.pages[class] == pg {
-		a.pages[class] = 0
-	}
-
-	// Remove all free slots from this page from the global free list
-	var removedNodes []uintptr // Nodes we removed
-	var prev uintptr = 0
-
-	for n := a.lists[class]; n != 0; {
-		next := (*node)(unsafe.Pointer(n)).next
-
-		if (n &^ uintptr(pageMask)) == pg {
-			// This free slot is from the page we're evacuating - remove it
-			removedNodes = append(removedNodes, n)
-
-			// Unlink from list
-			if prev == 0 {
-				// Removing head
-				a.lists[class] = next
-			} else {
-				(*node)(unsafe.Pointer(prev)).next = next
-			}
-
-			if next != 0 {
-				(*node)(unsafe.Pointer(next)).prev = prev
-			}
-		} else {
-			prev = n
-		}
-		n = next
-	}
-
-	// Capture original used count
-	originalUsed := header.used
-
-	// Track if page was unmapped
-	pageWasUnmapped := false
-
-	// Ensure restoration
-	defer func() {
-		if !pageWasUnmapped {
-			// Restore pages pointer
-			if savedPages == pg {
-				a.pages[class] = pg
-			}
-
-			// Re-insert removed nodes at head of list
-			for _, n := range removedNodes {
-				(*node)(unsafe.Pointer(n)).prev = 0
-				(*node)(unsafe.Pointer(n)).next = a.lists[class]
-				if a.lists[class] != 0 {
-					(*node)(unsafe.Pointer(a.lists[class])).prev = n
-				}
-				a.lists[class] = n
-			}
-		}
-	}()
-
-	// Build set of free slots for this page
-	freeSlots := make(map[uintptr]bool, len(removedNodes))
-	for _, n := range removedNodes {
-		freeSlots[n] = true
-	}
-
-	// Relocate used slots
-	relocations := make([][]byte, 0, originalUsed)
-	oldAddresses := make([]uintptr, 0, originalUsed)
-
-	baseAddr := pg + headerSize
-	for i := uint32(0); i < header.brk; i++ {
-		slotAddr := baseAddr + uintptr(i)*uintptr(slotSize)
-
-		if !freeSlots[slotAddr] {
-			// This slot is in use - allocate new location
-			newAddr, err := a.UintptrMalloc(slotSize)
-			if err != nil {
-				panic(fmt.Sprintf("Failed to allocate during defrag: %v", err))
-			}
-
-			// Copy data
-			oldSlice := unsafe.Slice((*byte)(unsafe.Pointer(slotAddr)), slotSize)
-			newSlice := unsafe.Slice((*byte)(unsafe.Pointer(newAddr)), slotSize)
-			copy(newSlice, oldSlice)
-
-			relocations = append(relocations, newSlice)
-			oldAddresses = append(oldAddresses, slotAddr)
-		}
-	}
-
-	if len(relocations) != int(originalUsed) {
-		panic(fmt.Sprintf("Expected %d relocations, found %d in page=%#x",
-			originalUsed, len(relocations), pg))
-	}
-
-	// Free all old records
-	for _, oldAddr := range oldAddresses {
-		if err := a.UintptrFree(oldAddr); err != nil {
-			panic(fmt.Sprintf("Failed to free old record during defrag: %v", err))
-		}
-	}
-
-	// Mark page as unmapped if we freed everything
-	if len(oldAddresses) == int(originalUsed) {
-		pageWasUnmapped = true
 	}
 
 	return relocations
