@@ -11,6 +11,8 @@ import (
 )
 
 const (
+	counters = true
+
 	headerSize      = unsafe.Sizeof(page_header{})
 	dedicHdrSize    = unsafe.Sizeof(page_header_common{})
 	pageAvail       = pageSize - headerSize
@@ -25,7 +27,7 @@ var sizeClassSlotSize = []uint32{
 }
 
 type node struct {
-	prev, next uintptr // *node - global free list (across all pages in class)
+	prev, next             uintptr // *node - global free list (across all pages in class)
 	prevInPage, nextInPage uintptr // *node - per-page free list (only slots from same page)
 }
 
@@ -48,15 +50,15 @@ type page_header struct {
 
 // Allocator allocates and frees memory. Its zero value is ready for use.
 type Allocator struct {
-	Allocs        int      // # of allocs.
-	Bytes         int      // Asked from OS.
+	Allocs        int // # of allocs.
+	Bytes         int // Asked from OS.
 	cap           []uint32
 	lists         []uintptr // *node - free lists per size class
 	Mmaps         int       // Asked from OS.
 	pages         []uintptr // *page - current page per size class
 	classIdx      []byte
 	maxSharedSize int
-	
+
 	// Defragmentation optimization fields
 	firstPage []uintptr // first page in linked list per class
 	lastPage  []uintptr // last page in linked list per class
@@ -89,7 +91,7 @@ func NewAllocator() (a *Allocator) {
 	a.cap = make([]uint32, len(sizeClassSlotSize))
 	a.lists = make([]uintptr, len(sizeClassSlotSize))
 	a.pages = make([]uintptr, len(sizeClassSlotSize))
-	
+
 	// Initialize defragmentation optimization fields
 	a.firstPage = make([]uintptr, len(sizeClassSlotSize))
 	a.lastPage = make([]uintptr, len(sizeClassSlotSize))
