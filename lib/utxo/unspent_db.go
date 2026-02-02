@@ -71,6 +71,11 @@ type UnspentDB struct {
 	ComprssedUTXO       bool
 	DoNotWriteUndoFiles bool
 	undo_dir_created    bool
+
+	mag2defrag    int
+	mapDefragsCnt int
+	recDefragsCnt int
+	recDefragsTot int
 }
 
 type NewUnspentOpts struct {
@@ -456,6 +461,22 @@ func (db *UnspentDB) Defrag(recs []*[]byte) {
 		db.HashMap[ind[0]][ind] = r
 		db.MapMutex[ind[0]].Unlock()
 	}
+	db.recDefragsCnt++
+	db.recDefragsTot += len(recs)
+}
+
+func (db *UnspentDB) DefragMap() {
+	//db.Mutex.Lock()
+	db.MapMutex[db.mag2defrag].Lock()
+	new_map := make(map[UtxoKeyType]*[]byte, len(db.HashMap[db.mag2defrag]))
+	for k, v := range db.HashMap[db.mag2defrag] {
+		new_map[k] = v
+	}
+	db.HashMap[db.mag2defrag] = new_map
+	db.MapMutex[db.mag2defrag].Unlock()
+	db.mag2defrag = (db.mag2defrag + 1) % len(db.HashMap)
+	db.mapDefragsCnt++
+	//db.Mutex.Unlock()
 }
 
 func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
@@ -828,6 +849,8 @@ func (db *UnspentDB) GetStats() (s string) {
 		len(db.abortwritingnow) > 0, db.ComprssedUTXO)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
+	s += fmt.Sprintf(" Defrags:  Maps:%d    Records: %d recs (in %d rounds)\n",
+		db.mapDefragsCnt, db.recDefragsTot, db.recDefragsCnt)
 	return
 }
 
