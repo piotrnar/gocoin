@@ -852,10 +852,11 @@ func (db *UnspentDB) UTXOStats() string {
 
 // GetStats returns DB statistics.
 func (db *UnspentDB) GetStats() (s string) {
-	var hml int
+	var hml, dels int
 	for i := range db.HashMap {
 		db.MapMutex[i].RLock()
 		hml += len(db.HashMap[i])
+		dels += db.DeletedRecords[i]
 		db.MapMutex[i].RUnlock()
 	}
 
@@ -864,8 +865,8 @@ func (db *UnspentDB) GetStats() (s string) {
 		len(db.abortwritingnow) > 0, db.ComprssedUTXO)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	s += fmt.Sprintf(" Defrags:  Maps:%d (%d no) in %s   Records: %d recs (in %d rounds)\n",
-		db.mapDefragsCnt, db.mapNoDefragsCnt, db.mapDefragsTime.String(),
+	s += fmt.Sprintf(" Defrags:  Maps:%d (%d no) in %s (%d%% dels)   Records: %d recs (in %d rounds)\n",
+		db.mapDefragsCnt, db.mapNoDefragsCnt, db.mapDefragsTime.String(), 100*dels/hml,
 		db.recDefragsTot, db.recDefragsCnt)
 	return
 }
