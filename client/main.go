@@ -104,7 +104,7 @@ func defrag_utxo() {
 		common.UpdateMemoryLimit()
 		common.UnlockCfg()
 	}
-	if time.Since(lastMapDefragDone) > 2*time.Second {
+	if time.Since(lastMapDefragDone) > time.Second {
 		common.BlockChain.Unspent.DefragMap(false)
 		lastMapDefragDone = time.Now()
 	}
