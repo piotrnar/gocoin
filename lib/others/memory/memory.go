@@ -18,7 +18,7 @@ const (
 	pageAvail       = pageSize - headerSize
 	pageMask        = pageSize - 1
 	pageSize        = 1 << pageSizeLog
-	sizeAdjustement = 8 // part of the UTXO record may be stored as map's key and need to be substracted
+	sizeAdjustement = 0 // part of the UTXO record may be stored as map's key and need to be substracted
 )
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
