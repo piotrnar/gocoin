@@ -85,7 +85,6 @@ type NewUnspentOpts struct {
 	CB              CallbackFunctions
 	AbortNow        *bool
 	Dir             string
-	RecordsPrealloc uint
 	Rescan          bool
 	VolatimeMode    bool
 	CompressRecords bool
@@ -112,7 +111,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	db.ComprssedUTXO = opts.CompressRecords
 	if opts.Rescan {
 		for i := range db.HashMap {
-			db.HashMap[i] = make(map[UtxoKeyType]*[]byte, opts.RecordsPrealloc/256)
+			db.HashMap[i] = make(map[UtxoKeyType]*[]byte)
 		}
 		return
 	}
@@ -262,7 +261,7 @@ fatal_error:
 	db.LastBlockHeight = 0
 	db.LastBlockHash = nil
 	for i := range db.HashMap {
-		db.HashMap[i] = make(map[UtxoKeyType]*[]byte, opts.RecordsPrealloc/256)
+		db.HashMap[i] = make(map[UtxoKeyType]*[]byte)
 	}
 
 	return
