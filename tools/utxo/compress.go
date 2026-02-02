@@ -53,11 +53,11 @@ func one_map(i int) {
 	)
 
 	for k, v := range db.HashMap[i] {
-		utxo.NewUtxoRecOwn(k, v, &rec, &sta_cbs)
+		utxo.NewUtxoRecOwn(*v, &rec, &sta_cbs)
 		if compress {
-			db.HashMap[i][k] = utxo.SerializeC(&rec, false, nil)
+			db.HashMap[i][k] = utxo.SerializeC(&rec, nil)
 		} else {
-			db.HashMap[i][k] = utxo.SerializeU(&rec, false, nil)
+			db.HashMap[i][k] = utxo.SerializeU(&rec, nil)
 		}
 		if gc == -1 {
 			utxo.Memory_Free(v)

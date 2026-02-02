@@ -611,7 +611,7 @@ func utxo_defrag(par string) {
 	fmt.Print("Defragmenting UTXO maps ... ")
 	sta = time.Now()
 	for range common.BlockChain.Unspent.HashMap {
-		common.BlockChain.Unspent.DefragMap()
+		common.BlockChain.Unspent.DefragMap(true)
 	}
 	fmt.Println("took", time.Since(sta).String())
 	fmt.Printf("UTXO Records Defragmented %d times, to save %d MB - took %s / %s\n",
