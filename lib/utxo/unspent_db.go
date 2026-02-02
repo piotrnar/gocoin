@@ -469,6 +469,9 @@ func (db *UnspentDB) Defrag(recs [][]byte) {
 
 // Only call it from the main thread
 func (db *UnspentDB) DefragMap(force bool) {
+	if db.WritingInProgress.Get() {
+		return
+	}
 	//db.Mutex.Lock()
 	sta := time.Now()
 	db.MapMutex[db.mag2defrag].Lock()
