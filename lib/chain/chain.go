@@ -14,14 +14,14 @@ import (
 var AbortNow bool // set it to true to abort any activity
 
 type Chain struct {
-	Blocks  *BlockDB        // blockchain.dat and blockchain.idx
-	Unspent *utxo.UnspentDB // unspent folder
-	BlockTreeRoot   *BlockTreeNode
-	blockTreeEnd    *BlockTreeNode
-	Genesis         *btc.Uint256
-	BlockIndex       map[[btc.Uint256IdxLen]byte]*BlockTreeNode
-	CB NewChanOpts // callbacks used by Unspent database
-	Consensus struct {
+	Blocks        *BlockDB        // blockchain.dat and blockchain.idx
+	Unspent       *utxo.UnspentDB // unspent folder
+	BlockTreeRoot *BlockTreeNode
+	blockTreeEnd  *BlockTreeNode
+	Genesis       *btc.Uint256
+	BlockIndex    map[[btc.Uint256IdxLen]byte]*BlockTreeNode
+	CB            NewChanOpts // callbacks used by Unspent database
+	Consensus     struct {
 		MaxPOWValue                         *big.Int
 		Window, EnforceUpgrade, RejectBlock uint
 		MaxPOWBits                          uint32
@@ -34,7 +34,7 @@ type Chain struct {
 		BIP65Height                         uint32
 		BIP66Height                         uint32
 	}
-	blockTreeAccess sync.Mutex
+	blockTreeAccess  sync.Mutex
 	BlockIndexAccess sync.Mutex
 }
 
@@ -44,9 +44,8 @@ type NewChanOpts struct {
 	BlockUndoneCB    func(*btc.Block) // used to put undone txs back into memory pool
 	UtxoFilesSubdir  string
 	UndoBlocks       uint // undo this many blocks when opening the chain
-	UTXOPrealloc     uint
 	UTXOVolatileMode bool
-	DoNotRescan      bool             // when set UTXO will not be automatically updated with new block found on disk
+	DoNotRescan      bool // when set UTXO will not be automatically updated with new block found on disk
 	CompressUTXO     bool
 }
 
@@ -100,7 +99,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	ch.Unspent = utxo.NewUnspentDb(&utxo.NewUnspentOpts{
 		Dir: dbrootdir, Rescan: rescan, VolatimeMode: opts.UTXOVolatileMode,
 		CB: opts.UTXOCallbacks, AbortNow: &AbortNow,
-		CompressRecords: opts.CompressUTXO, RecordsPrealloc: opts.UTXOPrealloc})
+		CompressRecords: opts.CompressUTXO})
 
 	if AbortNow {
 		return
