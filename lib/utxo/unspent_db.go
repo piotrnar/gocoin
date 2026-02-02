@@ -51,6 +51,7 @@ type BlockChanges struct {
 
 type UnspentDB struct {
 	HashMap         [256](map[UtxoKeyType][]byte)
+	DeletedRecords  [256]int // used to decide whether to defragment the map
 	CB              CallbackFunctions
 	hurryup         chan bool
 	abortwritingnow chan bool
@@ -71,10 +72,11 @@ type UnspentDB struct {
 	DoNotWriteUndoFiles bool
 	undo_dir_created    bool
 
-	mag2defrag    int
-	mapDefragsCnt int
-	recDefragsCnt int
-	recDefragsTot int
+	mag2defrag      int
+	mapDefragsCnt   int
+	mapNoDefragsCnt int
+	recDefragsCnt   int
+	recDefragsTot   int
 }
 
 type NewUnspentOpts struct {
@@ -461,19 +463,27 @@ func (db *UnspentDB) Defrag(recs [][]byte) {
 		db.HashMap[ind[0]][ind] = r[:len(v)]
 		db.MapMutex[ind[0]].Unlock()
 	}
+	db.recDefragsCnt++
+	db.recDefragsTot += len(recs)
 }
 
-func (db *UnspentDB) DefragMap() {
+// Only call it from the main thread
+func (db *UnspentDB) DefragMap(force bool) {
 	//db.Mutex.Lock()
 	db.MapMutex[db.mag2defrag].Lock()
-	new_map := make(map[UtxoKeyType][]byte, len(db.HashMap[db.mag2defrag]))
-	for k, v := range db.HashMap[db.mag2defrag] {
-		new_map[k] = v
+	if force || 4*db.DeletedRecords[db.mag2defrag] > len(db.HashMap[db.mag2defrag]) {
+		new_map := make(map[UtxoKeyType][]byte, len(db.HashMap[db.mag2defrag]))
+		for k, v := range db.HashMap[db.mag2defrag] {
+			new_map[k] = v
+		}
+		db.HashMap[db.mag2defrag] = new_map
+		db.DeletedRecords[db.mag2defrag] = 0
+		db.mapDefragsCnt++
+	} else {
+		db.mapNoDefragsCnt++
 	}
-	db.HashMap[db.mag2defrag] = new_map
 	db.MapMutex[db.mag2defrag].Unlock()
 	db.mag2defrag = (db.mag2defrag + 1) % len(db.HashMap)
-	db.mapDefragsCnt++
 	//db.Mutex.Unlock()
 }
 
@@ -490,6 +500,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 			copy(ind[:], tx.Hash.Hash[:])
 			db.MapMutex[ind[0]].Lock()
 			delete(db.HashMap[ind[0]], ind)
+			db.DeletedRecords[ind[0]]++
 			db.MapMutex[ind[0]].Unlock()
 		}
 	} else {
@@ -557,6 +568,7 @@ func (db *UnspentDB) Idle() bool {
 		return false
 	}
 
+	db.DefragMap(false)
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
 
@@ -645,6 +657,8 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 		db.HashMap[ind[0]][ind] = Serialize(rec, nil)
 	} else {
 		delete(db.HashMap[ind[0]], ind)
+		db.DeletedRecords[ind[0]]++
+
 	}
 	db.MapMutex[ind[0]].Unlock()
 	Memory_Free(v)
@@ -847,8 +861,8 @@ func (db *UnspentDB) GetStats() (s string) {
 		len(db.abortwritingnow) > 0, db.ComprssedUTXO)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	s += fmt.Sprintf(" Defrags:  Maps:%d    Records: %d recs (in %d rounds)\n",
-		db.mapDefragsCnt, db.recDefragsTot, db.recDefragsCnt)
+	s += fmt.Sprintf(" Defrags:  Maps:%d (%d no)   Records: %d recs (in %d rounds)\n",
+		db.mapDefragsCnt, db.mapNoDefragsCnt, db.recDefragsTot, db.recDefragsCnt)
 	return
 }
 
@@ -878,6 +892,7 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 			if !spendable_found {
 				Memory_Free(v)
 				delete(db.HashMap[k[0]], k)
+				db.DeletedRecords[k[0]]++
 				unspendable_txs++
 			} else if record_removed > 0 {
 				db.HashMap[k[0]][k] = Serialize(rec, nil)
