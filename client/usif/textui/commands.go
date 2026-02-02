@@ -604,16 +604,18 @@ func utxo_defrag(par string) {
 
 	cmds := strings.Split(par, " ")
 	for _, cmd := range cmds {
-		switch cmd {
-		case "map":
-			dmap = true
-		case "mem":
-		case "rec":
-			dmem = true
-		case "all":
-			dmem, dmap = true, true
-		default:
-			println("unknown command:", cmd, " (map/rec, mem or all)")
+		if strings.Trim(cmd, " ") != "" {
+			switch cmd {
+			case "map":
+				dmap = true
+			case "mem":
+			case "rec":
+				dmem = true
+			case "all":
+				dmem, dmap = true, true
+			default:
+				println("unknown command:", cmd, " (map/rec, mem or all)")
+			}
 		}
 	}
 

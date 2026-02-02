@@ -164,12 +164,12 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			if (common.Last.Block.Height % div) == 0 {
 				b, _, ms := common.MemUsed()
 				common.MemMutex.Lock()
-				db, c, t, tt := common.DefragBytes, common.DefragCount, common.DefragTime, common.DefragTotime
+				db, tt := common.DefragBytes, common.DefragTotime
 				common.MemMutex.Unlock()
-				fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(),
-					"Queue:", len(network.NetBlocks),
-					" UTXO:", b>>20, "/", ms, " SYS:", memsize.MustResidentMemory()>>20, "MB",
-					" Def", c, "/", db>>20, "MB -", tt.String(), "/", t.String())
+				fmt.Println("Parsing to", common.Last.Block.Height,
+					"took", time.Since(newbl.TmStart).String(), " QUE:", len(network.NetBlocks),
+					" UTX:", b>>20, "/", ms, " SYS:", memsize.MustResidentMemory()>>20, "MB",
+					" DEF:", db>>20, "MB /", tt.String())
 			}
 		}
 
