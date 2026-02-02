@@ -110,7 +110,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	db.ComprssedUTXO = opts.CompressRecords
 	if opts.Rescan {
 		for i := range db.HashMap {
-			db.HashMap[i] = make(map[UtxoKeyType][]byte)
+			db.HashMap[i] = make(map[UtxoKeyType][]byte, 100e3)
 		}
 		return
 	}
@@ -260,7 +260,7 @@ fatal_error:
 	db.LastBlockHeight = 0
 	db.LastBlockHash = nil
 	for i := range db.HashMap {
-		db.HashMap[i] = make(map[UtxoKeyType][]byte)
+		db.HashMap[i] = make(map[UtxoKeyType][]byte, 100e3)
 	}
 
 	return
@@ -475,7 +475,7 @@ func (db *UnspentDB) DefragMap(force bool) {
 	//db.Mutex.Lock()
 	sta := time.Now()
 	db.MapMutex[db.mag2defrag].Lock()
-	if force || 2*db.DeletedRecords[db.mag2defrag] > len(db.HashMap[db.mag2defrag]) {
+	if force || (len(db.HashMap[db.mag2defrag]) > 100e3 && 4*db.DeletedRecords[db.mag2defrag] > len(db.HashMap[db.mag2defrag])) {
 		new_map := make(map[UtxoKeyType][]byte, len(db.HashMap[db.mag2defrag]))
 		for k, v := range db.HashMap[db.mag2defrag] {
 			new_map[k] = v
