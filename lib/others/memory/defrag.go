@@ -2,6 +2,7 @@ package memory
 
 import (
 	"fmt"
+	"reflect"
 	"sort"
 	"unsafe"
 )
@@ -18,7 +19,7 @@ type pageUtilization struct {
 }
 
 // Defrag performs defragmentation for a specific size class
-func (a *Allocator) Defrag(class int) [][]byte {
+func (a *Allocator) Defrag(class int) []*[]byte {
 	const minFreePages = 10    // minimum free pages to keep after defrag
 	const minUtilization = 0.5 // only defrag pages below 50% utilization
 
@@ -159,7 +160,7 @@ func (a *Allocator) Defrag(class int) [][]byte {
 
 	// Step 7: Evacuate all pages
 	slotSize := int(sizeClassSlotSize[class])
-	relocations := make([][]byte, 0, recordsToMove)
+	relocations := make([]*[]byte, 0, recordsToMove)
 
 	for idx := range evacPages {
 		pg := evacPages[idx].pg
@@ -184,11 +185,17 @@ func (a *Allocator) Defrag(class int) [][]byte {
 			}
 
 			// Copy data
-			oldSlice := unsafe.Slice((*byte)(unsafe.Pointer(slotAddr)), slotSize)
-			newSlice := unsafe.Slice((*byte)(unsafe.Pointer(newAddr)), slotSize)
-			copy(newSlice, oldSlice)
+			//oldSlice := unsafe.Slice((*byte)(unsafe.Pointer(slotAddr)), slotSize)
+			oldSlice := (*reflect.SliceHeader)(unsafe.Pointer(slotAddr))
+			//newSlice := unsafe.Slice((*byte)(unsafe.Pointer(newAddr)), slotSize)
+			newSlice := (*reflect.SliceHeader)(unsafe.Pointer(newAddr))
+			newSlice.Cap = oldSlice.Cap
+			newSlice.Data = uintptr(newAddr + 24)
+			newSlice.Len = oldSlice.Cap
+			ns := (*[]byte)(unsafe.Pointer(newSlice))
+			copy(*ns, *((*[]byte)(unsafe.Pointer(oldSlice))))
 
-			relocations = append(relocations, newSlice)
+			relocations = append(relocations, ns)
 
 			// Free old slot
 			if err := a.UintptrFree(slotAddr); err != nil {
@@ -247,8 +254,8 @@ func (a *Allocator) Defrag(class int) [][]byte {
 }
 
 // DefragAllImproved defragments all classes
-func (a *Allocator) DefragAllImproved() [][]byte {
-	var allRelocations [][]byte
+func (a *Allocator) DefragAllImproved() []*[]byte {
+	var allRelocations []*[]byte
 	bytesBefore := a.Bytes
 
 	for class := range sizeClassSlotSize {

@@ -2,6 +2,7 @@ package memory
 
 import (
 	"fmt"
+	"reflect"
 	"unsafe"
 )
 
@@ -154,12 +155,18 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 }
 
 // Malloc allocates size bytes and returns a byte slice.
-func (a *Allocator) Malloc(size int) (r []byte, err error) {
+func (a *Allocator) Malloc(size int) (r *[]byte, err error) {
+	size += 24
 	p, err := a.UintptrMalloc(size)
 	if p == 0 || err != nil {
 		return nil, err
 	}
 
-	r = unsafe.Slice((*byte)(unsafe.Pointer(p)), size)
-	return r[:size], nil
+	//r = unsafe.Slice((*byte)(unsafe.Pointer(p)), size)
+	//return r[:size], nil
+	sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
+	sh.Cap = size - 24
+	sh.Data = uintptr(p + 24)
+	sh.Len = size - 24
+	return (*[]byte)(unsafe.Pointer(sh)), nil
 }

@@ -77,7 +77,7 @@ var (
 var (
 	NewUtxoRecOwn func([]byte, *UtxoRec, *NewUtxoOutAllocCbs)     = NewUtxoRecOwnU
 	OneUtxoRec    func(dat []byte, vout uint32) *btc.TxOut        = OneUtxoRecU
-	Serialize     func(rec *UtxoRec, use_buf []byte) (buf []byte) = SerializeU
+	Serialize     func(rec *UtxoRec, use_buf []byte) (buf *[]byte) = SerializeU
 )
 
 func NewUtxoRecStatic(dat []byte) *UtxoRec {

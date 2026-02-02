@@ -36,7 +36,7 @@ func do_the_thing(db *utxo.UnspentDB, i int, tmp *uint32) {
 	)
 	var ttt uint32
 	for k, v := range db.HashMap[i] {
-		utxo.NewUtxoRecOwn(k, v, &sta_rec, &sta_cbs)
+		utxo.NewUtxoRecOwn(k, *v, &sta_rec, &sta_cbs)
 		ttt += sta_rec.InBlock
 	}
 	atomic.AddUint32(tmp, ttt)
@@ -79,7 +79,7 @@ func utxo_benchmark(dir string) {
 	sta = time.Now()
 	for i := range db.HashMap {
 		for _, v := range db.HashMap[i] {
-			tmp += binary.LittleEndian.Uint32(v)
+			tmp += binary.LittleEndian.Uint32(*v)
 		}
 	}
 	println("\rGoing through the map for the slice done in", time.Since(sta).String(), tmp)
@@ -120,7 +120,7 @@ func utxo_benchmark(dir string) {
 	sta = time.Now()
 	for i := range db.HashMap {
 		for k, v := range db.HashMap[i] {
-			tmp += utxo.NewUtxoRecStatic(k, v).InBlock
+			tmp += utxo.NewUtxoRecStatic(k, *v).InBlock
 		}
 	}
 	println("\rDecoding all records in static mode done in", time.Since(sta).String(), tmp)
@@ -133,7 +133,7 @@ func utxo_benchmark(dir string) {
 		go func(i int) {
 			var ttt uint32
 			for k, v := range db.HashMap[i] {
-				ttt += utxo.NewUtxoRec(k, v).InBlock
+				ttt += utxo.NewUtxoRec(k, *v).InBlock
 			}
 			atomic.AddUint32(&tmp, ttt)
 			wg.Done()
@@ -147,7 +147,7 @@ func utxo_benchmark(dir string) {
 	sta = time.Now()
 	for i := range db.HashMap {
 		for k, v := range db.HashMap[i] {
-			tmp += utxo.NewUtxoRec(k, v).InBlock
+			tmp += utxo.NewUtxoRec(k, *v).InBlock
 		}
 	}
 	println("\rDecoding all records in dynamic mode done in", time.Since(sta).String(), tmp)

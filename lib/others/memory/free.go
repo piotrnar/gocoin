@@ -116,10 +116,6 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 }
 
 // Free deallocates memory (as in C.free).
-func (a *Allocator) Free(b []byte) (err error) {
-	if b = b[:cap(b)]; len(b) == 0 {
-		return nil
-	}
-
-	return a.UintptrFree(uintptr(unsafe.Pointer(&b[0])))
+func (a *Allocator) Free(b *[]byte) (err error) {
+	return a.UintptrFree(uintptr(unsafe.Pointer(b)))
 }
