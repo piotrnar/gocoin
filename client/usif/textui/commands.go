@@ -599,12 +599,25 @@ func utxo_mem(par string) {
 	common.MemMutex.Unlock()
 }
 
-func utxo_defrag_info(par string) {
-	common.MemMutex.Lock()
-	fmt.Printf(" Defragmented %d times, to save %d MB - took %s / %s\n",
+func utxo_defrag(par string) {
+	sta := time.Now()
+	if common.MemoryModUsed {
+		fmt.Print("Defragmenting UTXO records ... ")
+		common.DefragUTXOMem()
+		fmt.Println("took", time.Since(sta).String())
+	} else {
+		fmt.Println("UTXO records of Go heap (dont need derfagmenting)")
+	}
+	fmt.Print("Defragmenting UTXO maps ... ")
+	sta = time.Now()
+	for range common.BlockChain.Unspent.HashMap {
+		common.BlockChain.Unspent.DefragMap()
+	}
+	fmt.Println("took", time.Since(sta).String())
+	fmt.Printf("UTXO Records Defragmented %d times, to save %d MB - took %s / %s\n",
 		common.DefragCount, common.DefragBytes>>20, common.DefragTotime.String(),
 		common.DefragTime.String())
-	common.MemMutex.Unlock()
+	fmt.Print(common.BlockChain.Unspent.GetStats())
 }
 
 func init() {
@@ -630,5 +643,5 @@ func init() {
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics [mem]")
 	newUi("web", true, webui_stats, "Show WebUI access statistics")
 	newUi("um utxomem", true, utxo_mem, "Show UTXO memory heap stats")
-	newUi("d defraginfo", true, utxo_defrag_info, "Show UTXO memory defrag info")
+	newUi("d defrag", true, utxo_defrag, "Defragment UTXO")
 }
