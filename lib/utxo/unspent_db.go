@@ -475,7 +475,7 @@ func (db *UnspentDB) DefragMap(force bool) {
 	//db.Mutex.Lock()
 	sta := time.Now()
 	db.MapMutex[db.mag2defrag].Lock()
-	if force || (len(db.HashMap[db.mag2defrag]) > 100e3 && 4*db.DeletedRecords[db.mag2defrag] > len(db.HashMap[db.mag2defrag])) {
+	if force || (len(db.HashMap[db.mag2defrag]) > 100e3 && 2*db.DeletedRecords[db.mag2defrag] > len(db.HashMap[db.mag2defrag])) {
 		new_map := make(map[UtxoKeyType]*[]byte, len(db.HashMap[db.mag2defrag]))
 		for k, v := range db.HashMap[db.mag2defrag] {
 			new_map[k] = v
