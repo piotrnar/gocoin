@@ -567,13 +567,12 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 	db.DirtyDB.Set()
 }
 
-// Idle should be called when the main thread is idle.
+// Idle should be called when the main thread is idle to trigger UTXO.db saving
 func (db *UnspentDB) Idle() bool {
 	if db.volatimemode {
 		return false
 	}
 
-	db.DefragMap(false)
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
 

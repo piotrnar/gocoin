@@ -747,7 +747,8 @@ func main() {
 
 		retry_blocks_now := make(chan struct{}, 1)
 
-		startup_ticks := 5 // give 5 seconds for finding out missing blocks
+		startup_ticks := 5                   // give 5 seconds for finding out missing blocks
+		utxoDefrag := time.Tick(time.Minute) // once a minute check one map / 256 min for them all
 		for !usif.Exit_now.Get() {
 			common.Busy()
 
@@ -849,6 +850,9 @@ func main() {
 				common.Busy()
 				peersdb.ExpirePeers()
 				usif.ExpireBlockFees()
+
+			case <-utxoDefrag:
+				common.BlockChain.Unspent.DefragMap(false)
 
 			case on := <-wallet.OnOff:
 				common.Busy()
