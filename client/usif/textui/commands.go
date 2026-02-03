@@ -619,12 +619,22 @@ func utxo_defrag(par string) {
 		}
 	}
 
+	showmemuse := func() {
+		gomem, _ := sys.MemUsed()
+		utxomem, _, utxomaps := common.MemUsed()
+		fmt.Printf("Current SYS memory usage: %d MB = %d Go + %d UTXO (%d mmaps)\n",
+			memsize.MustResidentMemory()>>20, gomem>>20, utxomem>>20, utxomaps)
+	}
+
+	showmemuse()
+
 	if dmem {
 		sta := time.Now()
 		if common.MemoryModUsed {
 			fmt.Print("Defragmenting UTXO records ... ")
 			common.DefragUTXOMem()
 			fmt.Println("took", time.Since(sta).String())
+			showmemuse()
 		} else {
 			fmt.Println("UTXO records of Go heap (dont need derfagmenting)")
 		}
@@ -636,6 +646,7 @@ func utxo_defrag(par string) {
 			common.BlockChain.Unspent.DefragMap(true)
 		}
 		fmt.Println("took", time.Since(sta).String())
+		showmemuse()
 	}
 	fmt.Printf("UTXO Records Defragmented %d times, to save %d MB - took %s / %s\n",
 		common.DefragCount, common.DefragBytes>>20, common.DefragTotime.String(),
