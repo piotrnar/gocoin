@@ -10,6 +10,11 @@ import (
 	"unsafe"
 )
 
+// sizeClassSlotSize maps class index -> actual slot size in bytes
+var sizeClassSlotSize = []uint32{
+	72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 257, 264, 272, 280, 289, 297, 305, 313, 320, 328, 337, 346, 352, 361, 368, 377, 385, 393, 401, 409, 418, 424, 434, 440, 450, 457, 464, 472, 483, 491, 499, 504, 512, 531, 545, 560, 576, 593, 611, 624, 644, 658, 672, 695, 711, 720, 737, 755, 774, 784, 805, 826, 837, 849, 873, 885, 898, 925, 939, 953, 968, 983, 999, 1015, 1032, 1067, 1105, 1125, 1166, 1188, 1235, 1260, 1285, 1312, 1369, 1399, 1431, 1464, 1499, 1535, 1573, 1613, 1655, 1699, 1746, 1795, 1847, 1902, 1960, 2022, 2088, 2159, 2234, 2315, 2401, 2495, 2595, 2705, 2823, 2953, 3094, 3250, 3423, 3614, 3828, 4069, 4342, 4654, 5014, 5434, 5930, 6525, 7253, 8163, 9332, 10892, 13075, 16350, 21808, 32724,
+}
+
 const (
 	_MEM_COMMIT   = 0x1000
 	_MEM_RESERVE  = 0x2000
@@ -44,11 +49,11 @@ var (
 	procVirtualAlloc  = modkernel32.NewProc("VirtualAlloc")
 	procVirtualAlloc2 = modkernelbase.NewProc("VirtualAlloc2")
 	procVirtualFree   = modkernel32.NewProc("VirtualFree")
-	mmap func(int) (uintptr, int, error)
+	mmap              func(int) (uintptr, int, error)
 )
 
 func init() {
-	if pageSizeLog==16 {
+	if pageSizeLog == 16 {
 		mmap = mmap64
 		println("Using VirtualAlloc for 64 KB pages")
 	} else {

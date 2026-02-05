@@ -18,13 +18,8 @@ const (
 	pageAvail    = pageSize - headerSize
 	pageMask     = pageSize - 1
 	pageSize     = 1 << pageSizeLog
-	sizeIncrease = 24 // part of the UTXO record may be stored as map's key and need to be substracted
+	sizeIncrease = unsafe.Sizeof([]byte{})
 )
-
-// sizeClassSlotSize maps class index -> actual slot size in bytes
-var sizeClassSlotSize = []uint32{
-	72, 80, 96, 104, 112, 120, 128, 136, 152, 160, 168, 184, 200, 216, 240, 264, 288, 312, 352, 400, 432, 512, 624, 704, 832, 944, 1152, 1408, 1600, 1760, 2016, 2432, 2880, 3072, 3456, 4032, 4480, 5376, 6016, 7040, 8192, 9216, 10240, 12032, 14080, 16128, 17920, 20992, 24576, 28672, 32768,
-}
 
 type node struct {
 	prev, next             uintptr // *node - global free list (across all pages in class)
@@ -116,27 +111,8 @@ func NewAllocator() (a *Allocator) {
 }
 
 func init() {
-	// discard records that would be less then half of available page space
-	max_class_size := ((1<<pageSizeLog)-uint32(headerSize))/2 - sizeIncrease
-	println("max class size", max_class_size)
-	println("page size:", (1 << pageSizeLog), " page header size:", headerSize, "  max class size:", max_class_size)
-	print(len(sizeClassSlotSize), " slot sizes: ")
-	for _, ss := range sizeClassSlotSize {
-		print(ss, ", ")
-	}
-	println()
-	if sizeClassSlotSize[len(sizeClassSlotSize)-1]+sizeIncrease > max_class_size {
-		for mx := len(sizeClassSlotSize) - 1; mx > 0; mx-- {
-			if sizeClassSlotSize[mx-1]+sizeIncrease <= max_class_size {
-				sizeClassSlotSize = sizeClassSlotSize[:mx]
-				println("sizeClassSlotSize trimmed to", len(sizeClassSlotSize), "records")
-				break
-			}
-		}
-	}
-
-	// adjust slot sizes according to the actually expected alloc sizes
+	// add the slice header to each slot size
 	for i := range sizeClassSlotSize {
-		sizeClassSlotSize[i] -= sizeIncrease
+		sizeClassSlotSize[i] += uint32(sizeIncrease)
 	}
 }
