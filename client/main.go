@@ -620,11 +620,6 @@ func main() {
 
 	host_init() // This will create the DB lock file and keep it open
 
-	if common.MemoryModUsed && common.CheckMemory() {
-		println("memory corrupt after init")
-		os.Exit(1)
-	}
-
 	os.RemoveAll(common.TempBlocksDir())
 	common.MkTempBlocksDir()
 

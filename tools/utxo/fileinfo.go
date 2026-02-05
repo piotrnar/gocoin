@@ -42,7 +42,7 @@ func decode_utxo_header(fn string) {
 
 	align := func(size uint64) uint64 {
 		ali := uint64(8)
-		msiz := uint64(512)
+		msiz := uint64(1024)
 		for {
 			if size < msiz {
 				return (size + (ali - 1)) & ^(ali - 1)
@@ -65,22 +65,10 @@ func decode_utxo_header(fn string) {
 			println(er.Error())
 			return
 		}
-		if le > 65536 {
+		if spare[0] == 0x6a || le > 65536 {
 			continue
 		}
 		le = align(le)
-		/*if le < 256 {
-			le = (le + 7) & 0xfffffff8
-		} else if le < 1024 {
-			le = (le + 15) & 0xfffffff0
-		} else if le < 4096 {
-			le = (le + 31) & 0xffffffe0
-		} else if le < 65536 {
-			//le = (le + 1023) & 0xfffff000
-			le = (le + 63) & 0xffffffc0
-		} else {
-			le = 65536
-		}*/
 		lens[int(le)]++
 	}
 	fmt.Println("\rMap length:", len(lens))

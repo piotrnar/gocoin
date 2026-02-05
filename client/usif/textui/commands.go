@@ -595,7 +595,7 @@ func webui_stats(par string) {
 
 func utxo_mem(par string) {
 	common.MemMutex.Lock()
-	common.Memory.PrintStats()
+	fmt.Print(common.Memory.GetInfo())
 	common.MemMutex.Unlock()
 }
 
@@ -661,6 +661,7 @@ func init() {
 	newUi("configsave sc", false, save_config, "Save current settings to the config file")
 	newUi("configset cfg", false, set_config, "Set a specific config value: use JSON, omit top {}")
 	newUi("counters c", false, show_counters, "Show internal debug counters [prefix]")
+	newUi("defrag d", true, utxo_defrag, "Defragment UTXO or show stats [rec|mem] [map] [all]")
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")
 	newUi("inv", false, send_inv, "Send inv message to all the peers - specify type & hash")
@@ -674,8 +675,7 @@ func init() {
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
 	newUi("trust", true, switch_trust, "Assume all downloaded blocks trusted: 0|1")
 	newUi("undo", true, undo_block, "Undo one block")
-	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics [mem]")
+	newUi("utxodb u", true, blchain_utxodb, "Display UTXO-db statistics [mem]")
+	newUi("utxomem um", true, utxo_mem, "Show UTXO memory heap stats")
 	newUi("web", true, webui_stats, "Show WebUI access statistics")
-	newUi("um utxomem", true, utxo_mem, "Show UTXO memory heap stats")
-	newUi("d defrag", true, utxo_defrag, "Defragment UTXO or show stats [rec|mem] [map] [all]")
 }
