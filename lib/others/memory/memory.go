@@ -83,23 +83,26 @@ func getSlotSize(class int) uint32 {
 	return 0
 }
 
-func (a *Allocator) GetInfo() string {
+func (a *Allocator) GetInfo(verbose bool) string {
 	var pcnt, scnt, fcnt int
 	w := new(bytes.Buffer)
 	for class := range sizeClassSlotSize {
 		siz := int(sizeClassSlotSize[class])
-		fmt.Fprintf(w, "%3d)  siz: %-5d   cap: %-5d  pagCnt: %-6d   freeSl: %-6d   waste: %2.1f pages\n",
-			class, siz, a.cap[class], a.pageCount[class], a.freeSlots[class],
-			float64(a.freeSlots[class])/float64(a.cap[class]))
+		if verbose {
+			fmt.Fprintf(w, "%3d)  siz: %-5d   cap: %-5d  pagCnt: %-6d   freeSl: %-6d   waste: %2.1f pages\n",
+				class, siz, a.cap[class], a.pageCount[class], a.freeSlots[class],
+				float64(a.freeSlots[class])/float64(a.cap[class]))
+		}
 		pcnt += int(a.pageCount[class])
 		scnt += int(a.pageCount[class]) * int(a.cap[class]) * siz
 		fcnt += int(a.freeSlots[class]) * siz
 	}
-	fmt.Fprintf(w, "Bytes: %d,   Allocs: %d,    Maps: %d,    MaxSize: %d\n",
+	fmt.Fprintf(w, "Bytes: %d,  Allocs: %d,  Maps: %d,  MaxSize: %d\n",
 		a.Bytes, a.Allocs, a.Mmaps, a.maxSharedSize)
-	fmt.Fprintf(w, "Page Header Size: %d,   Slot Extra Size: %d,   \n",
-		headerSize, sizeIncrease)
-	fmt.Fprintf(w, "Total slots: %d MB,  pages: %d,   free slots: %d MB\n", scnt>>20, pcnt, fcnt>>20)
+	fmt.Fprintf(w, "Page Header Size: %d,   Slot Extra Size: %d,   Page Size: %d\n",
+		headerSize, sizeIncrease, pageSize)
+	fmt.Fprintf(w, "Classes: %d,  Total slots: %d MB,  pages: %d,   free slots: %d MB\n",
+		len(sizeClassSlotSize), scnt>>20, pcnt, fcnt>>20)
 	return w.String()
 }
 func NewAllocator() (a *Allocator) {
@@ -132,11 +135,6 @@ func NewAllocator() (a *Allocator) {
 }
 
 func init() {
-	print(len(sizeClassSlotSize), " slot sizes: ")
-	for _, ss := range sizeClassSlotSize {
-		print(ss, ", ")
-	}
-	println()
 	// add the slice header to each slot size
 	for i := range sizeClassSlotSize {
 		sizeClassSlotSize[i] += uint32(sizeIncrease)
