@@ -111,6 +111,11 @@ func NewAllocator() (a *Allocator) {
 }
 
 func init() {
+	print(len(sizeClassSlotSize), " slot sizes: ")
+	for _, ss := range sizeClassSlotSize {
+		print(ss, ", ")
+	}
+	println()
 	// add the slice header to each slot size
 	for i := range sizeClassSlotSize {
 		sizeClassSlotSize[i] += uint32(sizeIncrease)
