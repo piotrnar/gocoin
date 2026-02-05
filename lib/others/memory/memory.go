@@ -23,7 +23,7 @@ const (
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
 var sizeClassSlotSize = []uint32{
-	72, 80, 96, 104, 112, 120, 128, 136, 152, 160, 168, 184, 200, 216, 240, 272, 288, 320, 368, 400, 432, 512, 576, 640, 704, 768, 896, 1024, 1216, 1408, 1728, 2048, 2304, 2560, 2944, 3200, 3712, 4096, 5120, 6144, 6912, 8192, 9216, 10240, 11264, 13312, 15360, 17408, 21504, 28672, 32768,
+	72, 80, 96, 104, 112, 120, 128, 136, 152, 160, 168, 184, 200, 216, 240, 264, 288, 312, 352, 400, 432, 512, 624, 704, 832, 944, 1152, 1408, 1600, 1760, 2016, 2432, 2880, 3072, 3456, 4032, 4480, 5376, 6016, 7040, 8192, 9216, 10240, 12032, 14080, 16128, 17920, 20992, 24576, 28672, 32768,
 }
 
 type node struct {
@@ -118,6 +118,7 @@ func NewAllocator() (a *Allocator) {
 func init() {
 	// discard records that would be less then half of available page space
 	max_class_size := ((1<<pageSizeLog)-uint32(headerSize))/2 - sizeIncrease
+	println("max class size", max_class_size)
 	println("page size:", (1 << pageSizeLog), " page header size:", headerSize, "  max class size:", max_class_size)
 	print(len(sizeClassSlotSize), " slot sizes: ")
 	for _, ss := range sizeClassSlotSize {
