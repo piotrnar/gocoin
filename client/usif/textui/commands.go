@@ -595,7 +595,7 @@ func webui_stats(par string) {
 
 func utxo_mem(par string) {
 	common.MemMutex.Lock()
-	fmt.Print(common.Memory.GetInfo())
+	fmt.Print(common.Memory.GetInfo(strings.HasPrefix(par, "v")))
 	common.MemMutex.Unlock()
 }
 
@@ -676,6 +676,6 @@ func init() {
 	newUi("trust", true, switch_trust, "Assume all downloaded blocks trusted: 0|1")
 	newUi("undo", true, undo_block, "Undo one block")
 	newUi("utxodb u", true, blchain_utxodb, "Display UTXO-db statistics [mem]")
-	newUi("utxomem um", true, utxo_mem, "Show UTXO memory heap stats")
+	newUi("utxomem um", true, utxo_mem, "Show UTXO memory heap stats [verbose]")
 	newUi("web", true, webui_stats, "Show WebUI access statistics")
 }
