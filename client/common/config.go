@@ -502,7 +502,6 @@ func DefragUTXOMem() {
 		DefragCount++
 		DefragBytes += bts_before - Memory.Bytes
 		DefragTime += time.Since(sta)
-		DefragTotime += time.Since(sta)
 	}
 	DefragTotime += time.Since(sta)
 	MemMutex.Unlock()
