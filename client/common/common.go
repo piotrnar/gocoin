@@ -96,6 +96,8 @@ var (
 	NoCounters sys.SyncBool
 
 	SyncMaxCacheBytes sys.SyncInt
+
+	StopBlockProcessing bool
 )
 
 type TheLastBlock struct {

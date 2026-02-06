@@ -482,6 +482,10 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 	}
 
 	for last != end {
+		if common.StopBlockProcessing {
+			time.Sleep(1e9)
+			continue
+		}
 		nxt := last.FindPathTo(end)
 		if nxt == nil {
 			break
