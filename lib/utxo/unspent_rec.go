@@ -75,27 +75,25 @@ var (
 )
 
 var (
-	NewUtxoRecOwn func(UtxoKeyType, []byte, *UtxoRec, *NewUtxoOutAllocCbs)   = NewUtxoRecOwnU
-	OneUtxoRec    func(key UtxoKeyType, dat []byte, vout uint32) *btc.TxOut  = OneUtxoRecU
-	Serialize     func(rec *UtxoRec, full bool, use_buf []byte) (buf []byte) = SerializeU
+	NewUtxoRecOwn func([]byte, *UtxoRec, *NewUtxoOutAllocCbs)     = NewUtxoRecOwnU
+	OneUtxoRec    func(dat []byte, vout uint32) *btc.TxOut        = OneUtxoRecU
+	Serialize     func(rec *UtxoRec, use_buf []byte) (buf *[]byte) = SerializeU
 )
 
-func NewUtxoRecStatic(key UtxoKeyType, dat []byte) *UtxoRec {
-	NewUtxoRecOwn(key, dat, &sta_rec, &sta_cbs)
+func NewUtxoRecStatic(dat []byte) *UtxoRec {
+	NewUtxoRecOwn(dat, &sta_rec, &sta_cbs)
 	return &sta_rec
 }
 
-func NewUtxoRec(key UtxoKeyType, dat []byte) *UtxoRec {
+func NewUtxoRec(dat []byte) *UtxoRec {
 	var rec UtxoRec
-	NewUtxoRecOwn(key, dat, &rec, nil)
+	NewUtxoRecOwn(dat, &rec, nil)
 	return &rec
 }
 
 func FullUtxoRec(dat []byte) *UtxoRec {
-	var key UtxoKeyType
 	var rec UtxoRec
-	copy(key[:], dat[:UtxoIdxLen])
-	NewUtxoRecOwn(key, dat[UtxoIdxLen:], &rec, nil)
+	NewUtxoRecOwn(dat, &rec, nil)
 	return &rec
 }
 

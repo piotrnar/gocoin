@@ -88,12 +88,6 @@ func host_init() {
 		ext.BlockUndoneCB = nil // Do not call the callback if undoing blocks as it will panic
 	}
 
-	if common.Testnet {
-		ext.UTXOPrealloc = 11e6 // New testnet4 around block #117k
-	} else {
-		ext.UTXOPrealloc = 116e6 // Around block #931k
-	}
-
 	sta := time.Now()
 	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext,
 		&chain.BlockDBOpts{

@@ -18,13 +18,12 @@ var (
 	ComprScrLen     = []int{21, 21, 33, 33, 33, 33}
 )
 
-func NewUtxoRecOwnC(key UtxoKeyType, dat []byte, rec *UtxoRec, cbs *NewUtxoOutAllocCbs) {
+func NewUtxoRecOwnC(dat []byte, rec *UtxoRec, cbs *NewUtxoOutAllocCbs) {
 	var off, n, i int
 	var u64, idx uint64
 
-	off = 32 - UtxoIdxLen
-	copy(rec.TxID[:UtxoIdxLen], key[:])
-	copy(rec.TxID[UtxoIdxLen:], dat[:off])
+	off = 32
+	copy(rec.TxID[:], dat[:])
 
 	u64, n = btc.VULe(dat[off:])
 	off += n
@@ -66,12 +65,12 @@ func NewUtxoRecOwnC(key UtxoKeyType, dat []byte, rec *UtxoRec, cbs *NewUtxoOutAl
 	}
 }
 
-func OneUtxoRecC(key UtxoKeyType, dat []byte, vout uint32) *btc.TxOut {
+func OneUtxoRecC(dat []byte, vout uint32) *btc.TxOut {
 	var off, n, i int
 	var u64, idx uint64
 	var res btc.TxOut
 
-	off = 32 - UtxoIdxLen
+	off = 32
 
 	u64, n = btc.VULe(dat[off:])
 	off += n
@@ -122,7 +121,7 @@ func OneUtxoRecC(key UtxoKeyType, dat []byte, vout uint32) *btc.TxOut {
 	return nil
 }
 
-func SerializeC(rec *UtxoRec, full bool, use_buf []byte) (buf []byte) {
+func SerializeC(rec *UtxoRec, use_buf []byte) (buf *[]byte) {
 	var le, of int
 	var any_out bool
 
@@ -146,14 +145,8 @@ func SerializeC(rec *UtxoRec, full bool, use_buf []byte) (buf []byte) {
 		}
 	}
 
-	if full {
-		le = 32
-	} else {
-		le = 32 - UtxoIdxLen
-	}
-
-	le += btc.VLenSize(uint64(rec.InBlock)) // block length
-	le += btc.VLenSize(outcnt)              // out count
+	le = 32 + btc.VLenSize(uint64(rec.InBlock)) // block length
+	le += btc.VLenSize(outcnt)                  // out count
 
 	for i, r := range rec.Outs {
 		if rec.Outs[i] != nil {
@@ -177,28 +170,24 @@ func SerializeC(rec *UtxoRec, full bool, use_buf []byte) (buf []byte) {
 	if use_buf == nil {
 		buf = Memory_Malloc(le)
 	} else {
-		buf = use_buf[:le]
+		x := use_buf[:le]
+		buf = &x
 	}
-	if full {
-		copy(buf[:32], rec.TxID[:])
-		of = 32
-	} else {
-		of = 32 - UtxoIdxLen
-		copy(buf[:of], rec.TxID[UtxoIdxLen:])
-	}
+	copy((*buf)[:32], rec.TxID[:])
+	of = 32
 
-	of += btc.PutULe(buf[of:], uint64(rec.InBlock))
-	of += btc.PutULe(buf[of:], outcnt)
+	of += btc.PutULe((*buf)[of:], uint64(rec.InBlock))
+	of += btc.PutULe((*buf)[of:], outcnt)
 	for i, r := range rec.Outs {
 		if rec.Outs[i] != nil {
-			of += btc.PutULe(buf[of:], uint64(i))
-			of += btc.PutULe(buf[of:], comp_val[i])
+			of += btc.PutULe((*buf)[of:], uint64(i))
+			of += btc.PutULe((*buf)[of:], comp_val[i])
 			if comp_scr[i] != nil {
-				copy(buf[of:], comp_scr[i])
+				copy((*buf)[of:], comp_scr[i])
 				of += len(comp_scr[i])
 			} else {
-				of += btc.PutULe(buf[of:], uint64(6+len(r.PKScr)))
-				copy(buf[of:], r.PKScr)
+				of += btc.PutULe((*buf)[of:], uint64(6+len(r.PKScr)))
+				copy((*buf)[of:], r.PKScr)
 				of += len(r.PKScr)
 			}
 		}

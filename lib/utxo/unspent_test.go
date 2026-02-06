@@ -52,7 +52,7 @@ func TestFullUtxoRec(t *testing.T) {
 	if len(rec.Outs[2].PKScr) != 25 {
 		t.Error("Outs[2] bad script")
 	}
-	if !bytes.Equal(raw, Serialize(rec, true, nil)) {
+	if !bytes.Equal(raw, *Serialize(rec, nil)) {
 		t.Error("Serialize error")
 	}
 }
@@ -71,10 +71,10 @@ func BenchmarkNewUtxoRec(b *testing.B) {
 	raw, _ := hex.DecodeString(UtxoRecord)
 	var key UtxoKeyType
 	copy(key[:], raw[:])
-	dat := raw[UtxoIdxLen:]
+	dat := raw
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if NewUtxoRec(key, dat) == nil {
+		if NewUtxoRec(dat) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}
@@ -84,10 +84,10 @@ func BenchmarkNewUtxoRecStatic(b *testing.B) {
 	raw, _ := hex.DecodeString(UtxoRecord)
 	var key UtxoKeyType
 	copy(key[:], raw[:])
-	dat := raw[UtxoIdxLen:]
+	dat := raw
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if NewUtxoRecStatic(key, dat) == nil {
+		if NewUtxoRecStatic(dat) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}
@@ -98,11 +98,11 @@ func BenchmarkSerialize(b *testing.B) {
 	var key UtxoKeyType
 	var buf [0x100000]byte
 	copy(key[:], raw[:])
-	dat := raw[UtxoIdxLen:]
-	rec := NewUtxoRecStatic(key, dat)
+	dat := raw
+	rec := NewUtxoRecStatic(dat)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if Serialize(rec, false, buf[:]) == nil {
+		if Serialize(rec, buf[:]) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}
@@ -113,11 +113,11 @@ func BenchmarkSerializeFull(b *testing.B) {
 	var key UtxoKeyType
 	var buf [0x100000]byte
 	copy(key[:], raw[:])
-	dat := raw[UtxoIdxLen:]
-	rec := NewUtxoRecStatic(key, dat)
+	dat := raw
+	rec := NewUtxoRecStatic(dat)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if Serialize(rec, false, buf[:]) == nil {
+		if Serialize(rec, buf[:]) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}
@@ -127,11 +127,11 @@ func BenchmarkSerializeWithAlloc(b *testing.B) {
 	raw, _ := hex.DecodeString(UtxoRecord)
 	var key UtxoKeyType
 	copy(key[:], raw[:])
-	dat := raw[UtxoIdxLen:]
-	rec := NewUtxoRecStatic(key, dat)
+	dat := raw
+	rec := NewUtxoRecStatic(dat)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if Serialize(rec, false, nil) == nil {
+		if Serialize(rec, nil) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}
@@ -142,12 +142,12 @@ func BenchmarkSerializeCompress(b *testing.B) {
 	var key UtxoKeyType
 	var buf [0x100000]byte
 	copy(key[:], raw[:])
-	dat := raw[UtxoIdxLen:]
-	rec := NewUtxoRecStatic(key, dat)
-	SerializeC(rec, false, buf[:]) // serialize once to allocate the pools
+	dat := raw
+	rec := NewUtxoRecStatic(dat)
+	SerializeC(rec, buf[:]) // serialize once to allocate the pools
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if SerializeC(rec, false, buf[:]) == nil {
+		if SerializeC(rec, buf[:]) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}
@@ -157,12 +157,12 @@ func BenchmarkSerializeCompressWithAlloc(b *testing.B) {
 	raw, _ := hex.DecodeString(UtxoRecord)
 	var key UtxoKeyType
 	copy(key[:], raw[:])
-	dat := raw[UtxoIdxLen:]
-	rec := NewUtxoRecStatic(key, dat)
-	SerializeC(rec, false, nil) // serialize once to allocate the pools
+	dat := raw
+	rec := NewUtxoRecStatic(dat)
+	SerializeC(rec, nil) // serialize once to allocate the pools
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if SerializeC(rec, false, nil) == nil {
+		if SerializeC(rec, nil) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}

@@ -198,7 +198,7 @@ func InitConfig() {
 	CFG.TXRoute.MaxTxWeight = 400e3
 	CFG.TXRoute.MemInputs = false
 
-	CFG.Memory.GCPercTrshold = 10 // 30% (To save mem)
+	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)
 	CFG.Memory.MaxCachedBlks = 200
 	CFG.Memory.CacheOnDisk = true
 	CFG.Memory.SyncCacheSize = 500
@@ -334,13 +334,13 @@ func InitConfig() {
 	} else {
 		fmt.Println("Using modernc.org/memory package to skip GC for UTXO records ")
 		MemoryModUsed = true
-		utxo.Memory_Malloc = func(le int) (res []byte) {
+		utxo.Memory_Malloc = func(le int) (res *[]byte) {
 			MemMutex.Lock()
 			res, _ = Memory.Malloc(le)
 			MemMutex.Unlock()
 			return
 		}
-		utxo.Memory_Free = func(ptr []byte) {
+		utxo.Memory_Free = func(ptr *[]byte) {
 			MemMutex.Lock()
 			Memory.Free(ptr)
 			MemMutex.Unlock()
@@ -484,6 +484,28 @@ func Reset() {
 	ReloadMiners()
 
 	ApplyLastTrustedBlock()
+}
+
+func DefragUTXOMem() {
+	MemMutex.Lock()
+	sta := time.Now()
+	bts_before := Memory.Bytes
+	records := Memory.DefragAllImproved()
+
+	if len(records) > 0 {
+		MemMutex.Unlock()
+		BlockChain.Unspent.Defrag(records)
+		MemMutex.Lock()
+	}
+
+	if len(records) > 0 {
+		DefragCount++
+		DefragBytes += bts_before - Memory.Bytes
+		DefragTime += time.Since(sta)
+		DefragTotime += time.Since(sta)
+	}
+	DefragTotime += time.Since(sta)
+	MemMutex.Unlock()
 }
 
 // Mind that this is called with config mutex locked.

@@ -38,6 +38,9 @@ var (
 	highestAcceptedBlock uint32
 	retryCachedBlocks    bool
 	syncDoneAnnounced    bool
+
+	lastDefragDone    time.Time
+	lastMapDefragDone time.Time
 )
 
 const (
@@ -91,6 +94,22 @@ func exit_now() {
 	os.Exit(0)
 }
 
+func defrag_utxo() {
+	if common.MemoryModUsed {
+		if time.Since(lastDefragDone) > time.Minute {
+			common.DefragUTXOMem()
+			lastDefragDone = time.Now()
+		}
+		common.LockCfg()
+		common.UpdateMemoryLimit()
+		common.UnlockCfg()
+	}
+	if time.Since(lastMapDefragDone) > time.Second {
+		common.BlockChain.Unspent.DefragMap(false)
+		lastMapDefragDone = time.Now()
+	}
+}
+
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
 	if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted.Get() {
@@ -119,12 +138,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused
 	}
 
-	if common.MemoryModUsed {
-		common.LockCfg()
-		common.UpdateMemoryLimit()
-		common.UnlockCfg()
-	}
-
 	if e == nil {
 		if bl.Height > highestAcceptedBlock {
 			highestAcceptedBlock = bl.Height
@@ -146,11 +159,18 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		if common.Last.Block.Height > 400e3 {
 			div = 50e3
 		}
-		if common.Last.ParseTill != nil && (common.Last.Block.Height%div) == 0 {
-			b, _, ms := common.MemUsed()
-			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String(),
-				"Queue:", len(network.NetBlocks),
-				" UTXO:", b>>20, "/", ms, " SYS:", memsize.MustResidentMemory()>>20, "MB")
+		if common.Last.ParseTill != nil {
+			defrag_utxo()
+			if (common.Last.Block.Height % div) == 0 {
+				b, _, ms := common.MemUsed()
+				common.MemMutex.Lock()
+				db, tt := common.DefragBytes, common.DefragTotime
+				common.MemMutex.Unlock()
+				fmt.Println("Parsing to", common.Last.Block.Height,
+					"took", time.Since(newbl.TmStart).String(), " QUE:", len(network.NetBlocks),
+					" UTX:", b>>20, "/", ms, " SYS:", memsize.MustResidentMemory()>>20, "MB",
+					" DEF:", db>>20, "MB /", tt.String())
+			}
 		}
 
 		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
@@ -160,15 +180,17 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.BlockChain.BlockIndexAccess.Lock()
 		lch := network.LastCommitedHeader
 		common.BlockChain.BlockIndexAccess.Unlock()
-		if !syncDoneAnnounced && common.Last.ParseTill == nil && !common.BlockChainSynchronized &&
-			((common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height) {
-			print_sync_stats()
-			if common.Last.Block.Height <= 200e3 {
-				// Cache underflow counter is not reliable at the beginning of chain sync, so reset it here
-				network.Fetch.CacheEmpty = 0
-			}
-			if common.Last.Block.Height == lch.Height {
-				syncDoneAnnounced = true
+		if !syncDoneAnnounced && common.Last.ParseTill == nil && !common.BlockChainSynchronized {
+			defrag_utxo()
+			if (common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height {
+				print_sync_stats()
+				if common.Last.Block.Height <= 200e3 {
+					// Cache underflow counter is not reliable at the beginning of chain sync, so reset it here
+					network.Fetch.CacheEmpty = 0
+				}
+				if common.Last.Block.Height == lch.Height {
+					syncDoneAnnounced = true
+				}
 			}
 		}
 		if *exitat != 0 && uint(common.Last.Block.Height) == *exitat {
@@ -720,7 +742,8 @@ func main() {
 
 		retry_blocks_now := make(chan struct{}, 1)
 
-		startup_ticks := 5 // give 5 seconds for finding out missing blocks
+		startup_ticks := 5                   // give 5 seconds for finding out missing blocks
+		utxoDefrag := time.Tick(time.Minute) // once a minute check one map / 256 min for them all
 		for !usif.Exit_now.Get() {
 			common.Busy()
 
@@ -822,6 +845,9 @@ func main() {
 				common.Busy()
 				peersdb.ExpirePeers()
 				usif.ExpireBlockFees()
+
+			case <-utxoDefrag:
+				common.BlockChain.Unspent.DefragMap(false)
 
 			case on := <-wallet.OnOff:
 				common.Busy()

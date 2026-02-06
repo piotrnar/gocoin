@@ -51,7 +51,7 @@ func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 	common.BlockChain.Unspent.MapMutex[int(ind[0])].RUnlock()
 	if v != nil {
 		vout = binary.LittleEndian.Uint32(ur[utxo.UtxoIdxLen:])
-		rec = utxo.NewUtxoRec(ind, v)
+		rec = utxo.NewUtxoRec(*v)
 	}
 	return
 }

@@ -88,6 +88,7 @@ func main() {
 	if dir != "" {
 		if fi, er := os.Stat(dir); er == nil && !fi.IsDir() {
 			decode_utxo_header(dir)
+			return
 		}
 	}
 
@@ -102,13 +103,13 @@ func main() {
 
 	if gc == -1 {
 		fmt.Println("Using designated memory allocator")
-		utxo.Memory_Malloc = func(le int) (res []byte) {
+		utxo.Memory_Malloc = func(le int) (res *[]byte) {
 			MemMutex.Lock()
 			res, _ = Memory.Malloc(le)
 			MemMutex.Unlock()
 			return
 		}
-		utxo.Memory_Free = func(ptr []byte) {
+		utxo.Memory_Free = func(ptr *[]byte) {
 			MemMutex.Lock()
 			Memory.Free(ptr)
 			MemMutex.Unlock()
