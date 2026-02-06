@@ -35,48 +35,44 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 		return nil // not worth defragmenting
 	}
 
-	// Step 2: Walk page linked list to build utilization map - O(P)
-	pageMap := make(map[uintptr]*pageUtilization)
-
+	// Step 2: Build an array of non fully used pages
+	pages := make([]uintptr, 0, a.pageCount[class])
 	for pg := a.firstPage[class]; pg != 0; pg = (*page_header)(unsafe.Pointer(pg)).next {
-		header := (*page_header)(unsafe.Pointer(pg))
-		used := int(header.used)
-		if used < cap {
-			pageMap[pg] = &pageUtilization{pageAddr: pg, used: used}
+		if int((*page_header)(unsafe.Pointer(pg)).used) < cap {
+			pages = append(pages, pg)
 		}
 	}
 
-	if len(pageMap) == 0 {
+	if len(pages) == 0 {
 		println("ERROR: Unexpected empty pageMap for class", class)
 		return nil
 	}
 
 	// Step 3: Sort pages by utilization (lowest first)
-	pages := make([]pageUtilization, 0, len(pageMap))
-	for _, pu := range pageMap {
-		pages = append(pages, *pu)
-	}
-
 	sort.Slice(pages, func(i, j int) bool {
-		return pages[i].used < pages[j].used
+		page_i := (*page_header)(unsafe.Pointer(pages[i]))
+		page_j := (*page_header)(unsafe.Pointer(pages[j]))
+		return page_i.used < page_j.used
 	})
 
 	// Step 4: Select pages to evacuate
 	targetFreedRecords := cap * (potentialFreePages - minFreePages)
 	var recordsToMove, recordsToFree int
-	var pagesToEvacuate []uintptr
+	pagesToEvacuate := make([]uintptr, 0, len(pages))
 
 	if trace {
-		fmt.Println("targetFreedRecords:", targetFreedRecords)
+		fmt.Printf("Defragment class %d,  cap %d  -  non full pages: %d,  target free recs: %d\n",
+			class, cap, len(pages), targetFreedRecords)
 	}
 	for i := range pages {
-		pagesToEvacuate = append(pagesToEvacuate, pages[i].pageAddr)
-		recordsToFree += cap - int(pages[i].used)
-		recordsToMove += int(pages[i].used)
+		page_i_used := int((*page_header)(unsafe.Pointer(pages[i])).used)
+		pagesToEvacuate = append(pagesToEvacuate, pages[i])
+		recordsToFree += cap - int(page_i_used)
+		recordsToMove += int(page_i_used)
 		freedPages := recordsToFree / cap
 		if trace {
 			fmt.Printf(" + page with %d used records => total %d  / fred:%d = (%d + %d) / %d\n",
-				pages[i].used, recordsToMove, freedPages, a.freeSlots[class], recordsToMove, cap)
+				page_i_used, recordsToMove, freedPages, a.freeSlots[class], recordsToMove, cap)
 		}
 		if recordsToFree >= targetFreedRecords {
 			if trace {
