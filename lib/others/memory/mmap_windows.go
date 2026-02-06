@@ -31,7 +31,6 @@ const (
 
 	pageSizeLog   = 16
 	mmapAlignment = 1 << pageSizeLog // always align to page size
-	minFreePages  = 16               // minimum free pages to keep after defrag
 )
 
 type MEM_ADDRESS_REQUIREMENTS struct {

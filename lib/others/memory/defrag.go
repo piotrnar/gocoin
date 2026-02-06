@@ -7,6 +7,14 @@ import (
 	"unsafe"
 )
 
+const (
+	defragFromWasteMB = 12 // When number of free slots exceeds this many MB ...
+	defragToWasteMB   = 4  // ... defragment until it falls below this many MB.
+
+	minFreePagesFrom = (defragFromWasteMB << 20) / pageSize
+	minFreePagesTo   = (defragToWasteMB << 20) / pageSize
+)
+
 var trace bool
 
 // pageUtilization tracks utilization metrics for defragmentation
@@ -31,7 +39,7 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 	// Step 1: Quick check using counters - O(1)
 	potentialFreePages := int(a.freeSlots[class]) / cap
 
-	if potentialFreePages <= minFreePages {
+	if potentialFreePages <= minFreePagesFrom {
 		return nil // not worth defragmenting
 	}
 
@@ -56,7 +64,7 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 	})
 
 	// Step 4: Select pages to evacuate
-	targetFreedRecords := cap * (potentialFreePages - minFreePages)
+	targetFreedRecords := cap * (potentialFreePages - minFreePagesTo)
 	var recordsToMove, recordsToFree int
 	pagesToEvacuate := make([]uintptr, 0, len(pages))
 
