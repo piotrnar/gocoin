@@ -58,10 +58,10 @@ var (
 func init() {
 	if pageSizeLog == 16 {
 		mmap = mmap64
-		println("Using VirtualAlloc for 64 KB pages")
+		//println("Using VirtualAlloc for 64 KB pages")
 	} else {
 		mmap = mmapX
-		println("Using VirtualAlloc2 for", 1<<(pageSizeLog-10), "KB pages")
+		///println("Using VirtualAlloc2 for", 1<<(pageSizeLog-10), "KB pages")
 	}
 }
 

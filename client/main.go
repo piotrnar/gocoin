@@ -96,7 +96,7 @@ func exit_now() {
 
 func defrag_utxo() {
 	if common.MemoryModUsed {
-		if time.Since(lastDefragDone) > time.Minute {
+		if time.Since(lastDefragDone) > 5*time.Minute {
 			common.DefragUTXOMem()
 			lastDefragDone = time.Now()
 		}
@@ -104,7 +104,7 @@ func defrag_utxo() {
 		common.UpdateMemoryLimit()
 		common.UnlockCfg()
 	}
-	if time.Since(lastMapDefragDone) > time.Second {
+	if time.Since(lastMapDefragDone) > 2*time.Second {
 		common.BlockChain.Unspent.DefragMap(false)
 		lastMapDefragDone = time.Now()
 	}
@@ -160,7 +160,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			div = 50e3
 		}
 		if common.Last.ParseTill != nil {
-			defrag_utxo()
 			if (common.Last.Block.Height % div) == 0 {
 				b, _, ms := common.MemUsed()
 				common.MemMutex.Lock()
@@ -181,7 +180,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		lch := network.LastCommitedHeader
 		common.BlockChain.BlockIndexAccess.Unlock()
 		if !syncDoneAnnounced && common.Last.ParseTill == nil && !common.BlockChainSynchronized {
-			defrag_utxo()
 			if (common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height {
 				print_sync_stats()
 				if common.Last.Block.Height <= 200e3 {
@@ -217,7 +215,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 				network.NetRouteInv(network.MSG_BLOCK, bl.Hash, newbl.Conn)
 			}
 		}
-
+		defrag_utxo()
 	} else {
 		//fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 		new_end := common.BlockChain.LastBlock()
@@ -746,8 +744,7 @@ func main() {
 
 		retry_blocks_now := make(chan struct{}, 1)
 
-		startup_ticks := 5                   // give 5 seconds for finding out missing blocks
-		utxoDefrag := time.Tick(time.Minute) // once a minute check one map / 256 min for them all
+		startup_ticks := 5 // give 5 seconds for finding out missing blocks
 		for !usif.Exit_now.Get() {
 			common.Busy()
 
@@ -849,9 +846,6 @@ func main() {
 				common.Busy()
 				peersdb.ExpirePeers()
 				usif.ExpireBlockFees()
-
-			case <-utxoDefrag:
-				common.BlockChain.Unspent.DefragMap(false)
 
 			case on := <-wallet.OnOff:
 				common.Busy()
