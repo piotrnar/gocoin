@@ -30,6 +30,7 @@ import (
 
 var (
 	SaveBlockChain *time.Timer = time.NewTimer(1<<63 - 1)
+	DefragPeriod               = 5 * time.Minute
 
 	NetBlocksSize sys.SyncInt
 
@@ -96,7 +97,7 @@ func exit_now() {
 
 func defrag_utxo() {
 	if common.MemoryModUsed {
-		if time.Since(lastDefragDone) > 5*time.Minute {
+		if time.Since(lastDefragDone) > DefragPeriod {
 			common.DefragUTXOMem()
 			lastDefragDone = time.Now()
 		}
@@ -104,7 +105,7 @@ func defrag_utxo() {
 		common.UpdateMemoryLimit()
 		common.UnlockCfg()
 	}
-	if time.Since(lastMapDefragDone) > 2*time.Second {
+	if time.Since(lastMapDefragDone) > DefragPeriod/256 {
 		common.BlockChain.Unspent.DefragMap(false)
 		lastMapDefragDone = time.Now()
 	}
