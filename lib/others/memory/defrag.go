@@ -24,7 +24,6 @@ func (a *Allocator) Trace(on bool) {
 
 // Defrag performs defragmentation for a specific size class
 func (a *Allocator) Defrag(class int) []*[]byte {
-	const minFreePages = 10    // minimum free pages to keep after defrag
 	const minUtilization = 0.5 // only defrag pages below 50% utilization
 
 	if class < 0 || class >= len(sizeClassSlotSize) {
