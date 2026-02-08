@@ -332,7 +332,7 @@ func InitConfig() {
 	if CFG.Memory.UseGoHeap {
 		fmt.Println("Using native Go heap with Garbage Collector for UTXO records")
 	} else {
-		fmt.Println("Using modernc.org/memory package to skip GC for UTXO records ")
+		fmt.Println("Using memory package with", Memory.ClassCont, "size classes for UTXO records")
 		MemoryModUsed = true
 		utxo.Memory_Malloc = func(le int) (res *[]byte) {
 			MemMutex.Lock()
@@ -502,7 +502,6 @@ func DefragUTXOMem() {
 		DefragCount++
 		DefragBytes += bts_before - Memory.Bytes
 		DefragTime += time.Since(sta)
-		DefragTotime += time.Since(sta)
 	}
 	DefragTotime += time.Since(sta)
 	MemMutex.Unlock()

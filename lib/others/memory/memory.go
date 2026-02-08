@@ -54,7 +54,8 @@ type Allocator struct {
 	Mmaps         int       // Asked from OS.
 	pages         []uintptr // *page - current page per size class
 	classIdx      []byte
-	maxSharedSize int
+	MaxSharedSize int
+	ClassCont     int
 
 	// Defragmentation optimization fields
 	firstPage []uintptr // first page in linked list per class
@@ -69,7 +70,7 @@ func roundup(n, m int) int { return (n + m - 1) &^ (m - 1) }
 // getSizeClass returns the size class index for a given allocation size.
 // This is the core routing function that determines which slot size to use.
 func (a *Allocator) getSizeClass(size int) int {
-	if size >= a.maxSharedSize {
+	if size >= a.MaxSharedSize {
 		return -1
 	}
 	return int(a.classIdx[size])
@@ -98,7 +99,7 @@ func (a *Allocator) GetInfo(verbose bool) string {
 		fcnt += int(a.freeSlots[class]) * siz
 	}
 	fmt.Fprintf(w, "Bytes: %d,  Allocs: %d,  Maps: %d,  MaxSize: %d\n",
-		a.Bytes, a.Allocs, a.Mmaps, a.maxSharedSize)
+		a.Bytes, a.Allocs, a.Mmaps, a.MaxSharedSize)
 	fmt.Fprintf(w, "Page Header Size: %d,   Slot Extra Size: %d,   Page Size: %d\n",
 		headerSize, sizeIncrease, pageSize)
 	fmt.Fprintf(w, "Classes: %d,  Total slots: %d MB,  pages: %d,   free slots: %d MB\n",
@@ -121,8 +122,9 @@ func NewAllocator() (a *Allocator) {
 		a.cap[i] = uint32(pageAvail) / sizeClassSlotSize[i]
 	}
 
-	a.maxSharedSize = int(sizeClassSlotSize[len(sizeClassSlotSize)-1])
-	a.classIdx = make([]byte, a.maxSharedSize+1)
+	a.ClassCont = len(sizeClassSlotSize)
+	a.MaxSharedSize = int(sizeClassSlotSize[len(sizeClassSlotSize)-1])
+	a.classIdx = make([]byte, a.MaxSharedSize+1)
 	for size := range a.classIdx {
 		for i, v := range sizeClassSlotSize {
 			if size <= int(v) {

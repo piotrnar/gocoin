@@ -7,89 +7,99 @@ import (
 	"unsafe"
 )
 
-const trace = false
+const (
+	defragFromWasteMB = 12 // When number of free slots exceeds this many MB ...
+	defragToWasteMB   = 4  // ... defragment until it falls below this many MB.
+
+	minFreePagesFrom = (defragFromWasteMB << 20) / pageSize
+	minFreePagesTo   = (defragToWasteMB << 20) / pageSize
+)
+
+var trace bool
 
 // pageUtilization tracks utilization metrics for defragmentation
 type pageUtilization struct {
 	pageAddr uintptr
-	used     uint16
-	free     uint16
-	cap      uint16
-	ratio    float32 // used/cap
+	used     int
+}
+
+func (a *Allocator) Trace(on bool) {
+	trace = on
 }
 
 // Defrag performs defragmentation for a specific size class
 func (a *Allocator) Defrag(class int) []*[]byte {
-	const minFreePages = 10    // minimum free pages to keep after defrag
-	const minUtilization = 0.5 // only defrag pages below 50% utilization
+	if class < 0 || class >= len(sizeClassSlotSize) {
+		println("ERROR: Illegal class number", class)
+		return nil
+	}
 
 	cap := int(a.cap[class])
 
 	// Step 1: Quick check using counters - O(1)
 	potentialFreePages := int(a.freeSlots[class]) / cap
 
-	if potentialFreePages <= minFreePages {
+	if potentialFreePages <= minFreePagesFrom {
 		return nil // not worth defragmenting
 	}
 
-	// Step 2: Walk page linked list to build utilization map - O(P)
-	pageMap := make(map[uintptr]*pageUtilization)
-
+	// Step 2: Build an array of non fully used pages
+	pages := make([]uintptr, 0, a.pageCount[class])
 	for pg := a.firstPage[class]; pg != 0; pg = (*page_header)(unsafe.Pointer(pg)).next {
-		header := (*page_header)(unsafe.Pointer(pg))
-		used := int(header.used)
-
-		if used > 0 && used < cap {
-			pageMap[pg] = &pageUtilization{
-				pageAddr: pg,
-				used:     header.used,
-				free:     header.free,
-				cap:      uint16(cap),
-				ratio:    float32(used) / float32(cap),
-			}
+		if int((*page_header)(unsafe.Pointer(pg)).used) < cap {
+			pages = append(pages, pg)
 		}
 	}
 
-	if len(pageMap) == 0 {
+	if len(pages) == 0 {
+		println("ERROR: Unexpected empty pageMap for class", class)
 		return nil
 	}
 
 	// Step 3: Sort pages by utilization (lowest first)
-	pages := make([]pageUtilization, 0, len(pageMap))
-	for _, pu := range pageMap {
-		pages = append(pages, *pu)
-	}
-
 	sort.Slice(pages, func(i, j int) bool {
-		return pages[i].ratio < pages[j].ratio
+		page_i := (*page_header)(unsafe.Pointer(pages[i]))
+		page_j := (*page_header)(unsafe.Pointer(pages[j]))
+		return page_i.used < page_j.used
 	})
 
 	// Step 4: Select pages to evacuate
-	targetFreedPages := potentialFreePages - minFreePages
-	var recordsToMove int
-	var pagesToEvacuate []uintptr
+	targetFreedRecords := cap * (potentialFreePages - minFreePagesTo)
+	var recordsToMove, recordsToFree int
+	pagesToEvacuate := make([]uintptr, 0, len(pages))
 
+	if trace {
+		fmt.Printf("Defragment class %d,  cap %d  -  non full pages: %d,  target free recs: %d\n",
+			class, cap, len(pages), targetFreedRecords)
+	}
 	for i := range pages {
-		if pages[i].ratio > minUtilization {
-			break
+		page_i_used := int((*page_header)(unsafe.Pointer(pages[i])).used)
+		pagesToEvacuate = append(pagesToEvacuate, pages[i])
+		recordsToFree += cap - int(page_i_used)
+		recordsToMove += int(page_i_used)
+		freedPages := recordsToFree / cap
+		if trace {
+			fmt.Printf(" + page with %d used records => total %d  / fred:%d = (%d + %d) / %d\n",
+				page_i_used, recordsToMove, freedPages, a.freeSlots[class], recordsToMove, cap)
 		}
-
-		pagesToEvacuate = append(pagesToEvacuate, pages[i].pageAddr)
-		recordsToMove += int(pages[i].used)
-
-		freedPages := (int(a.freeSlots[class]) + recordsToMove) / cap
-		if freedPages-minFreePages >= targetFreedPages {
+		if recordsToFree >= targetFreedRecords {
+			if trace {
+				fmt.Println(" * enough to free:", recordsToFree, "/", targetFreedRecords, " -  to move:", recordsToMove)
+			}
 			break
 		}
 	}
 
 	if recordsToMove == 0 {
+		if trace {
+			fmt.Printf("No records to move\n")
+		}
 		return nil
 	}
 
 	if trace {
-		fmt.Printf("Defrag class %d: relocating %d records from %d pages (target: free %d pages)\n",
-			class, recordsToMove, len(pagesToEvacuate), targetFreedPages)
+		fmt.Printf("Defrag class %d: relocating %d records from %d pages (target: free %d records)\n",
+			class, recordsToMove, len(pagesToEvacuate), targetFreedRecords)
 	}
 
 	// Step 5: Mark all pages as evacuating

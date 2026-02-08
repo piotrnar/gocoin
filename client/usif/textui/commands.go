@@ -601,20 +601,28 @@ func utxo_mem(par string) {
 
 func utxo_defrag(par string) {
 	var dmem, dmap bool
+	var class2def int = -1
 
 	cmds := strings.Split(par, " ")
 	for _, cmd := range cmds {
 		if strings.Trim(cmd, " ") != "" {
-			switch cmd {
-			case "map":
-				dmap = true
-			case "mem":
-			case "rec":
+			if v, er := strconv.ParseUint(cmd, 10, 32); er == nil {
 				dmem = true
-			case "all":
-				dmem, dmap = true, true
-			default:
-				println("unknown command:", cmd, " (map/rec, mem or all)")
+				class2def = int(v)
+				println("class2def:", class2def)
+			} else {
+				switch cmd {
+				case "map":
+					dmap = true
+				case "mem":
+					dmem = true
+				case "rec":
+					dmem = true
+				case "all":
+					dmem, dmap = true, true
+				default:
+					fmt.Printf("unknown command:'%s'\n (use 'rec', 'map', 'all' or class number)", cmd)
+				}
 			}
 		}
 	}
@@ -631,8 +639,17 @@ func utxo_defrag(par string) {
 	if dmem {
 		sta := time.Now()
 		if common.MemoryModUsed {
-			fmt.Print("Defragmenting UTXO records ... ")
-			common.DefragUTXOMem()
+			if class2def < 0 {
+				fmt.Print("Defragmenting all UTXO records ... ")
+				common.DefragUTXOMem()
+			} else {
+				fmt.Println("Defragmenting class", class2def, "UTXO records ...")
+				common.MemMutex.Lock()
+				common.Memory.Trace(true)
+				common.Memory.Defrag(class2def)
+				common.Memory.Trace(false)
+				common.MemMutex.Unlock()
+			}
 			fmt.Println("took", time.Since(sta).String())
 			showmemuse()
 		} else {
@@ -654,6 +671,11 @@ func utxo_defrag(par string) {
 	fmt.Print(common.BlockChain.Unspent.GetStats())
 }
 
+func blocks_stop(par string) {
+	common.StopBlockProcessing = par != "0" && par != "false"
+	fmt.Println("StopBlockProcessing:", common.StopBlockProcessing)
+}
+
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("cach", true, show_cached, "Show cached blocks [del2height]")
@@ -661,7 +683,7 @@ func init() {
 	newUi("configsave sc", false, save_config, "Save current settings to the config file")
 	newUi("configset cfg", false, set_config, "Set a specific config value: use JSON, omit top {}")
 	newUi("counters c", false, show_counters, "Show internal debug counters [prefix]")
-	newUi("defrag d", true, utxo_defrag, "Defragment UTXO or show stats [rec|mem] [map] [all]")
+	newUi("defrag def", true, utxo_defrag, "Defragment UTXO or show stats [rec|mem] [map] [all]")
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")
 	newUi("inv", false, send_inv, "Send inv message to all the peers - specify type & hash")
@@ -678,4 +700,5 @@ func init() {
 	newUi("utxodb u", true, blchain_utxodb, "Display UTXO-db statistics [mem]")
 	newUi("utxomem um", true, utxo_mem, "Show UTXO memory heap stats [verbose]")
 	newUi("web", true, webui_stats, "Show WebUI access statistics")
+	newUi("stop", true, blocks_stop, "Stop/restart block processing [0|1]")
 }
