@@ -7,7 +7,7 @@
 * Client: CFG.Memory.MemoryLimitMB respects mem used by UTXO records, even with UseGoHeap set to false
 * Lib/Utxo: Added HashMap defragmenting routines to allow memory usege optimizations
 * Lib/Memory: Added defragmenting routines to allow memory usege optimizations
-* Client: using defragmenting routines to lower memory usage during chain sync/rebuild
+* Client: using defragmenting routines to lower memory usage during chain sync/rebuild (saves RAM)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
