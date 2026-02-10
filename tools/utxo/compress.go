@@ -15,6 +15,7 @@ var (
 	decompress bool
 	gc         int = -1
 	ncpu       int = -1
+	create_csv bool
 
 	wg      sync.WaitGroup
 	db      *utxo.UnspentDB

@@ -32,17 +32,23 @@ func decode_utxo_header(fn string) {
 	} else {
 		fmt.Println("Records: Not compressed")
 	}
-	fmt.Println("Last Block Height:", uint32(le))
+	block_height := uint32(le)
+	fmt.Println("Last Block Height:", block_height)
 	fmt.Println("Last Block Hash:", btc.NewUint256(buf[8:40]).String())
 	rec_cnt := binary.LittleEndian.Uint64(buf[40:48])
 	fmt.Println("Number of UTXO records:", rec_cnt)
 
-	println("Gathering UTXO records size statistics...")
+	if !create_csv {
+		return
+	}
+
+	fname := fmt.Sprintf("data-%d.csv", block_height)
 	lens := make(map[int]int)
 
 	align := func(size uint64) uint64 {
 		ali := uint64(8)
-		msiz := uint64(1024)
+		//msiz := uint64(1024)
+		msiz := uint64(1e6)
 		for {
 			if size < msiz {
 				return (size + (ali - 1)) & ^(ali - 1)
@@ -52,26 +58,27 @@ func decode_utxo_header(fn string) {
 		}
 
 	}
+	const MaxLen = 32724
 	for i := uint64(0); i < rec_cnt; i++ {
 		if (i & 0xfffff) == 0xfffff {
-			fmt.Print("\r", 100*i/rec_cnt, "%...")
+			fmt.Print("\rGathering record size stats from UTXO.db - ", 100*i/rec_cnt, "% complete...")
 		}
 		le, er = btc.ReadVLen(f)
 		if er != nil {
-			println(er.Error())
+			println("\n", er.Error())
 			return
 		}
 		if _, er = io.ReadFull(f, spare[:int(le)]); er != nil {
-			println(er.Error())
+			println("\n", er.Error())
 			return
 		}
-		if spare[0] == 0x6a || le > 65536 {
+		if le > MaxLen {
 			continue
 		}
 		le = align(le)
 		lens[int(le)]++
 	}
-	fmt.Println("\rMap length:", len(lens))
+	fmt.Println("\rNumber of unique sizes up to length", 32724, ":", len(lens), "                   ")
 	type onerec struct {
 		siz, cnt int
 	}
@@ -80,11 +87,21 @@ func decode_utxo_header(fn string) {
 		sss = append(sss, onerec{siz: k, cnt: v})
 	}
 	sort.Slice(sss, func(i, j int) bool {
+		if sss[i].cnt == sss[j].cnt {
+			return sss[i].siz < sss[j].siz
+		}
 		return sss[i].cnt > sss[j].cnt
 	})
-	fmt.Println("Size, Count")
+	csv, er := os.Create(fname)
+	if er != nil {
+		println("ERROR:", er.Error())
+		return
+	}
+	fmt.Fprintln(csv, "Size, Count")
 	for _, r := range sss {
 		//fmt.Println(i+1, "", r.siz, "->", r.cnt, "time(s)")
-		fmt.Print(r.siz, ", ", r.cnt, "\n")
+		fmt.Fprint(csv, r.siz, ", ", r.cnt, "\n")
 	}
+	csv.Close()
+	fmt.Println("UTXO memory stats saved as", fname)
 }

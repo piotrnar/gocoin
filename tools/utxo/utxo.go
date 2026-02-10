@@ -21,6 +21,7 @@ func print_help() {
 	fmt.Println("   * -compr or -decompr : to request DB conversion")
 	fmt.Println("   * -gc[<perc>] : to use native Go heap [with the given GC target percentage]")
 	fmt.Println("   * -n[<num>] : to use concurrent threads [number of threads]")
+	fmt.Println("   * -csv : to create the csv file with UTXO stats (for memory module optimizer)")
 	os.Exit(1)
 }
 
@@ -76,6 +77,8 @@ func main() {
 				ncpu = runtime.NumCPU()
 				println("WARNING: Using default NumCPU value")
 			}
+		} else if strings.HasPrefix(arg, "-cs") {
+			create_csv = true
 		} else {
 			if dir != "" {
 				println("ERROR: db directory specified more than once")
