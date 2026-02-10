@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -25,15 +27,20 @@ func main() {
 	sliceHeader := flag.Int("slice", 24, "Slice header added to each record size")
 	maxSlot := flag.Int("maxslot", 32748, "Maximum slot size (32724+24)")
 	maxCandPerEndpoint := flag.Int("maxcand", 50, "Max candidates to try per endpoint")
+	numWorkers := flag.Int("workers", 0, "Number of parallel workers (0 = NumCPU)")
 
 	flag.Parse()
+
+	if *numWorkers <= 0 {
+		*numWorkers = runtime.NumCPU()
+	}
 
 	pageSize := 1 << *pageSizeLog
 	pageAvail := pageSize - *headerSize
 
 	fmt.Printf("Page size: %d (%dKB), Page avail: %d, Header: %d, Slice header: %d\n",
 		pageSize, pageSize/1024, pageAvail, *headerSize, *sliceHeader)
-	fmt.Printf("Max slot: %d, Desired classes: %d\n", *maxSlot, *numClasses)
+	fmt.Printf("Max slot: %d, Desired classes: %d, Workers: %d\n", *maxSlot, *numClasses, *numWorkers)
 
 	groups := loadCSV(*csvFile, *sliceHeader, *maxSlot)
 	fmt.Printf("Loaded %d distinct size groups\n", len(groups))
@@ -48,13 +55,13 @@ func main() {
 	fmt.Printf("Total candidate pool: %d\n", len(candidates))
 
 	t0 := time.Now()
-	bestSlots, bestPages := dpOptimize(groups, candidates, *numClasses, pageAvail, *maxSlot, *maxCandPerEndpoint)
+	bestSlots, bestPages := dpOptimize(groups, candidates, *numClasses, pageAvail, *maxSlot, *maxCandPerEndpoint, *numWorkers)
 	elapsed := time.Since(t0)
 
 	fmt.Printf("\nDP completed in %v\n", elapsed)
 	fmt.Printf("Optimal total pages: %d (%d MB)\n", bestPages, bestPages*int64(pageSize)>>20)
 
-	printStats(bestSlots, groups, pageAvail, pageSize)
+	wastePages, wasteMB := printStats(bestSlots, groups, pageAvail, pageSize)
 
 	fmt.Printf("\nGo sizeClassSlotSize (without +24 slice header):\n")
 	strs := make([]string, len(bestSlots))
@@ -62,7 +69,8 @@ func main() {
 		strs[i] = strconv.Itoa(s - *sliceHeader)
 	}
 	totalMB := bestPages * int64(pageSize) >> 20
-	fmt.Printf("/*%dMB-%d-%dMB*/ %s,\n", (totalMB-int64(totalCount)*96>>20), len(bestSlots), totalMB, strings.Join(strs, ", "))
+	_ = wastePages
+	fmt.Printf("/*%dMB-%d-%dMB*/ %s,\n", wasteMB, len(bestSlots), totalMB, strings.Join(strs, ", "))
 
 	fmt.Printf("\nGo sizeClassSlotSize (raw slot sizes including slice header):\n")
 	strs2 := make([]string, len(bestSlots))
@@ -141,19 +149,12 @@ func buildCandidates(groups []SizeGroup, pageAvail, maxSlot int) []int {
 	return result
 }
 
-// For a given minimum slot size, return the best candidate slot sizes to try.
-// Prioritizes candidates that give more slots per page (good page utilization).
 func topCandidatesForMinSlot(minSlot int, candidates []int, pageAvail, maxCand int) []int {
 	startIdx := sort.SearchInts(candidates, minSlot)
 	if startIdx >= len(candidates) {
 		return nil
 	}
 
-	// For minimizing pages, the best slot is the smallest one that fits
-	// (more slots per page = fewer pages). But sometimes a slightly larger
-	// slot that's a perfect page divisor is better overall.
-	//
-	// Collect candidates up to a reasonable range above minSlot.
 	maxCandSize := minSlot*3 + 256
 	if maxCandSize > candidates[len(candidates)-1] {
 		maxCandSize = candidates[len(candidates)-1]
@@ -161,8 +162,8 @@ func topCandidatesForMinSlot(minSlot int, candidates []int, pageAvail, maxCand i
 
 	type scored struct {
 		slot  int
-		pages int // slots per page (higher is better)
-		tail  int // page tail waste (lower is better)
+		pages int
+		tail  int
 	}
 
 	var scoredList []scored
@@ -179,8 +180,6 @@ func topCandidatesForMinSlot(minSlot int, candidates []int, pageAvail, maxCand i
 		scoredList = append(scoredList, scored{slot: c, pages: spp, tail: tail})
 	}
 
-	// Sort by: slots per page descending, then tail waste ascending
-	// This prioritizes candidates that pack more records per page.
 	sort.Slice(scoredList, func(i, j int) bool {
 		if scoredList[i].pages != scoredList[j].pages {
 			return scoredList[i].pages > scoredList[j].pages
@@ -188,7 +187,6 @@ func topCandidatesForMinSlot(minSlot int, candidates []int, pageAvail, maxCand i
 		return scoredList[i].tail < scoredList[j].tail
 	})
 
-	// Also ensure we include the exact minSlot and a few perfect divisors
 	limit := maxCand
 	if limit > len(scoredList) {
 		limit = len(scoredList)
@@ -202,7 +200,7 @@ func topCandidatesForMinSlot(minSlot int, candidates []int, pageAvail, maxCand i
 	return result
 }
 
-func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, maxCand int) ([]int, int64) {
+func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, maxCand, numWorkers int) ([]int, int64) {
 	N := len(groups)
 
 	// Prefix sums for O(1) range count queries
@@ -211,17 +209,13 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 		prefixCount[i+1] = prefixCount[i] + g.Count
 	}
 
-	rangeCount := func(from, to int) int64 {
-		return prefixCount[to] - prefixCount[from]
-	}
-
 	// Cost = number of pages for slot size S covering groups[from..to)
 	pagesForSlot := func(S int, from, to int) int64 {
 		spp := int64(pageAvail / S)
 		if spp == 0 {
 			return math.MaxInt64 / 2
 		}
-		cnt := rangeCount(from, to)
+		cnt := prefixCount[to] - prefixCount[from]
 		if cnt == 0 {
 			return 0
 		}
@@ -246,6 +240,13 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 	}
 	endpointCands[maxSlot] = lastCands
 
+	// Convert endpointCands map to array indexed by group index for fast access
+	// endpointCandsByIdx[j] = candidates for endpoint j (groups[j-1].Size)
+	endpointCandsByIdx := make([][]int, N+1)
+	for j := 1; j <= N; j++ {
+		endpointCandsByIdx[j] = endpointCands[groups[j-1].Size]
+	}
+
 	const INF = int64(math.MaxInt64 / 2)
 
 	prev := make([]int64, N+1)
@@ -264,6 +265,16 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 		decisions[k] = make([]decision, N+1)
 	}
 
+	// Worker pool for parallel j processing
+	type workItem struct {
+		j int
+	}
+	type workResult struct {
+		j    int
+		cost int64
+		dec  decision
+	}
+
 	for k := 1; k <= K; k++ {
 		for j := range curr {
 			curr[j] = INF
@@ -272,17 +283,10 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 		t0 := time.Now()
 		isLast := (k == K)
 
-		for j := k; j <= N; j++ {
-			if isLast && j != N {
-				continue
-			}
-
-			var cands []int
-			if isLast {
-				cands = endpointCands[maxSlot]
-			} else {
-				cands = endpointCands[groups[j-1].Size]
-			}
+		if isLast {
+			// Last class: only j=N, not worth parallelizing
+			j := N
+			cands := endpointCands[maxSlot]
 
 			bestW := INF
 			bestI := -1
@@ -292,9 +296,8 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 				if prev[i] >= INF {
 					continue
 				}
-
 				for _, S := range cands {
-					if isLast && S < maxSlot {
+					if S < maxSlot {
 						continue
 					}
 					p := pagesForSlot(S, i, j)
@@ -307,8 +310,64 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 				}
 			}
 
-			curr[j] = bestW
-			decisions[k][j] = decision{splitAt: bestI, slotSize: bestS}
+			curr[N] = bestW
+			decisions[k][N] = decision{splitAt: bestI, slotSize: bestS}
+		} else {
+			// Parallel processing of j values
+			jobs := make(chan workItem, N)
+			results := make(chan workResult, N)
+
+			var wg sync.WaitGroup
+			for w := 0; w < numWorkers; w++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					for item := range jobs {
+						j := item.j
+						cands := endpointCandsByIdx[j]
+
+						bestW := INF
+						bestI := -1
+						bestS := 0
+
+						for i := k - 1; i < j; i++ {
+							if prev[i] >= INF {
+								continue
+							}
+							for _, S := range cands {
+								p := pagesForSlot(S, i, j)
+								total := prev[i] + p
+								if total < bestW {
+									bestW = total
+									bestI = i
+									bestS = S
+								}
+							}
+						}
+
+						results <- workResult{j: j, cost: bestW, dec: decision{splitAt: bestI, slotSize: bestS}}
+					}
+				}()
+			}
+
+			// Submit jobs
+			go func() {
+				for j := k; j <= N; j++ {
+					jobs <- workItem{j: j}
+				}
+				close(jobs)
+			}()
+
+			// Collect results
+			go func() {
+				wg.Wait()
+				close(results)
+			}()
+
+			for r := range results {
+				curr[r.j] = r.cost
+				decisions[k][r.j] = r.dec
+			}
 		}
 
 		elapsed := time.Since(t0)
@@ -342,7 +401,7 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 	return slots, optimalPages
 }
 
-func printStats(slots []int, groups []SizeGroup, pageAvail, pageSize int) {
+func printStats(slots []int, groups []SizeGroup, pageAvail, pageSize int) (int64, int64) {
 	sort.Ints(slots)
 	var totalPages int64
 	var totalCount int64
@@ -405,12 +464,14 @@ func printStats(slots []int, groups []SizeGroup, pageAvail, pageSize int) {
 		}
 	}
 
+	totalWaste := totalSlotWaste + totalTailWaste + totalLastPageWaste
 	fmt.Println(strings.Repeat("-", 92))
 	fmt.Printf("Total records: %d\n", totalCount)
 	fmt.Printf("Total pages:           %12d (%d MB)\n", totalPages, totalPages*int64(pageSize)>>20)
 	fmt.Printf("Total slot waste:      %12d bytes (%.1f MB)\n", totalSlotWaste, float64(totalSlotWaste)/(1024*1024))
 	fmt.Printf("Total tail waste:      %12d bytes (%.1f MB)\n", totalTailWaste, float64(totalTailWaste)/(1024*1024))
 	fmt.Printf("Total last-page waste: %12d bytes (%.1f MB)\n", totalLastPageWaste, float64(totalLastPageWaste)/(1024*1024))
-	totalWaste := totalSlotWaste + totalTailWaste + totalLastPageWaste
 	fmt.Printf("Total waste:           %12d bytes (%.1f MB)\n", totalWaste, float64(totalWaste)/(1024*1024))
+	wasteMB := totalWaste >> 20
+	return totalPages, wasteMB
 }
