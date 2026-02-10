@@ -21,7 +21,7 @@ func print_help() {
 	fmt.Println("   * -compr or -decompr : to request DB conversion")
 	fmt.Println("   * -gc[<perc>] : to use native Go heap [with the given GC target percentage]")
 	fmt.Println("   * -n[<num>] : to use concurrent threads [number of threads]")
-	fmt.Println("   * -csv : to create the csv file with UTXO stats (for memory module optimizer)")
+	fmt.Println("   * -csv : to create the csv file with UTXO stats (for slot_optimizer)")
 	os.Exit(1)
 }
 
