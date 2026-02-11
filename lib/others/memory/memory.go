@@ -99,7 +99,7 @@ func (a *Allocator) GetInfo(verbose bool) string {
 		fmt.Fprintln(w)
 	}
 	fmt.Fprintf(w, "Bytes: %d,  Allocs: %d,  Maps: %d sh + %d pr  MaxSize: %d\n",
-		a.Bytes, a.Allocs, a.SharedMmaps, a.MaxSharedSize, a.PrivateMmaps)
+		a.Bytes, a.Allocs, a.SharedMmaps, a.PrivateMmaps, a.MaxSharedSize)
 	fmt.Fprintf(w, "Page Header Size: %d,   Slot Extra Size: %d,   Page Size: %d\n",
 		headerSize, sizeIncrease, pageSize)
 	fmt.Fprintf(w, "Classes: %d,  Total slots: %d MB,  pages: %d,   free slots: %d MB\n",
