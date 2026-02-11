@@ -44,7 +44,6 @@ func unmap(addr uintptr, size int) error {
 
 // pageSize aligned.
 func mmap(size int) (uintptr, int, error) {
-	size = roundup(size, osPageSize)
 	// The actual mmap syscall varies by architecture. mmapSyscall provides same
 	// functionality as the unexported funtion syscall.mmap and is declared in
 	// mmap_*_*.go and mmap_fallback.go. To add support for a new architecture,

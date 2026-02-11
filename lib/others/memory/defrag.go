@@ -114,7 +114,7 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 	for idx, pg := range pagesToEvacuate {
 		header := (*page_header)(unsafe.Pointer(pg))
 
-		header.evacuating = 1
+		header.evacuating = true
 
 		evacPages[idx].pg = pg
 		evacPages[idx].originalUsed = header.used
@@ -189,7 +189,7 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 			}
 
 			// This is a used slot - relocate it
-			newAddr, err := a.UintptrMalloc(slotSize)
+			newAddr, err := a.uintptrMalloc(slotSize)
 			if err != nil {
 				panic(fmt.Sprintf("Failed to allocate during defrag: %v", err))
 			}
@@ -208,7 +208,7 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 			relocations = append(relocations, ns)
 
 			// Free old slot
-			if err := a.UintptrFree(slotAddr); err != nil {
+			if err := a.uintptrFree(slotAddr); err != nil {
 				panic(fmt.Sprintf("Failed to free during defrag: %v", err))
 			}
 		}
@@ -223,7 +223,7 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 			panic(fmt.Sprintf("Page %#x still has %d used slots after evacuation!", pg, header.used))
 		}
 
-		header.evacuating = 0
+		header.evacuating = false
 
 		// Remove from page linked list
 		if header.prev != 0 {
@@ -246,11 +246,11 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 		}
 
 		if counters {
-			a.Bytes -= int(header.siz)
+			a.Bytes -= pageSize
 			a.Mmaps--
 		}
 
-		if err := unmap(pg, int(header.siz)); err != nil {
+		if err := unmap(pg, pageSize); err != nil {
 			panic(fmt.Sprintf("Failed to unmap page %#x: %v", pg, err))
 		}
 	}

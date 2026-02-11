@@ -161,6 +161,14 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			div = 50e3
 		}
 		if common.Last.ParseTill != nil {
+			if common.Last.Block.Height == 936000 {
+				lastDefragDone = time.Now().Add(-time.Hour)
+				defrag_utxo()
+				for range common.BlockChain.Unspent.HashMap {
+					common.BlockChain.Unspent.DefragMap(true)
+				}
+				div = common.Last.Block.Height
+			}
 			if (common.Last.Block.Height % div) == 0 {
 				b, _, ms := common.MemUsed()
 				common.MemMutex.Lock()

@@ -2,15 +2,15 @@ package memory
 
 import "unsafe"
 
-func (a *Allocator) unmap(p uintptr /* *page */) error {
+func (a *Allocator) unmap(p uintptr, size int) error {
 	if counters {
 		a.Mmaps--
 	}
-	return unmap(p, int((*page_header)(unsafe.Pointer(p)).siz))
+	return unmap(p, size)
 }
 
-// UintptrFree is like Free except its argument is an uintptr
-func (a *Allocator) UintptrFree(p uintptr) (err error) {
+// uintptrFree is like Free except its argument is an uintptr
+func (a *Allocator) uintptrFree(p uintptr) (err error) {
 	if p == 0 {
 		return nil
 	}
@@ -19,16 +19,19 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 		a.Allocs--
 	}
 
-	pg := p &^ uintptr(pageMask)
-	class := int((*page_header)(unsafe.Pointer(pg)).class)
-
-	// Dedicated page (large allocation) - slotSize == 0
-	if class < 0 {
+	pg := p &^ uintptr(osPageMask)
+	if *(*uintptr)(unsafe.Pointer(pg)) == privPageMagic {
+		// if the value is 0, it is not a pointer in the slice header - it's a private page
+		*(*uintptr)(unsafe.Pointer(pg)) = 0 // clean it just in case
+		size := *(*int)(unsafe.Pointer(pg + 8))
 		if counters {
-			a.Bytes -= int((*page_header)(unsafe.Pointer(pg)).siz)
+			a.Bytes -= size
 		}
-		return a.unmap(pg)
+		return a.unmap(p, size)
 	}
+
+	pg = p &^ uintptr(pageMask)
+	class := int((*page_header)(unsafe.Pointer(pg)).class)
 
 	// Shared page - Add to free list (unless page is being evacuated)
 	header := (*page_header)(unsafe.Pointer(pg))
@@ -39,7 +42,7 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 		a.freeSlots[class]++
 
 		// If page is being evacuated, don't add to free list
-		if header.evacuating != 0 {
+		if header.evacuating {
 			return nil
 		}
 
@@ -110,12 +113,13 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 		a.pages[class] = 0
 	}
 	if counters {
-		a.Bytes -= int((*page_header)(unsafe.Pointer(pg)).siz)
+		a.Bytes -= pageSize
 	}
-	return a.unmap(pg)
+	a.SharedMmaps--
+	return a.unmap(pg, osPageSize)
 }
 
 // Free deallocates memory (as in C.free).
 func (a *Allocator) Free(b *[]byte) (err error) {
-	return a.UintptrFree(uintptr(unsafe.Pointer(b)))
+	return a.uintptrFree(uintptr(unsafe.Pointer(b)))
 }

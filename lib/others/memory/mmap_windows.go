@@ -64,7 +64,6 @@ func init() {
 
 // pageSize aligned.
 func mmap64(size int) (uintptr, int, error) {
-	size = roundup(size, osPageSize) // Round to OS page (4KB), not allocator pageSize (64KB)
 	addr, _, err := procVirtualAlloc.Call(0, uintptr(size), _MEM_COMMIT|_MEM_RESERVE, _PAGE_READWRITE)
 	if err.(syscall.Errno) != 0 || addr == 0 {
 		return addr, size, err
@@ -74,8 +73,6 @@ func mmap64(size int) (uintptr, int, error) {
 
 // aby value aligned using VirtualAlloc2
 func mmapX(size int) (uintptr, int, error) {
-	size = roundup(size, osPageSize)
-
 	var addressReqs MEM_ADDRESS_REQUIREMENTS
 	addressReqs.Alignment = mmapAlignment
 

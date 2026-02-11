@@ -19,19 +19,15 @@ func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 	if size > 0xffffffff {
 		panic("mmap to big")
 	}
-	(*page_header)(unsafe.Pointer(p)).siz = uint32(size)
 	return p, nil
 }
 
 // newPage creates a dedicated page for a single large allocation
 func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
-	size += int(dedicHdrSize)
 	p, err := a.mmap(size)
 	if err != nil {
 		return 0, err
 	}
-
-	(*page_header)(unsafe.Pointer(p)).class = -1 // Mark as dedicated page
 	return p, nil
 }
 
@@ -42,14 +38,13 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		panic(fmt.Sprintf("invalid size class: %d", class))
 	}
 
-	totalSize := uint32(headerSize) + a.cap[class]*slotSize
-	p, err := a.mmap(int(totalSize))
+	p, err := a.mmap(pageSize)
 	if err != nil {
 		return 0, err
 	}
 
 	header := (*page_header)(unsafe.Pointer(p))
-	header.class = int16(class)
+	header.class = byte(class)
 	header.free = uint16(a.cap[class]) // All slots initially free
 
 	// Link into page list
@@ -69,11 +64,12 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	a.freeSlots[class] += a.cap[class]
 
 	a.pages[class] = p
+	a.SharedMmaps++
 	return p, nil
 }
 
-// UintptrMalloc is like Malloc except it returns an uintptr.
-func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
+// uintptrMalloc is like Malloc except it returns an uintptr.
+func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
 	if size < 0 {
 		panic("invalid malloc size")
 	}
@@ -90,10 +86,14 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 
 	// Large allocation - use dedicated page
 	if class < 0 {
+		size = roundup(size+dedicHdrSize, osPageSize)
 		p, err := a.newPage(size)
 		if err != nil {
 			return 0, err
 		}
+
+		*(*uintptr)(unsafe.Pointer(p)) = privPageMagic
+		*(*int)(unsafe.Pointer(p + 8)) = size
 		return p + dedicHdrSize, nil
 	}
 
@@ -157,7 +157,7 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 // Malloc allocates size bytes and returns a byte slice.
 func (a *Allocator) Malloc(size int) (r *[]byte, err error) {
 	size += 24
-	p, err := a.UintptrMalloc(size)
+	p, err := a.uintptrMalloc(size)
 	if p == 0 || err != nil {
 		return nil, err
 	}
