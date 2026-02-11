@@ -12,6 +12,8 @@ import (
 	"unsafe"
 )
 
+var LastBlockDone uint32
+
 const (
 	headerSize   = unsafe.Sizeof(page_header{})
 	pageAvail    = pageSize - headerSize

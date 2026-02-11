@@ -23,6 +23,7 @@ import (
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/memory"
 	"github.com/piotrnar/gocoin/lib/others/memsize"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -138,6 +139,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	if bl.LastKnownHeight-bl.Height > common.Get(&common.CFG.Memory.MaxCachedBlks) {
 		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused
 	}
+	memory.LastBlockDone = bl.Height
 
 	if e == nil {
 		if bl.Height > highestAcceptedBlock {
