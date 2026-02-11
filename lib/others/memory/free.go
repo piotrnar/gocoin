@@ -13,7 +13,7 @@ func (a *Allocator) unmap(p uintptr, size int) error {
 func (a *Allocator) uintptrFree(p uintptr) (err error) {
 	a.Allocs--
 
-	if sh := (*reflect.SliceHeader)(unsafe.Pointer(p)); sh.Cap-sliceHdrLen > a.MaxSharedSize {
+	if sh := (*reflect.SliceHeader)(unsafe.Pointer(p)); sh.Cap+sliceHdrLen > a.MaxSharedSize {
 		size := sh.Cap + sliceHdrLen
 		a.Bytes -= size
 		a.PrivateMmaps--
