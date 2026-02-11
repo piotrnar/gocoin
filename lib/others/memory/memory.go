@@ -13,13 +13,12 @@ import (
 )
 
 const (
-	headerSize    = unsafe.Sizeof(page_header{})
-	dedicHdrSize  = 8
-	pageAvail     = pageSize - headerSize
-	pageMask      = pageSize - 1
-	pageSize      = 1 << pageSizeLog
-	sizeIncrease  = unsafe.Sizeof([]byte{})
-	privPageMagic = 0x9384bd76ef8a0f77
+	headerSize   = unsafe.Sizeof(page_header{})
+	pageAvail    = pageSize - headerSize
+	pageMask     = pageSize - 1
+	pageSize     = 1 << pageSizeLog
+	sliceHdrLen  = int(unsafe.Sizeof([]byte{}))
+	sizeIncrease = sliceHdrLen
 )
 
 type node struct {
@@ -92,6 +91,13 @@ func (a *Allocator) GetInfo(verbose bool) string {
 		scnt += int(a.pageCount[class]) * int(a.cap[class]) * siz
 		fcnt += int(a.freeSlots[class]) * siz
 	}
+	if !verbose {
+		fmt.Fprint(w, len(sizeClassSlotSize), " slots: ")
+		for _, siz := range sizeClassSlotSize {
+			fmt.Fprint(w, int(siz)-int(sizeIncrease), ", ")
+		}
+		fmt.Fprintln(w)
+	}
 	fmt.Fprintf(w, "Bytes: %d,  Allocs: %d,  Maps: %d sh + %d pr  MaxSize: %d\n",
 		a.Bytes, a.Allocs, a.SharedMmaps, a.MaxSharedSize, a.PrivateMmaps)
 	fmt.Fprintf(w, "Page Header Size: %d,   Slot Extra Size: %d,   Page Size: %d\n",
@@ -100,6 +106,7 @@ func (a *Allocator) GetInfo(verbose bool) string {
 		len(sizeClassSlotSize), scnt>>20, pcnt, fcnt>>20)
 	return w.String()
 }
+
 func NewAllocator() (a *Allocator) {
 	a = new(Allocator)
 	a.cap = make([]uint32, len(sizeClassSlotSize))

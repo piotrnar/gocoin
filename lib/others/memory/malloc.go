@@ -75,9 +75,7 @@ func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
 		if err != nil {
 			return 0, err
 		}
-		*(*uintptr)(unsafe.Pointer(p)) = privPageMagic
-		sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
-		sh.Cap = size - int(unsafe.Sizeof(*sh))
+		(*reflect.SliceHeader)(unsafe.Pointer(p)).Cap = size - sliceHdrLen
 		return p, nil
 	}
 
@@ -101,8 +99,7 @@ func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
 		}
 		slotSize := int(sizeClassSlotSize[class])
 		ptr := p + headerSize + uintptr(header.brk-1)*uintptr(slotSize)
-		sh := (*reflect.SliceHeader)(unsafe.Pointer(ptr))
-		sh.Cap = int(slotSize) - int(unsafe.Sizeof(*sh))
+		(*reflect.SliceHeader)(unsafe.Pointer(ptr)).Cap = int(slotSize) - sliceHdrLen
 		return ptr, nil
 	}
 
@@ -138,8 +135,7 @@ func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
 	header.used++
 	header.free--
 	a.freeSlots[class]--
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(n))
-	sh.Cap = int(sizeClassSlotSize[class]) - int(unsafe.Sizeof(*sh))
+	(*reflect.SliceHeader)(unsafe.Pointer(n)).Cap = int(sizeClassSlotSize[class]) - sliceHdrLen
 	return n, nil
 }
 
@@ -151,13 +147,11 @@ func (a *Allocator) Malloc(size int) (r *[]byte, err error) {
 		return nil, err
 	}
 
-	//r = unsafe.Slice((*byte)(unsafe.Pointer(p)), size)
-	//return r[:size], nil
 	sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
-	sh.Data = uintptr(p + 24)
-	sh.Len = size - 24
+	sh.Data = p + uintptr(sliceHdrLen)
+	sh.Len = size - sliceHdrLen
 	if sh.Cap < sh.Len {
-		panic(fmt.Sprintf("pipa cap %d < len %d   - p 0x%x", sh.Cap, sh.Len, p))
+		panic(fmt.Sprintf("bad cap returned cap %d < len %d   - p 0x%x", sh.Cap, sh.Len, p))
 	}
 	return (*[]byte)(unsafe.Pointer(sh)), nil
 }
