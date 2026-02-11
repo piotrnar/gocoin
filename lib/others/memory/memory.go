@@ -70,7 +70,7 @@ func roundup(n, m int) int { return (n + m - 1) &^ (m - 1) }
 // getSizeClass returns the size class index for a given allocation size.
 // This is the core routing function that determines which slot size to use.
 func (a *Allocator) getSizeClass(size int) int {
-	if size >= a.MaxSharedSize {
+	if size > a.MaxSharedSize {
 		return -1
 	}
 	return int(a.classIdx[size])
