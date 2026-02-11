@@ -14,7 +14,7 @@ import (
 
 const (
 	headerSize    = unsafe.Sizeof(page_header{})
-	dedicHdrSize  = 16
+	dedicHdrSize  = 8
 	pageAvail     = pageSize - headerSize
 	pageMask      = pageSize - 1
 	pageSize      = 1 << pageSizeLog

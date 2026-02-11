@@ -1,6 +1,9 @@
 package memory
 
-import "unsafe"
+import (
+	"reflect"
+	"unsafe"
+)
 
 func (a *Allocator) unmap(p uintptr, size int) error {
 	return unmap(p, size)
@@ -14,7 +17,9 @@ func (a *Allocator) uintptrFree(p uintptr) (err error) {
 	if *(*uintptr)(unsafe.Pointer(pg)) == privPageMagic {
 		// if the value is 0, it is not a pointer in the slice header - it's a private page
 		*(*uintptr)(unsafe.Pointer(pg)) = 0 // clean it just in case
-		size := *(*int)(unsafe.Pointer(pg + 8))
+		shptr := pg + dedicHdrSize
+		sh := (*reflect.SliceHeader)(unsafe.Pointer(shptr))
+		size := sh.Cap + dedicHdrSize + int(unsafe.Sizeof(*sh))
 		a.Bytes -= size
 		a.PrivateMmaps--
 		return a.unmap(p, size)
