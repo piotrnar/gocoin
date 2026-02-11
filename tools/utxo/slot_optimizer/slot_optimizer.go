@@ -23,7 +23,7 @@ func main() {
 	csvFile := flag.String("csv", "data_full.csv", "CSV file with size,count records")
 	numClasses := flag.Int("classes", 33, "Number of desired size classes")
 	pageSizeLog := flag.Int("pagelog", 20, "Page size log2 (16=64KB, 20=1MB)")
-	headerSize := flag.Int("header", 40, "Page header size in bytes")
+	headerSize := flag.Int("header", 32, "Page header size in bytes")
 	sliceHeader := flag.Int("slice", 24, "Slice header added to each record size")
 	maxSlot := flag.Int("maxslot", 0, "Maximum slot size including header (0 = auto from CSV data)")
 	maxCandPerEndpoint := flag.Int("maxcand", 50, "Max candidates to try per endpoint")
