@@ -1,10 +1,7 @@
 package memory
 
 import (
-	"fmt"
-	"os"
 	"reflect"
-	"runtime/debug"
 	"unsafe"
 )
 
@@ -14,21 +11,6 @@ func (a *Allocator) unmap(p uintptr, size int) error {
 
 // uintptrFree is like Free except its argument is an uintptr
 func (a *Allocator) uintptrFree(p uintptr) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err, ok := r.(error)
-			if !ok {
-				err = fmt.Errorf("pkg: %v", r)
-			}
-			fmt.Println("uintptrFree panic recovered:", err.Error())
-			fmt.Printf("Freeing pointer 0x%x  after block %d done\n", p, LastBlockDone)
-			sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
-			fmt.Printf("Cap:%d + %d > %d\n", sh.Cap, sliceHdrLen, a.MaxSharedSize)
-			fmt.Println(string(debug.Stack()))
-			os.Exit(1)
-		}
-	}()
-
 	a.Allocs--
 
 	if sh := (*reflect.SliceHeader)(unsafe.Pointer(p)); sh.Cap+sliceHdrLen > a.MaxSharedSize {

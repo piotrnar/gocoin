@@ -1,7 +1,12 @@
 package utxo
 
 import (
+	"fmt"
+	"os"
+	"runtime/debug"
+
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/memory"
 )
 
 /*
@@ -30,6 +35,19 @@ func NewUtxoRecOwnU(dat []byte, rec *UtxoRec, cbs *NewUtxoOutAllocCbs) {
 	}
 
 	for off < len(dat) {
+		defer func() {
+			if r := recover(); r != nil {
+				err, ok := r.(error)
+				if !ok {
+					err = fmt.Errorf("pkg: %v", r)
+				}
+				fmt.Println("panic recovered:", err.Error())
+				fmt.Printf("Ptr:%p Cap:%d Len:%d + %d > %d   LastBlockDone:%d\n",
+					&dat[0], len(dat), cap(dat), memory.LastBlockDone)
+				fmt.Println(string(debug.Stack()))
+				os.Exit(1)
+			}
+		}()
 		idx, n = btc.VULe(dat[off:])
 		off += n
 		if cbs != nil {
