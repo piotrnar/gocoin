@@ -13,19 +13,14 @@ func (a *Allocator) unmap(p uintptr, size int) error {
 func (a *Allocator) uintptrFree(p uintptr) (err error) {
 	a.Allocs--
 
-	pg := p &^ uintptr(osPageMask)
-	if *(*uintptr)(unsafe.Pointer(pg)) == privPageMagic {
-		// if the value is 0, it is not a pointer in the slice header - it's a private page
-		*(*uintptr)(unsafe.Pointer(pg)) = 0 // clean it just in case
-		shptr := pg + dedicHdrSize
-		sh := (*reflect.SliceHeader)(unsafe.Pointer(shptr))
-		size := sh.Cap + dedicHdrSize + int(unsafe.Sizeof(*sh))
+	if sh := (*reflect.SliceHeader)(unsafe.Pointer(p)); sh.Cap-int(unsafe.Sizeof(*sh)) > a.MaxSharedSize {
+		size := sh.Cap + int(unsafe.Sizeof(*sh))
 		a.Bytes -= size
 		a.PrivateMmaps--
 		return a.unmap(p, size)
 	}
 
-	pg = p &^ uintptr(pageMask)
+	pg := p &^ uintptr(pageMask)
 	class := int((*page_header)(unsafe.Pointer(pg)).class)
 
 	// Shared page - Add to free list (unless page is being evacuated)

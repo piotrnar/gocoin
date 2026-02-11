@@ -70,17 +70,15 @@ func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
 
 	// Large allocation - use dedicated page
 	if class < 0 {
-		size = roundup(size+dedicHdrSize, osPageSize)
+		size = roundup(size, osPageSize)
 		p, err := a.newPrivatePage(size)
 		if err != nil {
 			return 0, err
 		}
-
 		*(*uintptr)(unsafe.Pointer(p)) = privPageMagic
-		shptr := p + dedicHdrSize
-		sh := (*reflect.SliceHeader)(unsafe.Pointer(shptr))
-		sh.Cap = size - dedicHdrSize - int(unsafe.Sizeof(*sh))
-		return shptr, nil
+		sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
+		sh.Cap = size - int(unsafe.Sizeof(*sh))
+		return p, nil
 	}
 
 	// Small allocation - use shared page
