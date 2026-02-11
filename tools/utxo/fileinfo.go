@@ -11,6 +11,11 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
+var (
+	create_csv bool
+	max_size   int
+)
+
 func decode_utxo_header(fn string) {
 	var buf [48]byte
 	var spare [1024 * 1024]byte
@@ -58,7 +63,8 @@ func decode_utxo_header(fn string) {
 		}
 
 	}
-	const MaxLen = 32724
+	var minsiz int = 1e9
+	var maxsiz int
 	for i := uint64(0); i < rec_cnt; i++ {
 		if (i & 0xfffff) == 0xfffff {
 			fmt.Print("\rGathering record size stats from UTXO.db - ", 100*i/rec_cnt, "% complete...")
@@ -72,13 +78,21 @@ func decode_utxo_header(fn string) {
 			println("\n", er.Error())
 			return
 		}
-		if le > MaxLen {
+		if int(le) > maxsiz {
+			maxsiz = int(le)
+		}
+		if int(le) < minsiz {
+			minsiz = int(le)
+		}
+
+		if le > uint64(max_size) {
 			continue
 		}
 		le = align(le)
 		lens[int(le)]++
 	}
-	fmt.Println("\rNumber of unique sizes up to length", 32724, ":", len(lens), "                   ")
+	fmt.Printf("\rRecords sizes are in range from %d to %d bytes                       \n", minsiz, maxsiz)
+	fmt.Println("Number of unique sizes up to length", max_size, ":", len(lens))
 	type onerec struct {
 		siz, cnt int
 	}

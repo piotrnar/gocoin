@@ -25,7 +25,7 @@ func main() {
 	pageSizeLog := flag.Int("pagelog", 20, "Page size log2 (16=64KB, 20=1MB)")
 	headerSize := flag.Int("header", 40, "Page header size in bytes")
 	sliceHeader := flag.Int("slice", 24, "Slice header added to each record size")
-	maxSlot := flag.Int("maxslot", 32748, "Maximum slot size (32724+24)")
+	maxSlot := flag.Int("maxslot", 0, "Maximum slot size including header (0 = auto from CSV data)")
 	maxCandPerEndpoint := flag.Int("maxcand", 50, "Max candidates to try per endpoint")
 	numWorkers := flag.Int("workers", 0, "Number of parallel workers (0 = NumCPU)")
 
@@ -38,11 +38,7 @@ func main() {
 	pageSize := 1 << *pageSizeLog
 	pageAvail := pageSize - *headerSize
 
-	fmt.Printf("Page size: %d (%dKB), Page avail: %d, Header: %d, Slice header: %d\n",
-		pageSize, pageSize/1024, pageAvail, *headerSize, *sliceHeader)
-	fmt.Printf("Max slot: %d, Desired classes: %d, Workers: %d\n", *maxSlot, *numClasses, *numWorkers)
-
-	groups := loadCSV(*csvFile, *sliceHeader, *maxSlot)
+	groups := loadCSV(*csvFile, *sliceHeader)
 	fmt.Printf("Loaded %d distinct size groups\n", len(groups))
 
 	var totalCount int64
@@ -50,6 +46,40 @@ func main() {
 		totalCount += g.Count
 	}
 	fmt.Printf("Total records: %d\n", totalCount)
+
+	// Determine maxSlot: from flag or from data
+	if *maxSlot <= 0 {
+		*maxSlot = groups[len(groups)-1].Size
+		// Round up to multiple of 8
+		*maxSlot = (*maxSlot + 7) &^ 7
+	}
+
+	// Filter out records that won't fit in a single page
+	// (slot must fit at least 1 per page)
+	if *maxSlot > pageAvail {
+		*maxSlot = pageAvail &^ 7
+		fmt.Printf("Warning: maxSlot clamped to page avail: %d\n", *maxSlot)
+	}
+
+	// Remove groups larger than maxSlot (they'll be dedicated pages)
+	filtered := groups[:0]
+	var dedicatedRecords int64
+	for _, g := range groups {
+		if g.Size <= *maxSlot {
+			filtered = append(filtered, g)
+		} else {
+			dedicatedRecords += g.Count
+		}
+	}
+	if dedicatedRecords > 0 {
+		fmt.Printf("Records exceeding maxSlot (%d): %d (will use dedicated pages)\n", *maxSlot, dedicatedRecords)
+	}
+	groups = filtered
+
+	fmt.Printf("Page size: %d (%dKB), Page avail: %d, Header: %d, Slice header: %d\n",
+		pageSize, pageSize/1024, pageAvail, *headerSize, *sliceHeader)
+	fmt.Printf("Max slot: %d (source: %d), Desired classes: %d, Workers: %d\n",
+		*maxSlot, *maxSlot-*sliceHeader, *numClasses, *numWorkers)
 
 	candidates := buildCandidates(groups, pageAvail, *maxSlot)
 	fmt.Printf("Total candidate pool: %d\n", len(candidates))
@@ -80,7 +110,7 @@ func main() {
 	fmt.Printf("%s\n", strings.Join(strs2, ", "))
 }
 
-func loadCSV(filename string, sliceHeader, maxSlot int) []SizeGroup {
+func loadCSV(filename string, sliceHeader int) []SizeGroup {
 	f, err := os.Open(filename)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening CSV: %v\n", err)
@@ -103,9 +133,6 @@ func loadCSV(filename string, sliceHeader, maxSlot int) []SizeGroup {
 		size, _ := strconv.Atoi(strings.TrimSpace(row[0]))
 		count, _ := strconv.ParseInt(strings.TrimSpace(row[1]), 10, 64)
 		size += sliceHeader
-		if size > maxSlot {
-			continue
-		}
 		size = (size + 7) &^ 7
 		records = append(records, SizeGroup{Size: size, Count: count})
 	}

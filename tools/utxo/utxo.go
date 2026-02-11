@@ -22,6 +22,7 @@ func print_help() {
 	fmt.Println("   * -gc[<perc>] : to use native Go heap [with the given GC target percentage]")
 	fmt.Println("   * -n[<num>] : to use concurrent threads [number of threads]")
 	fmt.Println("   * -csv : to create the csv file with UTXO stats (for slot_optimizer)")
+	fmt.Println("   * -ms<size> : use this max slot size for the csv file")
 	os.Exit(1)
 }
 
@@ -79,6 +80,13 @@ func main() {
 			}
 		} else if strings.HasPrefix(arg, "-cs") {
 			create_csv = true
+		} else if strings.HasPrefix(arg, "-ms") {
+			if n, er := strconv.ParseUint(arg[3:], 10, 32); er == nil && n >= 72 {
+				max_size = int(n)
+			} else {
+				println("Incorrect -ms<size> value:", arg)
+				os.Exit(1)
+			}
 		} else {
 			if dir != "" {
 				println("ERROR: db directory specified more than once")
