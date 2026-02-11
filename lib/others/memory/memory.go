@@ -13,8 +13,6 @@ import (
 )
 
 const (
-	counters = true
-
 	headerSize    = unsafe.Sizeof(page_header{})
 	dedicHdrSize  = 16
 	pageAvail     = pageSize - headerSize
@@ -44,14 +42,14 @@ type page_header struct {
 type Allocator struct {
 	Allocs        int // # of allocs.
 	Bytes         int // Asked from OS.
-	cap           []uint32
-	lists         []uintptr // *node - free lists per size class
-	Mmaps         int       // Asked from OS.
+	PrivateMmaps  int // Asked from OS.
 	SharedMmaps   int
-	pages         []uintptr // *page - current page per size class
-	classIdx      []byte
 	MaxSharedSize int
 	ClassCont     int
+	cap           []uint32
+	lists         []uintptr // *node - free lists per size class
+	pages         []uintptr // *page - current page per size class
+	classIdx      []byte
 
 	// Defragmentation optimization fields
 	firstPage []uintptr // first page in linked list per class
@@ -94,8 +92,8 @@ func (a *Allocator) GetInfo(verbose bool) string {
 		scnt += int(a.pageCount[class]) * int(a.cap[class]) * siz
 		fcnt += int(a.freeSlots[class]) * siz
 	}
-	fmt.Fprintf(w, "Bytes: %d,  Allocs: %d,  Maps: %d/%d,  MaxSize: %d\n",
-		a.Bytes, a.Allocs, a.SharedMmaps, a.Mmaps, a.MaxSharedSize)
+	fmt.Fprintf(w, "Bytes: %d,  Allocs: %d,  Maps: %d sh + %d pr  MaxSize: %d\n",
+		a.Bytes, a.Allocs, a.SharedMmaps, a.MaxSharedSize, a.PrivateMmaps)
 	fmt.Fprintf(w, "Page Header Size: %d,   Slot Extra Size: %d,   Page Size: %d\n",
 		headerSize, sizeIncrease, pageSize)
 	fmt.Fprintf(w, "Classes: %d,  Total slots: %d MB,  pages: %d,   free slots: %d MB\n",

@@ -3,30 +3,20 @@ package memory
 import "unsafe"
 
 func (a *Allocator) unmap(p uintptr, size int) error {
-	if counters {
-		a.Mmaps--
-	}
 	return unmap(p, size)
 }
 
 // uintptrFree is like Free except its argument is an uintptr
 func (a *Allocator) uintptrFree(p uintptr) (err error) {
-	if p == 0 {
-		return nil
-	}
-
-	if counters {
-		a.Allocs--
-	}
+	a.Allocs--
 
 	pg := p &^ uintptr(osPageMask)
 	if *(*uintptr)(unsafe.Pointer(pg)) == privPageMagic {
 		// if the value is 0, it is not a pointer in the slice header - it's a private page
 		*(*uintptr)(unsafe.Pointer(pg)) = 0 // clean it just in case
 		size := *(*int)(unsafe.Pointer(pg + 8))
-		if counters {
-			a.Bytes -= size
-		}
+		a.Bytes -= size
+		a.PrivateMmaps--
 		return a.unmap(p, size)
 	}
 
@@ -112,9 +102,7 @@ func (a *Allocator) uintptrFree(p uintptr) (err error) {
 	if a.pages[class] == pg {
 		a.pages[class] = 0
 	}
-	if counters {
-		a.Bytes -= pageSize
-	}
+	a.Bytes -= pageSize
 	a.SharedMmaps--
 	return a.unmap(pg, osPageSize)
 }

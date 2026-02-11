@@ -11,23 +11,17 @@ func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 	if err != nil {
 		return 0, err
 	}
-
-	if counters {
-		a.Mmaps++
-		a.Bytes += size
-	}
-	if size > 0xffffffff {
-		panic("mmap to big")
-	}
+	a.Bytes += size
 	return p, nil
 }
 
-// newPage creates a dedicated page for a single large allocation
-func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
+// newPrivatePage creates a dedicated page for a single large allocation
+func (a *Allocator) newPrivatePage(size int) (uintptr /* *page */, error) {
 	p, err := a.mmap(size)
 	if err != nil {
 		return 0, err
 	}
+	a.PrivateMmaps++
 	return p, nil
 }
 
@@ -70,24 +64,14 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 
 // uintptrMalloc is like Malloc except it returns an uintptr.
 func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
-	if size < 0 {
-		panic("invalid malloc size")
-	}
-
-	if size == 0 {
-		return 0, nil
-	}
-
-	if counters {
-		a.Allocs++
-	}
+	a.Allocs++
 
 	class := a.getSizeClass(size)
 
 	// Large allocation - use dedicated page
 	if class < 0 {
 		size = roundup(size+dedicHdrSize, osPageSize)
-		p, err := a.newPage(size)
+		p, err := a.newPrivatePage(size)
 		if err != nil {
 			return 0, err
 		}

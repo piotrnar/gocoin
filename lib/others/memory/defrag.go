@@ -245,10 +245,9 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 			a.pages[class] = 0
 		}
 
-		if counters {
-			a.Bytes -= pageSize
-			a.Mmaps--
-		}
+		a.Bytes -= pageSize
+		a.Allocs -= int(header.used)
+		a.SharedMmaps--
 
 		if err := unmap(pg, pageSize); err != nil {
 			panic(fmt.Sprintf("Failed to unmap page %#x: %v", pg, err))

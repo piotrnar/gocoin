@@ -385,7 +385,7 @@ func CurrentScriptFlags() uint32 {
 
 func MemUsed() (bts int, alcs int, mmaps int) {
 	MemMutex.Lock()
-	bts, alcs, mmaps = Memory.Bytes, Memory.Allocs, Memory.Mmaps
+	bts, alcs, mmaps = Memory.Bytes, Memory.Allocs, Memory.SharedMmaps
 	MemMutex.Unlock()
 	return
 }
