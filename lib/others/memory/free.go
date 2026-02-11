@@ -21,7 +21,7 @@ func (a *Allocator) uintptrFree(p uintptr) (err error) {
 				err = fmt.Errorf("pkg: %v", r)
 			}
 			fmt.Println("uintptrFree panic recovered:", err.Error())
-			fmt.Printf("Frexing poinrer 0x%x\n", p)
+			fmt.Printf("Freeing pointer 0x%x  after block %d done\n", p, LastBlockDone)
 			sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
 			fmt.Printf("Cap:%d + %d > %d\n", sh.Cap, sliceHdrLen, a.MaxSharedSize)
 			fmt.Println(string(debug.Stack()))
