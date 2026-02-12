@@ -17,12 +17,6 @@ const (
 
 var trace bool
 
-// pageUtilization tracks utilization metrics for defragmentation
-type pageUtilization struct {
-	pageAddr uintptr
-	used     int
-}
-
 func (a *Allocator) Trace(on bool) {
 	trace = on
 }

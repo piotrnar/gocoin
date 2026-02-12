@@ -17,13 +17,11 @@ var sizeClassSlotSize = []uint32{
 }
 
 const (
-	_MEM_COMMIT   = 0x1000
-	_MEM_RESERVE  = 0x2000
-	_MEM_DECOMMIT = 0x4000
-	_MEM_RELEASE  = 0x8000
+	_MEM_COMMIT  = 0x1000
+	_MEM_RESERVE = 0x2000
+	_MEM_RELEASE = 0x8000
 
 	_PAGE_READWRITE = 0x0004
-	_PAGE_NOACCESS  = 0x0001
 
 	MemExtendedParameterAddressRequirements = 1
 
@@ -45,7 +43,6 @@ type MEM_EXTENDED_PARAMETER struct {
 var (
 	modkernel32       = syscall.NewLazyDLL("kernel32.dll")
 	modkernelbase     = syscall.NewLazyDLL("kernelbase.dll")
-	osPageMask        = osPageSize - 1
 	osPageSize        = os.Getpagesize()
 	procVirtualAlloc  = modkernel32.NewProc("VirtualAlloc")
 	procVirtualAlloc2 = modkernelbase.NewProc("VirtualAlloc2")
@@ -104,7 +101,7 @@ func mmapX(size int) (uintptr, int, error) {
 	return addr, size, nil // Return original size, not rounded size
 }
 
-func unmap(addr uintptr, size int) error {
+func unmap(addr uintptr, _ int) error {
 	r, _, err := procVirtualFree.Call(addr, 0, _MEM_RELEASE)
 	if r == 0 {
 		return err
