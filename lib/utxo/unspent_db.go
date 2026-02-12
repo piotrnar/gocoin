@@ -469,6 +469,7 @@ func (db *UnspentDB) Defrag(recs []*[]byte) {
 
 // Only call it from the main thread
 func (db *UnspentDB) DefragMap(force bool) {
+	return
 	if db.WritingInProgress.Get() {
 		return
 	}
