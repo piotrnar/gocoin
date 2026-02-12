@@ -141,17 +141,13 @@ func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
 
 // Malloc allocates size bytes and returns a byte slice.
 func (a *Allocator) Malloc(size int) (r *[]byte, err error) {
-	size += 24
-	p, err := a.uintptrMalloc(size)
+	p, err := a.uintptrMalloc(size + sliceHdrLen)
 	if p == 0 || err != nil {
 		return nil, err
 	}
 
 	sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
 	sh.Data = p + uintptr(sliceHdrLen)
-	sh.Len = size - sliceHdrLen
-	if sh.Cap < sh.Len {
-		panic(fmt.Sprintf("bad cap returned cap %d < len %d   - p 0x%x", sh.Cap, sh.Len, p))
-	}
+	sh.Len = size
 	return (*[]byte)(unsafe.Pointer(sh)), nil
 }

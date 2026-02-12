@@ -195,13 +195,11 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 			}
 
 			// Copy data
-			//oldSlice := unsafe.Slice((*byte)(unsafe.Pointer(slotAddr)), slotSize)
 			oldSlice := (*reflect.SliceHeader)(unsafe.Pointer(slotAddr))
-			//newSlice := unsafe.Slice((*byte)(unsafe.Pointer(newAddr)), slotSize)
 			newSlice := (*reflect.SliceHeader)(unsafe.Pointer(newAddr))
-			newSlice.Cap = oldSlice.Cap
+			*newSlice = *oldSlice
 			newSlice.Data = uintptr(newAddr + 24)
-			newSlice.Len = oldSlice.Cap
+
 			ns := (*[]byte)(unsafe.Pointer(newSlice))
 			copy(*ns, *((*[]byte)(unsafe.Pointer(oldSlice))))
 
