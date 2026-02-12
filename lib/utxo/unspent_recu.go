@@ -1,6 +1,7 @@
 package utxo
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"runtime/debug"
@@ -34,20 +35,21 @@ func NewUtxoRecOwnU(dat []byte, rec *UtxoRec, cbs *NewUtxoOutAllocCbs) {
 		rec.Outs = make([]*UtxoTxOut, u64>>1)
 	}
 
-	for off < len(dat) {
-		defer func() {
-			if r := recover(); r != nil {
-				err, ok := r.(error)
-				if !ok {
-					err = fmt.Errorf("pkg: %v", r)
-				}
-				fmt.Println("panic recovered:", err.Error())
-				fmt.Printf("Ptr:%p Cap:%d Len:%d + %d > %d   LastBlockDone:%d\n",
-					&dat[0], len(dat), cap(dat), memory.LastBlockDone)
-				fmt.Println(string(debug.Stack()))
-				os.Exit(1)
+	defer func() {
+		if r := recover(); r != nil {
+			err, ok := r.(error)
+			if !ok {
+				err = fmt.Errorf("pkg: %v", r)
 			}
-		}()
+			fmt.Println("panic recovered:", err.Error())
+			fmt.Printf("Ptr:%p Cap:%d Len:%d   LastBlockDone:%d  - off:$%d\n",
+				&dat[0], len(dat), cap(dat), memory.LastBlockDone, off)
+			fmt.Println(hex.EncodeToString(dat))
+			fmt.Println(string(debug.Stack()))
+			os.Exit(1)
+		}
+	}()
+	for off < len(dat) {
 		idx, n = btc.VULe(dat[off:])
 		off += n
 		if cbs != nil {
