@@ -150,7 +150,7 @@ func (a *Allocator) Malloc(size int) (r *[]byte, err error) {
 	sh.Data = p + uintptr(sliceHdrLen)
 	sh.Len = size
 	if sh.Cap == 4992 {
-		fmt.Printf("Malloc(%d) => slice:%p / len:%d / cap:%d", size, sh, sh.Len, sh.Cap)
+		fmt.Printf("Malloc(%d) => slice:%p / len:%d / cap:%d\n", size, sh, sh.Len, sh.Cap)
 	}
 	return (*[]byte)(unsafe.Pointer(sh)), nil
 }
