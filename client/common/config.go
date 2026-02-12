@@ -490,15 +490,11 @@ func DefragUTXOMem() {
 	MemMutex.Lock()
 	sta := time.Now()
 	bts_before := Memory.Bytes
-	records := Memory.DefragAllImproved()
+	rec_cnt := Memory.DefragAllImproved(func(oldRec, newRec *[]byte) {
+		BlockChain.Unspent.Relocate(oldRec, newRec)
+	})
 
-	if len(records) > 0 {
-		MemMutex.Unlock()
-		BlockChain.Unspent.Defrag(records)
-		MemMutex.Lock()
-	}
-
-	if len(records) > 0 {
+	if rec_cnt > 0 {
 		DefragCount++
 		DefragBytes += bts_before - Memory.Bytes
 		DefragTime += time.Since(sta)

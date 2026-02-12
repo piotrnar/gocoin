@@ -248,13 +248,14 @@ func all_val_stats(s string) {
 }
 
 func wallet_on_off(s string) {
-	if s == "on" {
+	switch s {
+	case "on":
 		select {
 		case wallet.OnOff <- true:
 		default:
 		}
 		return
-	} else if s == "off" {
+	case "off":
 		select {
 		case wallet.OnOff <- false:
 		default:

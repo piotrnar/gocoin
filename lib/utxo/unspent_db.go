@@ -77,8 +77,7 @@ type UnspentDB struct {
 	mapDefragsCnt   int
 	mapNoDefragsCnt int
 	mapDefragsTime  time.Duration
-	recDefragsCnt   int
-	recDefragsTot   int
+	recRelocateCnt  int
 }
 
 type NewUnspentOpts struct {
@@ -455,16 +454,13 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	return
 }
 
-func (db *UnspentDB) Defrag(recs []*[]byte) {
-	for _, r := range recs {
-		var ind UtxoKeyType
-		copy(ind[:], *r)
-		db.MapMutex[ind[0]].Lock()
-		db.HashMap[ind[0]][ind] = r
-		db.MapMutex[ind[0]].Unlock()
-	}
-	db.recDefragsCnt++
-	db.recDefragsTot += len(recs)
+func (db *UnspentDB) Relocate(oldRec, newRec *[]byte) {
+	var ind UtxoKeyType
+	copy(ind[:], *oldRec)
+	db.MapMutex[ind[0]].Lock()
+	db.HashMap[ind[0]][ind] = newRec
+	db.MapMutex[ind[0]].Unlock()
+	db.recRelocateCnt++
 }
 
 // Only call it from the main thread
@@ -866,9 +862,9 @@ func (db *UnspentDB) GetStats() (s string) {
 		len(db.abortwritingnow) > 0, db.ComprssedUTXO)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	s += fmt.Sprintf(" Defrags:  Maps:%d (%d no) in %s (%d%% dels)   Records: %d recs (in %d rounds)\n",
+	s += fmt.Sprintf(" Defrags:  Maps:%d (%d no) in %s (%d%% dels)   Relocations: %d recs\n",
 		db.mapDefragsCnt, db.mapNoDefragsCnt, db.mapDefragsTime.String(), 100*dels/hml,
-		db.recDefragsTot, db.recDefragsCnt)
+		db.recRelocateCnt)
 	return
 }
 

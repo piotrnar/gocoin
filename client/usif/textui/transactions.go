@@ -469,11 +469,12 @@ func push_old_txs(par string) {
 			max_spb = 10.0
 		}
 		if len(ss) >= 2 {
-			if ss[1] == "push" {
+			switch ss[1] {
+			case "push":
 				push = true
-			} else if ss[1] == "purge" {
+			case "purge":
 				purge = true
-			} else {
+			default:
 				fmt.Println("The second argument must be eiter push or purge")
 			}
 		}

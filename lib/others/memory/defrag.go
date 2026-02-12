@@ -22,10 +22,10 @@ func (a *Allocator) Trace(on bool) {
 }
 
 // Defrag performs defragmentation for a specific size class
-func (a *Allocator) Defrag(class int) []*[]byte {
+func (a *Allocator) Defrag(class int, relocate func(oldslice, newslice *[]byte)) (cnt int) {
 	if class < 0 || class >= len(sizeClassSlotSize) {
 		println("ERROR: Illegal class number", class)
-		return nil
+		return
 	}
 
 	cap := int(a.cap[class])
@@ -34,7 +34,7 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 	potentialFreePages := int(a.freeSlots[class]) / cap
 
 	if potentialFreePages <= minFreePagesFrom {
-		return nil // not worth defragmenting
+		return // not worth defragmenting
 	}
 
 	// Step 2: Build an array of non fully used pages
@@ -47,7 +47,7 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 
 	if len(pages) == 0 {
 		println("ERROR: Unexpected empty pageMap for class", class)
-		return nil
+		return
 	}
 
 	// Step 3: Sort pages by utilization (lowest first)
@@ -88,7 +88,7 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 		if trace {
 			fmt.Printf("No records to move\n")
 		}
-		return nil
+		return
 	}
 
 	if trace {
@@ -164,7 +164,6 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 
 	// Step 7: Evacuate all pages
 	slotSize := int(sizeClassSlotSize[class])
-	relocations := make([]*[]byte, 0, recordsToMove)
 
 	for idx := range evacPages {
 		pg := evacPages[idx].pg
@@ -197,7 +196,9 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 			ns := (*[]byte)(unsafe.Pointer(newSlice))
 			copy(*ns, *((*[]byte)(unsafe.Pointer(oldSlice))))
 
-			relocations = append(relocations, ns)
+			relocate((*[]byte)(unsafe.Pointer(oldSlice)), (*[]byte)(unsafe.Pointer(newSlice)))
+
+			cnt++
 
 			// Free old slot
 			if err := a.uintptrFree(slotAddr); err != nil {
@@ -248,38 +249,16 @@ func (a *Allocator) Defrag(class int) []*[]byte {
 
 	if trace {
 		fmt.Printf("Defrag class %d: relocated %d records, freed %d pages\n",
-			class, len(relocations), len(evacPages))
+			class, cnt, len(evacPages))
 	}
 
-	return relocations
+	return
 }
 
 // DefragAllImproved defragments all classes
-func (a *Allocator) DefragAllImproved() []*[]byte {
-	var allRelocations []*[]byte
-	bytesBefore := a.Bytes
-
+func (a *Allocator) DefragAllImproved(relocate func(oldslice, newslice *[]byte)) (cnt int) {
 	for class := range sizeClassSlotSize {
-		relocations := a.Defrag(class)
-		if len(relocations) > 0 {
-			allRelocations = append(allRelocations, relocations...)
-			if trace {
-				fmt.Printf("Defragged class %d: %d relocations\n", class, len(relocations))
-			}
-		}
+		cnt += a.Defrag(class, relocate)
 	}
-
-	if len(allRelocations) > 0 {
-		bytesFreed := bytesBefore - a.Bytes
-		if bytesFreed <= 0 {
-			panic(fmt.Sprintf("%d records moved, but no memory freed: %d -> %d",
-				len(allRelocations), bytesBefore, a.Bytes))
-		}
-		if trace {
-			fmt.Printf("Total: %d records relocated, freed %d bytes (%.2f MB)\n",
-				len(allRelocations), bytesFreed, float64(bytesFreed)/(1024*1024))
-		}
-	}
-
-	return allRelocations
+	return
 }
