@@ -12,8 +12,8 @@ import (
 
 // sizeClassSlotSize maps class index -> actual slot size in bytes
 var sizeClassSlotSize = []uint32{
-	/*313MB-19-13038MB*/ 72, 80, 104, 128, 160, 200, 264, 312, 432, 624, 896, 1400, 2088, 3088, 5008, 8160, 13064, 21808, 32728,
-	/*145MB-33-12702MB*/ //72, 80, 96, 104, 120, 128, 152, 160, 184, 200, 240, 264, 288, 312, 368, 432, 520, 672, 824, 1032, 1400, 1744, 2232, 2952, 4064, 5008, 6520, 8160, 10888, 13048, 16352, 21808, 32728}
+	/*313MB-19-13038MB*/ //72, 80, 104, 128, 160, 200, 264, 312, 432, 624, 896, 1400, 2088, 3088, 5008, 8160, 13064, 21808, 32728,
+	/*145MB-33-12702MB*/ 72, 80, 96, 104, 120, 128, 152, 160, 184, 200, 240, 264, 288, 312, 368, 432, 520, 672, 824, 1032, 1400, 1744, 2232, 2952, 4064, 5008, 6520, 8160, 10888, 13048, 16352, 21808, 32728,
 }
 
 const (
@@ -50,17 +50,24 @@ var (
 	procVirtualAlloc  = modkernel32.NewProc("VirtualAlloc")
 	procVirtualAlloc2 = modkernelbase.NewProc("VirtualAlloc2")
 	procVirtualFree   = modkernel32.NewProc("VirtualFree")
-	mmap              func(int) (uintptr, int, error)
+	mmapInternal      func(int) (uintptr, int, error)
 )
 
 func init() {
 	if pageSizeLog == 16 {
-		mmap = mmap64
+		mmapInternal = mmap64
 		//println("Using VirtualAlloc for 64 KB pages")
 	} else {
-		mmap = mmapX
+		mmapInternal = mmapX
 		///println("Using VirtualAlloc2 for", 1<<(pageSizeLog-10), "KB pages")
 	}
+}
+
+func mmap(size int) (uintptr, int, error) {
+	if size == 0 {
+		return mmapInternal(pageSize)
+	}
+	return mmap64(size)
 }
 
 // pageSize aligned.

@@ -6,6 +6,8 @@ import (
 	"unsafe"
 )
 
+// it the size is 0, it will allocate pageSize bytes aligned to pageSize
+// otherwise it will allocate size bytes allignd to OS page size
 func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 	p, size, err := mmap(size)
 	if err != nil {
@@ -16,6 +18,7 @@ func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 }
 
 // newPrivatePage creates a dedicated page for a single large allocation
+// the size must be ronded up to OS page size
 func (a *Allocator) newPrivatePage(size int) (uintptr /* *page */, error) {
 	p, err := a.mmap(size)
 	if err != nil {
@@ -32,7 +35,7 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		panic(fmt.Sprintf("invalid size class: %d", class))
 	}
 
-	p, err := a.mmap(pageSize)
+	p, err := a.mmap(0)
 	if err != nil {
 		return 0, err
 	}
