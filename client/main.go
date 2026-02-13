@@ -156,28 +156,43 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		}
 		common.UpdateScriptFlags(bl.VerifyFlags)
 
-		div := uint32(100e3)
-		if common.Last.Block.Height > 400e3 {
-			div = 50e3
+		divAtHeigh := func(height uint32) uint32 {
+			if height > 900e3 {
+				return 10e3
+			}
+			if height > 750e3 {
+				return 25e3
+			}
+			if height > 400e3 {
+				return 50e3
+			}
+			return 100e3
 		}
 		if common.Last.ParseTill != nil {
+			var div uint32
 			if common.Last.Block.Height == 936000 {
 				lastDefragDone = time.Now().Add(-time.Hour)
 				defrag_utxo()
 				for range common.BlockChain.Unspent.HashMap {
 					common.BlockChain.Unspent.DefragMap(true)
 				}
-				div = common.Last.Block.Height
+				div = 0
+			} else {
+				div = divAtHeigh(common.Last.Block.Height)
 			}
-			if (common.Last.Block.Height % div) == 0 {
-				b, _, ms := common.MemUsed()
-				common.MemMutex.Lock()
-				db, tt := common.DefragBytes, common.DefragTotime
-				common.MemMutex.Unlock()
+			if div == 0 || (common.Last.Block.Height%div) == 0 {
+				var utxs string
+				if common.MemoryModUsed {
+					b, _, _ := common.MemUsed()
+					common.MemMutex.Lock()
+					db, tt := common.DefragBytes, common.DefragTotime
+					common.MemMutex.Unlock()
+					utxs = fmt.Sprintf(" UTX: %d MB / dfrg %d MB in %s", b>>20, db>>20, tt.String())
+				}
+				al, sy := sys.MemUsed()
 				fmt.Println("Parsing to", common.Last.Block.Height,
-					"took", time.Since(newbl.TmStart).String(), " QUE:", len(network.NetBlocks),
-					" UTX:", b>>20, "/", ms, " SYS:", memsize.MustResidentMemory()>>20, "MB",
-					" DEF:", db>>20, "MB /", tt.String())
+					"took", time.Since(newbl.TmStart).String(), " Q:", len(network.NetBlocks),
+					" MEM:", al>>20, sy>>20, memsize.MustResidentMemory()>>20, "MB", utxs)
 			}
 		}
 
