@@ -11,7 +11,7 @@ import (
 
 const (
 	defragFromWasteMB = 12 // When number of free slots exceeds this many MB ...
-	defragToWasteMB   = 4 // ... defragment until it falls below this many MB.
+	defragToWasteMB   = 4  // ... defragment until it falls below this many MB.
 
 	minFreePagesFrom = (defragFromWasteMB << 20) / pageSize
 	minFreePagesTo   = (defragToWasteMB << 20) / pageSize
@@ -202,10 +202,8 @@ func (a *Allocator) defragClass(class int, relocate func(oldslice, newslice *[]b
 			}
 			slotAddr += slotSize
 		}
-	}
 
-	// Unmap evacuated pages
-	for _, pg := range pagesToEvacuate {
+		// Unmap evacuated page
 		header := (*page_header)(unsafe.Pointer(pg))
 		header.evacuating = false
 		// Remove from page linked list
