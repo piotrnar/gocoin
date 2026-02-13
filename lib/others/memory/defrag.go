@@ -10,16 +10,12 @@ import (
 )
 
 const (
-	defragFromWasteMB = 2 // When number of free slots exceeds this many MB ...
-	defragToWasteMB   = 1 // ... defragment until it falls below this many MB.
+	defragFromWasteMB = 12 // When number of free slots exceeds this many MB ...
+	defragToWasteMB   = 4 // ... defragment until it falls below this many MB.
 
 	minFreePagesFrom = (defragFromWasteMB << 20) / pageSize
 	minFreePagesTo   = (defragToWasteMB << 20) / pageSize
 )
-
-func init() {
-	println("memory/defrag.go - refert defragFromWasteMB and defragToWasteMB to 12/4")
-}
 
 var trace bool
 
