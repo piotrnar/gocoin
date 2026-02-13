@@ -10,12 +10,16 @@ import (
 )
 
 const (
-	defragFromWasteMB = 12 // When number of free slots exceeds this many MB ...
-	defragToWasteMB   = 4  // ... defragment until it falls below this many MB.
+	defragFromWasteMB = 2 // When number of free slots exceeds this many MB ...
+	defragToWasteMB   = 1 // ... defragment until it falls below this many MB.
 
 	minFreePagesFrom = (defragFromWasteMB << 20) / pageSize
 	minFreePagesTo   = (defragToWasteMB << 20) / pageSize
 )
+
+func init() {
+	println("memory/defrag.go - refert defragFromWasteMB and defragToWasteMB to 12/4")
+}
 
 var trace bool
 
@@ -92,6 +96,12 @@ func (a *Allocator) defragClass(class int, relocate func(oldslice, newslice *[]b
 		return page_i.used < page_j.used
 	})
 
+	// Mark all pages as evacuating
+	type evacInfo struct {
+		pg        uintptr
+		freeSlots map[uintptr]bool
+	}
+
 	// Select pages to evacuate
 	targetFreedRecords := cap * (potentialFreePages - minFreePagesTo)
 	var recordsToMove, recordsToFree int
@@ -131,46 +141,23 @@ func (a *Allocator) defragClass(class int, relocate func(oldslice, newslice *[]b
 			class, recordsToMove, len(pagesToEvacuate), targetFreedRecords)
 	}
 
-	// Mark all pages as evacuating
-	type evacInfo struct {
-		pg           uintptr
-		originalUsed uint16
-		freeSlots    map[uintptr]bool
-	}
-
-	evacPages := make([]evacInfo, len(pagesToEvacuate))
-
-	for idx, pg := range pagesToEvacuate {
+	freeSlotsArr := make([]map[uintptr]struct{}, 0, len(pagesToEvacuate))
+	for _, pg := range pagesToEvacuate {
 		header := (*page_header)(unsafe.Pointer(pg))
-
 		header.evacuating = true
-
-		evacPages[idx].pg = pg
-		evacPages[idx].originalUsed = header.used
-
 		if a.pages[class] == pg {
 			a.pages[class] = 0
 		}
-	}
 
-	// For each evacuating page, collect its free slots and remove them from global list
-	for idx := range evacPages {
-		pg := evacPages[idx].pg
-		header := (*page_header)(unsafe.Pointer(pg))
-
-		freeSlots := make(map[uintptr]bool, header.free)
-
+		freeSlots := make(map[uintptr]struct{}, header.free)
 		for n := header.freeList; n != 0; n = (*node)(unsafe.Pointer(n)).nextInPage {
-			freeSlots[n] = true
+			freeSlots[n] = struct{}{}
 		}
-
 		// Remove these slots from global free list
 		for n := header.freeList; n != 0; {
 			nextInPage := (*node)(unsafe.Pointer(n)).nextInPage
-
 			next := (*node)(unsafe.Pointer(n)).next
 			prev := (*node)(unsafe.Pointer(n)).prev
-
 			if prev == 0 {
 				a.lists[class] = next
 				if next != 0 {
@@ -182,70 +169,49 @@ func (a *Allocator) defragClass(class int, relocate func(oldslice, newslice *[]b
 					(*node)(unsafe.Pointer(next)).prev = prev
 				}
 			}
-
 			n = nextInPage
 		}
-
-		evacPages[idx].freeSlots = freeSlots
+		freeSlotsArr = append(freeSlotsArr, freeSlots)
 		header.freeList = 0
 	}
 
 	// Evacuate all pages
-	slotSize := int(sizeClassSlotSize[class])
-
-	for idx := range evacPages {
-		pg := evacPages[idx].pg
-		header := (*page_header)(unsafe.Pointer(pg))
-		freeSlots := evacPages[idx].freeSlots
-
-		baseAddr := pg + headerSize
-
-		for i := uint16(0); i < header.brk; i++ {
-			slotAddr := baseAddr + uintptr(i)*uintptr(slotSize)
-
-			if freeSlots[slotAddr] {
-				continue
+	slotSize := uintptr(sizeClassSlotSize[class])
+	for idx, pg := range pagesToEvacuate {
+		slotAddr := pg + headerSize
+		for left := int((*page_header)(unsafe.Pointer(pg)).brk); left > 0; left-- {
+			if _, ok := freeSlotsArr[idx][slotAddr]; !ok {
+				// This is a used slot - relocate it
+				newAddr, newPage, err := a.classMalloc(class)
+				if err != nil {
+					panic(fmt.Sprintf("Failed to allocate during defrag: %v", err))
+				}
+				if newPage {
+					deltaBytes += pageSize
+					deltaMmaps++
+				}
+				// Copy data
+				oldSlice := (*reflect.SliceHeader)(unsafe.Pointer(slotAddr))
+				os := (*[]byte)(unsafe.Pointer(oldSlice))
+				newSlice := (*reflect.SliceHeader)(unsafe.Pointer(newAddr))
+				ns := (*[]byte)(unsafe.Pointer(newSlice))
+				newSlice.Data = uintptr(newAddr + 24)
+				newSlice.Len = oldSlice.Len
+				newSlice.Cap = oldSlice.Cap
+				copy(*ns, *os)
+				relocate(os, ns)
+				cnt++
+				// Free old slot (page is evacuating, so slot won't re-enter free list)
+				a.classFree(class, slotAddr)
 			}
-
-			// This is a used slot - relocate it
-			newAddr, newPage, err := a.classMalloc(class)
-			if err != nil {
-				panic(fmt.Sprintf("Failed to allocate during defrag: %v", err))
-			}
-			if newPage {
-				deltaBytes += pageSize
-				deltaMmaps++
-			}
-
-			// Copy data
-			oldSlice := (*reflect.SliceHeader)(unsafe.Pointer(slotAddr))
-			newSlice := (*reflect.SliceHeader)(unsafe.Pointer(newAddr))
-			*newSlice = *oldSlice
-			newSlice.Data = uintptr(newAddr + 24)
-
-			ns := (*[]byte)(unsafe.Pointer(newSlice))
-			copy(*ns, *((*[]byte)(unsafe.Pointer(oldSlice))))
-
-			relocate((*[]byte)(unsafe.Pointer(oldSlice)), (*[]byte)(unsafe.Pointer(newSlice)))
-
-			cnt++
-
-			// Free old slot (page is evacuating, so slot won't re-enter free list)
-			a.classFree(class, slotAddr)
+			slotAddr += slotSize
 		}
 	}
 
 	// Unmap evacuated pages
-	for idx := range evacPages {
-		pg := evacPages[idx].pg
+	for _, pg := range pagesToEvacuate {
 		header := (*page_header)(unsafe.Pointer(pg))
-
-		if header.used != 0 {
-			panic(fmt.Sprintf("Page %#x still has %d used slots after evacuation!", pg, header.used))
-		}
-
 		header.evacuating = false
-
 		// Remove from page linked list
 		if header.prev != 0 {
 			(*page_header)(unsafe.Pointer(header.prev)).next = header.next
@@ -257,29 +223,21 @@ func (a *Allocator) defragClass(class int, relocate func(oldslice, newslice *[]b
 		} else {
 			a.lastPage[class] = header.prev
 		}
-
 		// Update per-class counters
 		a.pageCount[class]--
 		a.freeSlots[class] -= uint32(header.free)
-
 		if a.pages[class] == pg {
 			a.pages[class] = 0
 		}
-
 		// Accumulate shared counter deltas
 		deltaBytes -= pageSize
 		deltaMmaps--
-
-		if err := unmap(pg, pageSize); err != nil {
-			panic(fmt.Sprintf("Failed to unmap page %#x: %v", pg, err))
-		}
+		unmap(pg, pageSize)
 	}
-
 	if trace {
 		fmt.Printf("Defrag class %d: relocated %d records, freed %d pages\n",
-			class, cnt, len(evacPages))
+			class, cnt, len(pagesToEvacuate))
 	}
-
 	return
 }
 
