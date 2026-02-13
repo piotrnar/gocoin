@@ -135,7 +135,8 @@ var (
 
 	mutex_cfg sync.Mutex
 
-	defaultMemoryLimit = debug.SetMemoryLimit(-1)
+	defaultMemoryLimit    = debug.SetMemoryLimit(-1)
+	defaultMemoryLimitSet = true
 )
 
 type oneAllowedAddr struct {
@@ -525,8 +526,10 @@ func UpdateMemoryLimit() {
 				warningShown = true
 			}
 		}
-	} else {
+		defaultMemoryLimitSet = false
+	} else if !defaultMemoryLimitSet {
 		debug.SetMemoryLimit(defaultMemoryLimit)
+		defaultMemoryLimitSet = true
 	}
 }
 
