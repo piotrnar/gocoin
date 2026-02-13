@@ -187,12 +187,13 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 					common.MemMutex.Lock()
 					db, tt := common.DefragBytes, common.DefragTotime
 					common.MemMutex.Unlock()
-					utxs = fmt.Sprintf(" UTX: %d MB / dfrg %d MB in %s", b>>20, db>>20, tt.String())
+					utxs = fmt.Sprintf(" / UTX: %d MB, DEF %d MB in %.2f s",
+						b>>20, db>>20, float64(tt)/float64(time.Second))
 				}
 				al, sy := sys.MemUsed()
-				fmt.Println("Parsing to", common.Last.Block.Height,
-					"took", time.Since(newbl.TmStart).String(), " Q:", len(network.NetBlocks),
-					" MEM:", al>>20, sy>>20, memsize.MustResidentMemory()>>20, "MB", utxs)
+				fmt.Printf("Parsing to %d took %.2f min (%d) / Al:%d Sy:%d Re:%d MB%s\n",
+					common.Last.Block.Height, float64(time.Since(newbl.TmStart))/float64(time.Minute),
+					len(network.NetBlocks), al>>20, sy>>20, memsize.MustResidentMemory()>>20, utxs)
 			}
 		}
 
