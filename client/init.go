@@ -10,7 +10,6 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
-	"github.com/piotrnar/gocoin/lib/others/memsize"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
@@ -122,10 +121,10 @@ func host_init() {
 
 	sto := time.Now()
 
-	al, _ := sys.MemUsed()
+	al, sy := sys.MemUsed()
 	by, _, _ := common.MemUsed()
 	fmt.Printf("Blockchain open in %s.  %d + %d MB of RAM used (%d)\n",
-		sto.Sub(sta).String(), al>>20, by>>20, memsize.MustResidentMemory()>>20)
+		sto.Sub(sta).String(), al>>20, by>>20, sy>>20)
 	fmt.Println("Highest known block is", common.Last.Block.Height, "from",
 		common.Last.Time.Format("2006-01-02 15:04:05"))
 

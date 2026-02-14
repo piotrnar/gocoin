@@ -23,7 +23,6 @@ import (
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
-	"github.com/piotrnar/gocoin/lib/others/memsize"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
@@ -76,9 +75,9 @@ func blockUndone(bl *btc.Block) {
 func print_sync_stats() {
 	_, mu := sys.MemUsed()
 	cb, _, _ := common.MemUsed()
-	fmt.Printf("Sync to %d took %s,  Que: %d/%d,  Mem: %d/%d/%d,  Cach: %d/%d/%d - cachempty: %d\n",
+	fmt.Printf("Sync to %d took %s,  Que: %d/%d,  Mem: %d/%d,  Cach: %d/%d/%d - cachempty: %d\n",
 		common.Last.Block.Height, time.Since(common.StartTime).String(),
-		len(network.NetBlocks), network.CachedBlocksLen(), mu>>20, cb>>20, memsize.MustResidentMemory()>>20,
+		len(network.NetBlocks), network.CachedBlocksLen(), mu>>20, cb>>20,
 		network.CachedBlocksBytes.Get()>>20, network.MaxCachedBlocksSize.Get()>>20,
 		common.SyncMaxCacheBytes.Get()>>20, network.Fetch.CacheEmpty)
 }
@@ -189,9 +188,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 						b>>20, db>>20, float64(tt)/float64(time.Second))
 				}
 				al, sy := sys.MemUsed()
-				fmt.Printf("Parsing to %d took %.2f min (%d) / Al:%d Sy:%d Re:%d MB%s\n",
+				fmt.Printf("Parsing to %d took %.2f min (%d) / Go:%d Sys:%d MB%s\n",
 					common.Last.Block.Height, float64(time.Since(newbl.TmStart))/float64(time.Minute),
-					len(network.NetBlocks), al>>20, sy>>20, memsize.MustResidentMemory()>>20, utxs)
+					len(network.NetBlocks), al>>20, sy>>20, utxs)
 			}
 		}
 

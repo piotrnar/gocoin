@@ -13,7 +13,6 @@ import (
 	"github.com/piotrnar/gocoin/client/peersdb"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/memsize"
 )
 
 var (
@@ -124,7 +123,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	out.Heap_size = ms.Alloc
-	out.Heap_sysmem = memsize.MustResidentMemory()
+	out.Heap_sysmem = ms.Sys
 	out.GC_Num = ms.NumGC
 	out.GC_Last = uint32(ms.LastGC / uint64(time.Second))
 	out.GC_Total = ms.PauseTotalNs
