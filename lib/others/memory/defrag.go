@@ -258,7 +258,6 @@ func (a *Allocator) classMalloc(class int) (r uintptr, newPage bool, err error) 
 		}
 		slotSize := int(sizeClassSlotSize[class])
 		ptr := p + headerSize + uintptr(header.brk-1)*uintptr(slotSize)
-		(*reflect.SliceHeader)(unsafe.Pointer(ptr)).Cap = int(slotSize) - sliceHdrLen
 		return ptr, newPage, nil
 	}
 
@@ -292,7 +291,6 @@ func (a *Allocator) classMalloc(class int) (r uintptr, newPage bool, err error) 
 	header.used++
 	header.free--
 	a.freeSlots[class]--
-	(*reflect.SliceHeader)(unsafe.Pointer(n)).Cap = int(sizeClassSlotSize[class]) - sliceHdrLen
 	return n, newPage, nil
 }
 
