@@ -13,6 +13,7 @@ import (
 
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/memory"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/utxo"
 )
@@ -333,19 +334,11 @@ func InitConfig() {
 	if CFG.Memory.UseGoHeap {
 		fmt.Println("Using native Go heap with Garbage Collector for UTXO records")
 	} else {
-		fmt.Println("Using memory package with", Memory.ClassCont, "size classes for UTXO records")
-		MemoryModUsed = true
-		utxo.Memory_Malloc = func(le int) (res *[]byte) {
-			MemMutex.Lock()
-			res, _ = Memory.Malloc(le)
-			MemMutex.Unlock()
-			return
-		}
-		utxo.Memory_Free = func(ptr *[]byte) {
-			MemMutex.Lock()
-			Memory.Free(ptr)
-			MemMutex.Unlock()
-		}
+		Memory = memory.NewAllocator()
+		fmt.Printf("Using memory package with %d sizes up to %d for UTXO records\n",
+			Memory.ClassCont, Memory.MaxSharedSize-24)
+		utxo.Memory_Malloc = Memory.Malloc
+		utxo.Memory_Free = Memory.Free
 	}
 
 	if CFG.Memory.DataFilesKeep == 0 {
@@ -488,28 +481,27 @@ func Reset() {
 }
 
 func DefragUTXOMem() {
-	MemMutex.Lock()
 	sta := time.Now()
-	bts_before := Memory.Bytes
+	bts_before := Memory.Bytes.Load()
 	rec_cnt := Memory.DefragAllImproved(func(oldRec, newRec *[]byte) {
 		BlockChain.Unspent.Relocate(oldRec, newRec)
 	})
 
 	if rec_cnt > 0 {
 		DefragCount++
-		DefragBytes += bts_before - Memory.Bytes
+		DefragBytes += int(bts_before - Memory.Bytes.Load())
 		DefragTime += time.Since(sta)
 	}
 	DefragTotime += time.Since(sta)
-	MemMutex.Unlock()
 }
 
 // Mind that this is called with config mutex locked.
 func UpdateMemoryLimit() {
 	if CFG.Memory.MemoryLimitMB != 0 {
-		MemMutex.Lock()
-		utxo_bytes_used := int64(Memory.Bytes)
-		MemMutex.Unlock()
+		var utxo_bytes_used int64
+		if Memory != nil {
+			utxo_bytes_used = Memory.Bytes.Load()
+		}
 		new_limit := int64(CFG.Memory.MemoryLimitMB) << 20
 		if new_limit > utxo_bytes_used {
 			debug.SetMemoryLimit(new_limit - utxo_bytes_used)

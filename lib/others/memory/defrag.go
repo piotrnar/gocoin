@@ -55,8 +55,8 @@ func (a *Allocator) DefragAllImproved(relocate func(oldslice, newslice *[]byte))
 	wg.Wait()
 
 	// Apply accumulated counter deltas
-	a.Bytes += int(totalBytes.Load())
-	a.SharedMmaps += int(totalMmaps.Load())
+	a.Bytes.Add(totalBytes.Load())
+	a.SharedMmaps.Add(totalMmaps.Load())
 
 	return int(totalCnt.Load())
 }

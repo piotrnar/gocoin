@@ -13,7 +13,7 @@ func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 	if err != nil {
 		return 0, err
 	}
-	a.Bytes += size
+	a.Bytes.Add(int64(size))
 	return p, nil
 }
 
@@ -24,7 +24,7 @@ func (a *Allocator) newPrivatePage(size int) (uintptr /* *page */, error) {
 	if err != nil {
 		return 0, err
 	}
-	a.PrivateMmaps++
+	a.PrivateMmaps.Add(1)
 	return p, nil
 }
 
@@ -61,13 +61,13 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	a.freeSlots[class] += a.cap[class]
 
 	a.pages[class] = p
-	a.SharedMmaps++
+	a.SharedMmaps.Add(1)
 	return p, nil
 }
 
 // uintptrMalloc is like Malloc except it returns an uintptr.
 func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
-	a.Allocs++
+	a.Allocs.Add(1)
 
 	class := a.getSizeClass(size)
 
@@ -143,14 +143,16 @@ func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
 }
 
 // Malloc allocates size bytes and returns a byte slice.
-func (a *Allocator) Malloc(size int) (r *[]byte, err error) {
+func (a *Allocator) Malloc(size int) (r *[]byte) {
+	a.Lock()
 	p, err := a.uintptrMalloc(size + sliceHdrLen)
+	a.Unlock()
 	if p == 0 || err != nil {
-		return nil, err
+		return nil
 	}
 
 	sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
 	sh.Data = p + uintptr(sliceHdrLen)
 	sh.Len = size
-	return (*[]byte)(unsafe.Pointer(sh)), nil
+	return (*[]byte)(unsafe.Pointer(sh))
 }

@@ -9,6 +9,8 @@ package memory // import "modernc.org/memory"
 import (
 	"bytes"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -39,10 +41,11 @@ type page_header struct {
 
 // Allocator allocates and frees memory. Its zero value is ready for use.
 type Allocator struct {
-	Allocs        int // # of allocs.
-	Bytes         int // Asked from OS.
-	PrivateMmaps  int // Asked from OS.
-	SharedMmaps   int
+	sync.Mutex
+	Allocs        atomic.Int64 // # of allocs.
+	Bytes         atomic.Int64 // Asked from OS.
+	PrivateMmaps  atomic.Int64 // Asked from OS.
+	SharedMmaps   atomic.Int64
 	MaxSharedSize int
 	ClassCont     int
 	cap           []uint32
@@ -78,6 +81,8 @@ func getSlotSize(class int) uint32 {
 }
 
 func (a *Allocator) GetInfo(verbose bool) string {
+	a.Lock()
+	defer a.Unlock()
 	var pcnt, scnt, fcnt int
 	w := new(bytes.Buffer)
 	for class := range sizeClassSlotSize {
@@ -99,7 +104,7 @@ func (a *Allocator) GetInfo(verbose bool) string {
 		fmt.Fprintln(w)
 	}
 	fmt.Fprintf(w, "Bytes: %d,  Allocs: %d,  Maps: %d sh + %d pr  MaxSize: %d\n",
-		a.Bytes, a.Allocs, a.SharedMmaps, a.PrivateMmaps, a.MaxSharedSize)
+		a.Bytes.Load(), a.Allocs.Load(), a.SharedMmaps.Load(), a.PrivateMmaps.Load(), a.MaxSharedSize)
 	fmt.Fprintf(w, "Page Header Size: %d,   Slot Extra Size: %d,   Page Size: %d\n",
 		headerSize, sizeIncrease, pageSize)
 	fmt.Fprintf(w, "Classes: %d,  Total slots: %d MB,  pages: %d,   free slots: %d MB\n",

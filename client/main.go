@@ -96,7 +96,7 @@ func exit_now() {
 }
 
 func defrag_utxo() {
-	if common.MemoryModUsed {
+	if common.Memory != nil {
 		if time.Since(lastDefragDone) > DefragPeriod {
 			common.DefragUTXOMem()
 			lastDefragDone = time.Now()
@@ -182,11 +182,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			}
 			if div == 0 || (common.Last.Block.Height%div) == 0 {
 				var utxs string
-				if common.MemoryModUsed {
+				if common.Memory != nil {
 					b, _, _ := common.MemUsed()
-					common.MemMutex.Lock()
 					db, tt := common.DefragBytes, common.DefragTotime
-					common.MemMutex.Unlock()
 					utxs = fmt.Sprintf(" / UTX: %d MB, DEF %d MB in %.2f s",
 						b>>20, db>>20, float64(tt)/float64(time.Second))
 				}

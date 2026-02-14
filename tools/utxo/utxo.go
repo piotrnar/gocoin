@@ -114,17 +114,8 @@ func main() {
 
 	if gc == -1 {
 		fmt.Println("Using designated memory allocator")
-		utxo.Memory_Malloc = func(le int) (res *[]byte) {
-			MemMutex.Lock()
-			res, _ = Memory.Malloc(le)
-			MemMutex.Unlock()
-			return
-		}
-		utxo.Memory_Free = func(ptr *[]byte) {
-			MemMutex.Lock()
-			Memory.Free(ptr)
-			MemMutex.Unlock()
-		}
+		utxo.Memory_Malloc = Memory.Malloc
+		utxo.Memory_Free = Memory.Free
 	} else {
 		fmt.Println("Using native Go heap with GC target of", gc)
 		debug.SetGCPercent(gc)

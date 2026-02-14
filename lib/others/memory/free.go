@@ -11,12 +11,12 @@ func (a *Allocator) unmap(p uintptr, size int) error {
 
 // uintptrFree is like Free except its argument is an uintptr
 func (a *Allocator) uintptrFree(p uintptr) (err error) {
-	a.Allocs--
+	a.Allocs.Add(-1)
 
 	if sh := (*reflect.SliceHeader)(unsafe.Pointer(p)); sh.Cap+sliceHdrLen > a.MaxSharedSize {
 		size := sh.Cap + sliceHdrLen
-		a.Bytes -= size
-		a.PrivateMmaps--
+		a.Bytes.Add(int64(-size))
+		a.PrivateMmaps.Add(-1)
 		return a.unmap(p, size)
 	}
 
@@ -102,12 +102,16 @@ func (a *Allocator) uintptrFree(p uintptr) (err error) {
 	if a.pages[class] == pg {
 		a.pages[class] = 0
 	}
-	a.Bytes -= pageSize
-	a.SharedMmaps--
+	a.Bytes.Add(-pageSize)
+	a.SharedMmaps.Add(-1)
 	return a.unmap(pg, osPageSize)
 }
 
 // Free deallocates memory (as in C.free).
-func (a *Allocator) Free(b *[]byte) (err error) {
-	return a.uintptrFree(uintptr(unsafe.Pointer(b)))
+func (a *Allocator) Free(b *[]byte) {
+	a.Lock()
+	if er := a.uintptrFree(uintptr(unsafe.Pointer(b))); er != nil {
+		panic(er.Error())
+	}
+	a.Unlock()
 }

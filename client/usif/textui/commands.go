@@ -596,9 +596,11 @@ func webui_stats(par string) {
 }
 
 func utxo_mem(par string) {
-	common.MemMutex.Lock()
-	fmt.Print(common.Memory.GetInfo(strings.HasPrefix(par, "v")))
-	common.MemMutex.Unlock()
+	if common.Memory == nil {
+		fmt.Println("Memory module not in use (Memory.UseGoHeap is set in config)")
+	} else {
+		fmt.Print(common.Memory.GetInfo(strings.HasPrefix(par, "v")))
+	}
 }
 
 func utxo_defrag(par string) {
@@ -633,13 +635,13 @@ func utxo_defrag(par string) {
 
 	if dmem {
 		sta := time.Now()
-		if common.MemoryModUsed {
+		if common.Memory != nil {
 			fmt.Print("Defragmenting all UTXO records ... ")
 			common.DefragUTXOMem()
 			fmt.Println("took", time.Since(sta).String())
 			showmemuse()
 		} else {
-			fmt.Println("UTXO records of Go heap (dont need derfagmenting)")
+			fmt.Println("UTXO records stored in Go's heap and don't need defragmenting")
 		}
 	}
 	if dmap {
