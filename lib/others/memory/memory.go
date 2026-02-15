@@ -121,8 +121,8 @@ func (a *Allocator) GetInfo(verbose bool) string {
 		a.Bytes.Load(), a.Allocs.Load(), a.SharedMmaps.Load(), a.PrivateMmaps.Load(), a.MaxSharedSize)
 	fmt.Fprintf(w, "Page Header Size: %d,   Slot Extra Size: %d,   Page Size: %d\n",
 		headerSize, sizeIncrease, pageSize)
-	fmt.Fprintf(w, "Classes: %d,  Total slots: %d MB,  pages: %d,   free slots: %d MB\n",
-		len(sizeClassSlotSize), scnt>>20, pcnt, fcnt>>20)
+	fmt.Fprintf(w, "Classes: %d,  Total slots: %d MB,  pages: %d,   free slots: %d MB,  page cache: %d\n",
+		len(sizeClassSlotSize), scnt>>20, pcnt, fcnt>>20, len(a.pageCache))
 	return w.String()
 }
 
