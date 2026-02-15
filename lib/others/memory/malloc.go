@@ -150,22 +150,17 @@ func (a *Allocator) Malloc(size int) (r *[]byte) {
 		return (*[]byte)(unsafe.Pointer(sh))
 	}
 
-	// Small allocation - check if we need a new page before taking the lock
+	// Small allocation
 	a.classMu[class].Lock()
 
 	if a.lists[class] == 0 && a.pages[class] == 0 {
-		// Need a new page - release lock, mmap, re-lock
-		a.classMu[class].Unlock()
-
+		// Need a new page - mmap is expensive but this path is infrequent
+		// (only when a class runs completely dry)
 		p, err := a.mmapSharedPage()
 		if err != nil {
+			a.classMu[class].Unlock()
 			return nil
 		}
-
-		a.classMu[class].Lock()
-
-		// Another thread may have allocated a page while we were mmapping.
-		// If so, link our page anyway - it won't hurt, just adds capacity.
 		a.linkSharedPage(class, p)
 	}
 
