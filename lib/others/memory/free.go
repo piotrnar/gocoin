@@ -104,10 +104,10 @@ func (a *Allocator) uintptrFreeShared(p uintptr) (unmapPage uintptr) {
 	if a.pages[class] == pg {
 		a.pages[class] = 0
 	}
-	a.Bytes.Add(-pageSize)
 	a.SharedMmaps.Add(-1)
 
-	// Return the page to unmap outside the lock
+	// Return the page to caller - caller decides whether to cache or unmap.
+	// Bytes accounting is NOT done here - caller must handle it.
 	return pg
 }
 
@@ -122,6 +122,7 @@ func (a *Allocator) uintptrFree(p uintptr) (err error) {
 
 	pg := a.uintptrFreeShared(p)
 	if pg != 0 {
+		a.Bytes.Add(-pageSize)
 		return a.unmap(pg, osPageSize)
 	}
 	return nil
@@ -145,13 +146,17 @@ func (a *Allocator) Free(b *[]byte) {
 	pg := p &^ uintptr(pageMask)
 	class := int((*page_header)(unsafe.Pointer(pg)).class)
 	a.classMu[class].Lock()
-	unmapPage := a.uintptrFreeShared(p)
+	emptyPage := a.uintptrFreeShared(p)
 	a.classMu[class].Unlock()
 
-	// Unmap empty page outside the lock
-	if unmapPage != 0 {
-		if er := a.unmap(unmapPage, osPageSize); er != nil {
-			panic(er.Error())
+	// If a page became empty, try to recycle it into the page cache
+	if emptyPage != 0 {
+		if !a.pageCachePut(emptyPage) {
+			// Cache is full - actually unmap and adjust Bytes
+			a.Bytes.Add(-pageSize)
+			if er := a.unmap(emptyPage, osPageSize); er != nil {
+				panic(er.Error())
+			}
 		}
 	}
 }

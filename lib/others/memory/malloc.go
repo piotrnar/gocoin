@@ -27,9 +27,13 @@ func (a *Allocator) newPrivatePage(size int) (uintptr /* *page */, error) {
 	return p, nil
 }
 
-// mmapSharedPage allocates a raw page via mmap without linking it into any class.
-// Called outside the class mutex to keep the syscall out of the critical section.
+// mmapSharedPage gets a page for shared use.
+// Tries the page cache first (fast, no syscall), falls back to mmap.
 func (a *Allocator) mmapSharedPage() (uintptr, error) {
+	if p := a.pageCacheGet(); p != 0 {
+		a.SharedMmaps.Add(1)
+		return p, nil
+	}
 	p, err := a.mmap(0)
 	if err != nil {
 		return 0, err
