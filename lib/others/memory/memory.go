@@ -22,8 +22,8 @@ const (
 	sliceHdrLen  = int(unsafe.Sizeof([]byte{}))
 	sizeIncrease = sliceHdrLen
 
-	pageCacheLow  = 10 // refill trigger: launch goroutine when cache falls below this
-	pageCacheHigh = 20 // capacity of the channel / max cached pages
+	pageCacheLow  = 2 // refill trigger: launch goroutine when cache falls below this
+	pageCacheHigh = 5 // capacity of the channel / max cached pages
 )
 
 type node struct {
