@@ -41,13 +41,13 @@ type page_header struct {
 
 // Allocator allocates and frees memory. Its zero value is ready for use.
 type Allocator struct {
-	sync.Mutex
 	Allocs        atomic.Int64 // # of allocs.
 	Bytes         atomic.Int64 // Asked from OS.
 	PrivateMmaps  atomic.Int64 // Asked from OS.
 	SharedMmaps   atomic.Int64
 	MaxSharedSize int
 	ClassCont     int
+	classMu       []sync.Mutex // per-class mutexes for Malloc/Free parallelism
 	cap           []uint32
 	lists         []uintptr // *node - free lists per size class
 	pages         []uintptr // *page - current page per size class
@@ -81,8 +81,14 @@ func getSlotSize(class int) uint32 {
 }
 
 func (a *Allocator) GetInfo(verbose bool) string {
-	a.Lock()
-	defer a.Unlock()
+	for i := range a.classMu {
+		a.classMu[i].Lock()
+	}
+	defer func() {
+		for i := range a.classMu {
+			a.classMu[i].Unlock()
+		}
+	}()
 	var pcnt, scnt, fcnt int
 	w := new(bytes.Buffer)
 	for class := range sizeClassSlotSize {
@@ -114,6 +120,7 @@ func (a *Allocator) GetInfo(verbose bool) string {
 
 func NewAllocator() (a *Allocator) {
 	a = new(Allocator)
+	a.classMu = make([]sync.Mutex, len(sizeClassSlotSize))
 	a.cap = make([]uint32, len(sizeClassSlotSize))
 	a.lists = make([]uintptr, len(sizeClassSlotSize))
 	a.pages = make([]uintptr, len(sizeClassSlotSize))

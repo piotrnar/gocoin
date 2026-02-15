@@ -144,9 +144,14 @@ func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
 
 // Malloc allocates size bytes and returns a byte slice.
 func (a *Allocator) Malloc(size int) (r *[]byte) {
-	a.Lock()
+	class := a.getSizeClass(size + sliceHdrLen)
+	if class >= 0 {
+		a.classMu[class].Lock()
+	}
 	p, err := a.uintptrMalloc(size + sliceHdrLen)
-	a.Unlock()
+	if class >= 0 {
+		a.classMu[class].Unlock()
+	}
 	if p == 0 || err != nil {
 		return nil
 	}

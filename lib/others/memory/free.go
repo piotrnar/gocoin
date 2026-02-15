@@ -109,9 +109,22 @@ func (a *Allocator) uintptrFree(p uintptr) (err error) {
 
 // Free deallocates memory (as in C.free).
 func (a *Allocator) Free(b *[]byte) {
-	a.Lock()
-	if er := a.uintptrFree(uintptr(unsafe.Pointer(b))); er != nil {
+	p := uintptr(unsafe.Pointer(b))
+
+	// Check if this is a private (large) allocation - no class mutex needed
+	if sh := (*reflect.SliceHeader)(unsafe.Pointer(p)); sh.Cap+sliceHdrLen > a.MaxSharedSize {
+		if er := a.uintptrFree(p); er != nil {
+			panic(er.Error())
+		}
+		return
+	}
+
+	// Shared allocation - lock the class mutex
+	pg := p &^ uintptr(pageMask)
+	class := int((*page_header)(unsafe.Pointer(pg)).class)
+	a.classMu[class].Lock()
+	if er := a.uintptrFree(p); er != nil {
 		panic(er.Error())
 	}
-	a.Unlock()
+	a.classMu[class].Unlock()
 }
