@@ -332,10 +332,10 @@ func InitConfig() {
 	}
 
 	if CFG.Memory.UseGoHeap {
-		fmt.Println("Using native Go heap with Garbage Collector for UTXO records")
+		fmt.Println("WARNING: Using native Go heap and Garbage Collector for UTXO records")
 	} else {
 		Memory = memory.NewAllocator()
-		fmt.Printf("Using memory package with %d sizes up to %d for UTXO records\n",
+		fmt.Printf("Using optimized memory package with %d sizes up to %d for UTXO records\n",
 			Memory.ClassCont, Memory.MaxSharedSize-24)
 		utxo.Memory_Malloc = Memory.Malloc
 		utxo.Memory_Free = Memory.Free
