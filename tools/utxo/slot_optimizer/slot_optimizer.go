@@ -23,9 +23,10 @@ func main() {
 	csvFile := flag.String("csv", "data_full.csv", "CSV file with size,count records")
 	numClasses := flag.Int("classes", 33, "Number of desired size classes")
 	pageSizeLog := flag.Int("pagelog", 20, "Page size log2 (16=64KB, 20=1MB)")
-	headerSize := flag.Int("header", 40, "Page header size in bytes")
+	headerSize := flag.Int("header", 32, "Page header size in bytes")
 	sliceHeader := flag.Int("slice", 24, "Slice header added to each record size")
-	maxSlot := flag.Int("maxslot", 0, "Maximum slot size including header (0 = auto from CSV data)")
+	maxSlot := flag.Int("maxslot", 0, "Maximum slot size including header (0 = auto)")
+	minFit := flag.Int("minfit", 2, "Minimum number of max-size slots that must fit in one page")
 	maxCandPerEndpoint := flag.Int("maxcand", 50, "Max candidates to try per endpoint")
 	numWorkers := flag.Int("workers", 0, "Number of parallel workers (0 = NumCPU)")
 
@@ -47,19 +48,13 @@ func main() {
 	}
 	fmt.Printf("Total records: %d\n", totalCount)
 
-	// Determine maxSlot: from flag or from data
+	// Determine maxSlot
 	if *maxSlot <= 0 {
-		*maxSlot = groups[len(groups)-1].Size
-		// Round up to multiple of 8
-		*maxSlot = (*maxSlot + 7) &^ 7
+		// Auto: largest slot that fits minFit times per page, aligned to 8
+		*maxSlot = (pageAvail / *minFit) &^ 7
 	}
-
-	// Filter out records that won't fit in a single page
-	// (slot must fit at least 1 per page)
-	if *maxSlot > pageAvail {
-		*maxSlot = pageAvail &^ 7
-		fmt.Printf("Warning: maxSlot clamped to page avail: %d\n", *maxSlot)
-	}
+	fmt.Printf("Max slot: %d (source: %d), fits %d per page\n",
+		*maxSlot, *maxSlot-*sliceHeader, pageAvail / *maxSlot)
 
 	// Remove groups larger than maxSlot (they'll be dedicated pages)
 	filtered := groups[:0]
@@ -232,12 +227,17 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 
 	// Prefix sums for O(1) range count queries
 	prefixCount := make([]int64, N+1)
+	prefixWeighted := make([]int64, N+1)
 	for i, g := range groups {
 		prefixCount[i+1] = prefixCount[i] + g.Count
+		prefixWeighted[i+1] = prefixWeighted[i] + int64(g.Size)*g.Count
 	}
 
-	// Cost = number of pages for slot size S covering groups[from..to)
-	pagesForSlot := func(S int, from, to int) int64 {
+	// Cost function for slot size S covering groups[from..to).
+	// Primary: number of pages (scaled by pageAvail to dominate).
+	// Tiebreaker: total waste bytes within those pages (internal + tail + last-page free).
+	// This ensures we minimize pages first, then minimize waste among equal-page solutions.
+	costForSlot := func(S int, from, to int) int64 {
 		spp := int64(pageAvail / S)
 		if spp == 0 {
 			return math.MaxInt64 / 2
@@ -246,7 +246,29 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 		if cnt == 0 {
 			return 0
 		}
-		return (cnt + spp - 1) / spp
+		numPages := (cnt + spp - 1) / spp
+
+		// Internal waste: S*count - sum(size*count)
+		wsum := prefixWeighted[to] - prefixWeighted[from]
+		internalWaste := int64(S)*cnt - wsum
+
+		// Tail waste per page
+		tailPerPage := int64(pageAvail - int(spp)*S)
+		tailWaste := numPages * tailPerPage
+
+		// Last page unused slots
+		usedInLast := cnt % spp
+		if usedInLast == 0 {
+			usedInLast = spp
+		}
+		lastPageWaste := (spp - usedInLast) * int64(S)
+
+		totalWaste := internalWaste + tailWaste + lastPageWaste
+
+		// Scale pages so they always dominate.
+		// Max waste per page = pageAvail (~1MB or ~64KB).
+		// So multiplying pages by (pageAvail+1) ensures 1 page > any waste amount.
+		return numPages*int64(pageAvail+1) + totalWaste
 	}
 
 	// Precompute per-endpoint candidate lists
@@ -327,7 +349,7 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 					if S < maxSlot {
 						continue
 					}
-					p := pagesForSlot(S, i, j)
+					p := costForSlot(S, i, j)
 					total := prev[i] + p
 					if total < bestW {
 						bestW = total
@@ -362,7 +384,7 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 								continue
 							}
 							for _, S := range cands {
-								p := pagesForSlot(S, i, j)
+								p := costForSlot(S, i, j)
 								total := prev[i] + p
 								if total < bestW {
 									bestW = total
@@ -400,7 +422,7 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 		elapsed := time.Since(t0)
 		if isLast {
 			fmt.Printf("  DP class %d/%d: %.2fs -> total pages: %d\n",
-				k, K, elapsed.Seconds(), curr[N])
+				k, K, elapsed.Seconds(), curr[N]/int64(pageAvail+1))
 		} else {
 			minW := INF
 			for _, w := range curr {
@@ -409,13 +431,14 @@ func dpOptimize(groups []SizeGroup, candidates []int, K, pageAvail, maxSlot, max
 				}
 			}
 			fmt.Printf("  DP class %d/%d: %.2fs -> best partial pages: %d\n",
-				k, K, elapsed.Seconds(), minW)
+				k, K, elapsed.Seconds(), minW/int64(pageAvail+1))
 		}
 
 		prev, curr = curr, prev
 	}
 
-	optimalPages := prev[N]
+	optimalCost := prev[N]
+	optimalPages := optimalCost / int64(pageAvail+1)
 
 	slots := make([]int, K)
 	j := N

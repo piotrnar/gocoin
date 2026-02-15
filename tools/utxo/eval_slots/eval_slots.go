@@ -19,7 +19,7 @@ func main() {
 	csvFile := flag.String("csv", "data_full.csv", "CSV file with size,count records")
 	slotsStr := flag.String("slots", "", "Comma-separated slot sizes (source values, without +24)")
 	pageSizeLog := flag.Int("pagelog", 20, "Page size log2 (16=64KB, 20=1MB)")
-	headerSize := flag.Int("header", 40, "Page header size in bytes")
+	headerSize := flag.Int("header", 32, "Page header size in bytes")
 	sliceHeader := flag.Int("slice", 24, "Slice header added to each record size")
 
 	flag.Parse()

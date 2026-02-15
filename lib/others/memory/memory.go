@@ -9,18 +9,18 @@ package memory // import "modernc.org/memory"
 import (
 	"bytes"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"unsafe"
 )
 
 const (
-	counters = true
-
 	headerSize   = unsafe.Sizeof(page_header{})
-	dedicHdrSize = unsafe.Sizeof(page_header_common{})
 	pageAvail    = pageSize - headerSize
 	pageMask     = pageSize - 1
 	pageSize     = 1 << pageSizeLog
-	sizeIncrease = unsafe.Sizeof([]byte{})
+	sliceHdrLen  = int(unsafe.Sizeof([]byte{}))
+	sizeIncrease = sliceHdrLen
 )
 
 type node struct {
@@ -28,17 +28,11 @@ type node struct {
 	prevInPage, nextInPage uintptr // *node - per-page free list (only slots from same page)
 }
 
-type page_header_common struct {
-	class int16  // -1 for private page
-	cap   uint16 // number of records (not used for private page)
-	siz   uint32 // total page size from mmap, including header, padded to osPageSize
-}
-
 type page_header struct {
-	page_header_common
+	class      byte
+	evacuating bool    // true during defragmentation to prevent freed slots from re-entering free list
 	brk        uint16  // high water mark of allocated slots
 	used       uint16  // number of currently used slots
-	evacuating uint16  // 1 during defragmentation to prevent freed slots from re-entering free list
 	free       uint16  // number of free slots in this page (for quick defrag decisions)
 	prev       uintptr // previous page in class (linked list of all pages)
 	next       uintptr // next page in class (linked list of all pages)
@@ -47,15 +41,17 @@ type page_header struct {
 
 // Allocator allocates and frees memory. Its zero value is ready for use.
 type Allocator struct {
-	Allocs        int // # of allocs.
-	Bytes         int // Asked from OS.
-	cap           []uint32
-	lists         []uintptr // *node - free lists per size class
-	Mmaps         int       // Asked from OS.
-	pages         []uintptr // *page - current page per size class
-	classIdx      []byte
+	sync.Mutex
+	Allocs        atomic.Int64 // # of allocs.
+	Bytes         atomic.Int64 // Asked from OS.
+	PrivateMmaps  atomic.Int64 // Asked from OS.
+	SharedMmaps   atomic.Int64
 	MaxSharedSize int
 	ClassCont     int
+	cap           []uint32
+	lists         []uintptr // *node - free lists per size class
+	pages         []uintptr // *page - current page per size class
+	classIdx      []byte
 
 	// Defragmentation optimization fields
 	firstPage []uintptr // first page in linked list per class
@@ -85,6 +81,8 @@ func getSlotSize(class int) uint32 {
 }
 
 func (a *Allocator) GetInfo(verbose bool) string {
+	a.Lock()
+	defer a.Unlock()
 	var pcnt, scnt, fcnt int
 	w := new(bytes.Buffer)
 	for class := range sizeClassSlotSize {
@@ -98,14 +96,22 @@ func (a *Allocator) GetInfo(verbose bool) string {
 		scnt += int(a.pageCount[class]) * int(a.cap[class]) * siz
 		fcnt += int(a.freeSlots[class]) * siz
 	}
-	fmt.Fprintf(w, "Bytes: %d,  Allocs: %d,  Maps: %d,  MaxSize: %d\n",
-		a.Bytes, a.Allocs, a.Mmaps, a.MaxSharedSize)
+	if !verbose {
+		fmt.Fprint(w, len(sizeClassSlotSize), " slots: ")
+		for _, siz := range sizeClassSlotSize {
+			fmt.Fprint(w, int(siz)-int(sizeIncrease), ", ")
+		}
+		fmt.Fprintln(w)
+	}
+	fmt.Fprintf(w, "Bytes: %d,  Allocs: %d,  Maps: %d sh + %d pr  MaxSize: %d\n",
+		a.Bytes.Load(), a.Allocs.Load(), a.SharedMmaps.Load(), a.PrivateMmaps.Load(), a.MaxSharedSize)
 	fmt.Fprintf(w, "Page Header Size: %d,   Slot Extra Size: %d,   Page Size: %d\n",
 		headerSize, sizeIncrease, pageSize)
 	fmt.Fprintf(w, "Classes: %d,  Total slots: %d MB,  pages: %d,   free slots: %d MB\n",
 		len(sizeClassSlotSize), scnt>>20, pcnt, fcnt>>20)
 	return w.String()
 }
+
 func NewAllocator() (a *Allocator) {
 	a = new(Allocator)
 	a.cap = make([]uint32, len(sizeClassSlotSize))
@@ -138,6 +144,9 @@ func NewAllocator() (a *Allocator) {
 
 func init() {
 	// add the slice header to each slot size
+	if len(sizeClassSlotSize) > 255 {
+		panic("Too many classes")
+	}
 	for i := range sizeClassSlotSize {
 		sizeClassSlotSize[i] += uint32(sizeIncrease)
 	}

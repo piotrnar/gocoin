@@ -84,14 +84,12 @@ var (
 	lastTrustedBlock       *btc.Uint256
 	LastTrustedBlockHeight uint32
 
-	Memory        *memory.Allocator = memory.NewAllocator()
-	MemMutex      sync.Mutex
-	MemoryModUsed bool
-	warningShown  bool
-	DefragCount   int
-	DefragBytes   int
-	DefragTime    time.Duration
-	DefragTotime  time.Duration
+	Memory       *memory.Allocator
+	warningShown bool
+	DefragCount  int
+	DefragBytes  int
+	DefragTime   time.Duration
+	DefragTotime time.Duration
 
 	NoCounters sys.SyncBool
 
@@ -384,9 +382,9 @@ func CurrentScriptFlags() uint32 {
 }
 
 func MemUsed() (bts int, alcs int, mmaps int) {
-	MemMutex.Lock()
-	bts, alcs, mmaps = Memory.Bytes, Memory.Allocs, Memory.Mmaps
-	MemMutex.Unlock()
+	if Memory != nil {
+		bts, alcs, mmaps = int(Memory.Bytes.Load()), int(Memory.Allocs.Load()), int(Memory.SharedMmaps.Load())
+	}
 	return
 }
 

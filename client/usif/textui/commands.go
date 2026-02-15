@@ -74,9 +74,10 @@ func AskYesNo(msg string) bool {
 	for {
 		fmt.Print(msg, " (y/n) : ")
 		l := strings.ToLower(readline())
-		if l == "y" {
+		switch l {
+		case "y":
 			return true
-		} else if l == "n" {
+		case "n":
 			return false
 		}
 	}
@@ -420,9 +421,10 @@ func send_inv(par string) {
 }
 
 func switch_trust(par string) {
-	if par == "0" {
+	switch par {
+	case "0":
 		common.FLAG.TrustAll = false
-	} else if par == "1" {
+	case "1":
 		common.FLAG.TrustAll = true
 	}
 	fmt.Println("Assume blocks trusted:", common.FLAG.TrustAll)
@@ -594,35 +596,30 @@ func webui_stats(par string) {
 }
 
 func utxo_mem(par string) {
-	common.MemMutex.Lock()
-	fmt.Print(common.Memory.GetInfo(strings.HasPrefix(par, "v")))
-	common.MemMutex.Unlock()
+	if common.Memory == nil {
+		fmt.Println("Memory module not in use (Memory.UseGoHeap is set in config)")
+	} else {
+		fmt.Print(common.Memory.GetInfo(strings.HasPrefix(par, "v")))
+	}
 }
 
 func utxo_defrag(par string) {
 	var dmem, dmap bool
-	var class2def int = -1
 
 	cmds := strings.Split(par, " ")
 	for _, cmd := range cmds {
 		if strings.Trim(cmd, " ") != "" {
-			if v, er := strconv.ParseUint(cmd, 10, 32); er == nil {
+			switch cmd {
+			case "map":
+				dmap = true
+			case "mem":
 				dmem = true
-				class2def = int(v)
-				println("class2def:", class2def)
-			} else {
-				switch cmd {
-				case "map":
-					dmap = true
-				case "mem":
-					dmem = true
-				case "rec":
-					dmem = true
-				case "all":
-					dmem, dmap = true, true
-				default:
-					fmt.Printf("unknown command:'%s'\n (use 'rec', 'map', 'all' or class number)", cmd)
-				}
+			case "rec":
+				dmem = true
+			case "all":
+				dmem, dmap = true, true
+			default:
+				fmt.Printf("unknown command:'%s'\n (use 'rec', 'map', 'all' or class number)", cmd)
 			}
 		}
 	}
@@ -638,22 +635,13 @@ func utxo_defrag(par string) {
 
 	if dmem {
 		sta := time.Now()
-		if common.MemoryModUsed {
-			if class2def < 0 {
-				fmt.Print("Defragmenting all UTXO records ... ")
-				common.DefragUTXOMem()
-			} else {
-				fmt.Println("Defragmenting class", class2def, "UTXO records ...")
-				common.MemMutex.Lock()
-				common.Memory.Trace(true)
-				common.Memory.Defrag(class2def)
-				common.Memory.Trace(false)
-				common.MemMutex.Unlock()
-			}
+		if common.Memory != nil {
+			fmt.Print("Defragmenting all UTXO records ... ")
+			common.DefragUTXOMem()
 			fmt.Println("took", time.Since(sta).String())
 			showmemuse()
 		} else {
-			fmt.Println("UTXO records of Go heap (dont need derfagmenting)")
+			fmt.Println("UTXO records stored in Go's heap and don't need defragmenting")
 		}
 	}
 	if dmap {

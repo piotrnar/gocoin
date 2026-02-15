@@ -6,32 +6,25 @@ import (
 	"unsafe"
 )
 
+// it the size is 0, it will allocate pageSize bytes aligned to pageSize
+// otherwise it will allocate size bytes allignd to OS page size
 func (a *Allocator) mmap(size int) (uintptr /* *page */, error) {
 	p, size, err := mmap(size)
 	if err != nil {
 		return 0, err
 	}
-
-	if counters {
-		a.Mmaps++
-		a.Bytes += size
-	}
-	if size > 0xffffffff {
-		panic("mmap to big")
-	}
-	(*page_header)(unsafe.Pointer(p)).siz = uint32(size)
+	a.Bytes.Add(int64(size))
 	return p, nil
 }
 
-// newPage creates a dedicated page for a single large allocation
-func (a *Allocator) newPage(size int) (uintptr /* *page */, error) {
-	size += int(dedicHdrSize)
+// newPrivatePage creates a dedicated page for a single large allocation
+// the size must be ronded up to OS page size
+func (a *Allocator) newPrivatePage(size int) (uintptr /* *page */, error) {
 	p, err := a.mmap(size)
 	if err != nil {
 		return 0, err
 	}
-
-	(*page_header)(unsafe.Pointer(p)).class = -1 // Mark as dedicated page
+	a.PrivateMmaps.Add(1)
 	return p, nil
 }
 
@@ -42,14 +35,13 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 		panic(fmt.Sprintf("invalid size class: %d", class))
 	}
 
-	totalSize := uint32(headerSize) + a.cap[class]*slotSize
-	p, err := a.mmap(int(totalSize))
+	p, err := a.mmap(0)
 	if err != nil {
 		return 0, err
 	}
 
 	header := (*page_header)(unsafe.Pointer(p))
-	header.class = int16(class)
+	header.class = byte(class)
 	header.free = uint16(a.cap[class]) // All slots initially free
 
 	// Link into page list
@@ -69,32 +61,25 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	a.freeSlots[class] += a.cap[class]
 
 	a.pages[class] = p
+	a.SharedMmaps.Add(1)
 	return p, nil
 }
 
-// UintptrMalloc is like Malloc except it returns an uintptr.
-func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
-	if size < 0 {
-		panic("invalid malloc size")
-	}
-
-	if size == 0 {
-		return 0, nil
-	}
-
-	if counters {
-		a.Allocs++
-	}
+// uintptrMalloc is like Malloc except it returns an uintptr.
+func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
+	a.Allocs.Add(1)
 
 	class := a.getSizeClass(size)
 
 	// Large allocation - use dedicated page
 	if class < 0 {
-		p, err := a.newPage(size)
+		size = roundup(size, osPageSize)
+		p, err := a.newPrivatePage(size)
 		if err != nil {
 			return 0, err
 		}
-		return p + dedicHdrSize, nil
+		(*reflect.SliceHeader)(unsafe.Pointer(p)).Cap = size - sliceHdrLen
+		return p, nil
 	}
 
 	// Small allocation - use shared page
@@ -115,8 +100,10 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 		if int(header.brk) == int(a.cap[class]) {
 			a.pages[class] = 0
 		}
-		slotSize := sizeClassSlotSize[class]
-		return p + headerSize + uintptr(header.brk-1)*uintptr(slotSize), nil
+		slotSize := int(sizeClassSlotSize[class])
+		ptr := p + headerSize + uintptr(header.brk-1)*uintptr(slotSize)
+		(*reflect.SliceHeader)(unsafe.Pointer(ptr)).Cap = int(slotSize) - sliceHdrLen
+		return ptr, nil
 	}
 
 	// Allocate from free list
@@ -151,22 +138,21 @@ func (a *Allocator) UintptrMalloc(size int) (r uintptr, err error) {
 	header.used++
 	header.free--
 	a.freeSlots[class]--
+	(*reflect.SliceHeader)(unsafe.Pointer(n)).Cap = int(sizeClassSlotSize[class]) - sliceHdrLen
 	return n, nil
 }
 
 // Malloc allocates size bytes and returns a byte slice.
-func (a *Allocator) Malloc(size int) (r *[]byte, err error) {
-	size += 24
-	p, err := a.UintptrMalloc(size)
+func (a *Allocator) Malloc(size int) (r *[]byte) {
+	a.Lock()
+	p, err := a.uintptrMalloc(size + sliceHdrLen)
+	a.Unlock()
 	if p == 0 || err != nil {
-		return nil, err
+		return nil
 	}
 
-	//r = unsafe.Slice((*byte)(unsafe.Pointer(p)), size)
-	//return r[:size], nil
 	sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
-	sh.Cap = size - 24
-	sh.Data = uintptr(p + 24)
-	sh.Len = size - 24
-	return (*[]byte)(unsafe.Pointer(sh)), nil
+	sh.Data = p + uintptr(sliceHdrLen)
+	sh.Len = size
+	return (*[]byte)(unsafe.Pointer(sh))
 }

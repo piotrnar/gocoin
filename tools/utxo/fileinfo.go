@@ -13,7 +13,7 @@ import (
 
 var (
 	create_csv bool
-	max_size   int
+	max_size   int = 1e6
 )
 
 func decode_utxo_header(fn string) {

@@ -3,7 +3,7 @@
 * Wallet: Improved the way how BIP39 mnemonic is printed (when -words command line switch used)
 * Wallet: Changed the way/order how differend wallet commands are handled
 * Lib/Script: Fixed error in OP_0NOTEQUAL not failing for values longer than 4 bytes (thanks @brunoerg)
-* Lib/others/memory: optimized for the most common sizes of UTXO records (saves ~2GB of memory)
+* Lib/others/memory: optimized for the most common sizes of UTXO records (saves few GB of memory)
 * Client: CFG.Memory.MemoryLimitMB respects mem used by UTXO records, even with UseGoHeap set to false
 * Lib/Utxo: Added HashMap defragmenting routines to allow memory usege optimizations
 * Lib/Memory: Added defragmenting routines to allow memory usege optimizations

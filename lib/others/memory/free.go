@@ -1,34 +1,27 @@
 package memory
 
-import "unsafe"
+import (
+	"reflect"
+	"unsafe"
+)
 
-func (a *Allocator) unmap(p uintptr /* *page */) error {
-	if counters {
-		a.Mmaps--
-	}
-	return unmap(p, int((*page_header)(unsafe.Pointer(p)).siz))
+func (a *Allocator) unmap(p uintptr, size int) error {
+	return unmap(p, size)
 }
 
-// UintptrFree is like Free except its argument is an uintptr
-func (a *Allocator) UintptrFree(p uintptr) (err error) {
-	if p == 0 {
-		return nil
-	}
+// uintptrFree is like Free except its argument is an uintptr
+func (a *Allocator) uintptrFree(p uintptr) (err error) {
+	a.Allocs.Add(-1)
 
-	if counters {
-		a.Allocs--
+	if sh := (*reflect.SliceHeader)(unsafe.Pointer(p)); sh.Cap+sliceHdrLen > a.MaxSharedSize {
+		size := sh.Cap + sliceHdrLen
+		a.Bytes.Add(int64(-size))
+		a.PrivateMmaps.Add(-1)
+		return a.unmap(p, size)
 	}
 
 	pg := p &^ uintptr(pageMask)
 	class := int((*page_header)(unsafe.Pointer(pg)).class)
-
-	// Dedicated page (large allocation) - slotSize == 0
-	if class < 0 {
-		if counters {
-			a.Bytes -= int((*page_header)(unsafe.Pointer(pg)).siz)
-		}
-		return a.unmap(pg)
-	}
 
 	// Shared page - Add to free list (unless page is being evacuated)
 	header := (*page_header)(unsafe.Pointer(pg))
@@ -39,7 +32,7 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 		a.freeSlots[class]++
 
 		// If page is being evacuated, don't add to free list
-		if header.evacuating != 0 {
+		if header.evacuating {
 			return nil
 		}
 
@@ -109,13 +102,16 @@ func (a *Allocator) UintptrFree(p uintptr) (err error) {
 	if a.pages[class] == pg {
 		a.pages[class] = 0
 	}
-	if counters {
-		a.Bytes -= int((*page_header)(unsafe.Pointer(pg)).siz)
-	}
-	return a.unmap(pg)
+	a.Bytes.Add(-pageSize)
+	a.SharedMmaps.Add(-1)
+	return a.unmap(pg, osPageSize)
 }
 
 // Free deallocates memory (as in C.free).
-func (a *Allocator) Free(b *[]byte) (err error) {
-	return a.UintptrFree(uintptr(unsafe.Pointer(b)))
+func (a *Allocator) Free(b *[]byte) {
+	a.Lock()
+	if er := a.uintptrFree(uintptr(unsafe.Pointer(b))); er != nil {
+		panic(er.Error())
+	}
+	a.Unlock()
 }
