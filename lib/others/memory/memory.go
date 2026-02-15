@@ -21,6 +21,9 @@ const (
 	pageSize     = 1 << pageSizeLog
 	sliceHdrLen  = int(unsafe.Sizeof([]byte{}))
 	sizeIncrease = sliceHdrLen
+
+	pageCacheLow  = 2 // refill trigger: launch goroutine when cache falls below this
+	pageCacheHigh = 5 // capacity of the channel / max cached pages
 )
 
 type node struct {
@@ -41,17 +44,22 @@ type page_header struct {
 
 // Allocator allocates and frees memory. Its zero value is ready for use.
 type Allocator struct {
-	sync.Mutex
 	Allocs        atomic.Int64 // # of allocs.
 	Bytes         atomic.Int64 // Asked from OS.
 	PrivateMmaps  atomic.Int64 // Asked from OS.
 	SharedMmaps   atomic.Int64
 	MaxSharedSize int
 	ClassCont     int
+	classMu       []sync.Mutex // per-class mutexes for Malloc/Free parallelism
 	cap           []uint32
 	lists         []uintptr // *node - free lists per size class
 	pages         []uintptr // *page - current page per size class
 	classIdx      []byte
+
+	// Page cache - buffered channel of pre-mmapped empty pages.
+	// Avoids mmap/munmap syscalls in the Malloc/Free hot paths.
+	// Kept between pageCacheLow and pageCacheHigh pages.
+	pageCache chan uintptr
 
 	// Defragmentation optimization fields
 	firstPage []uintptr // first page in linked list per class
@@ -81,8 +89,14 @@ func getSlotSize(class int) uint32 {
 }
 
 func (a *Allocator) GetInfo(verbose bool) string {
-	a.Lock()
-	defer a.Unlock()
+	for i := range a.classMu {
+		a.classMu[i].Lock()
+	}
+	defer func() {
+		for i := range a.classMu {
+			a.classMu[i].Unlock()
+		}
+	}()
 	var pcnt, scnt, fcnt int
 	w := new(bytes.Buffer)
 	for class := range sizeClassSlotSize {
@@ -107,13 +121,14 @@ func (a *Allocator) GetInfo(verbose bool) string {
 		a.Bytes.Load(), a.Allocs.Load(), a.SharedMmaps.Load(), a.PrivateMmaps.Load(), a.MaxSharedSize)
 	fmt.Fprintf(w, "Page Header Size: %d,   Slot Extra Size: %d,   Page Size: %d\n",
 		headerSize, sizeIncrease, pageSize)
-	fmt.Fprintf(w, "Classes: %d,  Total slots: %d MB,  pages: %d,   free slots: %d MB\n",
-		len(sizeClassSlotSize), scnt>>20, pcnt, fcnt>>20)
+	fmt.Fprintf(w, "Classes: %d,  Total slots: %d MB,  pages: %d,   free slots: %d MB,  page cache: %d\n",
+		len(sizeClassSlotSize), scnt>>20, pcnt, fcnt>>20, len(a.pageCache))
 	return w.String()
 }
 
 func NewAllocator() (a *Allocator) {
 	a = new(Allocator)
+	a.classMu = make([]sync.Mutex, len(sizeClassSlotSize))
 	a.cap = make([]uint32, len(sizeClassSlotSize))
 	a.lists = make([]uintptr, len(sizeClassSlotSize))
 	a.pages = make([]uintptr, len(sizeClassSlotSize))
@@ -130,6 +145,7 @@ func NewAllocator() (a *Allocator) {
 
 	a.ClassCont = len(sizeClassSlotSize)
 	a.MaxSharedSize = int(sizeClassSlotSize[len(sizeClassSlotSize)-1])
+	a.pageCache = make(chan uintptr, pageCacheHigh)
 	a.classIdx = make([]byte, a.MaxSharedSize+1)
 	for size := range a.classIdx {
 		for i, v := range sizeClassSlotSize {
@@ -139,7 +155,56 @@ func NewAllocator() (a *Allocator) {
 			}
 		}
 	}
+
+	// Pre-fill the page cache in the background so it's warm by first Malloc
+	go a.pageCacheRefill()
+
 	return
+}
+
+// pageCacheGet takes a page from the cache.
+// Returns 0 if the cache is empty.
+// If the cache level drops below pageCacheLow, triggers a background refill.
+func (a *Allocator) pageCacheGet() uintptr {
+	select {
+	case p := <-a.pageCache:
+		if len(a.pageCache) < pageCacheLow {
+			go a.pageCacheRefill()
+		}
+		return p
+	default:
+		return 0
+	}
+}
+
+// pageCachePut returns a page to the cache.
+// Returns false if the cache is full (caller should unmap the page).
+func (a *Allocator) pageCachePut(p uintptr) bool {
+	select {
+	case a.pageCache <- p:
+		return true
+	default:
+		return false
+	}
+}
+
+// pageCacheRefill tops up the page cache to pageCacheLow.
+// The space between pageCacheLow and pageCacheHigh is reserved
+// for absorbing pages recycled by Free.
+func (a *Allocator) pageCacheRefill() {
+	for len(a.pageCache) < pageCacheLow {
+		p, size, err := mmap(0)
+		if err != nil {
+			return
+		}
+		a.Bytes.Add(int64(size))
+		if !a.pageCachePut(p) {
+			// Channel got full while we were mmapping
+			a.Bytes.Add(-int64(size))
+			unmap(p, size)
+			return
+		}
+	}
 }
 
 func init() {

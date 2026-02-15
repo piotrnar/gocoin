@@ -1,7 +1,6 @@
 package memory
 
 import (
-	"fmt"
 	"reflect"
 	"unsafe"
 )
@@ -28,21 +27,27 @@ func (a *Allocator) newPrivatePage(size int) (uintptr /* *page */, error) {
 	return p, nil
 }
 
-// newSharedPage creates a new shared page for a specific size class
-func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
-	slotSize := getSlotSize(class)
-	if slotSize == 0 {
-		panic(fmt.Sprintf("invalid size class: %d", class))
+// mmapSharedPage gets a page for shared use.
+// Tries the page cache first (fast, no syscall), falls back to mmap.
+func (a *Allocator) mmapSharedPage() (uintptr, error) {
+	if p := a.pageCacheGet(); p != 0 {
+		a.SharedMmaps.Add(1)
+		return p, nil
 	}
-
 	p, err := a.mmap(0)
 	if err != nil {
 		return 0, err
 	}
+	a.SharedMmaps.Add(1)
+	return p, nil
+}
 
+// linkSharedPage initializes the page header and links it into the class's page list.
+// Must be called while holding classMu[class].
+func (a *Allocator) linkSharedPage(class int, p uintptr) {
 	header := (*page_header)(unsafe.Pointer(p))
 	header.class = byte(class)
-	header.free = uint16(a.cap[class]) // All slots initially free
+	header.free = uint16(a.cap[class])
 
 	// Link into page list
 	header.prev = a.lastPage[class]
@@ -61,34 +66,23 @@ func (a *Allocator) newSharedPage(class int) (uintptr /* *page */, error) {
 	a.freeSlots[class] += a.cap[class]
 
 	a.pages[class] = p
-	a.SharedMmaps.Add(1)
+}
+
+// uintptrMallocPrivate handles large allocations that get their own dedicated page.
+// No class mutex needed - only touches atomic counters.
+func (a *Allocator) uintptrMallocPrivate(size int) (uintptr, error) {
+	size = roundup(size, osPageSize)
+	p, err := a.newPrivatePage(size)
+	if err != nil {
+		return 0, err
+	}
+	(*reflect.SliceHeader)(unsafe.Pointer(p)).Cap = size - sliceHdrLen
 	return p, nil
 }
 
-// uintptrMalloc is like Malloc except it returns an uintptr.
-func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
-	a.Allocs.Add(1)
-
-	class := a.getSizeClass(size)
-
-	// Large allocation - use dedicated page
-	if class < 0 {
-		size = roundup(size, osPageSize)
-		p, err := a.newPrivatePage(size)
-		if err != nil {
-			return 0, err
-		}
-		(*reflect.SliceHeader)(unsafe.Pointer(p)).Cap = size - sliceHdrLen
-		return p, nil
-	}
-
-	// Small allocation - use shared page
-	if a.lists[class] == 0 && a.pages[class] == 0 {
-		if _, err := a.newSharedPage(class); err != nil {
-			return 0, err
-		}
-	}
-
+// uintptrMallocShared handles small allocations from shared pages.
+// Must be called while holding classMu[class].
+func (a *Allocator) uintptrMallocShared(class int) (r uintptr, err error) {
 	// Try to allocate from current page
 	if p := a.pages[class]; p != 0 {
 		header := (*page_header)(unsafe.Pointer(p))
@@ -144,9 +138,39 @@ func (a *Allocator) uintptrMalloc(size int) (r uintptr, err error) {
 
 // Malloc allocates size bytes and returns a byte slice.
 func (a *Allocator) Malloc(size int) (r *[]byte) {
-	a.Lock()
-	p, err := a.uintptrMalloc(size + sliceHdrLen)
-	a.Unlock()
+	a.Allocs.Add(1)
+
+	class := a.getSizeClass(size + sliceHdrLen)
+
+	// Large allocation - no class mutex needed
+	if class < 0 {
+		p, err := a.uintptrMallocPrivate(size + sliceHdrLen)
+		if p == 0 || err != nil {
+			return nil
+		}
+		sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
+		sh.Data = p + uintptr(sliceHdrLen)
+		sh.Len = size
+		return (*[]byte)(unsafe.Pointer(sh))
+	}
+
+	// Small allocation
+	a.classMu[class].Lock()
+
+	if a.lists[class] == 0 && a.pages[class] == 0 {
+		// Need a new page - mmap is expensive but this path is infrequent
+		// (only when a class runs completely dry)
+		p, err := a.mmapSharedPage()
+		if err != nil {
+			a.classMu[class].Unlock()
+			return nil
+		}
+		a.linkSharedPage(class, p)
+	}
+
+	p, err := a.uintptrMallocShared(class)
+	a.classMu[class].Unlock()
+
 	if p == 0 || err != nil {
 		return nil
 	}

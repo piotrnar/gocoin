@@ -9,21 +9,23 @@ func (a *Allocator) unmap(p uintptr, size int) error {
 	return unmap(p, size)
 }
 
-// uintptrFree is like Free except its argument is an uintptr
-func (a *Allocator) uintptrFree(p uintptr) (err error) {
-	a.Allocs.Add(-1)
+// uintptrFreePrivate handles freeing a large (private page) allocation.
+// No class mutex needed - only touches atomic counters and does unmap.
+func (a *Allocator) uintptrFreePrivate(p uintptr) error {
+	sh := (*reflect.SliceHeader)(unsafe.Pointer(p))
+	size := sh.Cap + sliceHdrLen
+	a.Bytes.Add(int64(-size))
+	a.PrivateMmaps.Add(-1)
+	return a.unmap(p, size)
+}
 
-	if sh := (*reflect.SliceHeader)(unsafe.Pointer(p)); sh.Cap+sliceHdrLen > a.MaxSharedSize {
-		size := sh.Cap + sliceHdrLen
-		a.Bytes.Add(int64(-size))
-		a.PrivateMmaps.Add(-1)
-		return a.unmap(p, size)
-	}
-
+// uintptrFreeShared handles freeing a slot from a shared page.
+// Must be called while holding classMu[class].
+// Returns the page pointer and true if the page became empty and should be unmapped.
+func (a *Allocator) uintptrFreeShared(p uintptr) (unmapPage uintptr) {
 	pg := p &^ uintptr(pageMask)
 	class := int((*page_header)(unsafe.Pointer(pg)).class)
 
-	// Shared page - Add to free list (unless page is being evacuated)
 	header := (*page_header)(unsafe.Pointer(pg))
 
 	if header.used >= 1 {
@@ -33,7 +35,7 @@ func (a *Allocator) uintptrFree(p uintptr) (err error) {
 
 		// If page is being evacuated, don't add to free list
 		if header.evacuating {
-			return nil
+			return 0
 		}
 
 		// Add to global free list
@@ -56,7 +58,7 @@ func (a *Allocator) uintptrFree(p uintptr) (err error) {
 		}
 		header.freeList = p
 
-		return nil
+		return 0
 	}
 
 	// Page is completely free - unmap it
@@ -102,16 +104,59 @@ func (a *Allocator) uintptrFree(p uintptr) (err error) {
 	if a.pages[class] == pg {
 		a.pages[class] = 0
 	}
-	a.Bytes.Add(-pageSize)
 	a.SharedMmaps.Add(-1)
-	return a.unmap(pg, osPageSize)
+
+	// Return the page to caller - caller decides whether to cache or unmap.
+	// Bytes accounting is NOT done here - caller must handle it.
+	return pg
+}
+
+// uintptrFree is like Free except its argument is an uintptr.
+// Used by defrag code which runs exclusively (no concurrent Malloc/Free).
+func (a *Allocator) uintptrFree(p uintptr) (err error) {
+	a.Allocs.Add(-1)
+
+	if sh := (*reflect.SliceHeader)(unsafe.Pointer(p)); sh.Cap+sliceHdrLen > a.MaxSharedSize {
+		return a.uintptrFreePrivate(p)
+	}
+
+	pg := a.uintptrFreeShared(p)
+	if pg != 0 {
+		a.Bytes.Add(-pageSize)
+		return a.unmap(pg, osPageSize)
+	}
+	return nil
 }
 
 // Free deallocates memory (as in C.free).
 func (a *Allocator) Free(b *[]byte) {
-	a.Lock()
-	if er := a.uintptrFree(uintptr(unsafe.Pointer(b))); er != nil {
-		panic(er.Error())
+	a.Allocs.Add(-1)
+
+	p := uintptr(unsafe.Pointer(b))
+
+	// Check if this is a private (large) allocation - no class mutex needed
+	if sh := (*reflect.SliceHeader)(unsafe.Pointer(p)); sh.Cap+sliceHdrLen > a.MaxSharedSize {
+		if er := a.uintptrFreePrivate(p); er != nil {
+			panic(er.Error())
+		}
+		return
 	}
-	a.Unlock()
+
+	// Shared allocation - lock the class mutex
+	pg := p &^ uintptr(pageMask)
+	class := int((*page_header)(unsafe.Pointer(pg)).class)
+	a.classMu[class].Lock()
+	emptyPage := a.uintptrFreeShared(p)
+	a.classMu[class].Unlock()
+
+	// If a page became empty, try to recycle it into the page cache
+	if emptyPage != 0 {
+		if !a.pageCachePut(emptyPage) {
+			// Cache is full - actually unmap and adjust Bytes
+			a.Bytes.Add(-pageSize)
+			if er := a.unmap(emptyPage, osPageSize); er != nil {
+				panic(er.Error())
+			}
+		}
+	}
 }
