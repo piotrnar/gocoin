@@ -1,10 +1,9 @@
 package secp256k1
 
 import (
-	"testing"
 	"crypto/rand"
+	"testing"
 )
-
 
 func TestFeInv(t *testing.T) {
 	var in, out, exp Field
@@ -26,7 +25,6 @@ func BenchmarkFieldSqrt(b *testing.B) {
 	}
 }
 
-
 func BenchmarkFieldInv(b *testing.B) {
 	var dat [32]byte
 	var f, tmp Field
@@ -37,3 +35,23 @@ func BenchmarkFieldInv(b *testing.B) {
 	}
 }
 
+func BenchmarkFieldSqr(b *testing.B) {
+	var dat [32]byte
+	var f, tmp Field
+	rand.Read(dat[:])
+	f.SetB32(dat[:])
+	for i := 0; i < b.N; i++ {
+		f.Sqr(&tmp)
+	}
+}
+
+func BenchmarkFieldMul(b *testing.B) {
+	var dat [64]byte
+	var f, g, tmp Field
+	rand.Read(dat[:])
+	f.SetB32(dat[:32])
+	g.SetB32(dat[32:])
+	for i := 0; i < b.N; i++ {
+		f.Mul(&tmp, &g)
+	}
+}

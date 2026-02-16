@@ -1,3 +1,4 @@
+//go:build amd64 || arm64 || arm64be || ppc64 || ppc64le || mips64 || mips64le || s390x || sparc64
 // +build amd64 arm64 arm64be ppc64 ppc64le mips64 mips64le s390x sparc64
 
 package secp256k1
@@ -7,6 +8,11 @@ import (
 )
 
 const FieldArch = "5x52"
+
+const (
+	M = 0xFFFFFFFFFFFFF
+	R = 0x1000003D10
+)
 
 type Field struct {
 	n [5]uint64
@@ -158,472 +164,426 @@ func (a *Field) Negate(r *Field, m uint64) {
 }
 
 func (a *Field) Mul(r, b *Field) {
+	a0, a1, a2, a3, a4 := a.n[0], a.n[1], a.n[2], a.n[3], a.n[4]
+	b0, b1, b2, b3, b4 := b.n[0], b.n[1], b.n[2], b.n[3], b.n[4]
+
 	var c_lo, c_hi, d_lo, d_hi uint64
-	var t3, t4, tx, u0, rn0, rn1 uint64
-	var carry, him, lom uint64
+	var t3, t4, tx, u0 uint64
+	var hi, lo, carry uint64
 
-	a0 := a.n[0]
-	a1 := a.n[1]
-	a2 := a.n[2]
-	a3 := a.n[3]
-	a4 := a.n[4]
+	// d = (uint128_t)a0 * b[3]
+	d_hi, d_lo = bits.Mul64(a0, b3)
 
-	const M = 0xFFFFFFFFFFFFF
-	const R = 0x1000003D10
+	// d += (uint128_t)a1 * b[2]
+	hi, lo = bits.Mul64(a1, b2)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	/*  [... a b c] is a shorthand for ... + a<<104 + b<<52 + c<<0 mod n.
-	 *  for 0 <= x <= 4, px is a shorthand for sum(a[i]*b[x-i], i=0..x).
-	 *  for 4 <= x <= 8, px is a shorthand for sum(a[i]*b[x-i], i=(x-4)..4)
-	 *  Note that [x 0 0 0 0 0] = [x*R].
-	 */
+	// d += (uint128_t)a2 * b[1]
+	hi, lo = bits.Mul64(a2, b1)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d.AddMul64s(a0, b.n[3])
-	d_hi, d_lo = bits.Mul64(a0, b.n[3])
+	// d += (uint128_t)a3 * b[0]
+	hi, lo = bits.Mul64(a3, b0)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d.AddMul64s(a1, b.n[2])
-	him, lom = bits.Mul64(a1, b.n[2])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// c = (uint128_t)a4 * b[4]
+	c_hi, c_lo = bits.Mul64(a4, b4)
 
-	//d.AddMul64s(a2, b.n[1])
-	him, lom = bits.Mul64(a2, b.n[1])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)(uint64_t)c * R
+	hi, lo = bits.Mul64(c_lo, R)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d.AddMul64s(a3, b.n[0])
-	him, lom = bits.Mul64(a3, b.n[0])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// c >>= 64
+	// After shift, c contains only the high 64 bits
 
-	/* [d 0 0 0] = [p3 0 0 0] */
-	//c = From64(a4).Mul64(b.n[4])
-	c_hi, c_lo = bits.Mul64(a4, b.n[4])
-
-	/* [c 0 0 0 0 d 0 0 0] = [p8 0 0 0 0 p3 0 0 0] */
-	//d = d.Add(c.And64(M).Mul64(R))
-	him, lom = bits.Mul64(c_lo&M, R)
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
-
-	//c = c.Rsh52()
-	c_lo = c_lo>>52 | c_hi<<(64-52)
-	c_hi = c_hi >> 52
-
-	/* [c 0 0 0 0 0 d 0 0 0] = [p8 0 0 0 0 p3 0 0 0] */
+	// t3 = (uint64_t)d & M
 	t3 = d_lo & M
-	//d = d.Rsh52()
-	d_lo = d_lo>>52 | d_hi<<(64-52)
-	d_hi = d_hi >> 52
-	/* [c 0 0 0 0 d t3 0 0 0] = [p8 0 0 0 0 p3 0 0 0] */
 
-	//d = d.Add(From64(a0).Mul64(b.n[4]))
-	him, lom = bits.Mul64(a0, b.n[4])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d >>= 52
+	d_lo = (d_lo >> 52) | (d_hi << 12)
+	d_hi >>= 52
 
-	//d = d.Add(From64(a1).Mul64(b.n[3]))
-	him, lom = bits.Mul64(a1, b.n[3])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a0 * b[4]
+	hi, lo = bits.Mul64(a0, b4)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(From64(a2).Mul64(b.n[2]))
-	him, lom = bits.Mul64(a2, b.n[2])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a1 * b[3]
+	hi, lo = bits.Mul64(a1, b3)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(From64(a3).Mul64(b.n[1]))
-	him, lom = bits.Mul64(a3, b.n[1])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a2 * b[2]
+	hi, lo = bits.Mul64(a2, b2)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(From64(a4).Mul64(b.n[0]))
-	him, lom = bits.Mul64(a4, b.n[0])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a3 * b[1]
+	hi, lo = bits.Mul64(a3, b1)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(c.Mul64(R))
-	him, lom = bits.Mul64(c_lo, R)
-	him += c_hi * R
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a4 * b[0]
+	hi, lo = bits.Mul64(a4, b0)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	/* [d t3 0 0 0] = [p8 0 0 0 p4 p3 0 0 0] */
+	// d += (uint128_t)(R << 12) * (uint64_t)c
+	hi, lo = bits.Mul64(R<<12, c_hi)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
+
+	// t4 = (uint64_t)d & M
 	t4 = d_lo & M
 
-	//d = d.Rsh52()
-	d_lo = d_lo>>52 | d_hi<<(64-52)
-	d_hi = d_hi >> 52
+	// d >>= 52
+	d_lo = (d_lo >> 52) | (d_hi << 12)
+	d_hi >>= 52
 
-	/* [d t4 t3 0 0 0] = [p8 0 0 0 p4 p3 0 0 0] */
-	tx = (t4 >> 48)
+	// tx = (t4 >> 48)
+	tx = t4 >> 48
+
+	// t4 &= (M >> 4)
 	t4 &= (M >> 4)
-	/* [d t4+(tx<<48) t3 0 0 0] = [p8 0 0 0 p4 p3 0 0 0] */
 
-	//c = From64(a0).Mul64(b.n[0])
-	c_hi, c_lo = bits.Mul64(a0, b.n[0])
+	// c = (uint128_t)a0 * b[0]
+	c_hi, c_lo = bits.Mul64(a0, b0)
 
-	/* [d t4+(tx<<48) t3 0 0 c] = [p8 0 0 0 p4 p3 0 0 p0] */
-	//d = d.Add(From64(a1).Mul64(b.n[4]))
-	him, lom = bits.Mul64(a1, b.n[4])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a1 * b[4]
+	hi, lo = bits.Mul64(a1, b4)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(From64(a2).Mul64(b.n[3]))
-	him, lom = bits.Mul64(a2, b.n[3])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a2 * b[3]
+	hi, lo = bits.Mul64(a2, b3)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(From64(a3).Mul64(b.n[2]))
-	him, lom = bits.Mul64(a3, b.n[2])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a3 * b[2]
+	hi, lo = bits.Mul64(a3, b2)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(From64(a4).Mul64(b.n[1]))
-	him, lom = bits.Mul64(a4, b.n[1])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a4 * b[1]
+	hi, lo = bits.Mul64(a4, b1)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	/* [d t4+(tx<<48) t3 0 0 c] = [p8 0 0 p5 p4 p3 0 0 p0] */
+	// u0 = (uint64_t)d & M
 	u0 = d_lo & M
 
-	//d = d.Rsh52()
-	d_lo = d_lo>>52 | d_hi<<(64-52)
-	d_hi = d_hi >> 52
+	// d >>= 52
+	d_lo = (d_lo >> 52) | (d_hi << 12)
+	d_hi >>= 52
 
-	/* [d u0 t4+(tx<<48) t3 0 0 c] = [p8 0 0 p5 p4 p3 0 0 p0] */
-	/* [d 0 t4+(tx<<48)+(u0<<52) t3 0 0 c] = [p8 0 0 p5 p4 p3 0 0 p0] */
+	// u0 = (u0 << 4) | tx
 	u0 = (u0 << 4) | tx
-	/* [d 0 t4+(u0<<48) t3 0 0 c] = [p8 0 0 p5 p4 p3 0 0 p0] */
 
-	//c = c.Add(From64(u0).Mul64(R >> 4))
-	him, lom = bits.Mul64(u0, R>>4)
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += (uint128_t)u0 * (R >> 4)
+	hi, lo = bits.Mul64(u0, R>>4)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	/* [d 0 t4 t3 0 0 c] = [p8 0 0 p5 p4 p3 0 0 p0] */
-	rn0 = c_lo & M
-	//c = c.Rsh52()
-	c_lo = c_lo>>52 | c_hi<<(64-52)
-	c_hi = c_hi >> 52
+	// rr[0] = (uint64_t)c & M
+	r.n[0] = c_lo & M
 
-	/* [d 0 t4 t3 0 c r0] = [p8 0 0 p5 p4 p3 0 0 p0] */
+	// c >>= 52
+	c_lo = (c_lo >> 52) | (c_hi << 12)
+	c_hi >>= 52
 
-	//c = c.Add(From64(a0).Mul64(b.n[1]))
-	him, lom = bits.Mul64(a0, b.n[1])
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += (uint128_t)a0 * b[1]
+	hi, lo = bits.Mul64(a0, b1)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	//c = c.Add(From64(a1).Mul64(b.n[0]))
-	him, lom = bits.Mul64(a1, b.n[0])
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += (uint128_t)a1 * b[0]
+	hi, lo = bits.Mul64(a1, b0)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	/* [d 0 t4 t3 0 c r0] = [p8 0 0 p5 p4 p3 0 p1 p0] */
-	//d = d.Add(From64(a2).Mul64(b.n[4]))
-	him, lom = bits.Mul64(a2, b.n[4])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a2 * b[4]
+	hi, lo = bits.Mul64(a2, b4)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(From64(a3).Mul64(b.n[3]))
-	him, lom = bits.Mul64(a3, b.n[3])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a3 * b[3]
+	hi, lo = bits.Mul64(a3, b3)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(From64(a4).Mul64(b.n[2]))
-	him, lom = bits.Mul64(a4, b.n[2])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a4 * b[2]
+	hi, lo = bits.Mul64(a4, b2)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	/* [d 0 t4 t3 0 c r0] = [p8 0 p6 p5 p4 p3 0 p1 p0] */
-	//c = c.Add(From64(d_lo & M).Mul64(R))
-	him, lom = bits.Mul64(d_lo&M, R)
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += (uint128_t)((uint64_t)d & M) * R
+	hi, lo = bits.Mul64(d_lo&M, R)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	//d = d.Rsh52()
-	d_lo = d_lo>>52 | d_hi<<(64-52)
-	d_hi = d_hi >> 52
+	// d >>= 52
+	d_lo = (d_lo >> 52) | (d_hi << 12)
+	d_hi >>= 52
 
-	/* [d 0 0 t4 t3 0 c r0] = [p8 0 p6 p5 p4 p3 0 p1 p0] */
-	rn1 = c_lo & M
-	//c = c.Rsh52()
-	c_lo = c_lo>>52 | c_hi<<(64-52)
-	c_hi = c_hi >> 52
+	// rr[1] = (uint64_t)c & M
+	r.n[1] = c_lo & M
 
-	/* [d 0 0 t4 t3 c r1 r0] = [p8 0 p6 p5 p4 p3 0 p1 p0] */
+	// c >>= 52
+	c_lo = (c_lo >> 52) | (c_hi << 12)
+	c_hi >>= 52
 
-	//c = c.Add(From64(a0).Mul64(b.n[2]))
-	him, lom = bits.Mul64(a0, b.n[2])
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += (uint128_t)a0 * b[2]
+	hi, lo = bits.Mul64(a0, b2)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	//c = c.Add(From64(a1).Mul64(b.n[1]))
-	him, lom = bits.Mul64(a1, b.n[1])
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += (uint128_t)a1 * b[1]
+	hi, lo = bits.Mul64(a1, b1)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	//c = c.Add(From64(a2).Mul64(b.n[0]))
-	him, lom = bits.Mul64(a2, b.n[0])
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += (uint128_t)a2 * b[0]
+	hi, lo = bits.Mul64(a2, b0)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	/* [d 0 0 t4 t3 c r1 r0] = [p8 0 p6 p5 p4 p3 p2 p1 p0] */
-	//d = d.Add(From64(a3).Mul64(b.n[4]))
-	him, lom = bits.Mul64(a3, b.n[4])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a3 * b[4]
+	hi, lo = bits.Mul64(a3, b4)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(From64(a4).Mul64(b.n[3]))
-	him, lom = bits.Mul64(a4, b.n[3])
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a4 * b[3]
+	hi, lo = bits.Mul64(a4, b3)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	/* [d 0 0 t4 t3 c t1 r0] = [p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-	//c = c.Add(From64(d_lo & M).Mul64(R))
-	him, lom = bits.Mul64(d_lo&M, R)
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += (uint128_t)R * (uint64_t)d
+	hi, lo = bits.Mul64(R, d_lo)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	//d = d.Rsh52()
-	d_lo = d_lo>>52 | d_hi<<(64-52)
-	d_hi = d_hi >> 52
+	// d >>= 64
+	d_lo = d_hi
+	d_hi = 0
 
-	/* [d 0 0 0 t4 t3 c r1 r0] = [p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-
-	r.n[0] = rn0
-	r.n[1] = rn1
-
-	/* [d 0 0 0 t4 t3 c r1 r0] = [p8 p7 p6 p5 p4 p3 p2 p1 p0] */
+	// rr[2] = (uint64_t)c & M
 	r.n[2] = c_lo & M
-	//c = c.Rsh52()
-	c_lo = c_lo>>52 | c_hi<<(64-52)
-	c_hi = c_hi >> 52
-	/* [d 0 0 0 t4 t3+c r2 r1 r0] = [p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 
-	//c = c.Add(d.Mul64(R).Add64(t3))
-	him, lom = bits.Mul64(d_lo, R)
-	him += d_hi * R
-	lom, carry = bits.Add64(lom, t3, 0)
-	him += carry
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c >>= 52
+	c_lo = (c_lo >> 52) | (c_hi << 12)
+	c_hi >>= 52
 
-	/* [t4 c r2 r1 r0] = [p8 p7 p6 p5 p4 p3 p2 p1 p0] */
+	// c += (uint128_t)(R << 12) * (uint64_t)d
+	hi, lo = bits.Mul64(R<<12, d_lo)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
+
+	// c += t3
+	c_lo, carry = bits.Add64(c_lo, t3, 0)
+	c_hi, _ = bits.Add64(c_hi, 0, carry)
+
+	// rr[3] = (uint64_t)c & M
 	r.n[3] = c_lo & M
-	//c = c.Rsh52()
 
-	r.n[4] = (c_lo>>52 | c_hi<<(64-52)) + t4
+	// c >>= 52
+	c_lo = (c_lo >> 52) | (c_hi << 12)
+	c_hi >>= 52
+
+	// rr[4] = (uint64_t)c + t4
+	r.n[4] = c_lo + t4
 }
 
 func (a *Field) Sqr(r *Field) {
+	a0, a1, a2, a3, a4 := a.n[0], a.n[1], a.n[2], a.n[3], a.n[4]
+
 	var c_lo, c_hi, d_lo, d_hi uint64
-	var carry, him, lom uint64
-
-	a0 := a.n[0]
-	a1 := a.n[1]
-	a2 := a.n[2]
-	a3 := a.n[3]
-	a4 := a.n[4]
 	var t3, t4, tx, u0 uint64
-	const (
-		M = 0xFFFFFFFFFFFFF
-		R = 0x1000003D10
-	)
+	var hi, lo, carry uint64
 
-	/**  [... a b c] is a shorthand for ... + a<<104 + b<<52 + c<<0 mod n.
-	 *  px is a shorthand for sum(a[i]*a[x-i], i=0..x).
-	 *  Note that [x 0 0 0 0 0] = [x*R].
-	 */
-
-	//d = From64(a0 * 2).Mul64(a3)
+	// d = (a0*2) * a3
 	d_hi, d_lo = bits.Mul64(a0*2, a3)
 
-	//d = d.Add(From64(a1 * 2).Mul64(a2))
-	him, lom = bits.Mul64(a1*2, a2)
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (a1*2) * a2
+	hi, lo = bits.Mul64(a1*2, a2)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	/* [d 0 0 0] = [p3 0 0 0] */
-	//c = From64(a4).Mul64(a4)
-	him, lom = bits.Mul64(a4, a4)
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c = a4 * a4
+	c_hi, c_lo = bits.Mul64(a4, a4)
 
-	/* [c 0 0 0 0 d 0 0 0] = [p8 0 0 0 0 p3 0 0 0] */
-	//d = d.Add(c.And64(M).Mul64(R))
-	him, lom = bits.Mul64(c_lo&M, R)
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint64_t)c * R
+	hi, lo = bits.Mul64(c_lo, R)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//c = c.Rsh52()
-	c_lo = c_lo>>52 | c_hi<<(64-52)
-	c_hi = c_hi >> 52
+	// c >>= 64
+	// After shift, c contains only the high 64 bits of the original c
 
-	/* [c 0 0 0 0 0 d 0 0 0] = [p8 0 0 0 0 p3 0 0 0] */
+	// t3 = (uint64_t)d & M
 	t3 = d_lo & M
 
-	//d = d.Rsh52()
-	d_lo = d_lo>>52 | d_hi<<(64-52)
-	d_hi = d_hi >> 52
+	// d >>= 52
+	d_lo = (d_lo >> 52) | (d_hi << 12)
+	d_hi >>= 52
 
-	/* [c 0 0 0 0 d t3 0 0 0] = [p8 0 0 0 0 p3 0 0 0] */
-
+	// a4 *= 2
 	a4 *= 2
-	//d = d.Add(From64(a0).Mul64(a4))
-	him, lom = bits.Mul64(a0, a4)
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
 
-	//d = d.Add(From64(a1 * 2).Mul64(a3))
-	him, lom = bits.Mul64(a1*2, a3)
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a0 * a4
+	hi, lo = bits.Mul64(a0, a4)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(From64(a2).Mul64(a2))
-	him, lom = bits.Mul64(a2, a2)
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)(a1*2) * a3
+	hi, lo = bits.Mul64(a1*2, a3)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	/* [c 0 0 0 0 d t3 0 0 0] = [p8 0 0 0 p4 p3 0 0 0] */
+	// d += (uint128_t)a2 * a2
+	hi, lo = bits.Mul64(a2, a2)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(c.Mul64(R))
-	him, lom = bits.Mul64(c_lo, R)
-	him += c_hi * R
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)(R << 12) * (uint64_t)c
+	hi, lo = bits.Mul64(R<<12, c_hi)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	/* [d t3 0 0 0] = [p8 0 0 0 p4 p3 0 0 0] */
+	// t4 = (uint64_t)d & M
 	t4 = d_lo & M
 
-	//d = d.Rsh52()
-	d_lo = d_lo>>52 | d_hi<<(64-52)
-	d_hi = d_hi >> 52
+	// d >>= 52
+	d_lo = (d_lo >> 52) | (d_hi << 12)
+	d_hi >>= 52
 
-	/* [d t4 t3 0 0 0] = [p8 0 0 0 p4 p3 0 0 0] */
-	tx = (t4 >> 48)
+	// tx = (t4 >> 48)
+	tx = t4 >> 48
+
+	// t4 &= (M >> 4)
 	t4 &= (M >> 4)
-	/* [d t4+(tx<<48) t3 0 0 0] = [p8 0 0 0 p4 p3 0 0 0] */
 
-	//c = From64(a0).Mul64(a0)
+	// c = (uint128_t)a0 * a0
 	c_hi, c_lo = bits.Mul64(a0, a0)
 
-	/* [d t4+(tx<<48) t3 0 0 c] = [p8 0 0 0 p4 p3 0 0 p0] */
-	//d = d.Add(From64(a1).Mul64(a4))
-	him, lom = bits.Mul64(a1, a4)
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a1 * a4
+	hi, lo = bits.Mul64(a1, a4)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Add(From64(a2 * 2).Mul64(a3))
-	him, lom = bits.Mul64(a2*2, a3)
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)(a2*2) * a3
+	hi, lo = bits.Mul64(a2*2, a3)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	/* [d t4+(tx<<48) t3 0 0 c] = [p8 0 0 p5 p4 p3 0 0 p0] */
+	// u0 = (uint64_t)d & M
 	u0 = d_lo & M
 
-	//d = d.Rsh52()
-	d_lo = d_lo>>52 | d_hi<<(64-52)
-	d_hi = d_hi >> 52
+	// d >>= 52
+	d_lo = (d_lo >> 52) | (d_hi << 12)
+	d_hi >>= 52
 
-	/* [d u0 t4+(tx<<48) t3 0 0 c] = [p8 0 0 p5 p4 p3 0 0 p0] */
-	/* [d 0 t4+(tx<<48)+(u0<<52) t3 0 0 c] = [p8 0 0 p5 p4 p3 0 0 p0] */
+	// u0 = (u0 << 4) | tx
 	u0 = (u0 << 4) | tx
-	/* [d 0 t4+(u0<<48) t3 0 0 c] = [p8 0 0 p5 p4 p3 0 0 p0] */
 
-	//c = c.Add(From64(u0).Mul64(R >> 4))
-	him, lom = bits.Mul64(u0, R>>4)
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += (uint128_t)u0 * (R >> 4)
+	hi, lo = bits.Mul64(u0, R>>4)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	/* [d 0 t4 t3 0 0 c] = [p8 0 0 p5 p4 p3 0 0 p0] */
+	// rr[0] = (uint64_t)c & M
 	r.n[0] = c_lo & M
 
-	//c = c.Rsh52()
-	c_lo = c_lo>>52 | c_hi<<(64-52)
-	c_hi = c_hi >> 52
+	// c >>= 52
+	c_lo = (c_lo >> 52) | (c_hi << 12)
+	c_hi >>= 52
 
-	/* [d 0 t4 t3 0 c r0] = [p8 0 0 p5 p4 p3 0 0 p0] */
-
+	// a0 *= 2
 	a0 *= 2
-	//c = c.Add(From64(a0).Mul64(a1))
-	him, lom = bits.Mul64(a0, a1)
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
 
-	/* [d 0 t4 t3 0 c r0] = [p8 0 0 p5 p4 p3 0 p1 p0] */
-	//d = d.Add(From64(a2).Mul64(a4))
-	him, lom = bits.Mul64(a2, a4)
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// c += (uint128_t)a0 * a1
+	hi, lo = bits.Mul64(a0, a1)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	//d = d.Add(From64(a3).Mul64(a3))
-	him, lom = bits.Mul64(a3, a3)
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a2 * a4
+	hi, lo = bits.Mul64(a2, a4)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	/* [d 0 t4 t3 0 c r0] = [p8 0 p6 p5 p4 p3 0 p1 p0] */
-	//c = c.Add(From64(d_lo & M).Mul64(R))
-	him, lom = bits.Mul64(d_lo&M, R)
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// d += (uint128_t)a3 * a3
+	hi, lo = bits.Mul64(a3, a3)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	//d = d.Rsh52()
-	d_lo = d_lo>>52 | d_hi<<(64-52)
-	d_hi = d_hi >> 52
+	// c += (uint128_t)((uint64_t)d & M) * R
+	hi, lo = bits.Mul64(d_lo&M, R)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	/* [d 0 0 t4 t3 0 c r0] = [p8 0 p6 p5 p4 p3 0 p1 p0] */
+	// d >>= 52
+	d_lo = (d_lo >> 52) | (d_hi << 12)
+	d_hi >>= 52
+
+	// rr[1] = (uint64_t)c & M
 	r.n[1] = c_lo & M
 
-	//c = c.Rsh52()
-	c_lo = c_lo>>52 | c_hi<<(64-52)
-	c_hi = c_hi >> 52
-	/* [d 0 0 t4 t3 c r1 r0] = [p8 0 p6 p5 p4 p3 0 p1 p0] */
+	// c >>= 52
+	c_lo = (c_lo >> 52) | (c_hi << 12)
+	c_hi >>= 52
 
-	//c = c.Add(From64(a0).Mul64(a2))
-	him, lom = bits.Mul64(a0, a2)
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += (uint128_t)a0 * a2
+	hi, lo = bits.Mul64(a0, a2)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	//c = c.Add(From64(a1).Mul64(a1))
-	him, lom = bits.Mul64(a1, a1)
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += (uint128_t)a1 * a1
+	hi, lo = bits.Mul64(a1, a1)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	/* [d 0 0 t4 t3 c r1 r0] = [p8 0 p6 p5 p4 p3 p2 p1 p0] */
-	//d = d.Add(From64(a3).Mul64(a4))
-	him, lom = bits.Mul64(a3, a4)
-	d_lo, carry = bits.Add64(d_lo, lom, 0)
-	d_hi, _ = bits.Add64(d_hi, him, carry)
+	// d += (uint128_t)a3 * a4
+	hi, lo = bits.Mul64(a3, a4)
+	d_lo, carry = bits.Add64(d_lo, lo, 0)
+	d_hi, _ = bits.Add64(d_hi, hi, carry)
 
-	/* [d 0 0 t4 t3 c r1 r0] = [p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-	//c = c.Add(From64(d_lo & M).Mul64(R))
-	him, lom = bits.Mul64(d_lo&M, R)
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += (uint128_t)R * (uint64_t)d
+	// This multiplies R by the low 64 bits of d and adds to c
+	hi, lo = bits.Mul64(R, d_lo)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	//d = d.Rsh52()
-	d_lo = d_lo>>52 | d_hi<<(64-52)
-	d_hi = d_hi >> 52
+	// d >>= 64
+	// After this, d contains only what was in d_hi
+	d_lo = d_hi
+	d_hi = 0
 
-	/* [d 0 0 0 t4 t3 c r1 r0] = [p8 p7 p6 p5 p4 p3 p2 p1 p0] */
+	// rr[2] = (uint64_t)c & M
 	r.n[2] = c_lo & M
 
-	//c = c.Rsh52()
-	c_lo = c_lo>>52 | c_hi<<(64-52)
-	c_hi = c_hi >> 52
+	// c >>= 52
+	c_lo = (c_lo >> 52) | (c_hi << 12)
+	c_hi >>= 52
 
-	/* [d 0 0 0 t4 t3+c r2 r1 r0] = [p8 p7 p6 p5 p4 p3 p2 p1 p0] */
+	// c += (uint128_t)(R << 12) * (uint64_t)d
+	hi, lo = bits.Mul64(R<<12, d_lo)
+	c_lo, carry = bits.Add64(c_lo, lo, 0)
+	c_hi, _ = bits.Add64(c_hi, hi, carry)
 
-	//c = c.Add(d.Mul64(R).Add64(t3))
-	him, lom = bits.Mul64(d_lo, R)
-	him += d_hi * R
-	lom, carry = bits.Add64(lom, t3, 0)
-	him += carry
-	c_lo, carry = bits.Add64(c_lo, lom, 0)
-	c_hi, _ = bits.Add64(c_hi, him, carry)
+	// c += t3
+	c_lo, carry = bits.Add64(c_lo, t3, 0)
+	c_hi, _ = bits.Add64(c_hi, 0, carry)
 
-	/* [t4 c r2 r1 r0] = [p8 p7 p6 p5 p4 p3 p2 p1 p0] */
+	// rr[3] = (uint64_t)c & M
 	r.n[3] = c_lo & M
 
-	r.n[4] = (c_lo>>52 | c_hi<<(64-52)) + t4
+	// c >>= 52
+	c_lo = (c_lo >> 52) | (c_hi << 12)
+	c_hi >>= 52
+
+	// rr[4] = (uint64_t)c + t4
+	r.n[4] = c_lo + t4
 }
