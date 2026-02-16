@@ -39,9 +39,24 @@ func (a *Number) set_hex(s string) {
 }
 
 func (num *Number) mask_bits(bits uint) {
-	mask := new(big.Int).Lsh(BigInt1, bits)
-	mask.Sub(mask, BigInt1)
-	num.Int.And(&num.Int, mask)
+	words := num.Int.Bits()
+	if len(words) == 0 {
+		return
+	}
+	fullWords := bits / 64
+	remBits := bits % 64
+	// zero out words beyond the mask
+	for i := int(fullWords) + 1; i < len(words); i++ {
+		words[i] = 0
+	}
+	// mask the partial word
+	if fullWords < uint(len(words)) && remBits > 0 {
+		words[fullWords] &= (1 << remBits) - 1
+	} else if fullWords < uint(len(words)) && remBits == 0 {
+		words[fullWords] = 0
+	}
+	// SetBits re-normalizes (trims leading zeros)
+	num.Int.SetBits(words)
 }
 
 func (a *Number) split_exp(r1, r2 *Number) {
@@ -82,7 +97,17 @@ func (num *Number) inc() {
 }
 
 func (num *Number) rsh_x(bits uint) (res int) {
-	res = int(new(big.Int).And(&num.Int, new(big.Int).SetUint64((1<<bits)-1)).Uint64())
+	if num.Int.Sign() >= 0 {
+		words := num.Int.Bits()
+		if len(words) > 0 {
+			res = int(words[0]) & ((1 << bits) - 1)
+		}
+	} else {
+		// Negative: need two's complement semantics
+		for i := uint(0); i < bits; i++ {
+			res |= int(num.Int.Bit(int(i))) << i
+		}
+	}
 	num.Rsh(&num.Int, bits)
 	return
 }
