@@ -645,7 +645,7 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 		return // no such txid in UTXO (just ignore delete request)
 	}
 	lv := int64(len(*v))
-	db.fileSize.Add(-lv - int64(btc.VLenSize(uint64(lv))))
+	size_sub := lv + int64(btc.VLenSize(uint64(lv)))
 	rec := NewUtxoRec(*v)
 	if db.CB.NotifyTxDel != nil {
 		db.CB.NotifyTxDel(rec, outs)
@@ -660,16 +660,17 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 	}
 	db.MapMutex[ind[0]].Lock()
 	if anyout {
-		v = Serialize(rec, nil)
-		lv = int64(len(*v))
-		db.fileSize.Add(lv + int64(btc.VLenSize(uint64(lv))))
-		db.HashMap[ind[0]][ind] = v
+		vn := Serialize(rec, nil)
+		lv = int64(len(*vn))
+		size_sub -= lv + int64(btc.VLenSize(uint64(lv)))
+		db.HashMap[ind[0]][ind] = vn
 	} else {
 		delete(db.HashMap[ind[0]], ind)
 		db.DeletedRecords[ind[0]]++
 
 	}
 	db.MapMutex[ind[0]].Unlock()
+	db.fileSize.Add(-size_sub)
 	Memory_Free(v)
 }
 
