@@ -18,6 +18,10 @@ import (
 	"github.com/piotrnar/gocoin/lib/script"
 )
 
+const (
+	DATA_SIZE_EXTRA_PER_RECORD = 24 + 8 //slice header + pointer
+)
+
 var (
 	UTXO_WRITING_TIME_TARGET        = 5 * time.Minute // Take it easy with flushing UTXO.db onto disk
 	UTXO_SKIP_SAVE_BLOCKS    uint32 = 0
@@ -78,6 +82,8 @@ type UnspentDB struct {
 	mapNoDefragsCnt int
 	mapDefragsTime  time.Duration
 	recRelocateCnt  int
+	dataSize        atomic.Int64
+	totalTxs        atomic.Int64
 }
 
 type NewUnspentOpts struct {
@@ -179,6 +185,8 @@ redo:
 		info = fmt.Sprint("\rLoading ", u64, " plain txs from ", fname, " - ")
 	}
 
+	db.totalTxs.Store(int64(u64))
+
 	// use background routine for map updates
 	ch = make(chan []one_rec, CHANNEL_SIZE)
 	recs = recpool[pool_idx][:]
@@ -211,6 +219,7 @@ redo:
 			goto fatal_error
 		}
 		copy(rec.k[:], (*rec.b)[:])
+		db.dataSize.Add(int64(le))
 
 		if rec_idx == len(recs)-1 {
 			ch <- recs
@@ -654,11 +663,14 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 	}
 	db.MapMutex[ind[0]].Lock()
 	if anyout {
-		db.HashMap[ind[0]][ind] = Serialize(rec, nil)
+		vn := Serialize(rec, nil)
+		db.HashMap[ind[0]][ind] = vn
+		db.dataSize.Add(int64(len(*vn)) - int64(len(*v)))
 	} else {
 		delete(db.HashMap[ind[0]], ind)
 		db.DeletedRecords[ind[0]]++
-
+		db.dataSize.Add(-int64(len(*v)))
+		db.totalTxs.Add(-1)
 	}
 	db.MapMutex[ind[0]].Unlock()
 	Memory_Free(v)
@@ -704,6 +716,8 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 				db.MapMutex[ind[0]].Lock()
 				db.HashMap[ind[0]][ind] = v
 				db.MapMutex[ind[0]].Unlock()
+				db.dataSize.Add(int64(len(*v)))
+				db.totalTxs.Add(1)
 			}
 		}
 		wg.Done()
@@ -834,6 +848,10 @@ func (db *UnspentDB) UTXOStats() string {
 	}
 	wg.Wait()
 
+	if lele != uint64(db.totalTxs.Load()) {
+		println("ERROR: Txs count mismatch:", outcnt, db.totalTxs.Load())
+	}
+
 	fmt.Fprintf(o, "UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, lele, float64(sumcb)/1e8)
 	fmt.Fprintf(o, " MaxTxOutCnt: %d  DirtyDB: %t  Writing: %t  Abort: %t  Compressed: %t\n",
@@ -841,8 +859,8 @@ func (db *UnspentDB) UTXOStats() string {
 		db.ComprssedUTXO)
 	fmt.Fprintf(o, " Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	fmt.Fprintf(o, " Unspendable Outputs: %d (%dKB)  txs:%d    UTXO.db file size: %d\n",
-		unspendable, unspendable_bytes>>10, unspendable_recs, filesize)
+	fmt.Fprintf(o, " Unspendable Outputs: %d (%dKB)  txs:%d    UTXO.db file size: %d (%d)\n",
+		unspendable, unspendable_bytes>>10, unspendable_recs, filesize, db.dataSize.Load())
 
 	return o.String()
 }
@@ -857,15 +875,23 @@ func (db *UnspentDB) GetStats() (s string) {
 		db.MapMutex[i].RUnlock()
 	}
 
-	s = fmt.Sprintf("UNSPENT: %d txs.  MaxCnt:%d  Dirt:%t  Writ:%t  Abort:%t  Compr:%t\n",
-		hml, len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(),
+	if hml != int(db.totalTxs.Load()) {
+		println("ERROR: Txs count mismatch:", hml, db.totalTxs.Load())
+	}
+	wr := new(bytes.Buffer)
+
+	fmt.Fprintf(wr, "UNSPENT: %d txs.  MaxCnt:%d  Dirt:%t  Writ:%t  Abort:%t  Compr:%t\n",
+		db.totalTxs.Load(), len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(),
 		len(db.abortwritingnow) > 0, db.ComprssedUTXO)
-	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
+	fmt.Fprintf(wr, " Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	s += fmt.Sprintf(" Defrags:  Maps:%d (%d no) in %s (%d%% dels)   Relocations: %d recs\n",
+	fmt.Fprintf(wr, " Defrags:  Maps:%d (%d no) in %s (%d%% dels),  Relocations: %d recs\n",
 		db.mapDefragsCnt, db.mapNoDefragsCnt, db.mapDefragsTime.String(), 100*dels/hml,
 		db.recRelocateCnt)
-	return
+	data, count, fprint := db.GetUTXOSize()
+	fmt.Fprintf(wr, " UTXO data size:  %d bytes + ( %d txs x %d ) => %d bytes of mem footprint\n",
+		data, count, DATA_SIZE_EXTRA_PER_RECORD, fprint)
+	return wr.String()
 }
 
 func (db *UnspentDB) PurgeUnspendable(all bool) {
@@ -908,4 +934,10 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 	db.Mutex.Unlock()
 
 	fmt.Println("Purged", unspendable_txs, "transactions and", unspendable_recs, "extra records")
+}
+
+func (db *UnspentDB) GetUTXOSize() (data, count, footprint int) {
+	data, count = int(db.dataSize.Load()), int(db.totalTxs.Load())
+	footprint = data + count*DATA_SIZE_EXTRA_PER_RECORD
+	return
 }
