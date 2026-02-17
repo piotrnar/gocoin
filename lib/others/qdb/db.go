@@ -11,9 +11,8 @@ The key must be a unique 64-bit value, most likely a hash of the actual key.
 
 They data is stored on a disk, in a folder specified during the call to NewDB().
 There are can be three possible files in that folder
- * qdb.0, qdb.1 - these files store a compact version of the entire database
- * qdb.log - this one stores the changes since the most recent qdb.0 or qdb.1
-
+  - qdb.0, qdb.1 - these files store a compact version of the entire database
+  - qdb.log - this one stores the changes since the most recent qdb.0 or qdb.1
 */
 package qdb
 
@@ -48,49 +47,39 @@ const (
 )
 
 type DB struct {
-	// folder with the db files
-	Dir string
-
-	LogFile         *os.File
-	LastValidLogPos int64
-	DataSeq         uint32
-
 	// access mutex:
 	Mutex sync.Mutex
-
-	//index:
-	Idx *QdbIndex
-
-	NoSyncMode     bool
+	// folder with the db files
+	Dir             string
+	counter_mutex   sync.Mutex
+	counter         map[string]uint64
+	LogFile         *os.File
+	LastValidLogPos int64
+	// index:
+	Idx            *QdbIndex
 	PendingRecords map[KeyType]bool
-
-	DatFiles map[uint32]*os.File
-
-	O ExtraOpts
-
-	VolatileMode bool // this will only store database on disk when you close it
-
-	counter       map[string]uint64
-	counter_mutex sync.Mutex
+	DatFiles       map[uint32]*os.File
+	DataSeq        uint32
+	NoSyncMode     bool
+	VolatileMode   bool // this will only store database on disk when you close it
+	O              ExtraOpts
 }
 
 type oneIdx struct {
-	data data_ptr_t
-
+	data    data_ptr_t
 	DataSeq uint32 // data file index
 	datpos  uint32 // position of the record in the data file
 	datlen  uint32 // length of the record in the data file
-
-	flags uint32
+	flags   uint32
 }
 
 type NewDBOpts struct {
-	Dir          string
-	Records      uint
-	WalkFunction QdbWalkFunction
+	Dir     string
+	Records uint
+	*ExtraOpts
 	LoadData     bool
 	Volatile     bool
-	*ExtraOpts
+	WalkFunction QdbWalkFunction
 }
 
 type ExtraOpts struct {

@@ -5,20 +5,18 @@ client blockchain into Gocoin's bitcoin client.
 package blockdb
 
 import (
-	"fmt"
-	"os"
 	"bytes"
 	"errors"
+	"fmt"
+	"os"
 )
 
-
 type BlockDB struct {
-	dir string
-	magic [4]byte
-	f *os.File
+	dir         string
+	f           *os.File
 	currfileidx uint32
+	magic       [4]byte
 }
-
 
 func NewBlockDB(dir string, magic [4]byte) (res *BlockDB) {
 	f, e := os.Open(idx2fname(dir, 0))
@@ -32,14 +30,12 @@ func NewBlockDB(dir string, magic [4]byte) (res *BlockDB) {
 	return
 }
 
-
 func idx2fname(dir string, fidx uint32) string {
 	if fidx == 0xffffffff {
 		return "blk99999.dat"
 	}
 	return fmt.Sprintf("%s/blk%05d.dat", dir, fidx)
 }
-
 
 func readBlockFromFile(f *os.File, mag []byte) (res []byte, e error) {
 	var buf [4]byte
@@ -59,22 +55,21 @@ func readBlockFromFile(f *os.File, mag []byte) (res []byte, e error) {
 		return
 	}
 	le := uint32(lsb2uint(buf[:]))
-	if le<81 {
+	if le < 81 {
 		e = errors.New(fmt.Sprintf("Incorrect block size %d", le))
 		return
 	}
 
 	res = make([]byte, le)
 	_, e = f.Read(res[:])
-	if e!=nil {
+	if e != nil {
 		return
 	}
 
 	return
 }
 
-
-func (db *BlockDB)readOneBlock() (res []byte, e error) {
+func (db *BlockDB) readOneBlock() (res []byte, e error) {
 	fpos, _ := db.f.Seek(0, 1)
 	res, e = readBlockFromFile(db.f, db.magic[:])
 	if e != nil {
@@ -103,7 +98,7 @@ func (db *BlockDB) FetchNextBlock() (bl []byte, e error) {
 }
 
 func lsb2uint(lt []byte) (res uint64) {
-	for i:=0; i<len(lt); i++ {
+	for i := 0; i < len(lt); i++ {
 		res |= (uint64(lt[i]) << uint(i*8))
 	}
 	return
