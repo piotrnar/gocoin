@@ -157,30 +157,13 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.UpdateScriptFlags(bl.VerifyFlags)
 
 		divAtHeigh := func(height uint32) uint32 {
-			if height > 900e3 {
-				return 10e3
-			}
-			if height > 750e3 {
-				return 25e3
-			}
 			if height > 400e3 {
 				return 50e3
 			}
 			return 100e3
 		}
 		if common.Last.ParseTill != nil {
-			var div uint32
-			if common.Last.Block.Height == 936000 {
-				lastDefragDone = time.Now().Add(-time.Hour)
-				defrag_utxo()
-				for range common.BlockChain.Unspent.HashMap {
-					common.BlockChain.Unspent.DefragMap(true)
-				}
-				div = 0
-			} else {
-				div = divAtHeigh(common.Last.Block.Height)
-			}
-			if div == 0 || (common.Last.Block.Height%div) == 0 {
+			if div := divAtHeigh(common.Last.Block.Height); (common.Last.Block.Height % div) == 0 {
 				var utxs string
 				if common.Memory != nil {
 					b, _, _ := common.MemUsed()
