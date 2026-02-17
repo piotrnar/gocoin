@@ -89,7 +89,9 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 		LastHeaderHeight   uint32
 		Blocks_on_disk     uint32
 		SavingUTXO         bool
-		UTXOFileSize       int
+		UTXODataSize       int
+		UTXORecordsCnt     int
+		UTXOMemFootprint   int
 	}
 
 	out.Blocks_cached = network.CachedBlocksLen()
@@ -120,7 +122,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	mutexHrate.Unlock()
 
 	out.SavingUTXO = common.BlockChain.Unspent.WritingInProgress.Get()
-	out.UTXOFileSize = common.BlockChain.Unspent.GetFileSize()
+	out.UTXODataSize, out.UTXORecordsCnt, out.UTXOMemFootprint = common.BlockChain.Unspent.GetUTXOSize()
 	out.ProcessPID = os.Getpid()
 
 	var ms runtime.MemStats

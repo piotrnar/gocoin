@@ -141,11 +141,10 @@ func show_info(par string) {
 	cb, ca, ms := common.MemUsed()
 	fmt.Printf("HeapUsed: %d MB,  SysUsed: %d MB,  UTXO-X-mem: %dMB in %d/%d\n",
 		al>>20, memsize.MustResidentMemory()>>20, cb>>20, ca, ms)
-	fmt.Printf("Peers: %d,  ECDSAs: %d %d %d,  AvgFee: %.1f SPB,  Saving: %t (%d)\n",
+	fmt.Printf("Peers: %d,  ECDSAs: %d %d %d,  AvgFee: %.1f SPB,  Saving: %t\n",
 		peersdb.PeerDB.Count(),
 		btc.EcdsaVerifyCnt(), btc.SchnorrVerifyCnt(), btc.CheckPay2ContractCnt(),
-		usif.GetAverageFee(), common.BlockChain.Unspent.WritingInProgress.Get(),
-		common.BlockChain.Unspent.GetFileSize())
+		usif.GetAverageFee(), common.BlockChain.Unspent.WritingInProgress.Get())
 
 	network.MutexRcv.Lock()
 	fmt.Println("LastHeder:", network.LastCommitedHeader.BlockHash.String(), "@",
