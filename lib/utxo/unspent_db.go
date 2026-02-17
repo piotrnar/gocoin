@@ -78,6 +78,7 @@ type UnspentDB struct {
 	mapNoDefragsCnt int
 	mapDefragsTime  time.Duration
 	recRelocateCnt  int
+	fileSize        atomic.Int64
 }
 
 type NewUnspentOpts struct {
@@ -179,6 +180,8 @@ redo:
 		info = fmt.Sprint("\rLoading ", u64, " plain txs from ", fname, " - ")
 	}
 
+	db.fileSize.Store(8 + 32 + 8)
+
 	// use background routine for map updates
 	ch = make(chan []one_rec, CHANNEL_SIZE)
 	recs = recpool[pool_idx][:]
@@ -211,6 +214,7 @@ redo:
 			goto fatal_error
 		}
 		copy(rec.k[:], (*rec.b)[:])
+		db.fileSize.Add(int64(le) + int64(btc.VLenSize(le)))
 
 		if rec_idx == len(recs)-1 {
 			ch <- recs
@@ -640,6 +644,8 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 	if v == nil {
 		return // no such txid in UTXO (just ignore delete request)
 	}
+	lv := int64(len(*v))
+	db.fileSize.Add(-lv - int64(btc.VLenSize(uint64(lv))))
 	rec := NewUtxoRec(*v)
 	if db.CB.NotifyTxDel != nil {
 		db.CB.NotifyTxDel(rec, outs)
@@ -654,7 +660,10 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 	}
 	db.MapMutex[ind[0]].Lock()
 	if anyout {
-		db.HashMap[ind[0]][ind] = Serialize(rec, nil)
+		v = Serialize(rec, nil)
+		lv = int64(len(*v))
+		db.fileSize.Add(lv + int64(btc.VLenSize(uint64(lv))))
+		db.HashMap[ind[0]][ind] = v
 	} else {
 		delete(db.HashMap[ind[0]], ind)
 		db.DeletedRecords[ind[0]]++
@@ -701,6 +710,8 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 			if add_this_tx {
 				ind := *(*UtxoKeyType)(unsafe.Pointer(&rec.TxID[0]))
 				v := Serialize(rec, nil)
+				lv := int64(len(*v))
+				db.fileSize.Add(lv + int64(btc.VLenSize(uint64(lv))))
 				db.MapMutex[ind[0]].Lock()
 				db.HashMap[ind[0]][ind] = v
 				db.MapMutex[ind[0]].Unlock()
@@ -834,6 +845,10 @@ func (db *UnspentDB) UTXOStats() string {
 	}
 	wg.Wait()
 
+	if filesize != uint64(db.fileSize.Load()) {
+		println("ERROR: File size mismatch:", filesize, db.fileSize.Load())
+	}
+
 	fmt.Fprintf(o, "UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, lele, float64(sumcb)/1e8)
 	fmt.Fprintf(o, " MaxTxOutCnt: %d  DirtyDB: %t  Writing: %t  Abort: %t  Compressed: %t\n",
@@ -862,9 +877,9 @@ func (db *UnspentDB) GetStats() (s string) {
 		len(db.abortwritingnow) > 0, db.ComprssedUTXO)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	s += fmt.Sprintf(" Defrags:  Maps:%d (%d no) in %s (%d%% dels)   Relocations: %d recs\n",
+	s += fmt.Sprintf(" Defrags:  Maps:%d (%d no) in %s (%d%% dels),  Relocations: %d recs, FSize:%d\n",
 		db.mapDefragsCnt, db.mapNoDefragsCnt, db.mapDefragsTime.String(), 100*dels/hml,
-		db.recRelocateCnt)
+		db.recRelocateCnt, db.fileSize.Load())
 	return
 }
 
@@ -908,4 +923,8 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 	db.Mutex.Unlock()
 
 	fmt.Println("Purged", unspendable_txs, "transactions and", unspendable_recs, "extra records")
+}
+
+func (db *UnspentDB) GetFileSize() int {
+	return int(db.fileSize.Load())
 }
