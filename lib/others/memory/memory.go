@@ -88,7 +88,7 @@ func getSlotSize(class int) uint32 {
 	return 0
 }
 
-func (a *Allocator) GetInfo(verbose, slots bool) string {
+func (a *Allocator) GetInfo(verbose bool) string {
 	for i := range a.classMu {
 		a.classMu[i].Lock()
 	}

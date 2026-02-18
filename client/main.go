@@ -590,6 +590,12 @@ func main() {
 		fmt.Println("WARNING: Gocoin client shall be build for 64-bit arch. It will likely crash now.")
 	}
 
+	cleanup, err := setupLogging("gocoin.log")
+	if err != nil {
+		panic(err)
+	}
+	defer cleanup()
+
 	fmt.Println("Gocoin client version", gocoin.Version, " PID", os.Getpid())
 
 	// Disable Ctrl+C
@@ -602,10 +608,6 @@ func main() {
 			}
 			fmt.Println("main panic recovered:", err.Error())
 			fmt.Println(string(debug.Stack()))
-			//network.NetCloseAll()
-			//common.CloseBlockChain()
-			//peersdb.ClosePeerDB()
-			//sys.UnlockDatabaseDir()
 			os.Exit(1)
 		}
 	}()
