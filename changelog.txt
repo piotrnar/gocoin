@@ -9,6 +9,7 @@
 * Lib/Memory: Added defragmenting routines to allow memory usege optimizations
 * Client: using defragmenting routines to lower memory usage during chain sync/rebuild (saves RAM)
 * Lib/Memory: Added parallel process support - boosted speed of UTXO rebuild, making UseGoHeap obsolete
+* Lib/Script: Fixed a bug that was cutting 32 bit size from OP_PUSHDATA to 16 bits (thanks @brunoerg)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

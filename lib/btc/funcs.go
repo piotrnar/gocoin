@@ -394,7 +394,7 @@ func GetOpcode(b []byte) (opcode int, ret []byte, pc int, e error) {
 				e = errors.New("GetOpcode error 4")
 				return
 			}
-			size = int(binary.LittleEndian.Uint16(b[pc : pc+4]))
+			size = int(binary.LittleEndian.Uint32(b[pc : pc+4]))
 			pc += 4
 		}
 		if pc+size > len(b) {
