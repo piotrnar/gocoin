@@ -23,7 +23,7 @@ with 3.2GHz Intel i7-8700 CPU, 128GB RAM, 2x1TB SSD and 1Gbit internet connectio
 running Debian 12 (bookworm).
 Clients using their default configuration.
 For other performance charts see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.
-Note that results may vary, depending the luck of connecting to 'good' peers.*
+Note that results may vary (even by 10-20%), depending the luck of connecting to 'good' peers.*
 
 # Requirements
 
