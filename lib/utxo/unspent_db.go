@@ -889,7 +889,7 @@ func (db *UnspentDB) GetStats() (s string) {
 		db.mapDefragsCnt, db.mapNoDefragsCnt, db.mapDefragsTime.String(), 100*dels/hml,
 		db.recRelocateCnt)
 	data, count, fprint := db.GetUTXOSize()
-	fmt.Fprintf(wr, " UTXO data size:  %d bytes + ( %d txs x %d ) => %d bytes of mem footprint\n",
+	fmt.Fprintf(wr, " UTXO data size: %d bytes + (%d txs x %d) = %d bytes of footprint\n",
 		data, count, DATA_SIZE_EXTRA_PER_RECORD, fprint)
 	return wr.String()
 }

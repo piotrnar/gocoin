@@ -88,7 +88,7 @@ func getSlotSize(class int) uint32 {
 	return 0
 }
 
-func (a *Allocator) GetInfo(verbose bool) string {
+func (a *Allocator) GetInfo(verbose, slots bool) string {
 	for i := range a.classMu {
 		a.classMu[i].Lock()
 	}
@@ -109,13 +109,6 @@ func (a *Allocator) GetInfo(verbose bool) string {
 		pcnt += int(a.pageCount[class])
 		scnt += int(a.pageCount[class]) * int(a.cap[class]) * siz
 		fcnt += int(a.freeSlots[class]) * siz
-	}
-	if !verbose {
-		fmt.Fprint(w, len(sizeClassSlotSize), " slots: ")
-		for _, siz := range sizeClassSlotSize {
-			fmt.Fprint(w, int(siz)-int(sizeIncrease), ", ")
-		}
-		fmt.Fprintln(w)
 	}
 	fmt.Fprintf(w, "Bytes: %d,  Allocs: %d,  Maps: %d sh + %d pr  MaxSize: %d\n",
 		a.Bytes.Load(), a.Allocs.Load(), a.SharedMmaps.Load(), a.PrivateMmaps.Load(), a.MaxSharedSize)
