@@ -22,7 +22,8 @@ the given block number, with comparision to Bitcoin Core 30.2:
 with 3.2GHz Intel i7-8700 CPU, 128GB RAM, 2x1TB SSD and 1Gbit internet connection,
 running Debian 12 (bookworm).
 Clients using their default configuration.
-For other performance charts see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.*
+For other performance charts see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.
+Note that results may vary, depending the luck of connecting to 'good' peers.*
 
 # Requirements
 
