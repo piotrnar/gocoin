@@ -590,12 +590,6 @@ func main() {
 		fmt.Println("WARNING: Gocoin client shall be build for 64-bit arch. It will likely crash now.")
 	}
 
-	cleanup, err := setupLogging("gocoin.log")
-	if err != nil {
-		panic(err)
-	}
-	defer cleanup()
-
 	fmt.Println("Gocoin client version", gocoin.Version, " PID", os.Getpid())
 
 	// Disable Ctrl+C
