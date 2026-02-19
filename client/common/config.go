@@ -32,9 +32,9 @@ var (
 		TrustAll      bool
 		UnbanAllPeers bool
 		NoWallet      bool
-		Log           bool
 		SaveConfig    bool
 		NoMempoolLoad bool
+		LogFile       string
 	}
 
 	CFG struct { // Options that can come from either command line or common file
@@ -278,10 +278,10 @@ func InitConfig() {
 	flag.BoolVar(&FLAG.TrustAll, "trust", FLAG.TrustAll, "Trust all scripts inside new blocks (for fast syncig)")
 	flag.BoolVar(&FLAG.UnbanAllPeers, "unban", FLAG.UnbanAllPeers, "Un-ban all peers in databse, before starting")
 	flag.BoolVar(&FLAG.NoWallet, "nowallet", FLAG.NoWallet, "Do not automatically enable the wallet functionality (lower memory usage and faster block processing)")
-	flag.BoolVar(&FLAG.Log, "log", FLAG.Log, "Store some runtime information in the log files")
 	flag.BoolVar(&FLAG.SaveConfig, "sc", FLAG.SaveConfig, "Save "+ConfigFile+" file and exit (use to create default config file)")
 	flag.BoolVar(&FLAG.NoMempoolLoad, "mp0", FLAG.NoMempoolLoad, "Do not attempt to load mempool from disk (start with empty one)")
 	flag.BoolVar(&CFG.AllBalances.InstantWallet, "iw", CFG.AllBalances.InstantWallet, "Make sure to fetch all wallet balances before starting UI and network")
+	flag.StringVar(&FLAG.LogFile, "log", "", "Specify file name where a copy of the console output should be saved")
 
 	if CFG.Datadir == "" {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"

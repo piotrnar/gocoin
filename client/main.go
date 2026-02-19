@@ -590,16 +590,17 @@ func fetch_balances_now() {
 }
 
 func main() {
-	var ptr *byte
-	if unsafe.Sizeof(ptr) < 8 {
-		fmt.Println("WARNING: Gocoin client shall be build for 64-bit arch. It will likely crash now.")
-	}
+	var clean_function func()
 
 	fmt.Println("Gocoin client version", gocoin.Version, " PID", os.Getpid())
+	if unsafe.Sizeof(uintptr(0)) < 8 {
+		fmt.Println("WARNING: Gocoin client shall be build for 64-bit arch. It will likely crash now.")
+	}
 
 	// Disable Ctrl+C
 	signal.Notify(common.KillChan, os.Interrupt, syscall.SIGTERM)
 	defer func() {
+		var exit_val int
 		if r := recover(); r != nil {
 			err, ok := r.(error)
 			if !ok {
@@ -607,11 +608,25 @@ func main() {
 			}
 			fmt.Println("main panic recovered:", err.Error())
 			fmt.Println(string(debug.Stack()))
-			os.Exit(1)
+			exit_val = 1
+		}
+		if clean_function != nil {
+			clean_function()
+		}
+		if exit_val != 0 {
+			os.Exit(exit_val)
 		}
 	}()
 
 	common.InitConfig()
+
+	if common.FLAG.LogFile != "" {
+		if cl, er := setupLogging(common.FLAG.LogFile); er == nil {
+			clean_function = cl
+		} else {
+			println("ERROR:", er.Error())
+		}
+	}
 
 	if common.FLAG.SaveConfig {
 		common.SaveConfig()

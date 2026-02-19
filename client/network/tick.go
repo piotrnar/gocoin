@@ -788,15 +788,15 @@ func (c *OneConnection) Run() {
 				c.DoS("Ver" + er.Error())
 				break
 			}
-			if common.FLAG.Log {
-				f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+			/*
+				f, _ := os.OpenFile("conn.log", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
 				if f != nil {
 					fmt.Fprintf(f, "%s: Connected ID:%d  In:%t  Addr:%s  Version:%d  Services:0x%x  Agent:%s\n",
 						time.Now().Format("2006-01-02 15:04:05"), c.ConnID, c.X.Incomming,
 						c.PeerAddr.Ip(), c.Node.Version, c.Node.Services, c.Node.Agent)
 					f.Close()
 				}
-			}
+			*/
 			c.X.LastMinFeePerKByte = common.MinFeePerKB()
 
 			if c.X.IsGocoin {
