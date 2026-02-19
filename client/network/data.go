@@ -344,7 +344,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	if cbip >= MAX_PEERS_BLOCKS_IN_PROGRESS {
 		Fetch.MaxCountInProgress++
 		// wake up in a few seconds, maybe some blocks will complete by then
-		c.nextGetData = time.Now().Add(1 * time.Second)
+		c.nextGetData = time.Now().Add(10 * time.Millisecond)
 		return
 	}
 
@@ -354,7 +354,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	if block_data_in_progress > 0 && (block_data_in_progress+avg_block_size) > MAX_GETDATA_FORWARD {
 		Fetch.MaxBytesInProgress++
 		// wake up in a few seconds, maybe some blocks will complete by then
-		c.nextGetData = time.Now().Add(1 * time.Second) // wait for some blocks to complete
+		c.nextGetData = time.Now().Add(10 * time.Millisecond) // wait for some blocks to complete
 		return
 	}
 
@@ -459,7 +459,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		//println(c.ConnID, "fetch nothing", cbip, block_data_in_progress, max_height-common.Last.BlockHeight(), cnt_in_progress)
 		Fetch.Nothing++
 		// wake up in a few seconds, maybe it will be different next time
-		c.nextGetData = time.Now().Add(5 * time.Second)
+		c.nextGetData = time.Now().Add(50 * time.Millisecond)
 		return
 	}
 
