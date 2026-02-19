@@ -34,7 +34,7 @@ var (
 
 	NetBlocksSize sys.SyncInt
 
-	exitat *uint = flag.Uint("exitat", 0, "Auto exit node after comitting block with the given height")
+	exitat *int = flag.Int("exitat", 0, "Auto exit node after comitting block with the given height (-1 for current last)")
 
 	highestAcceptedBlock uint32
 	retryCachedBlocks    bool
@@ -197,7 +197,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 				}
 			}
 		}
-		if *exitat != 0 && uint(common.Last.Block.Height) == *exitat {
+		if *exitat != 0 && (*exitat < 0 || int(common.Last.Block.Height) == *exitat) {
 			exit_now()
 		}
 		new_top := common.Last.Block == newbl.BlockTreeNode
