@@ -34,7 +34,8 @@ var (
 
 	NetBlocksSize sys.SyncInt
 
-	exitat *int = flag.Int("exitat", 0, "Auto exit node after comitting block with the given height (-1 for current last)")
+	exitat     *int  = flag.Int("exitat", 0, "Auto exit node after comitting block with the given height (-1 for current last)")
+	saveonexit *bool = flag.Bool("save", true, "Save UTXO.db before exiting (use with -exitat)")
 
 	highestAcceptedBlock uint32
 	retryCachedBlocks    bool
@@ -91,8 +92,12 @@ func exit_now() {
 			network.Fetch.BlockSameRcvd, wst>>20, tot>>20, 100*float64(wst)/float64(tot))
 	}
 	common.PrintBWStats()
-	fmt.Print("Reached given block ", *exitat, ". Now exiting....\n\n\n\n")
-	os.Exit(0)
+	fmt.Println("Executing exitat", *exitat, "  save:", *saveonexit)
+	if !*saveonexit {
+		fmt.Println("\n\n\n")
+		os.Exit(0)
+	}
+	usif.Exit_now.Set()
 }
 
 func defrag_utxo() {
