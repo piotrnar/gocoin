@@ -197,7 +197,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 				}
 			}
 		}
-		if *exitat != 0 && (*exitat < 0 || int(common.Last.Block.Height) == *exitat) {
+		if *exitat != 0 && int(common.Last.Block.Height) == *exitat {
 			exit_now()
 		}
 		new_top := common.Last.Block == newbl.BlockTreeNode
@@ -816,7 +816,7 @@ func main() {
 						break
 					}
 					common.Set(&common.BlockChainSynchronized, true)
-					if *exitat == 99999999 {
+					if *exitat == -1 {
 						exit_now()
 					}
 					reset_save_timer()
