@@ -70,9 +70,6 @@ func host_init() {
 		os.Exit(1)
 	}
 
-	fmt.Print(common.LogBuffer.String())
-	common.LogBuffer = nil
-
 	if btc.EC_Verify == nil {
 		fmt.Println("Using native secp256k1 lib for EC_Verify (consider installing a speedup)")
 	}

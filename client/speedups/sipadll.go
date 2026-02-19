@@ -10,7 +10,7 @@ package main
 
 import (
 	"encoding/hex"
-	"github.com/piotrnar/gocoin/client/common"
+	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"os"
 	"syscall"
@@ -87,7 +87,7 @@ func init() {
 		os.Exit(1)
 	}
 
-	common.Log.Println("Using secp256k1.dll of Bitcoin Core for EC_Verify, SchnorrVerify & CheckPayToContact")
+	fmt.Println("Using secp256k1.dll of Bitcoin Core for EC_Verify, SchnorrVerify & CheckPayToContact")
 	btc.EC_Verify = EC_Verify
 	btc.Schnorr_Verify = Schnorr_Verify
 	btc.Check_PayToContract = CheckPayToContract

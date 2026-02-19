@@ -1,10 +1,8 @@
 package common
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 	"sync"
@@ -25,9 +23,6 @@ const (
 
 var (
 	Services uint64 = btc.SERVICE_SEGWIT | btc.SERVICE_NETWORK_LIMITED // It updates this value in InitConfig()
-
-	LogBuffer             = new(bytes.Buffer)
-	Log       *log.Logger = log.New(LogBuffer, "", 0)
 
 	BlockChain     *chain.Chain
 	GenesisBlock   *btc.Uint256

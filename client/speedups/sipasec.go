@@ -11,7 +11,7 @@ package main
 */
 
 import (
-	"github.com/piotrnar/gocoin/client/common"
+	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/cgo/sipasec"
 )
@@ -29,7 +29,7 @@ func check_pay_to_contract(m_keydata, base, hash []byte, parity bool) bool {
 }
 
 func init() {
-	common.Log.Println("Using libsecp256k1.a for ECVerify, SchnorrVerify & CheckPayToContact")
+	fmt.Println("Using libsecp256k1.a for ECVerify, SchnorrVerify & CheckPayToContact")
 	btc.EC_Verify = sipa_ec_verify
 	btc.Schnorr_Verify = schnorr_ec_verify
 	btc.Check_PayToContract = check_pay_to_contract
