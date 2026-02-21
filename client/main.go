@@ -122,6 +122,10 @@ func has_blocks_ahead(cnt int) (rec int) {
 	if network.CachedMinHeight <= bh {
 		for ; rec < cnt; rec++ {
 			if _, ok := network.CachedBlocksIdx[bh+uint32(rec)]; !ok {
+				if network.LowestIndexToBlocksToGet > bh+uint32(rec) {
+					ii := network.IndexToBlocksToGet[bh+uint32(rec)]
+					fmt.Printf("WTF? %d is not in cache and not in B2G %d\n", bh+uint32(rec), len(ii))
+				}
 				break
 			}
 		}
