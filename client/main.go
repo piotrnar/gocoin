@@ -137,7 +137,8 @@ func delay_if_needed() {
 			time.Sleep(100 * time.Millisecond)
 			network.Fetch.HoldOn++
 			fmt.Println("Delay at", highestAcceptedBlock, "because has", has, "but needs", needs,
-				network.CachedMinHeight)
+				network.CachedMinHeight, network.LowestIndexToBlocksToGet,
+				network.LowestIndexToBlocksToGet-highestAcceptedBlock)
 		}
 	}
 }
