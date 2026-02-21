@@ -116,12 +116,11 @@ func defrag_utxo() {
 	}
 }
 
-func delay_if_needed() {
+func delay_if_needed(current_top uint32) {
 	network.MutexRcv.Lock()
-	b2gcnt := len(network.BlocksToGet)
-	li2get := network.LowestIndexToBlocksToGet
+	b2gcnt, li2get := len(network.BlocksToGet), network.LowestIndexToBlocksToGet
 	network.MutexRcv.Unlock()
-	if b2gcnt > 1e3 && li2get-common.Last.BlockHeight() < 10 {
+	if b2gcnt > 1e3 && li2get-current_top < 10 {
 		time.Sleep(100 * time.Millisecond)
 	}
 }
@@ -200,6 +199,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.BlockChain.BlockIndexAccess.Lock()
 		lch := network.LastCommitedHeader
 		common.BlockChain.BlockIndexAccess.Unlock()
+		var din bool
 		if !syncDoneAnnounced && common.Last.ParseTill == nil && !common.BlockChainSynchronized {
 			if (common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height {
 				print_sync_stats()
@@ -211,7 +211,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 					syncDoneAnnounced = true
 				}
 			}
-			delay_if_needed()
+			din = true
 		}
 		if *exitat != 0 && int(common.Last.Block.Height) == *exitat {
 			exit_now()
@@ -219,6 +219,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		new_top := common.Last.Block == newbl.BlockTreeNode
 		common.Last.Mutex.Unlock()
 
+		if din {
+			delay_if_needed(newbl.BlockTreeNode.Height)
+		}
 		if newbl.DoInvs && new_top {
 			// we will end up here for new blosks with minimal POW (testnet)
 			// we want to hold invs for those with timestamps too much ahead
