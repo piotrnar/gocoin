@@ -116,11 +116,9 @@ func defrag_utxo() {
 	}
 }
 
+/*
 func has_blocks_ahead(cnt int) (rec int) {
 	bh := highestAcceptedBlock + 1
-	if network.CachedMinHeight > bh {
-		return
-	}
 	for ; rec < cnt; rec++ {
 		if _, ok := network.CachedBlocksIdx[bh+uint32(rec)]; !ok {
 			return
@@ -128,15 +126,13 @@ func has_blocks_ahead(cnt int) (rec int) {
 	}
 	return
 }
+*/
 
 func delay_if_needed() {
-	needs := int(common.SyncMinBocksAhead.Load())
-	if has := has_blocks_ahead(needs); has < needs {
-		time.Sleep(100 * time.Millisecond)
+	if network.CachedMinHeight > highestAcceptedBlock+1 {
+		time.Sleep(1000 * time.Millisecond)
 		network.Fetch.HoldOn++
-		if highestAcceptedBlock > 100e3 {
-			fmt.Println("We have", has, "blocks but need", needs)
-		}
+		fmt.Println("Delay at", highestAcceptedBlock, "because CachedMinHeight is", network.CachedMinHeight)
 	}
 }
 
