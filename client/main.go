@@ -316,6 +316,9 @@ func retry_cached_blocks() (bool, int) {
 	common.CountSafe("RedoCachedBlks")
 
 	cached_min_height := network.CachedMinHeight
+	if cached_min_height > highestAcceptedBlock+1 {
+		return false, 0 // the most common case of cache miss
+	}
 
 try_next_one:
 	network.CachedBlocksMutex.Lock()
@@ -346,8 +349,6 @@ not_found:
 	}
 
 	if int(newbl.BlockTreeNode.Height)-int(highestAcceptedBlock) > 1 {
-		fmt.Println("Lowest cached block is", newbl.BlockTreeNode.Height,
-			"but we need", highestAcceptedBlock+1, "-", network.CachedMinHeight)
 		return false, 2
 	}
 
