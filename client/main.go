@@ -119,9 +119,11 @@ func defrag_utxo() {
 func has_blocks_ahead(cnt int) (rec int) {
 	bh := highestAcceptedBlock + 1
 	network.CachedBlocksMutex.Lock()
-	for ; rec < cnt; rec++ {
-		if _, ok := network.CachedBlocksIdx[bh+uint32(rec)]; !ok {
-			break
+	if network.CachedMinHeight <= bh {
+		for ; rec < cnt; rec++ {
+			if _, ok := network.CachedBlocksIdx[bh+uint32(rec)]; !ok {
+				break
+			}
 		}
 	}
 	network.CachedBlocksMutex.Unlock()
