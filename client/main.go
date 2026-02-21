@@ -132,9 +132,11 @@ func has_blocks_ahead(cnt int) (rec int) {
 func delay_if_needed() {
 	needs := int(common.SyncMinBocksAhead.Load())
 	if has := has_blocks_ahead(needs); has < needs {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		network.Fetch.HoldOn++
-		fmt.Println("We have", has, "blocks but need", needs)
+		if highestAcceptedBlock > 100e3 {
+			fmt.Println("We have", has, "blocks but need", needs)
+		}
 	}
 }
 
