@@ -116,11 +116,11 @@ func defrag_utxo() {
 	}
 }
 
-func delay_if_needed(current_top uint32) {
+func delay_if_needed() {
 	network.MutexRcv.Lock()
 	li2get := network.LowestIndexToBlocksToGet
 	network.MutexRcv.Unlock()
-	if li2get-current_top < uint32(common.SyncMinBocksAhead.Load()) {
+	if li2get-highestAcceptedBlock < uint32(common.SyncMinBocksAhead.Load()) {
 		time.Sleep(1000 * time.Millisecond)
 		network.Fetch.HoldOn++
 	}
@@ -219,7 +219,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.Last.Mutex.Unlock()
 
 		if network.BlocksToGetCnt() > 1000 {
-			delay_if_needed(newbl.BlockTreeNode.Height)
+			delay_if_needed()
 		}
 		if newbl.DoInvs && new_top {
 			// we will end up here for new blosks with minimal POW (testnet)
@@ -459,8 +459,9 @@ func print_cache_stat(why int) {
 	network.CachedBlocksMutex.Lock()
 	lencb := len(network.CachedBlocksIdx)
 	network.CachedBlocksMutex.Unlock()
-	fmt.Printf("@%d\tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d  <- %d\n",
-		lb, li2get-lb-1, lencb, common.AverageBlockSize.Get(), network.Fetch.CacheEmpty, why)
+	fmt.Printf("@%d / %d \tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d  <- %d\n",
+		lb, network.CachedMinHeight, li2get-lb-1, lencb, common.AverageBlockSize.Get(),
+		network.Fetch.CacheEmpty, why)
 }
 
 func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
