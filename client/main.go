@@ -116,19 +116,18 @@ func defrag_utxo() {
 	}
 }
 
-func has_blocks_ahead(cnt int) int {
-	return int(network.LowestIndexToBlocksToGet - highestAcceptedBlock - 1)
-}
-
 func delay_if_needed() {
 	if highestAcceptedBlock > 100e3 {
+		network.MutexRcv.Lock()
+		lowest_needed_block := network.LowestIndexToBlocksToGet
+		network.MutexRcv.Unlock()
 		needs := int(common.SyncMinBocksAhead.Load())
-		if has := has_blocks_ahead(needs); has < needs {
-			time.Sleep(100 * time.Millisecond)
+		has := int(lowest_needed_block - highestAcceptedBlock - 1)
+		if has < needs {
+			time.Sleep(200 * time.Millisecond)
 			network.Fetch.HoldOn++
 			fmt.Println("Delay at", highestAcceptedBlock, "because has", has, "but needs", needs,
-				network.CachedMinHeight, network.LowestIndexToBlocksToGet,
-				network.LowestIndexToBlocksToGet-highestAcceptedBlock)
+				network.CachedMinHeight, lowest_needed_block, lowest_needed_block-highestAcceptedBlock)
 		}
 	}
 }
