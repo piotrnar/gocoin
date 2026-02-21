@@ -763,7 +763,7 @@ func (c *OneConnection) Run() {
 
 			if !read_tried {
 				// it will end up here if we did not even try to read anything because of BW limit
-				time.Sleep(5 * time.Millisecond)
+				time.Sleep(10 * time.Millisecond)
 			}
 			continue
 		}
