@@ -77,11 +77,11 @@ func blockUndone(bl *btc.Block) {
 func print_sync_stats() {
 	_, mu := sys.MemUsed()
 	cb, _, _ := common.MemUsed()
-	fmt.Printf("Sync to %d took %s,  Que: %d/%d,  Mem: %d/%d/%d,  Cach: %d/%d/%d - cachempty: %d\n",
+	fmt.Printf("Sync to %d took %s,  Que: %d/%d,  Mem: %d/%d/%d,  Cach: %d/%d/%d - cachempty: %d (%d)\n",
 		common.Last.Block.Height, time.Since(common.StartTime).String(),
 		len(network.NetBlocks), network.CachedBlocksLen(), mu>>20, cb>>20, memsize.MustResidentMemory()>>20,
 		network.CachedBlocksBytes.Get()>>20, network.MaxCachedBlocksSize.Get()>>20,
-		common.SyncMaxCacheBytes.Get()>>20, network.Fetch.CacheEmpty)
+		common.SyncMaxCacheBytes.Get()>>20, network.Fetch.CacheEmpty, network.Fetch.HoldOn)
 }
 
 func exit_now() {
@@ -124,10 +124,10 @@ func delay_if_needed() {
 		needs := int(common.SyncMinBocksAhead.Load())
 		has := int(lowest_needed_block - highestAcceptedBlock - 1)
 		if has < needs {
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(150 * time.Millisecond)
 			network.Fetch.HoldOn++
-			fmt.Println("Delay at", highestAcceptedBlock, "because has", has, "but needs", needs,
-				network.CachedMinHeight, lowest_needed_block, lowest_needed_block-highestAcceptedBlock)
+			/*fmt.Println("Delay at", highestAcceptedBlock, "because has", has, "but needs", needs,
+			network.CachedMinHeight, lowest_needed_block, lowest_needed_block-highestAcceptedBlock)*/
 		}
 	}
 }
