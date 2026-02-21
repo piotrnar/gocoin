@@ -121,8 +121,7 @@ func delay_if_needed(current_top uint32) {
 	li2get := network.LowestIndexToBlocksToGet
 	network.MutexRcv.Unlock()
 	if li2get-current_top < 50 {
-		println("wait at", int(current_top), "..", li2get)
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(1000 * time.Millisecond)
 		network.Fetch.HoldOn++
 	}
 }
