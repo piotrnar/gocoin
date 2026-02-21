@@ -130,6 +130,17 @@ func has_blocks_ahead(cnt int) (rec int) {
 	return
 }
 
+func lowest_b2g() (minh uint32) {
+	network.MutexRcv.Lock()
+	for k, _ := range network.IndexToBlocksToGet {
+		if minh == 0 || k < minh {
+			minh = k
+		}
+	}
+	network.MutexRcv.Unlock()
+	return
+}
+
 func delay_if_needed() {
 	if highestAcceptedBlock > 100e3 {
 		needs := int(common.SyncMinBocksAhead.Load())
@@ -137,7 +148,7 @@ func delay_if_needed() {
 			time.Sleep(100 * time.Millisecond)
 			network.Fetch.HoldOn++
 			fmt.Println("Delay at", highestAcceptedBlock, "because has", has, "but needs", needs,
-				network.CachedMinHeight, network.LowestIndexToBlocksToGet,
+				network.CachedMinHeight, network.LowestIndexToBlocksToGet, "?=", lowest_b2g(),
 				network.LowestIndexToBlocksToGet-highestAcceptedBlock)
 		}
 	}
