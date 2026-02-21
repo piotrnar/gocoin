@@ -308,6 +308,7 @@ var Fetch struct {
 	MaxBytesInProgress uint64
 	NoWitness          uint64
 	Nothing            uint64
+	HoldOn             uint64
 	BlksCntMax         [6]uint64
 	ReachEndOfLoop     uint64
 	ReachMaxCnt        uint64

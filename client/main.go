@@ -116,6 +116,16 @@ func defrag_utxo() {
 	}
 }
 
+func delay_if_needed() {
+	network.MutexRcv.Lock()
+	b2gcnt := len(network.BlocksToGet)
+	li2get := network.LowestIndexToBlocksToGet
+	network.MutexRcv.Unlock()
+	if b2gcnt > 1e3 && li2get-common.Last.BlockHeight() < 10 {
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
 	if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted.Get() {
@@ -201,6 +211,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 					syncDoneAnnounced = true
 				}
 			}
+			delay_if_needed()
 		}
 		if *exitat != 0 && int(common.Last.Block.Height) == *exitat {
 			exit_now()
