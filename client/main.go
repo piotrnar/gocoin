@@ -447,17 +447,18 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		fmt.Println("AcceptBlock1", newbl.Block.Hash.String(), "-", e.Error())
 		newbl.Conn.Misbehave("LocalAcceptBl1", 250)
 	}
-	var why int
-	retryCachedBlocks, why = retry_cached_blocks()
+	retryCachedBlocks, _ = retry_cached_blocks()
 	if !retryCachedBlocks && network.BlocksToGetCnt() != 0 {
 		now := time.Now()
 		if network.Fetch.LastCacheEmpty.IsZero() || now.Sub(network.Fetch.LastCacheEmpty) >= time.Second {
 			network.Fetch.CacheEmpty++
 			network.Fetch.LastCacheEmpty = now
-			print_cache_stat(why)
+			//print_cache_stat(why)
 		}
 	}
 }
+
+/*
 func print_cache_stat(why int) {
 	common.Last.Mutex.Lock()
 	lb := common.Last.Block.Height
@@ -472,6 +473,7 @@ func print_cache_stat(why int) {
 		lb, network.CachedMinHeight, li2get-lb-1, lencb, common.AverageBlockSize.Get(),
 		network.Fetch.CacheEmpty, why)
 }
+*/
 
 func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	common.CountSafe("RPCNewBlock")
@@ -810,8 +812,7 @@ func main() {
 
 			common.CountSafe("MainThreadLoops")
 			if retryCachedBlocks {
-				var why int
-				if retryCachedBlocks, why = retry_cached_blocks(); retryCachedBlocks {
+				if retryCachedBlocks, _ = retry_cached_blocks(); retryCachedBlocks {
 					if len(retry_blocks_now) == 0 {
 						retry_blocks_now <- struct{}{}
 					}
@@ -824,7 +825,7 @@ func main() {
 						if network.Fetch.LastCacheEmpty.IsZero() || now.Sub(network.Fetch.LastCacheEmpty) >= time.Second {
 							network.Fetch.CacheEmpty++
 							network.Fetch.LastCacheEmpty = now
-							print_cache_stat(why)
+							//print_cache_stat(why)
 						}
 					}
 				}
