@@ -347,7 +347,7 @@ not_found:
 
 	if int(newbl.BlockTreeNode.Height)-int(highestAcceptedBlock) > 1 {
 		fmt.Println("Lowest cached block is", newbl.BlockTreeNode.Height,
-			"but we need", highestAcceptedBlock+1)
+			"but we need", highestAcceptedBlock+1, "-", network.CachedMinHeight)
 		return false, 2
 	}
 
