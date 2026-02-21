@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -220,7 +219,6 @@ func DelB2G(idx btc.BIDX) {
 			} else {
 				LowestIndexToBlocksToGet = 0
 			}
-			fmt.Println("LowestIndexToBlocksToGet", bh, "->", LowestIndexToBlocksToGet)
 		}
 	}
 
