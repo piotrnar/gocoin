@@ -118,9 +118,10 @@ func defrag_utxo() {
 
 func delay_if_needed(current_top uint32) {
 	network.MutexRcv.Lock()
-	b2gcnt, li2get := len(network.BlocksToGet), network.LowestIndexToBlocksToGet
+	li2get := network.LowestIndexToBlocksToGet
 	network.MutexRcv.Unlock()
-	if b2gcnt > 1e3 && li2get-current_top < 10 {
+	if li2get-current_top < 10 {
+		println("wait at", int(current_top), "..", li2get)
 		time.Sleep(100 * time.Millisecond)
 	}
 }
@@ -199,7 +200,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.BlockChain.BlockIndexAccess.Lock()
 		lch := network.LastCommitedHeader
 		common.BlockChain.BlockIndexAccess.Unlock()
-		var din bool
 		if !syncDoneAnnounced && common.Last.ParseTill == nil && !common.BlockChainSynchronized {
 			if (common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height {
 				print_sync_stats()
@@ -211,7 +211,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 					syncDoneAnnounced = true
 				}
 			}
-			din = true
 		}
 		if *exitat != 0 && int(common.Last.Block.Height) == *exitat {
 			exit_now()
@@ -219,7 +218,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		new_top := common.Last.Block == newbl.BlockTreeNode
 		common.Last.Mutex.Unlock()
 
-		if din {
+		if network.BlocksToGetCnt() > 1000 {
 			delay_if_needed(newbl.BlockTreeNode.Height)
 		}
 		if newbl.DoInvs && new_top {
@@ -445,8 +444,22 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		if network.Fetch.LastCacheEmpty.IsZero() || now.Sub(network.Fetch.LastCacheEmpty) >= time.Second {
 			network.Fetch.CacheEmpty++
 			network.Fetch.LastCacheEmpty = now
+			print_cache_stat()
 		}
 	}
+}
+func print_cache_stat() {
+	common.Last.Mutex.Lock()
+	lb := common.Last.Block.Height
+	common.Last.Mutex.Unlock()
+	network.MutexRcv.Lock()
+	li2get := network.LowestIndexToBlocksToGet
+	network.MutexRcv.Unlock()
+	network.CachedBlocksMutex.Lock()
+	lencb := len(network.CachedBlocksIdx)
+	network.CachedBlocksMutex.Unlock()
+	fmt.Printf("@%d\tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d\n",
+		lb, li2get-lb-1, lencb, common.AverageBlockSize.Get(), network.Fetch.CacheEmpty)
 }
 
 func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
@@ -799,6 +812,7 @@ func main() {
 						if network.Fetch.LastCacheEmpty.IsZero() || now.Sub(network.Fetch.LastCacheEmpty) >= time.Second {
 							network.Fetch.CacheEmpty++
 							network.Fetch.LastCacheEmpty = now
+							print_cache_stat()
 						}
 					}
 				}
