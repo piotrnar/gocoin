@@ -116,33 +116,8 @@ func defrag_utxo() {
 	}
 }
 
-func has_blocks_ahead(cnt int) (rec int) {
-	bh := highestAcceptedBlock + 1
-	network.CachedBlocksMutex.Lock()
-	if network.CachedMinHeight <= bh {
-		for ; rec < cnt; rec++ {
-			if _, ok := network.CachedBlocksIdx[bh+uint32(rec)]; !ok {
-				if network.LowestIndexToBlocksToGet > bh+uint32(rec) {
-					ii := network.IndexToBlocksToGet[bh+uint32(rec)]
-					fmt.Printf("WTF? %d is not in cache and not in B2G %d\n", bh+uint32(rec), len(ii))
-				}
-				break
-			}
-		}
-	}
-	network.CachedBlocksMutex.Unlock()
-	return
-}
-
-func lowest_b2g() (minh uint32) {
-	network.MutexRcv.Lock()
-	for k := range network.IndexToBlocksToGet {
-		if minh == 0 || k < minh {
-			minh = k
-		}
-	}
-	network.MutexRcv.Unlock()
-	return
+func has_blocks_ahead(cnt int) int {
+	return int(network.LowestIndexToBlocksToGet - highestAcceptedBlock - 1)
 }
 
 func delay_if_needed() {
@@ -152,7 +127,7 @@ func delay_if_needed() {
 			time.Sleep(100 * time.Millisecond)
 			network.Fetch.HoldOn++
 			fmt.Println("Delay at", highestAcceptedBlock, "because has", has, "but needs", needs,
-				network.CachedMinHeight, network.LowestIndexToBlocksToGet, "?=", lowest_b2g(),
+				network.CachedMinHeight, network.LowestIndexToBlocksToGet,
 				network.LowestIndexToBlocksToGet-highestAcceptedBlock)
 		}
 	}

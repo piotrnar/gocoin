@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -220,20 +219,7 @@ func DelB2G(idx btc.BIDX) {
 			} else {
 				LowestIndexToBlocksToGet = 0
 			}
-			if lb := lowest_b2g(); lb != LowestIndexToBlocksToGet {
-				panic(fmt.Sprintf("lowest b2g mismatch %d != %d", lb, LowestIndexToBlocksToGet))
-			}
 		}
 	}
-
 	delete(BlocksToGet, idx)
-}
-
-func lowest_b2g() (minh uint32) {
-	for k := range IndexToBlocksToGet {
-		if minh == 0 || k < minh {
-			minh = k
-		}
-	}
-	return
 }
