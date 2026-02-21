@@ -132,7 +132,7 @@ func has_blocks_ahead(cnt int) (rec int) {
 
 func lowest_b2g() (minh uint32) {
 	network.MutexRcv.Lock()
-	for k, _ := range network.IndexToBlocksToGet {
+	for k := range network.IndexToBlocksToGet {
 		if minh == 0 || k < minh {
 			minh = k
 		}
