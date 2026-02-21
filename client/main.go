@@ -120,7 +120,7 @@ func delay_if_needed(current_top uint32) {
 	network.MutexRcv.Lock()
 	li2get := network.LowestIndexToBlocksToGet
 	network.MutexRcv.Unlock()
-	if li2get-current_top < 50 {
+	if li2get-current_top < uint32(common.SyncMinBocksAhead.Load()) {
 		time.Sleep(1000 * time.Millisecond)
 		network.Fetch.HoldOn++
 	}
@@ -308,7 +308,7 @@ func get_block_from_disk_cache(hash *btc.Uint256) (bl *btc.Block) {
 	return
 }
 
-func retry_cached_blocks() bool {
+func retry_cached_blocks() (bool, int) {
 	var newbl *network.BlockRcvd
 	var lowest_cached_blocks []*network.BlockRcvd
 	var lowest_cached_block_idx int
@@ -342,11 +342,11 @@ not_found:
 	network.CachedBlocksMutex.Unlock()
 
 	if newbl == nil {
-		return false
+		return false, 1
 	}
 
 	if int(newbl.BlockTreeNode.Height)-int(highestAcceptedBlock) > 1 {
-		return false
+		return false, 2
 	}
 
 	if CheckParentDiscarded(newbl.BlockTreeNode) {
@@ -355,7 +355,7 @@ not_found:
 			del_block_from_disk_cache(newbl.BlockTreeNode.BlockHash)
 		}
 		network.CachedBlocksDel(newbl)
-		return network.CachedBlocksLen() > 0
+		return network.CachedBlocksLen() > 0, 3
 	}
 
 	if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
@@ -377,13 +377,13 @@ not_found:
 		newbl.Conn.Misbehave("LocalAcceptBl2", 250)
 	}
 	if usif.Exit_now.Get() {
-		return false
+		return false, 4
 	}
 	// remove it from cache
 	network.CachedBlocksDel(newbl)
 
 	// about retry_cached_blocks() now, to give the main task time for doing other things
-	return network.CachedBlocksLen() > 0
+	return network.CachedBlocksLen() > 0, 5
 }
 
 // CheckParentDiscarded returns true if the block's parent is on the DiscardedBlocks list.
@@ -438,17 +438,18 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		fmt.Println("AcceptBlock1", newbl.Block.Hash.String(), "-", e.Error())
 		newbl.Conn.Misbehave("LocalAcceptBl1", 250)
 	}
-	retryCachedBlocks = retry_cached_blocks()
+	var why int
+	retryCachedBlocks, why = retry_cached_blocks()
 	if !retryCachedBlocks && network.BlocksToGetCnt() != 0 {
 		now := time.Now()
 		if network.Fetch.LastCacheEmpty.IsZero() || now.Sub(network.Fetch.LastCacheEmpty) >= time.Second {
 			network.Fetch.CacheEmpty++
 			network.Fetch.LastCacheEmpty = now
-			print_cache_stat()
+			print_cache_stat(why)
 		}
 	}
 }
-func print_cache_stat() {
+func print_cache_stat(why int) {
 	common.Last.Mutex.Lock()
 	lb := common.Last.Block.Height
 	common.Last.Mutex.Unlock()
@@ -458,8 +459,8 @@ func print_cache_stat() {
 	network.CachedBlocksMutex.Lock()
 	lencb := len(network.CachedBlocksIdx)
 	network.CachedBlocksMutex.Unlock()
-	fmt.Printf("@%d\tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d\n",
-		lb, li2get-lb-1, lencb, common.AverageBlockSize.Get(), network.Fetch.CacheEmpty)
+	fmt.Printf("@%d\tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d  <- %d\n",
+		lb, li2get-lb-1, lencb, common.AverageBlockSize.Get(), network.Fetch.CacheEmpty, why)
 }
 
 func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
@@ -799,7 +800,8 @@ func main() {
 
 			common.CountSafe("MainThreadLoops")
 			if retryCachedBlocks {
-				if retryCachedBlocks = retry_cached_blocks(); retryCachedBlocks {
+				var why int
+				if retryCachedBlocks, why = retry_cached_blocks(); retryCachedBlocks {
 					if len(retry_blocks_now) == 0 {
 						retry_blocks_now <- struct{}{}
 					}
@@ -812,7 +814,7 @@ func main() {
 						if network.Fetch.LastCacheEmpty.IsZero() || now.Sub(network.Fetch.LastCacheEmpty) >= time.Second {
 							network.Fetch.CacheEmpty++
 							network.Fetch.LastCacheEmpty = now
-							print_cache_stat()
+							print_cache_stat(why)
 						}
 					}
 				}

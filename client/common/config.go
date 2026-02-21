@@ -427,6 +427,7 @@ func Reset() {
 	} else {
 		SyncMaxCacheBytes.Store(int(CFG.Memory.SyncCacheSize) << 20)
 	}
+	SyncMinBocksAhead.Store(uint32(CFG.Memory.SyncCacheSize) / 10)
 
 	if CFG.Stat.NoCounters {
 		if !NoCounters.Get() {

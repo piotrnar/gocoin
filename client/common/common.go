@@ -89,6 +89,7 @@ var (
 	NoCounters sys.SyncBool
 
 	SyncMaxCacheBytes sys.SyncInt
+	SyncMinBocksAhead atomic.Uint32
 
 	StopBlockProcessing bool
 )
