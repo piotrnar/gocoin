@@ -11,6 +11,7 @@
 * Lib/Memory: Added parallel process support - boosted speed of UTXO rebuild, making UseGoHeap obsolete
 * Lib/Script: Fixed a bug that was cutting 32 bit size from OP_PUSHDATA to 16 bits (thanks @brunoerg)
 * Client: new command line switch "-save" (run "client -exitat -1 -save" to sync chain & exit with saving)
+* The DLL based speedup is now using directly libsecp256k1-5.dll from Bitcoin Core (not the secp256k1.dll)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
