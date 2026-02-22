@@ -26,7 +26,7 @@ Now use "MSYS2 UCRT64" shell and execute:
  > cd bitcoin/src/secp256k1/
  > ./autogen.sh
  > ./configure
- > make
+ > make --enable-shared  # <- this will also build the DLL that can be used with sipadll
  > make install
 
 

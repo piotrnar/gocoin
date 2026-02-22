@@ -7,4 +7,5 @@ Windows
 --------------
 A preferred solution to boost EC verify operations under Windows is to not use
 cgo wrapper, but a DLL solution instead (see “client/speedup/sipadll.go”).
-However, if you manage to build the cgo solution, it performs just as well.
+This will require "libsecp256k1-5.dll" to be placed within your PATH.
+To build the DLL, follow the instructions in "sipasec/sipasec_windows.go"
