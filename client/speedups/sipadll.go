@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	fmt.Println("Using libsecp256k1-5.dll for EC_Verify, Schnorr_Verify & CheckPayToContract")
+	fmt.Println("Using libsecp256k1.dll for EC_Verify, Schnorr_Verify & CheckPayToContract")
 	btc.EC_Verify = sipadll.EC_Verify
 	btc.Schnorr_Verify = sipadll.Schnorr_Verify
 	btc.Check_PayToContract = sipadll.CheckPayToContract
