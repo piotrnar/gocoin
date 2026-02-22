@@ -2,7 +2,7 @@ package sipadll
 
 /*
   EC_Verify / Schnorr_Verify / CheckPayToContract speedup for Windows.
-  Calls libsecp256k1-5.dll directly (built with --enable-shared --enable-module-schnorrsig).
+  Calls libsecp256k1.dll directly (built with --enable-shared --enable-module-schnorrsig).
   No custom wrapper DLL needed.
 */
 
@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	dll = syscall.NewLazyDLL("libsecp256k1-5.dll")
+	dll = syscall.NewLazyDLL("libsecp256k1.dll")
 
 	procContextCreate              = dll.NewProc("secp256k1_context_create")
 	procEcPubkeyParse              = dll.NewProc("secp256k1_ec_pubkey_parse")
