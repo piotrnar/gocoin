@@ -281,15 +281,15 @@ func init() {
 	}
 
 	if !ec_verify() {
-		println("ERROR: Could not initiate libsecp256k1-5.dll (EC_Verify failed)")
+		println("ERROR: Could not initiate libsecp256k1.dll (EC_Verify failed)")
 		os.Exit(1)
 	}
 	if !schnorr_verify() {
-		println("ERROR: Could not initiate libsecp256k1-5.dll (Schnorr_Verify failed)")
+		println("ERROR: Could not initiate libsecp256k1.dll (Schnorr_Verify failed)")
 		os.Exit(1)
 	}
 	if !p2scr_verify() {
-		println("ERROR: Could not initiate libsecp256k1-5.dll (CheckPayToContract failed)")
+		println("ERROR: Could not initiate libsecp256k1.dll (CheckPayToContract failed)")
 		os.Exit(1)
 	}
 }
