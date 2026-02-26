@@ -41,7 +41,7 @@ const (
 
 	MAX_PEERS_BLOCKS_IN_PROGRESS = 500
 	MAX_BLOCKS_FORWARD_CNT       = 50000 // Never ask for a block higher than current top + this value
-	MAX_GETDATA_FORWARD          = 2e6   // Download up to 2MB forward (or one block)
+	MAX_GETDATA_FORWARD          = 4e6   // Download up to 4MB forward (or one block)
 
 	MAINTANENCE_PERIOD = time.Minute
 
@@ -51,8 +51,8 @@ const (
 	TxsCounterTick   = 6 * time.Second // 10 ticks per minute
 	TxsCounterBufLen = TxsCounterPeriod / TxsCounterTick
 
-	PeerTickPeriod  = 100 * time.Millisecond // run the peer's tick not more often than this
-	InvsFlushPeriod = 10 * time.Millisecond  // send all the pending invs to the peer not more often than this
+	PeerTickPeriod  = 250 * time.Millisecond // run the peer's tick not more often than this
+	InvsFlushPeriod = 100 * time.Millisecond  // send all the pending invs to the peer not more often than this
 
 	MAX_GETMP_TXS = 1e6
 )

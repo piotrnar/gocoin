@@ -104,7 +104,7 @@ func SockRead(con net.Conn, buf []byte) (n int, e error) {
 
 	if toread > 0 {
 		// Wait 10 millisecond for a data, timeout if nothing there
-		con.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
+		con.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
 		n, e = con.Read(buf[:toread])
 		bw_mutex.Lock()
 		dl_bytes_so_far -= toread
