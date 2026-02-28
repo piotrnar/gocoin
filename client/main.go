@@ -75,13 +75,11 @@ func blockUndone(bl *btc.Block) {
 }
 
 func print_sync_stats() {
-	_, mu := sys.MemUsed()
-	cb, _, _ := common.MemUsed()
-	fmt.Printf("Sync to %d took %s,  Que: %d/%d,  Mem: %d/%d/%d,  Cach: %d/%d/%d - cachempty: %d\n",
+	fmt.Printf("Sync to %d took %s,  Que: %d/%d,  Cache: %d/%d - Empty: %d - %s\n",
 		common.Last.Block.Height, time.Since(common.StartTime).String(),
-		len(network.NetBlocks), network.CachedBlocksLen(), mu>>20, cb>>20, memsize.MustResidentMemory()>>20,
-		network.CachedBlocksBytes.Get()>>20, network.MaxCachedBlocksSize.Get()>>20,
-		common.SyncMaxCacheBytes.Get()>>20, network.Fetch.CacheEmpty)
+		len(network.NetBlocks), network.CachedBlocksLen(),
+		network.CachedBlocksBytes.Get()>>20, common.SyncMaxCacheBytes.Get()>>20,
+		network.Fetch.CacheEmpty, network.Fetch.WastedCacheEmpty.String())
 }
 
 func exit_now() {
@@ -120,6 +118,11 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
 	if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted.Get() {
 		bl.Trusted.Set()
+	}
+
+	if !network.Fetch.LastCacheEmpty.IsZero() {
+		network.Fetch.WastedCacheEmpty = time.Since(network.Fetch.LastCacheEmpty)
+		network.Fetch.LastCacheEmpty = time.Time{}
 	}
 
 	common.BlockChain.Unspent.AbortWriting() // abort saving of UTXO.db
@@ -428,7 +431,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	retryCachedBlocks = retry_cached_blocks()
 	if !retryCachedBlocks && network.BlocksToGetCnt() != 0 {
 		now := time.Now()
-		if network.Fetch.LastCacheEmpty.IsZero() || now.Sub(network.Fetch.LastCacheEmpty) >= time.Second {
+		if network.Fetch.LastCacheEmpty.IsZero() {
 			network.Fetch.CacheEmpty++
 			network.Fetch.LastCacheEmpty = now
 		}
@@ -782,7 +785,7 @@ func main() {
 					}
 					if network.BlocksToGetCnt() != 0 {
 						now := time.Now()
-						if network.Fetch.LastCacheEmpty.IsZero() || now.Sub(network.Fetch.LastCacheEmpty) >= time.Second {
+						if network.Fetch.LastCacheEmpty.IsZero() {
 							network.Fetch.CacheEmpty++
 							network.Fetch.LastCacheEmpty = now
 						}

@@ -628,8 +628,12 @@ func NetworkTick() {
 
 	if conn_cnt < common.Get(&common.CFG.Net.MaxOutCons) {
 		// First we will choose up to 128 peers that we have seen alive - do not sort them
+		required_mask := uint64(btc.SERVICE_SEGWIT)
+		if needingAllBlocks() {
+			required_mask |= btc.SERVICE_NETWORK // for IBD, only take nodes that serve all blocks
+		}
 		adrs := peersdb.GetRecentPeers(128, false, func(ad *peersdb.PeerAddr) bool {
-			return ad.Banned != 0 || !ad.SeenAlive || (ad.Services&btc.SERVICE_SEGWIT) == 0 || ConnectionActive(ad)
+			return ad.Banned != 0 || !ad.SeenAlive || (ad.Services&required_mask) != required_mask || ConnectionActive(ad)
 		})
 		// now fetch another 32 never tried peers (this time sorted)
 		new_cnt := int(32)
@@ -637,7 +641,7 @@ func NetworkTick() {
 			new_cnt = len(adrs)
 		}
 		adrs2 := peersdb.GetRecentPeers(uint(new_cnt), true, func(ad *peersdb.PeerAddr) bool {
-			return ad.Banned != 0 || ad.SeenAlive || (ad.Services&btc.SERVICE_SEGWIT) == 0 // ignore those that have been seen alive
+			return ad.Banned != 0 || ad.SeenAlive || (ad.Services&required_mask) != required_mask // ignore those that have been seen alive
 		})
 		adrs = append(adrs, adrs2...)
 		// Now we should have 128 peers known to be alive and 32 never tried ones
@@ -786,6 +790,12 @@ func (c *OneConnection) Run() {
 			if er != nil {
 				//println("version msg error:", er.Error())
 				c.DoS("Ver" + er.Error())
+				break
+			}
+			if (c.Node.Services&btc.SERVICE_NETWORK) == 0 && needingAllBlocks() {
+				// during IBD, we disconnect nodes that do not serve all blocks
+				common.CountSafe("PeerDropNoBlocks")
+				c.Disconnect(false, "NoBlocks")
 				break
 			}
 			c.X.LastMinFeePerKByte = common.MinFeePerKB()
@@ -987,4 +997,9 @@ func (c *OneConnection) Run() {
 		}
 	}
 	c.Conn.Close()
+}
+
+// if this returns true, we shall disonnect any peer that does signal NODE_NETWORK in Services
+func needingAllBlocks() bool {
+	return BlocksToGetCnt() > 288
 }

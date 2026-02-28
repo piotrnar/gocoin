@@ -302,6 +302,7 @@ var Fetc struct {
 
 var Fetch struct {
 	LastCacheEmpty     time.Time
+	WastedCacheEmpty   time.Duration
 	NoBlocksToGet      uint64
 	HasBlocksExpired   uint64
 	MaxCountInProgress uint64
