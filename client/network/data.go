@@ -326,7 +326,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
 
-	if LowestIndexToBlocksToGet == 0 || len(BlocksToGet) == 0 {
+	if LowestIndexToBlocksToGet.Load() == 0 || len(BlocksToGet) == 0 {
 		Fetch.NoBlocksToGet++
 		// wake up in one minute, just in case
 		c.nextGetData = time.Now().Add(60 * time.Second)
@@ -368,7 +368,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	max_height := last_block_height + uint32(common.SyncMaxCacheBytes.Get()/avg_block_size)
 
 	Fetc.HeightA = uint64(last_block_height)
-	Fetc.HeightB = uint64(LowestIndexToBlocksToGet)
+	Fetc.HeightB = uint64(LowestIndexToBlocksToGet.Load())
 	Fetc.HeightC = uint64(max_height)
 
 	if max_height > last_block_height+MAX_BLOCKS_FORWARD_CNT {
@@ -396,11 +396,11 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		if max_height > max_max_height {
 			max_height = max_max_height
 		}
-		if max_height < LowestIndexToBlocksToGet {
+		if max_height < LowestIndexToBlocksToGet.Load() {
 			Fetch.BlksCntMax[cnt_in_progress]++
 			break
 		}
-		for bh := LowestIndexToBlocksToGet; bh <= max_height; bh++ {
+		for bh := LowestIndexToBlocksToGet.Load(); bh <= max_height; bh++ {
 			if idxlst, ok := IndexToBlocksToGet[bh]; ok {
 				for _, idx := range idxlst {
 					v := BlocksToGet[idx]

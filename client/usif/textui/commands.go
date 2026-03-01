@@ -440,7 +440,7 @@ func show_pending(par string) {
 	cnt := len(network.BlocksToGet)
 	var sofar int
 	fmt.Println("Number of blocks to get:", cnt)
-	bh := network.LowestIndexToBlocksToGet
+	bh := network.LowestIndexToBlocksToGet.Load()
 	for sofar < cnt {
 		if b2gs := network.IndexToBlocksToGet[bh]; len(b2gs) > 0 {
 			for _, bha := range b2gs {
