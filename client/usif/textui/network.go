@@ -259,9 +259,9 @@ func sync_stats(par string) {
 	lencb := len(network.CachedBlocksIdx)
 	network.CachedBlocksMutex.Unlock()
 
-	fmt.Printf("@%d\tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d\n",
+	fmt.Printf("@%d\tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d / %s\n",
 		lb, network.LowestIndexToBlocksToGet.Load()-lb-1, lencb,
-		common.AverageBlockSize.Get(), network.Fetch.CacheEmpty)
+		common.AverageBlockSize.Get(), network.Fetch.CacheEmpty, network.Fetch.WastedCacheEmpty.String())
 	tot := common.DlBytesTotal
 	if tot > 0 {
 		wst := network.Fetch.BlockBytesWasted
