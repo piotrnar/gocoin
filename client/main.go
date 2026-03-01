@@ -198,7 +198,8 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		lch := network.LastCommitedHeader
 		common.BlockChain.BlockIndexAccess.Unlock()
 		if !syncDoneAnnounced && common.Last.ParseTill == nil && !common.BlockChainSynchronized {
-			if (common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height {
+			if (common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height || 
+			common.Last.Block.Height == 930e3 // <-- TODO: remove this after testing {
 				print_sync_stats()
 				if common.Last.Block.Height <= 200e3 {
 					// Cache underflow counter is not reliable at the beginning of chain sync, so reset it here

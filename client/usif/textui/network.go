@@ -243,6 +243,8 @@ func print_fetch_counters() {
 	for i, v := range network.Fetch.BlksCntMax {
 		if v != 0 {
 			fmt.Print("  x", i, ":", v)
+		} else {
+			break
 		}
 	}
 	fmt.Println()
@@ -308,10 +310,9 @@ func sync_stats(par string) {
 	for i := uint32(0); i < max_blocks_at_once; i++ {
 		cnt := network.Fetc.C[i]
 		if cnt == 0 {
-			fmt.Printf("  C%d:-", i)
-		} else {
-			fmt.Printf("  C%d:%d", i, cnt)
+			break
 		}
+		fmt.Printf("  C%d:%d", i, cnt)
 	}
 	fmt.Println()
 
