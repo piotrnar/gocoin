@@ -103,10 +103,16 @@ func (c *OneConnection) Maintanence(now time.Time) {
 	// Expire GetBlockInProgress after five minutes, if they are not in BlocksToGet
 	c.ExpireHeadersAndGetData(&now, 0)
 
+	var block_expire_every time.Duration
+	if doingChainSync() {
+		block_expire_every = time.Minute
+	} else {
+		block_expire_every = common.Get(&common.BlockExpireEvery)
+	}
 	// Expire BlocksReceived counter
 	c.Mutex.Lock()
 	if len(c.blocksreceived) > 0 {
-		expire_before := now.Add(-common.Get(&common.BlockExpireEvery))
+		expire_before := now.Add(-block_expire_every)
 		var remove_blocks_cnt uint64
 		for _, br := range c.blocksreceived {
 			if br.After(expire_before) {

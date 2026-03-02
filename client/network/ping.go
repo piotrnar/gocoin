@@ -185,6 +185,10 @@ func (c *OneConnection) TryPing(now time.Time) bool {
 		return false // insufficient protocol version
 	}
 
+	if doingChainSync() {
+		return false // we do not ping during IBD
+	}
+
 	pingdur := common.Get(&common.PingPeerEvery)
 	if pingdur == 0 {
 		return false // pinging disabled in global config
