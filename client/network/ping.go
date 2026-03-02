@@ -158,7 +158,7 @@ func drop_worst_peer() bool {
 	}
 
 	immunity_minutes := ImmunityMinutes()
-	for idx, v := range list {
+	for _, v := range list {
 		if v.MinutesOnline < immunity_minutes {
 			continue
 		}
@@ -173,8 +173,6 @@ func drop_worst_peer() bool {
 			}
 		} else {
 			if OutConsActive+2 > common.Get(&common.CFG.Net.MaxOutCons) {
-				/*println("drop", idx+1, "/", len(list), v.Conn.PeerAddr.Ip(), "-",
-				v.BlockCount, "bocks", v.MinutesOnline, "min online")*/
 				common.CountSafe("PeerOutDropped")
 				v.Conn.Disconnect(true, "PeerOutDropped")
 				return true
