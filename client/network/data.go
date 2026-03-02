@@ -382,29 +382,32 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	if max_height > last_block_height+MAX_BLOCKS_FORWARD_CNT {
 		max_height = last_block_height + MAX_BLOCKS_FORWARD_CNT
 	}
-	max_max_height := max_height
-	if max_max_height > c.Node.Height {
-		max_max_height = c.Node.Height
+	max_height_limit := max_height
+	if max_height_limit > c.Node.Height {
+		max_height_limit = c.Node.Height
 	}
-	if max_max_height > LastCommitedHeader.Height {
-		max_max_height = LastCommitedHeader.Height
+	if max_height_limit > LastCommitedHeader.Height {
+		max_height_limit = LastCommitedHeader.Height
 	}
 
 	Fetc.HeightD = uint64(max_height)
 
 	max_blocks_at_once := common.Get(&common.CFG.Net.MaxBlockAtOnce)
+	if max_blocks_at_once < 1 {
+		max_blocks_at_once = 1
+	}
 	max_blocks_forward := max_height - last_block_height
+	max_blocks_forward_decrease := (max_blocks_forward / 2) / max_blocks_at_once
 	invs := new(bytes.Buffer)
 	var cnt_in_progress uint32
 	var lowest_found *OneBlockToGet
 
 	resize_fetch_arrays(int(max_blocks_at_once))
 	for {
-		// Find block to fetch:
-		max_height = last_block_height + (max_blocks_at_once-cnt_in_progress)*max_blocks_forward/max_blocks_at_once
-		if max_height > max_max_height {
-			max_height = max_max_height
+		if max_height > max_height_limit {
+			max_height = max_height_limit
 		}
+		// Find block to fetch:
 		if max_height < LowestIndexToBlocksToGet.Load() {
 			Fetch.BlksCntMax[cnt_in_progress]++
 			break
@@ -436,6 +439,8 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			Fetch.ReachEndOfLoop++
 			break
 		}
+		max_blocks_forward -= max_blocks_forward_decrease
+		max_height = last_block_height + max_blocks_forward
 		continue
 
 	found_it:
