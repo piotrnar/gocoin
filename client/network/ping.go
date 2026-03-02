@@ -159,25 +159,31 @@ func drop_worst_peer() bool {
 
 	immunity_minutes := ImmunityMinutes()
 	for _, v := range list {
+		print("trying ", v.Conn.PeerAddr.String(), " with ", v.BlockCount, " bl ... ")
 		if v.MinutesOnline < immunity_minutes {
+			println("too early")
 			continue
 		}
 		if v.Special {
+			println("is special")
 			continue
 		}
 		if v.Conn.X.Incomming {
 			if InConsActive+2 > common.Get(&common.CFG.Net.MaxInCons) {
 				common.CountSafe("PeerInDropped")
 				v.Conn.Disconnect(true, "PeerInDropped")
+				println("DROPPED IN")
 				return true
 			}
 		} else {
 			if OutConsActive+2 > common.Get(&common.CFG.Net.MaxOutCons) {
-				println("drop", v.Conn.PeerAddr.String(), "with", v.BlockCount, "bocks")
+				//println("drop", v.Conn.PeerAddr.String(), "with", v.BlockCount, "bocks")
+				println("DROPPED OUT")
 				common.CountSafe("PeerOutDropped")
 				v.Conn.Disconnect(true, "PeerOutDropped")
 				return true
 			}
+			println("did nothing")
 		}
 	}
 	return false
