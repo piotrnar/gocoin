@@ -588,16 +588,21 @@ func NetworkTick() {
 		}
 	}
 
-	if common.Get(&common.CFG.DropPeers.DropEachMinutes) != 0 &&
-		common.Get(&common.CFG.DropPeers.ImmunityMinutes) != 0 {
+	var drop_peer_period time.Duration
+	if doingChainSync() {
+		drop_peer_period = time.Minute
+	} else {
+		drop_peer_period = common.Get(&common.DropSlowestEvery)
+	}
+	if drop_peer_period != 0 {
 		if next_drop_peer.IsZero() {
-			next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery))
+			next_drop_peer = now.Add(drop_peer_period)
 		} else if now.After(next_drop_peer) {
 			if drop_worst_peer() {
-				next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery))
+				next_drop_peer = now.Add(drop_peer_period)
 			} else {
 				// If no peer dropped this time, try again sooner
-				next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery) >> 2)
+				next_drop_peer = now.Add(drop_peer_period >> 2)
 			}
 		}
 	}
@@ -629,7 +634,7 @@ func NetworkTick() {
 	if conn_cnt < common.Get(&common.CFG.Net.MaxOutCons) {
 		// First we will choose up to 128 peers that we have seen alive - do not sort them
 		required_mask := uint64(btc.SERVICE_SEGWIT)
-		if needingAllBlocks() {
+		if doingChainSync() {
 			required_mask |= btc.SERVICE_NETWORK // for IBD, only take nodes that serve all blocks
 		}
 		adrs := peersdb.GetRecentPeers(128, false, func(ad *peersdb.PeerAddr) bool {
@@ -792,7 +797,7 @@ func (c *OneConnection) Run() {
 				c.DoS("Ver" + er.Error())
 				break
 			}
-			if (c.Node.Services&btc.SERVICE_NETWORK) == 0 && needingAllBlocks() {
+			if (c.Node.Services&btc.SERVICE_NETWORK) == 0 && doingChainSync() {
 				// during IBD, we disconnect nodes that do not serve all blocks
 				common.CountSafe("PeerDropNoBlocks")
 				c.Disconnect(false, "NoBlocks")
@@ -1000,6 +1005,6 @@ func (c *OneConnection) Run() {
 }
 
 // if this returns true, we shall disonnect any peer that does signal NODE_NETWORK in Services
-func needingAllBlocks() bool {
+func doingChainSync() bool {
 	return BlocksToGetCnt() > 288
 }

@@ -150,8 +150,14 @@ func drop_worst_peer() bool {
 		return false
 	}
 
+	var immunity_minutes int
+	if doingChainSync() {
+		immunity_minutes = 1
+	} else {
+		immunity_minutes = int(common.Get(&common.CFG.DropPeers.ImmunityMinutes))
+	}
 	for _, v := range list {
-		if v.MinutesOnline < int(common.Get(&common.CFG.DropPeers.ImmunityMinutes)) {
+		if v.MinutesOnline < immunity_minutes {
 			continue
 		}
 		if v.Special {
