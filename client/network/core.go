@@ -43,7 +43,7 @@ const (
 	MAX_BLOCKS_FORWARD_CNT       = 50000 // Never ask for a block higher than current top + this value
 	MAX_GETDATA_FORWARD          = 2e6   // Download up to 2MB forward (or one block)
 
-	MAINTANENCE_PERIOD = 10 * time.Second
+	MAINTANENCE_PERIOD = time.Minute
 
 	MAX_INV_HISTORY = 500
 

@@ -98,40 +98,47 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 		cnt++
 	}
 	if cnt > 0 {
-		list = make(SortedConnections, len(tlist))
-		var ignore_bcnt bool // otherwise count blocks
-		var idx, best_idx, bcnt, best_bcnt, best_tcnt, best_ping int
+		if doingChainSync() {
+			sort.Slice(tlist, func(i, j int) bool {
+				return tlist[i].BlockCount > tlist[j].BlockCount
+			})
+			list = tlist
+		} else {
+			list = make(SortedConnections, len(tlist))
+			var ignore_bcnt bool // otherwise count blocks
+			var idx, best_idx, bcnt, best_bcnt, best_tcnt, best_ping int
 
-		for idx = len(list) - 1; idx >= 0; idx-- {
-			best_idx = -1
-			for i, v := range tlist {
-				if v.Conn == nil {
-					continue
-				}
-				if best_idx < 0 {
-					best_idx = i
-					best_tcnt = v.TxsCount
-					best_bcnt = v.BlockCount
-					best_ping = v.Ping
-				} else {
-					if ignore_bcnt {
-						bcnt = best_bcnt
-					} else {
-						bcnt = v.BlockCount
+			for idx = len(list) - 1; idx >= 0; idx-- {
+				best_idx = -1
+				for i, v := range tlist {
+					if v.Conn == nil {
+						continue
 					}
-					if best_bcnt < bcnt ||
-						best_bcnt == bcnt && best_tcnt < v.TxsCount ||
-						best_bcnt == bcnt && best_tcnt == v.TxsCount && best_ping > v.Ping {
-						best_bcnt = v.BlockCount
-						best_tcnt = v.TxsCount
-						best_ping = v.Ping
+					if best_idx < 0 {
 						best_idx = i
+						best_tcnt = v.TxsCount
+						best_bcnt = v.BlockCount
+						best_ping = v.Ping
+					} else {
+						if ignore_bcnt {
+							bcnt = best_bcnt
+						} else {
+							bcnt = v.BlockCount
+						}
+						if best_bcnt < bcnt ||
+							best_bcnt == bcnt && best_tcnt < v.TxsCount ||
+							best_bcnt == bcnt && best_tcnt == v.TxsCount && best_ping > v.Ping {
+							best_bcnt = v.BlockCount
+							best_tcnt = v.TxsCount
+							best_ping = v.Ping
+							best_idx = i
+						}
 					}
 				}
+				list[idx] = tlist[best_idx]
+				tlist[best_idx].Conn = nil
+				ignore_bcnt = !ignore_bcnt
 			}
-			list[idx] = tlist[best_idx]
-			tlist[best_idx].Conn = nil
-			ignore_bcnt = !ignore_bcnt
 		}
 	}
 	return
@@ -150,12 +157,7 @@ func drop_worst_peer() bool {
 		return false
 	}
 
-	var immunity_minutes int
-	if doingChainSync() {
-		immunity_minutes = 1
-	} else {
-		immunity_minutes = int(common.Get(&common.CFG.DropPeers.ImmunityMinutes))
-	}
+	immunity_minutes := ImmunityMinutes()
 	for _, v := range list {
 		if v.MinutesOnline < immunity_minutes {
 			continue
@@ -218,4 +220,11 @@ func (c *OneConnection) TryPing(now time.Time) bool {
 	c.LastPingSent = time.Now()
 	//println(c.PeerAddr.Ip(), "ping...")
 	return true
+}
+
+func ImmunityMinutes() int {
+	if doingChainSync() {
+		return 2 // give them 2 minutes to prove themselves
+	}
+	return int(common.Get(&common.CFG.DropPeers.ImmunityMinutes))
 }
