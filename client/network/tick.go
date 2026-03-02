@@ -98,7 +98,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	}
 }
 
-// Call this once a minute
+// Call this every 10 seconds or so
 func (c *OneConnection) Maintanence(now time.Time) {
 	// Expire GetBlockInProgress after five minutes, if they are not in BlocksToGet
 	c.ExpireHeadersAndGetData(&now, 0)
@@ -594,21 +594,23 @@ func NetworkTick() {
 		}
 	}
 
-	var drop_peer_period time.Duration
-	if doingChainSync() {
-		drop_peer_period = time.Minute
-	} else {
-		drop_peer_period = common.Get(&common.DropSlowestEvery)
-	}
-	if drop_peer_period != 0 {
-		if next_drop_peer.IsZero() {
-			next_drop_peer = now.Add(drop_peer_period)
-		} else if now.After(next_drop_peer) {
-			if drop_worst_peer() {
+	if time.Since(common.StartTime) > time.Minute {
+		var drop_peer_period time.Duration
+		if doingChainSync() {
+			drop_peer_period = time.Minute
+		} else {
+			drop_peer_period = common.Get(&common.DropSlowestEvery)
+		}
+		if drop_peer_period != 0 {
+			if next_drop_peer.IsZero() {
 				next_drop_peer = now.Add(drop_peer_period)
-			} else {
-				// If no peer dropped this time, try again sooner
-				next_drop_peer = now.Add(drop_peer_period >> 2)
+			} else if now.After(next_drop_peer) {
+				if drop_worst_peer() {
+					next_drop_peer = now.Add(drop_peer_period)
+				} else {
+					// If no peer dropped this time, try again sooner
+					next_drop_peer = now.Add(drop_peer_period >> 2)
+				}
 			}
 		}
 	}
@@ -740,7 +742,7 @@ func (c *OneConnection) Run() {
 	c.Mutex.Lock()
 	now := time.Now()
 	c.X.LastDataGot = now
-	c.nextMaintanence = now.Add(time.Minute)
+	c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
 	c.LastPingSent = now.Add(5*time.Second - common.Get(&common.PingPeerEvery)) // do first ping ~5 seconds from now
 
 	c.txsNxt = now.Add(TxsCounterTick)
