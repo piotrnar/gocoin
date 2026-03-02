@@ -742,7 +742,7 @@ func (c *OneConnection) Run() {
 	c.Mutex.Lock()
 	now := time.Now()
 	c.X.LastDataGot = now
-	c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
+	c.nextMaintanence = now.Add(3 * MAINTANENCE_PERIOD)
 	c.LastPingSent = now.Add(5*time.Second - common.Get(&common.PingPeerEvery)) // do first ping ~5 seconds from now
 
 	c.txsNxt = now.Add(TxsCounterTick)
@@ -1014,5 +1014,5 @@ func (c *OneConnection) Run() {
 
 // if this returns true, we shall disonnect any peer that does signal NODE_NETWORK in Services
 func doingChainSync() bool {
-	return BlocksToGetCnt() > 288
+	return !common.Get(&common.BlockChainSynchronized)
 }

@@ -100,7 +100,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 	if cnt > 0 {
 		if doingChainSync() {
 			sort.Slice(tlist, func(i, j int) bool {
-				return tlist[i].BlockCount > tlist[j].BlockCount
+				return tlist[i].BlockCount < tlist[j].BlockCount
 			})
 			list = tlist
 		} else {
@@ -173,6 +173,7 @@ func drop_worst_peer() bool {
 			}
 		} else {
 			if OutConsActive+2 > common.Get(&common.CFG.Net.MaxOutCons) {
+				println("drop", v.Conn.PeerAddr.String(), "with", v.BlockCount, "bocks")
 				common.CountSafe("PeerOutDropped")
 				v.Conn.Disconnect(true, "PeerOutDropped")
 				return true

@@ -141,8 +141,10 @@ func net_stats(par string) {
 		cnt++
 	}
 	sort.Sort(srt)
+	var res network.ConnInfo
 	for idx := range srt {
 		v := network.OpenCons[srt[idx].Key]
+		v.GetStats(&res)
 		v.Mutex.Lock()
 		fmt.Printf("%8d) ", v.ConnID)
 
@@ -154,6 +156,7 @@ func net_stats(par string) {
 		fmt.Printf(" %21s %5dms", v.PeerAddr.Ip(), v.GetAveragePing())
 		//fmt.Printf(" %7d : %-16s %7d : %-16s", v.X.LastBtsRcvd, v.X.LastCmdRcvd, v.X.LastBtsSent, v.X.LastCmdSent)
 		fmt.Printf(" %10s %10s", common.BytesToString(v.X.BytesReceived), common.BytesToString(v.X.BytesSent))
+		fmt.Printf(" %5d", res.BlocksReceived)
 		if len(v.GetBlockInProgress) != 0 {
 			fmt.Printf(" %4d", len(v.GetBlockInProgress))
 		} else {
