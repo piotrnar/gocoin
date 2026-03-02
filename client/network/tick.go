@@ -805,12 +805,21 @@ func (c *OneConnection) Run() {
 				c.DoS("Ver" + er.Error())
 				break
 			}
-			if (c.Node.Services&btc.SERVICE_NETWORK) == 0 && doingChainSync() {
-				// during IBD, we disconnect nodes that do not serve all blocks
-				common.CountSafe("PeerDropNoBlocks")
-				c.Disconnect(false, "NoBlocks")
-				break
+			if doingChainSync() {
+				if (c.Node.Services & btc.SERVICE_NETWORK) == 0 {
+					// during IBD, we disconnect nodes that do not serve all blocks
+					common.CountSafe("PeerDropNoBlocks")
+					c.Disconnect(false, "NoBlocks")
+					break
+				}
+				if strings.Contains(c.NodeAgent, "/Knots:") {
+					// It has been observed that most of these are performing badly
+					common.CountSafe("PeerDropKnots")
+					c.Disconnect(false, "Knots")
+					break
+				}
 			}
+
 			c.X.LastMinFeePerKByte = common.MinFeePerKB()
 
 			if c.X.IsGocoin {
