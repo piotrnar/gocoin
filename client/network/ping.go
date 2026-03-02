@@ -75,10 +75,12 @@ type SortedConnections []struct {
 // GetSortedConnections returns the slowest peers first.
 // Make sure to call it with locked Mutex_net.
 func GetSortedConnections() (list SortedConnections, any_ping bool) {
-	var cnt int
+	if len(OpenCons) == 0 {
+		return
+	}
 	now := time.Now()
 	tlist := make(SortedConnections, len(OpenCons))
-	for _, v := range OpenCons {
+	for cnt, v := range OpenCons {
 		v.Mutex.Lock()
 		tlist[cnt].Conn = v
 		tlist[cnt].Ping = v.GetAveragePing()
@@ -91,54 +93,50 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 			tlist[cnt].MinutesOnline = int(now.Sub(v.X.ConnectedAt) / time.Minute)
 		}
 		v.Mutex.Unlock()
-
 		if tlist[cnt].Ping > 0 {
 			any_ping = true
 		}
-		cnt++
 	}
-	if cnt > 0 {
-		if doingChainSync() {
-			sort.Slice(tlist, func(i, j int) bool {
-				return tlist[i].BlockCount < tlist[j].BlockCount
-			})
-			list = tlist
-		} else {
-			list = make(SortedConnections, len(tlist))
-			var ignore_bcnt bool // otherwise count blocks
-			var idx, best_idx, bcnt, best_bcnt, best_tcnt, best_ping int
+	if doingChainSync() {
+		sort.Slice(tlist, func(i, j int) bool {
+			return tlist[i].BlockCount < tlist[j].BlockCount
+		})
+		list = tlist
+	} else {
+		list = make(SortedConnections, len(tlist))
+		var ignore_bcnt bool // otherwise count blocks
+		var idx, best_idx, bcnt, best_bcnt, best_tcnt, best_ping int
 
-			for idx = len(list) - 1; idx >= 0; idx-- {
-				best_idx = -1
-				for i, v := range tlist {
-					if v.Conn == nil {
-						continue
-					}
-					if best_idx < 0 {
-						best_idx = i
-						best_tcnt = v.TxsCount
-						best_bcnt = v.BlockCount
-						best_ping = v.Ping
+		for idx = len(list) - 1; idx >= 0; idx-- {
+			best_idx = -1
+			for i, v := range tlist {
+				if v.Conn == nil {
+					continue
+				}
+				if best_idx < 0 {
+					best_idx = i
+					best_tcnt = v.TxsCount
+					best_bcnt = v.BlockCount
+					best_ping = v.Ping
+				} else {
+					if ignore_bcnt {
+						bcnt = best_bcnt
 					} else {
-						if ignore_bcnt {
-							bcnt = best_bcnt
-						} else {
-							bcnt = v.BlockCount
-						}
-						if best_bcnt < bcnt ||
-							best_bcnt == bcnt && best_tcnt < v.TxsCount ||
-							best_bcnt == bcnt && best_tcnt == v.TxsCount && best_ping > v.Ping {
-							best_bcnt = v.BlockCount
-							best_tcnt = v.TxsCount
-							best_ping = v.Ping
-							best_idx = i
-						}
+						bcnt = v.BlockCount
+					}
+					if best_bcnt < bcnt ||
+						best_bcnt == bcnt && best_tcnt < v.TxsCount ||
+						best_bcnt == bcnt && best_tcnt == v.TxsCount && best_ping > v.Ping {
+						best_bcnt = v.BlockCount
+						best_tcnt = v.TxsCount
+						best_ping = v.Ping
+						best_idx = i
 					}
 				}
-				list[idx] = tlist[best_idx]
-				tlist[best_idx].Conn = nil
-				ignore_bcnt = !ignore_bcnt
 			}
+			list[idx] = tlist[best_idx]
+			tlist[best_idx].Conn = nil
+			ignore_bcnt = !ignore_bcnt
 		}
 	}
 	return
@@ -158,32 +156,27 @@ func drop_worst_peer() bool {
 	}
 
 	immunity_minutes := ImmunityMinutes()
-	for _, v := range list {
-		print("trying ", v.Conn.PeerAddr.String(), " with ", v.BlockCount, " bl ... ")
+	for idx, v := range list {
 		if v.MinutesOnline < immunity_minutes {
-			println("too early")
 			continue
 		}
 		if v.Special {
-			println("is special")
 			continue
 		}
 		if v.Conn.X.Incomming {
 			if InConsActive+2 > common.Get(&common.CFG.Net.MaxInCons) {
 				common.CountSafe("PeerInDropped")
 				v.Conn.Disconnect(true, "PeerInDropped")
-				println("DROPPED IN")
 				return true
 			}
 		} else {
 			if OutConsActive+2 > common.Get(&common.CFG.Net.MaxOutCons) {
-				//println("drop", v.Conn.PeerAddr.String(), "with", v.BlockCount, "bocks")
-				println("DROPPED OUT")
+				println("drop", idx+1, "/", len(list), v.Conn.PeerAddr.Ip(), "-",
+					v.BlockCount, "bocks", v.MinutesOnline, "min online")
 				common.CountSafe("PeerOutDropped")
 				v.Conn.Disconnect(true, "PeerOutDropped")
 				return true
 			}
-			println("did nothing")
 		}
 	}
 	return false
