@@ -742,7 +742,7 @@ func (c *OneConnection) Run() {
 	c.Mutex.Lock()
 	now := time.Now()
 	c.X.LastDataGot = now
-	c.nextMaintanence = now.Add(3 * MAINTANENCE_PERIOD)
+	c.nextMaintanence = now.Add(5 * time.Minute)
 	c.LastPingSent = now.Add(5*time.Second - common.Get(&common.PingPeerEvery)) // do first ping ~5 seconds from now
 
 	c.txsNxt = now.Add(TxsCounterTick)
