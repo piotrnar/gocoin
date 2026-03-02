@@ -80,7 +80,8 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 	}
 	now := time.Now()
 	tlist := make(SortedConnections, len(OpenCons))
-	for cnt, v := range OpenCons {
+	var cnt int
+	for _, v := range OpenCons {
 		v.Mutex.Lock()
 		tlist[cnt].Conn = v
 		tlist[cnt].Ping = v.GetAveragePing()
@@ -96,6 +97,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 		if tlist[cnt].Ping > 0 {
 			any_ping = true
 		}
+		cnt++
 	}
 	if doingChainSync() {
 		sort.Slice(tlist, func(i, j int) bool {
