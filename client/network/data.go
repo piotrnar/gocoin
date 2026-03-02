@@ -291,13 +291,15 @@ func parseLocatorsPayload(pl []byte) (h2get []*btc.Uint256, hashstop *btc.Uint25
 	return
 }
 
+const MAX_BLOCKS_AT_ONCE_FOR_IBD = 10
+
 var Fetc struct {
 	HeightA uint64
 	HeightB uint64
 	HeightC uint64
 	HeightD uint64
 	B2G     uint64
-	C       [6]uint64
+	C       [MAX_BLOCKS_AT_ONCE_FOR_IBD]uint64
 }
 
 var Fetch struct {
@@ -309,7 +311,7 @@ var Fetch struct {
 	MaxBytesInProgress uint64
 	NoWitness          uint64
 	Nothing            uint64
-	BlksCntMax         [6]uint64
+	BlksCntMax         [MAX_BLOCKS_AT_ONCE_FOR_IBD]uint64
 	ReachEndOfLoop     uint64
 	ReachMaxCnt        uint64
 	ReachMaxData       uint64
@@ -384,7 +386,6 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 
 	Fetc.HeightD = uint64(max_height)
 
-	max_blocks_at_once := common.Get(&common.CFG.Net.MaxBlockAtOnce)
 	max_blocks_forward := max_height - last_block_height
 	invs := new(bytes.Buffer)
 	var cnt_in_progress uint32
@@ -392,7 +393,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 
 	for {
 		// Find block to fetch:
-		max_height = last_block_height + max_blocks_forward/(cnt_in_progress+1)
+		max_height = last_block_height + (MAX_BLOCKS_AT_ONCE_FOR_IBD-cnt_in_progress)*max_blocks_forward/MAX_BLOCKS_AT_ONCE_FOR_IBD
 		if max_height > max_max_height {
 			max_height = max_max_height
 		}
@@ -423,7 +424,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		}
 
 		// If we came here, we did not find it.
-		if cnt_in_progress++; cnt_in_progress >= max_blocks_at_once {
+		if cnt_in_progress++; cnt_in_progress >= MAX_BLOCKS_AT_ONCE_FOR_IBD {
 			Fetch.ReachEndOfLoop++
 			break
 		}
