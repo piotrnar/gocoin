@@ -70,7 +70,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		if curr_ping_cnt > v.SentAtPingCnt {
 			common.CountSafe("BlockInprogNotfound")
 			c.cntInc("BlockNotFound")
-		} else if now != nil && now.After(v.start.Add(5*time.Minute)) {
+		} else if now != nil && now.Sub(v.start) > BlockDownloadTimeout {
 			common.CountSafe("BlockInprogTimeout")
 			c.cntInc("BlockTimeout")
 		} else {
@@ -219,11 +219,13 @@ func (c *OneConnection) Tick(now time.Time) {
 		return // new headers requested
 	}
 
+	drop := c.drop
+	bip := len(c.GetBlockInProgress)
 	if c.X.AllHeadersReceived {
 		if !c.X.GetBlocksDataNow && now.After(c.nextGetData) {
 			c.X.GetBlocksDataNow = true
 		}
-		if c.X.GetBlocksDataNow && len(c.GetBlockInProgress) <= c.keepBlocksOver {
+		if c.X.GetBlocksDataNow && !c.drop && bip <= c.keepBlocksOver {
 			c.X.GetBlocksDataNow = false
 			c.Mutex.Unlock()
 			c.GetBlockData()
@@ -231,6 +233,12 @@ func (c *OneConnection) Tick(now time.Time) {
 		}
 	}
 	c.Mutex.Unlock()
+
+	if drop && bip == 0 {
+		println(c.ConnID, "- dropping")
+		c.Disconnect(true, "SyncSlow")
+		return
+	}
 
 	if new_sec { // nothing requested - free to ping..
 		c.TryPing(now)

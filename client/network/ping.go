@@ -171,6 +171,13 @@ func drop_worst_peer() bool {
 		if v.Special {
 			continue
 		}
+		if doingChainSync() {
+			common.CountSafe("PeerSyncDropped")
+			v.Conn.Mutex.Lock()
+			v.Conn.drop = true
+			v.Conn.Mutex.Unlock()
+			return true
+		}
 		if v.Conn.X.Incomming {
 			if InConsActive+2 > common.Get(&common.CFG.Net.MaxInCons) {
 				common.CountSafe("PeerInDropped")
@@ -181,7 +188,7 @@ func drop_worst_peer() bool {
 			if OutConsActive+2 > common.Get(&common.CFG.Net.MaxOutCons) {
 				common.CountSafe("PeerOutDropped")
 				v.Conn.Disconnect(true, "PeerOutDropped")
-				println("drop", v.Conn.PeerAddr.Ip(), "with ping", v.Ping, "ms and", v.BlockCount, "blocks")
+				println(v.Conn.ConnID, v.Conn.PeerAddr.Ip(), "with ping", v.Ping, "ms and", v.BlockCount, "blocks should drop")
 				return true
 			}
 		}

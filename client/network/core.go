@@ -26,10 +26,11 @@ const (
 	SendBufSize        = 16 * 1024 * 1024 // If you'd have this much in the send buffer, disconnect the peer
 	SendBufMask        = SendBufSize - 1
 
-	GetHeadersTimeout = 2 * time.Minute  // Timeout to receive headers
-	VersionMsgTimeout = 20 * time.Second // Timeout to receive the version message after connecting
-	TCPDialTimeout    = 20 * time.Second // If it does not connect within this time, assume it dead
-	NoDataTimeout     = 5 * time.Minute  // If no data received within this time, disconnect
+	GetHeadersTimeout    = 2 * time.Minute  // Timeout to receive headers
+	VersionMsgTimeout    = 20 * time.Second // Timeout to receive the version message after connecting
+	TCPDialTimeout       = 20 * time.Second // If it does not connect within this time, assume it dead
+	NoDataTimeout        = 1 * time.Minute  // If no data received within this time, disconnect
+	BlockDownloadTimeout = 2 * time.Minute  // If no block comes back within this time, dosconnect
 
 	MIN_PROTO_VERSION = 209
 
@@ -234,6 +235,7 @@ type OneConnection struct {
 	broken bool // flag that the conenction has been broken / shall be disconnected
 	dead   bool // If set the alive time in PeersDB will ne moved back
 	banit  bool // Ban this client after disconnecting
+	drop   bool // disconenct this peer when all blocks finish downloading
 }
 
 type oneBlockDl struct {
