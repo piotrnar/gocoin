@@ -86,7 +86,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 	b2g.Block.Trusted.Store(b2g.BlockTreeNode.Trusted.Get())
 
-	if common.BlockChainSynchronized.Load() {
+	if !doingChainSync() {
 		b2g.OnlyFetchFrom = []uint32{c.ConnID}
 	}
 	return PH_STATUS_NEW, b2g

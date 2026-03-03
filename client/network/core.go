@@ -889,6 +889,11 @@ func BlocksToGetCnt() (res int) {
 	return
 }
 
+// we do some things differenty during IBD
+func doingChainSync() bool {
+	return !common.BlockChainSynchronized.Load()
+}
+
 func init() {
 	rand.Read(nonce[:])
 }

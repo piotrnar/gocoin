@@ -160,7 +160,7 @@ func (c *OneConnection) Tick(now time.Time) {
 			return
 		}
 
-		if len(c.GetMP) > 0 && common.BlockChainSynchronized.Load() {
+		if len(c.GetMP) > 0 && !doingChainSync() {
 			// See if to send "getmp" command
 			select {
 			case txpool.GetMPInProgressTicket <- true:
@@ -937,7 +937,7 @@ func (c *OneConnection) Run() {
 			}
 
 		case "cmpctblock":
-			if common.BlockChainSynchronized.Load() {
+			if !doingChainSync() {
 				c.ProcessCmpctBlock(cmd)
 			}
 
@@ -1019,9 +1019,4 @@ func (c *OneConnection) Run() {
 		}
 	}
 	c.Conn.Close()
-}
-
-// if this returns true, we shall disonnect any peer that does signal NODE_NETWORK in Services
-func doingChainSync() bool {
-	return !common.BlockChainSynchronized.Load()
 }
