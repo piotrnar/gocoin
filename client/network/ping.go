@@ -151,7 +151,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 }
 
 // drop_worst_peer should be called only when OutConsActive >= MaxOutCons.
-func drop_worst_peer() bool {
+func drop_worst_peer() (dropped bool) {
 	var list SortedConnections
 	var any_ping bool
 
@@ -160,7 +160,7 @@ func drop_worst_peer() bool {
 
 	list, any_ping = GetSortedConnections()
 	if !any_ping { // if "list" is empty "any_ping" will also be false
-		return false
+		return
 	}
 
 	immunity_minutes := ImmunityMinutes()
@@ -168,7 +168,7 @@ func drop_worst_peer() bool {
 	out_dropped := OutConsActive < common.Get(&common.CFG.Net.MaxOutCons)-2
 	for _, v := range list {
 		if in_dropped && out_dropped {
-			return true
+			return
 		}
 
 		if v.Conn.X.Incomming {
@@ -188,31 +188,20 @@ func drop_worst_peer() bool {
 			continue
 		}
 
-		if doingChainSync() {
-			if v.Conn.X.Incomming {
-				in_dropped = true
-				common.CountSafe("PeerSyncDropInc")
-			} else {
-				out_dropped = true
-				common.CountSafe("PeerSyncDropOut")
-			}
-			v.Conn.Mutex.Lock()
-			v.Conn.drop = true
-			v.Conn.Mutex.Unlock()
-			//println(v.Conn.ConnID, v.Conn.PeerAddr.Ip(), "with ping", v.Ping, "ms and", v.BlockCount, "blocks should drop")
+		if v.Conn.X.Incomming {
+			common.CountSafe("PeerInDropped")
+			in_dropped = true
 		} else {
-			if v.Conn.X.Incomming {
-				common.CountSafe("PeerInDropped")
-				v.Conn.Disconnect(true, "PeerInDropped")
-				in_dropped = true
-			} else {
-				common.CountSafe("PeerOutDropped")
-				v.Conn.Disconnect(true, "PeerOutDropped")
-				out_dropped = true
-			}
+			common.CountSafe("PeerOutDropped")
+			out_dropped = true
 		}
+		v.Conn.Mutex.Lock()
+		v.Conn.drop = true // we want it to disconnect after all equested blocks are received
+		v.Conn.Mutex.Unlock()
+		dropped = true
+		//println(v.Conn.ConnID, v.Conn.PeerAddr.Ip(), "with ping", v.Ping, "ms and", v.BlockCount, "blocks should drop")
 	}
-	return false
+	return
 }
 
 func (c *OneConnection) TryPing(now time.Time) bool {

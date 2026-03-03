@@ -225,7 +225,7 @@ func (c *OneConnection) Tick(now time.Time) {
 		if !c.X.GetBlocksDataNow && now.After(c.nextGetData) {
 			c.X.GetBlocksDataNow = true
 		}
-		if c.X.GetBlocksDataNow && !c.drop && bip <= c.keepBlocksOver {
+		if c.X.GetBlocksDataNow && !drop && bip <= c.keepBlocksOver {
 			c.X.GetBlocksDataNow = false
 			c.Mutex.Unlock()
 			c.GetBlockData()
@@ -236,7 +236,7 @@ func (c *OneConnection) Tick(now time.Time) {
 
 	if drop && bip == 0 {
 		//println(c.ConnID, "- dropping")
-		c.Disconnect(true, "SyncSlow")
+		c.Disconnect(true, "PeerDropped")
 		return
 	}
 
@@ -602,23 +602,21 @@ func NetworkTick() {
 		}
 	}
 
-	if time.Since(common.StartTime) > time.Minute {
-		var drop_peer_period time.Duration
-		if doingChainSync() {
-			drop_peer_period = 2 * time.Minute
-		} else {
-			drop_peer_period = common.Get(&common.DropSlowestEvery)
-		}
-		if drop_peer_period != 0 {
-			if next_drop_peer.IsZero() {
+	var drop_peer_period time.Duration
+	if doingChainSync() {
+		drop_peer_period = 2 * time.Minute
+	} else {
+		drop_peer_period = common.Get(&common.DropSlowestEvery)
+	}
+	if drop_peer_period != 0 {
+		if next_drop_peer.IsZero() {
+			next_drop_peer = now.Add(drop_peer_period)
+		} else if now.After(next_drop_peer) {
+			if drop_worst_peer() {
 				next_drop_peer = now.Add(drop_peer_period)
-			} else if now.After(next_drop_peer) {
-				if drop_worst_peer() {
-					next_drop_peer = now.Add(drop_peer_period)
-				} else {
-					// If no peer dropped this time, try again sooner
-					next_drop_peer = now.Add(drop_peer_period >> 2)
-				}
+			} else {
+				// If no peer dropped this time, try again sooner
+				next_drop_peer = now.Add(drop_peer_period >> 2)
 			}
 		}
 	}
@@ -773,7 +771,9 @@ func (c *OneConnection) Run() {
 		}
 
 		if now.After(next_tick) {
-			c.Tick(now)
+			if c.Tick(now); c.IsBroken() {
+				break
+			}
 			next_tick = now.Add(PeerTickPeriod)
 		}
 
