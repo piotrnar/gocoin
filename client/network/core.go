@@ -30,7 +30,7 @@ const (
 	VersionMsgTimeout    = 20 * time.Second // Timeout to receive the version message after connecting
 	TCPDialTimeout       = 20 * time.Second // If it does not connect within this time, assume it dead
 	NoDataTimeout        = 1 * time.Minute  // If no data received within this time, disconnect
-	BlockDownloadTimeout = 2 * time.Minute  // If no block comes back within this time, dosconnect
+	BlockDownloadTimeout = 2 * time.Minute  // If no block comes back within this time, disconnect
 
 	MIN_PROTO_VERSION = 209
 

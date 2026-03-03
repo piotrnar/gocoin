@@ -98,11 +98,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	}
 }
 
-// Call this every 10 seconds or so
-func (c *OneConnection) Maintanence(now time.Time) {
-	// Expire GetBlockInProgress after five minutes, if they are not in BlocksToGet
-	c.ExpireHeadersAndGetData(&now, 0)
-
+func (c *OneConnection) expireBlockStats(now time.Time) {
 	var block_expire_every time.Duration
 	if doingChainSync() {
 		block_expire_every = time.Minute
@@ -110,7 +106,6 @@ func (c *OneConnection) Maintanence(now time.Time) {
 		block_expire_every = common.Get(&common.BlockExpireEvery)
 	}
 	// Expire BlocksReceived counter
-	c.Mutex.Lock()
 	if len(c.blocksreceived) > 0 {
 		expire_before := now.Add(-block_expire_every)
 		var remove_blocks_cnt uint64
@@ -125,7 +120,6 @@ func (c *OneConnection) Maintanence(now time.Time) {
 			common.CountSafeAdd("BlksRcvdExpired", remove_blocks_cnt)
 		}
 	}
-	c.Mutex.Unlock()
 }
 
 func (c *OneConnection) Tick(now time.Time) {
@@ -200,7 +194,7 @@ func (c *OneConnection) Tick(now time.Time) {
 		}
 
 		if now.After(c.nextMaintanence) {
-			c.Maintanence(now)
+			c.ExpireHeadersAndGetData(&now, 0)
 			c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
 		}
 

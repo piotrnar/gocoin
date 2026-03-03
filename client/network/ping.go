@@ -86,6 +86,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 	var cnt int
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
+		v.expireBlockStats(now)
 		tlist[cnt].Conn = v
 		tlist[cnt].Ping = v.GetAveragePing()
 		tlist[cnt].BlockCount = len(v.blocksreceived)
