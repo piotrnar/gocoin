@@ -157,7 +157,6 @@ type ConnInfo struct {
 	AveragePing      int
 	InvsDone         int
 	BlocksReceived   int
-	BlockDownloadMs  int
 
 	ID              uint32
 	Misbehave       uint16 // max value 1000
@@ -371,7 +370,6 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 
 	res.InvsDone = len(v.InvDone.History)
 	res.BlocksReceived = len(v.blocksreceived)
-	res.BlockDownloadMs = int(v.X.BlockDowloadTime / time.Millisecond)
 	res.GetMPInProgress = len(v.GetMP) != 0
 	res.Misbehave = uint16(v.misbehave)
 

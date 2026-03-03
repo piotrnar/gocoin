@@ -44,6 +44,9 @@ func (c *OneConnection) GetAveragePing() int {
 	if !c.X.VersionReceived {
 		return 0
 	}
+	if doingChainSync() {
+		return int(c.X.BlockDowloadTime / time.Millisecond)
+	}
 	if c.Node.Version > 60000 {
 		var pgs [PingHistoryLength]int
 		var act_len int
@@ -78,18 +81,13 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 	if len(OpenCons) == 0 {
 		return
 	}
-	doing_chain_sync := doingChainSync()
 	now := time.Now()
 	tlist := make(SortedConnections, len(OpenCons))
 	var cnt int
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
 		tlist[cnt].Conn = v
-		if doing_chain_sync {
-			tlist[cnt].Ping = int(v.X.BlockDowloadTime / time.Millisecond)
-		} else {
-			tlist[cnt].Ping = v.GetAveragePing()
-		}
+		tlist[cnt].Ping = v.GetAveragePing()
 		tlist[cnt].BlockCount = len(v.blocksreceived)
 		tlist[cnt].TxsCount = v.X.TxsReceived
 		tlist[cnt].Special = v.X.IsSpecial || v.X.Authorized
@@ -104,7 +102,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 		}
 		cnt++
 	}
-	if doing_chain_sync {
+	if doingChainSync() {
 		sort.Slice(tlist, func(i, j int) bool {
 			if tlist[i].Ping == tlist[j].Ping {
 				return tlist[i].BlockCount < tlist[j].BlockCount
@@ -183,6 +181,7 @@ func drop_worst_peer() bool {
 			if OutConsActive+2 > common.Get(&common.CFG.Net.MaxOutCons) {
 				common.CountSafe("PeerOutDropped")
 				v.Conn.Disconnect(true, "PeerOutDropped")
+				println("drop", v.Conn.PeerAddr.Ip(), "with ping", v.Ping, "ms and", v.BlockCount, "blocks")
 				return true
 			}
 		}
