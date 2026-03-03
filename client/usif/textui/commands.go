@@ -134,7 +134,7 @@ func show_info(par string) {
 	network.MutexRcv.Unlock()
 
 	fmt.Printf("Gocoin: %s,  Synced: %t (%d),   PID: %d,   Uptime %s\n", gocoin.Version,
-		common.Get(&common.BlockChainSynchronized), network.HeadersReceived.Get(), os.Getpid(),
+		common.BlockChainSynchronized.Load(), network.HeadersReceived.Get(), os.Getpid(),
 		time.Since(common.StartTime).String())
 	// Memory used
 	al, _ := sys.MemUsed()

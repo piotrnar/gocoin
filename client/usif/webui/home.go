@@ -54,7 +54,7 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 	network.MutexRcv.Lock()
 	out.LastHeaderHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
-	out.BlockChainSynchronized = common.Get(&common.BlockChainSynchronized)
+	out.BlockChainSynchronized = common.BlockChainSynchronized.Load()
 
 	bx, er := json.Marshal(out)
 	if er == nil {

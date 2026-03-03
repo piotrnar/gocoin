@@ -277,7 +277,7 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 		}
 	}
 	var repl [1]byte // return whether (we think that) we are synchronized
-	if common.Get(&common.BlockChainSynchronized) {
+	if common.BlockChainSynchronized.Load() {
 		repl[0] = 1
 	}
 	c.SendRawMsg("authack", repl[:], true)
