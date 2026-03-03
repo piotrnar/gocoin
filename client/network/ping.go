@@ -164,32 +164,51 @@ func drop_worst_peer() bool {
 	}
 
 	immunity_minutes := ImmunityMinutes()
+	in_dropped := InConsActive < common.Get(&common.CFG.Net.MaxInCons)-2
+	out_dropped := OutConsActive < common.Get(&common.CFG.Net.MaxOutCons)-2
 	for _, v := range list {
+		if in_dropped && out_dropped {
+			return true
+		}
+
+		if v.Conn.X.Incomming {
+			if in_dropped {
+				continue
+			}
+		} else {
+			if out_dropped {
+				continue
+			}
+		}
+
 		if v.MinutesOnline < immunity_minutes {
 			continue
 		}
 		if v.Special {
 			continue
 		}
+
 		if doingChainSync() {
-			common.CountSafe("PeerSyncDropped")
-			println(v.Conn.ConnID, v.Conn.PeerAddr.Ip(), "with ping", v.Ping, "ms and", v.BlockCount, "blocks should drop")
+			if v.Conn.X.Incomming {
+				in_dropped = true
+				common.CountSafe("PeerSyncDropInc")
+			} else {
+				out_dropped = true
+				common.CountSafe("PeerSyncDropOut")
+			}
 			v.Conn.Mutex.Lock()
 			v.Conn.drop = true
 			v.Conn.Mutex.Unlock()
-			return true
-		}
-		if v.Conn.X.Incomming {
-			if InConsActive+2 > common.Get(&common.CFG.Net.MaxInCons) {
+			//println(v.Conn.ConnID, v.Conn.PeerAddr.Ip(), "with ping", v.Ping, "ms and", v.BlockCount, "blocks should drop")
+		} else {
+			if v.Conn.X.Incomming {
 				common.CountSafe("PeerInDropped")
 				v.Conn.Disconnect(true, "PeerInDropped")
-				return true
-			}
-		} else {
-			if OutConsActive+2 > common.Get(&common.CFG.Net.MaxOutCons) {
+				in_dropped = true
+			} else {
 				common.CountSafe("PeerOutDropped")
 				v.Conn.Disconnect(true, "PeerOutDropped")
-				return true
+				out_dropped = true
 			}
 		}
 	}

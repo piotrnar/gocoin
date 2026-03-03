@@ -235,7 +235,7 @@ func (c *OneConnection) Tick(now time.Time) {
 	c.Mutex.Unlock()
 
 	if drop && bip == 0 {
-		println(c.ConnID, "- dropping")
+		//println(c.ConnID, "- dropping")
 		c.Disconnect(true, "SyncSlow")
 		return
 	}
