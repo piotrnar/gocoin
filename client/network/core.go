@@ -95,6 +95,7 @@ type ConnectionStatus struct {
 	LastDataGot         time.Time // if we have no data for some time, we abort this conenction
 	GetHeadersTimeOutAt time.Time
 	LastSent            time.Time
+	BlockDowloadTime    time.Duration
 
 	Counters map[string]uint64
 

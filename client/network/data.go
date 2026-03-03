@@ -203,6 +203,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 		c.cntInc("NewBlock!")
 		orb.TxMissing = -2
 	} else {
+		c.X.BlockDowloadTime = time.Since(bip.start)
 		delete(c.GetBlockInProgress, idx)
 		c.cntInc("NewBlock")
 		orb.TxMissing = -1

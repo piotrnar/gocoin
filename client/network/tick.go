@@ -597,7 +597,7 @@ func NetworkTick() {
 	if time.Since(common.StartTime) > time.Minute {
 		var drop_peer_period time.Duration
 		if doingChainSync() {
-			drop_peer_period = time.Minute
+			drop_peer_period = 2 * time.Minute
 		} else {
 			drop_peer_period = common.Get(&common.DropSlowestEvery)
 		}

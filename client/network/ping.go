@@ -78,13 +78,18 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 	if len(OpenCons) == 0 {
 		return
 	}
+	doing_chain_sync := doingChainSync()
 	now := time.Now()
 	tlist := make(SortedConnections, len(OpenCons))
 	var cnt int
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
 		tlist[cnt].Conn = v
-		tlist[cnt].Ping = v.GetAveragePing()
+		if doing_chain_sync {
+			tlist[cnt].Ping = int(v.X.BlockDowloadTime / time.Millisecond)
+		} else {
+			tlist[cnt].Ping = v.GetAveragePing()
+		}
 		tlist[cnt].BlockCount = len(v.blocksreceived)
 		tlist[cnt].TxsCount = v.X.TxsReceived
 		tlist[cnt].Special = v.X.IsSpecial || v.X.Authorized
@@ -99,9 +104,12 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 		}
 		cnt++
 	}
-	if doingChainSync() {
+	if doing_chain_sync {
 		sort.Slice(tlist, func(i, j int) bool {
-			return tlist[i].BlockCount < tlist[j].BlockCount
+			if tlist[i].Ping == tlist[j].Ping {
+				return tlist[i].BlockCount < tlist[j].BlockCount
+			}
+			return tlist[i].Ping > tlist[j].Ping
 		})
 		list = tlist
 	} else {
@@ -224,7 +232,7 @@ func (c *OneConnection) TryPing(now time.Time) bool {
 
 func ImmunityMinutes() int {
 	if doingChainSync() {
-		return 2 // give them 2 minutes to prove themselves
+		return 3 // give them 3 minutes to prove themselves
 	}
 	return int(common.Get(&common.CFG.DropPeers.ImmunityMinutes))
 }

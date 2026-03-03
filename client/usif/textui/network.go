@@ -157,6 +157,7 @@ func net_stats(par string) {
 		//fmt.Printf(" %7d : %-16s %7d : %-16s", v.X.LastBtsRcvd, v.X.LastCmdRcvd, v.X.LastBtsSent, v.X.LastCmdSent)
 		fmt.Printf(" %10s %10s", common.BytesToString(v.X.BytesReceived), common.BytesToString(v.X.BytesSent))
 		fmt.Printf(" %5d", res.BlocksReceived)
+		fmt.Printf(" %4dms", res.BlockDowloadTime/time.Millisecond)
 		if len(v.GetBlockInProgress) != 0 {
 			fmt.Printf(" %4d", len(v.GetBlockInProgress))
 		} else {
