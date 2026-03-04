@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"slices"
 	"time"
 
@@ -78,6 +79,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 
 	if common.LastTrustedBlockMatch(node.BlockHash) {
+		fmt.Println("After", time.Since(common.StartTime).String(), "found LastTrustedBlock at heigth", node.Height)
 		common.Set(&common.LastTrustedBlockHeight, node.Height)
 		for node != nil {
 			node.Trusted.Set()
