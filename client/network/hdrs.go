@@ -79,7 +79,8 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 
 	if common.LastTrustedBlockMatch(node.BlockHash) {
-		fmt.Println("After", time.Since(common.StartTime).String(), "found LastTrustedBlock at heigth", node.Height)
+		fmt.Println("Found LastTrustedBlock at height", node.Height, "after",
+			time.Since(common.StartTime).String(), common.Last.BlockHeight(), btc.EcdsaVerifyCnt())
 		common.Set(&common.LastTrustedBlockHeight, node.Height)
 		for node != nil {
 			node.Trusted.Set()
