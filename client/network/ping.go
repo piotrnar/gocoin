@@ -105,10 +105,14 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 	}
 	if doingChainSync() {
 		sort.Slice(tlist, func(i, j int) bool {
-			if tlist[i].BlockCount == 0 || tlist[j].BlockCount == 0 || tlist[i].Ping == tlist[j].Ping {
+			if tlist[i].BlockCount == tlist[j].BlockCount {
+				return tlist[i].Ping > tlist[j].Ping
+			}
+			return tlist[i].BlockCount < tlist[j].BlockCount
+			/*if tlist[i].BlockCount == 0 || tlist[j].BlockCount == 0 || tlist[i].Ping == tlist[j].Ping {
 				return tlist[i].BlockCount < tlist[j].BlockCount
 			}
-			return tlist[i].Ping > tlist[j].Ping
+			return tlist[i].Ping > tlist[j].Ping*/
 		})
 		list = tlist
 	} else {
