@@ -167,8 +167,8 @@ func InitConfig() {
 
 	// Fill in default values
 	CFG.Net.ListenTCP = true
-	CFG.Net.MaxOutCons = 10
-	CFG.Net.MaxInCons = 10
+	CFG.Net.MaxOutCons = 20
+	CFG.Net.MaxInCons = 20
 	CFG.Net.MaxBlockAtOnce = 3
 	CFG.Net.BindToIF = "0.0.0.0"
 
@@ -203,7 +203,7 @@ func InitConfig() {
 	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)
 	CFG.Memory.MaxCachedBlks = 200
 	CFG.Memory.CacheOnDisk = true
-	CFG.Memory.SyncCacheSize = 500
+	CFG.Memory.SyncCacheSize = 1000
 	CFG.Memory.MaxDataFileMB = 1000 // max 1GB per single data file
 	CFG.Memory.CompressBlockDB = true
 
