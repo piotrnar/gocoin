@@ -33,7 +33,7 @@ Note that results may vary (even by 10-20%), depending the luck of connecting to
 
 * 64-bit architecture OS and Go compiler.
 * File system supporting files larger than 4GB.
-* At least 32GB of system RAM (more recommended).
+* At least 32GB of system RAM.
 
 
 **wallet**:
