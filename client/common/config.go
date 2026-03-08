@@ -203,7 +203,7 @@ func InitConfig() {
 	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)
 	CFG.Memory.MaxCachedBlks = 200
 	CFG.Memory.CacheOnDisk = true
-	CFG.Memory.SyncCacheSize = 1000
+	CFG.Memory.SyncCacheSize = 500
 	CFG.Memory.MaxDataFileMB = 1000 // max 1GB per single data file
 	CFG.Memory.CompressBlockDB = true
 
@@ -423,7 +423,7 @@ func Reset() {
 		CFG.Memory.SyncCacheSize = 100
 	}
 	if CFG.Memory.CacheOnDisk {
-		SyncMaxCacheBytes.Store(int(CFG.Memory.SyncCacheSize) << 23) // 8x bigger cache if on disk (500MB -> 4GB)
+		SyncMaxCacheBytes.Store(int(CFG.Memory.SyncCacheSize) << 22) // 4x bigger cache if on disk (500MB -> 2GB)
 	} else {
 		SyncMaxCacheBytes.Store(int(CFG.Memory.SyncCacheSize) << 20)
 	}
