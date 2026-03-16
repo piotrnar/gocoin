@@ -44,6 +44,9 @@ func (c *OneConnection) GetAveragePing() int {
 	if !c.X.VersionReceived {
 		return 0
 	}
+	if doingChainSync() {
+		return int(c.X.BlockDowloadTime / time.Millisecond)
+	}
 	if c.Node.Version > 60000 {
 		var pgs [PingHistoryLength]int
 		var act_len int
@@ -75,11 +78,15 @@ type SortedConnections []struct {
 // GetSortedConnections returns the slowest peers first.
 // Make sure to call it with locked Mutex_net.
 func GetSortedConnections() (list SortedConnections, any_ping bool) {
-	var cnt int
+	if len(OpenCons) == 0 {
+		return
+	}
 	now := time.Now()
 	tlist := make(SortedConnections, len(OpenCons))
+	var cnt int
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
+		v.expireBlockStats(now)
 		tlist[cnt].Conn = v
 		tlist[cnt].Ping = v.GetAveragePing()
 		tlist[cnt].BlockCount = len(v.blocksreceived)
@@ -91,13 +98,24 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 			tlist[cnt].MinutesOnline = int(now.Sub(v.X.ConnectedAt) / time.Minute)
 		}
 		v.Mutex.Unlock()
-
 		if tlist[cnt].Ping > 0 {
 			any_ping = true
 		}
 		cnt++
 	}
-	if cnt > 0 {
+	if doingChainSync() {
+		sort.Slice(tlist, func(i, j int) bool {
+			if tlist[i].BlockCount == tlist[j].BlockCount {
+				return tlist[i].Ping > tlist[j].Ping
+			}
+			return tlist[i].BlockCount < tlist[j].BlockCount
+			/*if tlist[i].BlockCount == 0 || tlist[j].BlockCount == 0 || tlist[i].Ping == tlist[j].Ping {
+				return tlist[i].BlockCount < tlist[j].BlockCount
+			}
+			return tlist[i].Ping > tlist[j].Ping*/
+		})
+		list = tlist
+	} else {
 		list = make(SortedConnections, len(tlist))
 		var ignore_bcnt bool // otherwise count blocks
 		var idx, best_idx, bcnt, best_bcnt, best_tcnt, best_ping int
@@ -138,7 +156,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 }
 
 // drop_worst_peer should be called only when OutConsActive >= MaxOutCons.
-func drop_worst_peer() bool {
+func drop_worst_peer() (dropped bool) {
 	var list SortedConnections
 	var any_ping bool
 
@@ -147,36 +165,57 @@ func drop_worst_peer() bool {
 
 	list, any_ping = GetSortedConnections()
 	if !any_ping { // if "list" is empty "any_ping" will also be false
-		return false
+		return
 	}
 
+	immunity_minutes := ImmunityMinutes()
+	in_dropped := InConsActive < common.Get(&common.CFG.Net.MaxInCons)-2
+	out_dropped := OutConsActive < common.Get(&common.CFG.Net.MaxOutCons)-2
 	for _, v := range list {
-		if v.MinutesOnline < int(common.Get(&common.CFG.DropPeers.ImmunityMinutes)) {
+		if in_dropped && out_dropped {
+			return
+		}
+
+		if v.Conn.X.Incomming {
+			if in_dropped {
+				continue
+			}
+		} else {
+			if out_dropped {
+				continue
+			}
+		}
+
+		if v.MinutesOnline < immunity_minutes {
 			continue
 		}
 		if v.Special {
 			continue
 		}
+
 		if v.Conn.X.Incomming {
-			if InConsActive+2 > common.Get(&common.CFG.Net.MaxInCons) {
-				common.CountSafe("PeerInDropped")
-				v.Conn.Disconnect(true, "PeerInDropped")
-				return true
-			}
+			common.CountSafe("PeerInDropped")
+			in_dropped = true
 		} else {
-			if OutConsActive+2 > common.Get(&common.CFG.Net.MaxOutCons) {
-				common.CountSafe("PeerOutDropped")
-				v.Conn.Disconnect(true, "PeerOutDropped")
-				return true
-			}
+			common.CountSafe("PeerOutDropped")
+			out_dropped = true
 		}
+		v.Conn.Mutex.Lock()
+		v.Conn.drop = true // we want it to disconnect after all equested blocks are received
+		v.Conn.Mutex.Unlock()
+		dropped = true
+		//println(v.Conn.ConnID, v.Conn.PeerAddr.Ip(), "with ping", v.Ping, "ms and", v.BlockCount, "blocks should drop")
 	}
-	return false
+	return
 }
 
 func (c *OneConnection) TryPing(now time.Time) bool {
 	if c.Node.Version <= 60000 {
 		return false // insufficient protocol version
+	}
+
+	if doingChainSync() {
+		return false // we do not ping during IBD
 	}
 
 	pingdur := common.Get(&common.PingPeerEvery)
@@ -208,4 +247,11 @@ func (c *OneConnection) TryPing(now time.Time) bool {
 	c.LastPingSent = time.Now()
 	//println(c.PeerAddr.Ip(), "ping...")
 	return true
+}
+
+func ImmunityMinutes() int {
+	if doingChainSync() {
+		return 3 // give them 3 minutes to prove themselves
+	}
+	return int(common.Get(&common.CFG.DropPeers.ImmunityMinutes))
 }

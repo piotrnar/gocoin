@@ -64,9 +64,10 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(r.Form["wallet"]) > 0 {
-			if r.Form["wallet"][0] == "on" {
+			switch r.Form["wallet"][0] {
+			case "on":
 				wallet.OnOff <- true
-			} else if r.Form["wallet"][0] == "off" {
+			case "off":
 				wallet.OnOff <- false
 			}
 			if len(r.Form["page"]) > 0 {

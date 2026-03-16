@@ -134,7 +134,7 @@ func show_info(par string) {
 	network.MutexRcv.Unlock()
 
 	fmt.Printf("Gocoin: %s,  Synced: %t (%d),   PID: %d,   Uptime %s\n", gocoin.Version,
-		common.Get(&common.BlockChainSynchronized), network.HeadersReceived.Get(), os.Getpid(),
+		common.BlockChainSynchronized.Load(), network.HeadersReceived.Get(), os.Getpid(),
 		time.Since(common.StartTime).String())
 	// Memory used
 	al, _ := sys.MemUsed()
@@ -440,7 +440,7 @@ func show_pending(par string) {
 	cnt := len(network.BlocksToGet)
 	var sofar int
 	fmt.Println("Number of blocks to get:", cnt)
-	bh := network.LowestIndexToBlocksToGet
+	bh := network.LowestIndexToBlocksToGet.Load()
 	for sofar < cnt {
 		if b2gs := network.IndexToBlocksToGet[bh]; len(b2gs) > 0 {
 			for _, bha := range b2gs {

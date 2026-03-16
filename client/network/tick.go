@@ -70,7 +70,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		if curr_ping_cnt > v.SentAtPingCnt {
 			common.CountSafe("BlockInprogNotfound")
 			c.cntInc("BlockNotFound")
-		} else if now != nil && now.After(v.start.Add(5*time.Minute)) {
+		} else if now != nil && now.Sub(v.start) > BlockDownloadTimeout {
 			common.CountSafe("BlockInprogTimeout")
 			c.cntInc("BlockTimeout")
 		} else {
@@ -98,15 +98,16 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	}
 }
 
-// Call this once a minute
-func (c *OneConnection) Maintanence(now time.Time) {
-	// Expire GetBlockInProgress after five minutes, if they are not in BlocksToGet
-	c.ExpireHeadersAndGetData(&now, 0)
-
+func (c *OneConnection) expireBlockStats(now time.Time) {
+	var block_expire_every time.Duration
+	if doingChainSync() {
+		block_expire_every = time.Minute
+	} else {
+		block_expire_every = common.Get(&common.BlockExpireEvery)
+	}
 	// Expire BlocksReceived counter
-	c.Mutex.Lock()
 	if len(c.blocksreceived) > 0 {
-		expire_before := now.Add(-common.Get(&common.BlockExpireEvery))
+		expire_before := now.Add(-block_expire_every)
 		var remove_blocks_cnt uint64
 		for _, br := range c.blocksreceived {
 			if br.After(expire_before) {
@@ -119,7 +120,6 @@ func (c *OneConnection) Maintanence(now time.Time) {
 			common.CountSafeAdd("BlksRcvdExpired", remove_blocks_cnt)
 		}
 	}
-	c.Mutex.Unlock()
 }
 
 func (c *OneConnection) Tick(now time.Time) {
@@ -154,7 +154,7 @@ func (c *OneConnection) Tick(now time.Time) {
 			return
 		}
 
-		if len(c.GetMP) > 0 && common.Get(&common.BlockChainSynchronized) {
+		if len(c.GetMP) > 0 && !doingChainSync() {
 			// See if to send "getmp" command
 			select {
 			case txpool.GetMPInProgressTicket <- true:
@@ -194,7 +194,7 @@ func (c *OneConnection) Tick(now time.Time) {
 		}
 
 		if now.After(c.nextMaintanence) {
-			c.Maintanence(now)
+			c.ExpireHeadersAndGetData(&now, 0)
 			c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
 		}
 
@@ -213,11 +213,13 @@ func (c *OneConnection) Tick(now time.Time) {
 		return // new headers requested
 	}
 
+	drop := c.drop
+	bip := len(c.GetBlockInProgress)
 	if c.X.AllHeadersReceived {
 		if !c.X.GetBlocksDataNow && now.After(c.nextGetData) {
 			c.X.GetBlocksDataNow = true
 		}
-		if c.X.GetBlocksDataNow && len(c.GetBlockInProgress) <= c.keepBlocksOver {
+		if c.X.GetBlocksDataNow && !drop && bip <= c.keepBlocksOver {
 			c.X.GetBlocksDataNow = false
 			c.Mutex.Unlock()
 			c.GetBlockData()
@@ -225,6 +227,12 @@ func (c *OneConnection) Tick(now time.Time) {
 		}
 	}
 	c.Mutex.Unlock()
+
+	if drop && bip == 0 {
+		//println(c.ConnID, "- dropping")
+		c.Disconnect(true, "PeerDropped")
+		return
+	}
 
 	if new_sec { // nothing requested - free to ping..
 		c.TryPing(now)
@@ -588,16 +596,21 @@ func NetworkTick() {
 		}
 	}
 
-	if common.Get(&common.CFG.DropPeers.DropEachMinutes) != 0 &&
-		common.Get(&common.CFG.DropPeers.ImmunityMinutes) != 0 {
+	var drop_peer_period time.Duration
+	if doingChainSync() {
+		drop_peer_period = 2 * time.Minute
+	} else {
+		drop_peer_period = common.Get(&common.DropSlowestEvery)
+	}
+	if drop_peer_period != 0 {
 		if next_drop_peer.IsZero() {
-			next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery))
+			next_drop_peer = now.Add(drop_peer_period)
 		} else if now.After(next_drop_peer) {
 			if drop_worst_peer() {
-				next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery))
+				next_drop_peer = now.Add(drop_peer_period)
 			} else {
 				// If no peer dropped this time, try again sooner
-				next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery) >> 2)
+				next_drop_peer = now.Add(drop_peer_period >> 2)
 			}
 		}
 	}
@@ -629,7 +642,7 @@ func NetworkTick() {
 	if conn_cnt < common.Get(&common.CFG.Net.MaxOutCons) {
 		// First we will choose up to 128 peers that we have seen alive - do not sort them
 		required_mask := uint64(btc.SERVICE_SEGWIT)
-		if needingAllBlocks() {
+		if doingChainSync() {
 			required_mask |= btc.SERVICE_NETWORK // for IBD, only take nodes that serve all blocks
 		}
 		adrs := peersdb.GetRecentPeers(128, false, func(ad *peersdb.PeerAddr) bool {
@@ -729,7 +742,7 @@ func (c *OneConnection) Run() {
 	c.Mutex.Lock()
 	now := time.Now()
 	c.X.LastDataGot = now
-	c.nextMaintanence = now.Add(time.Minute)
+	c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
 	c.LastPingSent = now.Add(5*time.Second - common.Get(&common.PingPeerEvery)) // do first ping ~5 seconds from now
 
 	c.txsNxt = now.Add(TxsCounterTick)
@@ -752,7 +765,9 @@ func (c *OneConnection) Run() {
 		}
 
 		if now.After(next_tick) {
-			c.Tick(now)
+			if c.Tick(now); c.IsBroken() {
+				break
+			}
 			next_tick = now.Add(PeerTickPeriod)
 		}
 
@@ -792,12 +807,21 @@ func (c *OneConnection) Run() {
 				c.DoS("Ver" + er.Error())
 				break
 			}
-			if (c.Node.Services&btc.SERVICE_NETWORK) == 0 && needingAllBlocks() {
-				// during IBD, we disconnect nodes that do not serve all blocks
-				common.CountSafe("PeerDropNoBlocks")
-				c.Disconnect(false, "NoBlocks")
-				break
+			if doingChainSync() {
+				if (c.Node.Services & btc.SERVICE_NETWORK) == 0 {
+					// during IBD, we disconnect nodes that do not serve all blocks
+					common.CountSafe("PeerDropNoBlocks")
+					c.Disconnect(false, "NoBlocks")
+					break
+				}
+				if strings.Contains(c.NodeAgent, "/Knots:") {
+					// It has been observed that most of these are performing badly
+					common.CountSafe("PeerDropKnots")
+					c.Disconnect(false, "Knots")
+					break
+				}
 			}
+
 			c.X.LastMinFeePerKByte = common.MinFeePerKB()
 
 			if c.X.IsGocoin {
@@ -915,7 +939,7 @@ func (c *OneConnection) Run() {
 			}
 
 		case "cmpctblock":
-			if common.Get(&common.BlockChainSynchronized) {
+			if !doingChainSync() {
 				c.ProcessCmpctBlock(cmd)
 			}
 
@@ -997,9 +1021,4 @@ func (c *OneConnection) Run() {
 		}
 	}
 	c.Conn.Close()
-}
-
-// if this returns true, we shall disonnect any peer that does signal NODE_NETWORK in Services
-func needingAllBlocks() bool {
-	return BlocksToGetCnt() > 288
 }

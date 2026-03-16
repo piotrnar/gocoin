@@ -56,7 +56,7 @@ func reset_save_timer() {
 	for len(SaveBlockChain.C) > 0 {
 		<-SaveBlockChain.C
 	}
-	if common.BlockChainSynchronized {
+	if common.BlockChainSynchronized.Load() {
 		SaveBlockChain.Reset(SaveBlockChainAfter)
 	} else {
 		SaveBlockChain.Reset(SaveBlockChainAfterNoSync)
@@ -75,15 +75,19 @@ func blockUndone(bl *btc.Block) {
 }
 
 func print_sync_stats() {
-	fmt.Printf("Sync to %d took %s,  Que: %d/%d,  Cache: %d/%d - Empty: %d - %s\n",
+	blocksincache := network.LowestIndexToBlocksToGet.Load() - common.Last.Block.Height - 1
+	fmt.Printf("Sync to %d took %s,  Que:%d/%d/%d,  Avg:%dKB,  Cache:%d/%d - Emp:%d/%s\n",
 		common.Last.Block.Height, time.Since(common.StartTime).String(),
-		len(network.NetBlocks), network.CachedBlocksLen(),
+		len(network.NetBlocks), blocksincache, network.CachedBlocksLen(),
+		common.AverageBlockSize.Get()>>10,
 		network.CachedBlocksBytes.Get()>>20, common.SyncMaxCacheBytes.Get()>>20,
 		network.Fetch.CacheEmpty, network.Fetch.WastedCacheEmpty.String())
 }
 
 func exit_now() {
+	common.Last.Mutex.Lock()
 	print_sync_stats()
+	common.Last.Mutex.Unlock()
 	if tot := common.DlBytesTotal; tot > 0 {
 		wst := network.Fetch.BlockBytesWasted
 		fmt.Printf("Wasted %d blocks carrying %d / %dMB, which was %.2f%% of total DL bandwidth\n",
@@ -92,7 +96,7 @@ func exit_now() {
 	common.PrintBWStats()
 	fmt.Println("Executing exitat", *exitat, "  save:", *saveonexit)
 	if !*saveonexit {
-		fmt.Println("\n\n\n")
+		fmt.Print("\n\n\n\n")
 		os.Exit(0)
 	}
 	usif.Exit_now.Set()
@@ -121,7 +125,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	}
 
 	if !network.Fetch.LastCacheEmpty.IsZero() {
-		network.Fetch.WastedCacheEmpty = time.Since(network.Fetch.LastCacheEmpty)
+		network.Fetch.WastedCacheEmpty += time.Since(network.Fetch.LastCacheEmpty)
 		network.Fetch.LastCacheEmpty = time.Time{}
 	}
 
@@ -193,8 +197,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.BlockChain.BlockIndexAccess.Lock()
 		lch := network.LastCommitedHeader
 		common.BlockChain.BlockIndexAccess.Unlock()
-		if !syncDoneAnnounced && common.Last.ParseTill == nil && !common.BlockChainSynchronized {
-			if (common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height {
+		if !syncDoneAnnounced && common.Last.ParseTill == nil && !common.BlockChainSynchronized.Load() {
+			if (common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height ||
+				common.Last.Block.Height == 930e3 || common.Last.Block.Height == 940e3 { // <-- TODO: remove this after testing
 				print_sync_stats()
 				if common.Last.Block.Height <= 200e3 {
 					// Cache underflow counter is not reliable at the beginning of chain sync, so reset it here
@@ -821,7 +826,7 @@ func main() {
 				}
 				network.NetworkTick()
 
-				if common.BlockChainSynchronized {
+				if common.BlockChainSynchronized.Load() {
 					if common.WalletPendingTick() {
 						wallet.OnOff <- true
 					}
@@ -838,7 +843,7 @@ func main() {
 						startup_ticks--
 						break
 					}
-					common.Set(&common.BlockChainSynchronized, true)
+					common.BlockChainSynchronized.Store(true)
 					if *exitat == -1 {
 						exit_now()
 					}
@@ -875,7 +880,7 @@ func main() {
 			case on := <-wallet.OnOff:
 				common.Busy()
 				if on {
-					if common.BlockChainSynchronized {
+					if common.BlockChainSynchronized.Load() {
 						usif.FetchingBalances.Set()
 						wallet.LoadBalancesFromUtxo()
 						usif.FetchingBalances.Clr()

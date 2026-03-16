@@ -81,7 +81,7 @@ type UnspentDB struct {
 	mapDefragsCnt   int
 	mapNoDefragsCnt int
 	mapDefragsTime  time.Duration
-	recRelocateCnt  int
+	recRelocateCnt  atomic.Int64
 	dataSize        atomic.Int64
 	totalTxs        atomic.Int64
 }
@@ -469,7 +469,7 @@ func (db *UnspentDB) Relocate(oldRec, newRec *[]byte) {
 	db.MapMutex[ind[0]].Lock()
 	db.HashMap[ind[0]][ind] = newRec
 	db.MapMutex[ind[0]].Unlock()
-	db.recRelocateCnt++
+	db.recRelocateCnt.Add(1)
 }
 
 // Only call it from the main thread
@@ -887,7 +887,7 @@ func (db *UnspentDB) GetStats() (s string) {
 		db.LastBlockHeight)
 	fmt.Fprintf(wr, " Defrags:  Maps:%d (%d no) in %s (%d%% dels),  Relocations: %d recs\n",
 		db.mapDefragsCnt, db.mapNoDefragsCnt, db.mapDefragsTime.String(), 100*dels/hml,
-		db.recRelocateCnt)
+		db.recRelocateCnt.Load())
 	data, count, fprint := db.GetUTXOSize()
 	fmt.Fprintf(wr, " UTXO data size: %d bytes + (%d txs x %d) = %d bytes of footprint\n",
 		data, count, DATA_SIZE_EXTRA_PER_RECORD, fprint)

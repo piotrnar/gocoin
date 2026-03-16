@@ -203,6 +203,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 		c.cntInc("NewBlock!")
 		orb.TxMissing = -2
 	} else {
+		c.X.BlockDowloadTime = time.Since(bip.start)
 		delete(c.GetBlockInProgress, idx)
 		c.cntInc("NewBlock")
 		orb.TxMissing = -1
@@ -297,7 +298,7 @@ var Fetc struct {
 	HeightC uint64
 	HeightD uint64
 	B2G     uint64
-	C       [6]uint64
+	C       []uint32
 }
 
 var Fetch struct {
@@ -309,7 +310,7 @@ var Fetch struct {
 	MaxBytesInProgress uint64
 	NoWitness          uint64
 	Nothing            uint64
-	BlksCntMax         [6]uint64
+	BlksCntMax         []uint32
 	ReachEndOfLoop     uint64
 	ReachMaxCnt        uint64
 	ReachMaxData       uint64
@@ -320,13 +321,21 @@ var Fetch struct {
 	CacheEmpty uint64
 }
 
+func resize_fetch_arrays(mbatonce int) {
+	if mbatonce > len(Fetc.C) {
+		add_cnt := mbatonce - len(Fetc.C)
+		Fetc.C = append(Fetc.C, make([]uint32, add_cnt)...)
+		Fetch.BlksCntMax = append(Fetch.BlksCntMax, make([]uint32, add_cnt)...)
+	}
+}
+
 func (c *OneConnection) GetBlockData() (yes bool) {
 	//MAX_GETDATA_FORWARD
 	// Need to send getdata...?
 	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
 
-	if LowestIndexToBlocksToGet == 0 || len(BlocksToGet) == 0 {
+	if LowestIndexToBlocksToGet.Load() == 0 || len(BlocksToGet) == 0 {
 		Fetch.NoBlocksToGet++
 		// wake up in one minute, just in case
 		c.nextGetData = time.Now().Add(60 * time.Second)
@@ -368,39 +377,43 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	max_height := last_block_height + uint32(common.SyncMaxCacheBytes.Get()/avg_block_size)
 
 	Fetc.HeightA = uint64(last_block_height)
-	Fetc.HeightB = uint64(LowestIndexToBlocksToGet)
+	Fetc.HeightB = uint64(LowestIndexToBlocksToGet.Load())
 	Fetc.HeightC = uint64(max_height)
 
 	if max_height > last_block_height+MAX_BLOCKS_FORWARD_CNT {
 		max_height = last_block_height + MAX_BLOCKS_FORWARD_CNT
 	}
-	max_max_height := max_height
-	if max_max_height > c.Node.Height {
-		max_max_height = c.Node.Height
+	max_height_limit := max_height
+	if max_height_limit > c.Node.Height {
+		max_height_limit = c.Node.Height
 	}
-	if max_max_height > LastCommitedHeader.Height {
-		max_max_height = LastCommitedHeader.Height
+	if max_height_limit > LastCommitedHeader.Height {
+		max_height_limit = LastCommitedHeader.Height
 	}
 
 	Fetc.HeightD = uint64(max_height)
 
 	max_blocks_at_once := common.Get(&common.CFG.Net.MaxBlockAtOnce)
+	if max_blocks_at_once < 1 {
+		max_blocks_at_once = 1
+	}
 	max_blocks_forward := max_height - last_block_height
+	max_blocks_forward_decrease := (max_blocks_forward / 2) / max_blocks_at_once
 	invs := new(bytes.Buffer)
 	var cnt_in_progress uint32
 	var lowest_found *OneBlockToGet
 
+	resize_fetch_arrays(int(max_blocks_at_once))
 	for {
-		// Find block to fetch:
-		max_height = last_block_height + max_blocks_forward/(cnt_in_progress+1)
-		if max_height > max_max_height {
-			max_height = max_max_height
+		if max_height > max_height_limit {
+			max_height = max_height_limit
 		}
-		if max_height < LowestIndexToBlocksToGet {
+		// Find block to fetch:
+		if max_height < LowestIndexToBlocksToGet.Load() {
 			Fetch.BlksCntMax[cnt_in_progress]++
 			break
 		}
-		for bh := LowestIndexToBlocksToGet; bh <= max_height; bh++ {
+		for bh := LowestIndexToBlocksToGet.Load(); bh <= max_height; bh++ {
 			if idxlst, ok := IndexToBlocksToGet[bh]; ok {
 				for _, idx := range idxlst {
 					v := BlocksToGet[idx]
@@ -427,6 +440,8 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			Fetch.ReachEndOfLoop++
 			break
 		}
+		max_blocks_forward -= max_blocks_forward_decrease
+		max_height = last_block_height + max_blocks_forward
 		continue
 
 	found_it:

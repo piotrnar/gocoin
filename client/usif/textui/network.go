@@ -141,8 +141,10 @@ func net_stats(par string) {
 		cnt++
 	}
 	sort.Sort(srt)
+	var res network.ConnInfo
 	for idx := range srt {
 		v := network.OpenCons[srt[idx].Key]
+		v.GetStats(&res)
 		v.Mutex.Lock()
 		fmt.Printf("%8d) ", v.ConnID)
 
@@ -154,6 +156,7 @@ func net_stats(par string) {
 		fmt.Printf(" %21s %5dms", v.PeerAddr.Ip(), v.GetAveragePing())
 		//fmt.Printf(" %7d : %-16s %7d : %-16s", v.X.LastBtsRcvd, v.X.LastCmdRcvd, v.X.LastBtsSent, v.X.LastCmdSent)
 		fmt.Printf(" %10s %10s", common.BytesToString(v.X.BytesReceived), common.BytesToString(v.X.BytesSent))
+		fmt.Printf(" %5d", res.BlocksReceived)
 		if len(v.GetBlockInProgress) != 0 {
 			fmt.Printf(" %4d", len(v.GetBlockInProgress))
 		} else {
@@ -243,6 +246,8 @@ func print_fetch_counters() {
 	for i, v := range network.Fetch.BlksCntMax {
 		if v != 0 {
 			fmt.Print("  x", i, ":", v)
+		} else {
+			break
 		}
 	}
 	fmt.Println()
@@ -253,17 +258,13 @@ func sync_stats(par string) {
 	lb := common.Last.Block.Height
 	common.Last.Mutex.Unlock()
 
-	network.MutexRcv.Lock()
-	li2get := network.LowestIndexToBlocksToGet
-	network.MutexRcv.Unlock()
-
 	network.CachedBlocksMutex.Lock()
 	lencb := len(network.CachedBlocksIdx)
 	network.CachedBlocksMutex.Unlock()
 
-	fmt.Printf("@%d\tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d\n",
-		lb, li2get-lb-1, lencb,
-		common.AverageBlockSize.Get(), network.Fetch.CacheEmpty)
+	fmt.Printf("@%d\tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d / %s\n",
+		lb, network.LowestIndexToBlocksToGet.Load()-lb-1, lencb,
+		common.AverageBlockSize.Get(), network.Fetch.CacheEmpty, network.Fetch.WastedCacheEmpty.String())
 	tot := common.DlBytesTotal
 	if tot > 0 {
 		wst := network.Fetch.BlockBytesWasted
@@ -312,10 +313,9 @@ func sync_stats(par string) {
 	for i := uint32(0); i < max_blocks_at_once; i++ {
 		cnt := network.Fetc.C[i]
 		if cnt == 0 {
-			fmt.Printf("  C%d:-", i)
-		} else {
-			fmt.Printf("  C%d:%d", i, cnt)
+			break
 		}
+		fmt.Printf("  C%d:%d", i, cnt)
 	}
 	fmt.Println()
 

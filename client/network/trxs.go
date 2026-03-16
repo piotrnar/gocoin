@@ -108,7 +108,8 @@ func txPoolCB(ntx *txpool.TxRcvd, t2s *txpool.OneTxToSend) {
 	}
 
 	if result := ntx.Result; result != 0 {
-		if result == txpool.TX_REJECTED_NO_TXOU {
+		switch result {
+		case txpool.TX_REJECTED_NO_TXOU:
 			alreadyin := make(map[[32]byte]struct{}, len(ntx.TxIn))
 			missing_inputs := make([]int, 0, len(ntx.TxIn))
 			for txinidx, txin := range ntx.TxIn {
@@ -132,11 +133,11 @@ func txPoolCB(ntx *txpool.TxRcvd, t2s *txpool.OneTxToSend) {
 			} else {
 				common.CountSafe("TxMissingIgnore")
 			}
-		} else if result == txpool.TX_REJECTED_OVERSPEND {
+		case txpool.TX_REJECTED_OVERSPEND:
 			c.DoS("TxOversend")
-		} else if result == txpool.TX_REJECTED_SCRIPT_FAIL {
+		case txpool.TX_REJECTED_SCRIPT_FAIL:
 			c.DoS("TxScriptFail")
-		} else {
+		default:
 			c.Mutex.Lock()
 			c.cntInc(fmt.Sprint("TxRej", result))
 			c.Mutex.Unlock()

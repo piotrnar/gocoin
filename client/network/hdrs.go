@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"slices"
 	"time"
 
@@ -78,6 +79,8 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 
 	if common.LastTrustedBlockMatch(node.BlockHash) {
+		fmt.Println("Found LastTrustedBlock at height", node.Height, "after",
+			time.Since(common.StartTime).String(), common.Last.BlockHeight(), btc.EcdsaVerifyCnt())
 		common.Set(&common.LastTrustedBlockHeight, node.Height)
 		for node != nil {
 			node.Trusted.Set()
@@ -86,7 +89,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 	b2g.Block.Trusted.Store(b2g.BlockTreeNode.Trusted.Get())
 
-	if common.Get(&common.BlockChainSynchronized) {
+	if !doingChainSync() {
 		b2g.OnlyFetchFrom = []uint32{c.ConnID}
 	}
 	return PH_STATUS_NEW, b2g
@@ -133,11 +136,12 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 
 			sta, b2g := c.ProcessNewHeader(hdr)
 			if b2g == nil {
-				if sta == PH_STATUS_FATAL {
+				switch sta {
+				case PH_STATUS_FATAL:
 					//println("c.DoS(BadHeader)")
 					c.DoS("BadHeader")
 					return
-				} else if sta == PH_STATUS_ERROR {
+				case PH_STATUS_ERROR:
 					//println("c.Misbehave(BadHeader)")
 					c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
 				}

@@ -74,7 +74,8 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		c.InvStore(typ, pl[of+4:of+36])
 		ahr := c.X.AllHeadersReceived
 		c.Mutex.Unlock()
-		if typ == MSG_BLOCK {
+		switch typ {
+		case MSG_BLOCK:
 			bhash := btc.NewUint256(pl[of+4 : of+36])
 			if !ahr {
 				common.CountSafe("InvBlockIgnored")
@@ -98,13 +99,13 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 					common.CountSafe("InvBlockOld")
 				}
 			}
-		} else if typ == MSG_TX {
+		case MSG_TX:
 			if common.AcceptTx() {
 				c.TxInvNotify(pl[of+4 : of+36])
 			} else {
 				common.CountSafe("InvTxIgnored")
 			}
-		} else {
+		default:
 			common.CountSafePar("InvUnknTyp-", typ)
 		}
 		of += 36

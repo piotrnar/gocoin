@@ -2,6 +2,7 @@ package network
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"slices"
@@ -51,7 +52,7 @@ var (
 	BlocksToGetFailed        map[btc.BIDX]struct{}          = make(map[btc.BIDX]struct{})
 	BlocksToGetFailedCheck   time.Time                      // set to zero to check ASAP
 	IndexToBlocksToGet       map[uint32][]btc.BIDX          = make(map[uint32][]btc.BIDX)
-	LowestIndexToBlocksToGet uint32
+	LowestIndexToBlocksToGet atomic.Uint32
 	LastCommitedHeader       *chain.BlockTreeNode
 	MutexRcv                 sync.Mutex
 
@@ -179,8 +180,8 @@ func AddB2G(b2g *OneBlockToGet) {
 	BlocksToGet[bidx] = b2g
 	bh := b2g.BlockTreeNode.Height
 	IndexToBlocksToGet[bh] = append(IndexToBlocksToGet[bh], bidx)
-	if LowestIndexToBlocksToGet == 0 || bh < LowestIndexToBlocksToGet {
-		LowestIndexToBlocksToGet = bh
+	if LowestIndexToBlocksToGet.Load() == 0 || bh < LowestIndexToBlocksToGet.Load() {
+		LowestIndexToBlocksToGet.Store(bh)
 	}
 }
 
@@ -209,15 +210,15 @@ func DelB2G(idx btc.BIDX) {
 			println("DelB2G - index not matching")
 		}
 		delete(IndexToBlocksToGet, bh)
-		if bh == LowestIndexToBlocksToGet {
+		if bh == LowestIndexToBlocksToGet.Load() {
 			if len(IndexToBlocksToGet) > 0 {
-				for LowestIndexToBlocksToGet++; ; LowestIndexToBlocksToGet++ {
-					if _, ok := IndexToBlocksToGet[LowestIndexToBlocksToGet]; ok {
+				for LowestIndexToBlocksToGet.Add(1); ; LowestIndexToBlocksToGet.Add(1) {
+					if _, ok := IndexToBlocksToGet[LowestIndexToBlocksToGet.Load()]; ok {
 						break
 					}
 				}
 			} else {
-				LowestIndexToBlocksToGet = 0
+				LowestIndexToBlocksToGet.Store(0)
 			}
 		}
 	}

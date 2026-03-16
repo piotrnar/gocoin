@@ -6,48 +6,39 @@ import (
 )
 
 type SyncBool struct {
-	val int32
+	atomic.Bool
 }
 
 func (b *SyncBool) Get() bool {
-	return atomic.LoadInt32(&b.val) != 0
+	return b.Load()
 }
 
 func (b *SyncBool) Set() {
-	atomic.StoreInt32(&b.val, 1)
+	b.Store(true)
 }
 
 func (b *SyncBool) Clr() {
-	atomic.StoreInt32(&b.val, 0)
+	b.Store(false)
 }
 
 func (b *SyncBool) MarshalText() (text []byte, err error) {
 	return []byte(fmt.Sprint(b.Get())), nil
 }
 
-func (b *SyncBool) Store(val bool) {
-	if val {
-		b.Set()
-	} else {
-		b.Clr()
-	}
-}
-
-
 type SyncInt struct {
-	val int64
+	atomic.Int64
 }
 
 func (b *SyncInt) Get() int {
-	return int(atomic.LoadInt64(&b.val))
+	return int(b.Load())
 }
 
 func (b *SyncInt) Store(val int) {
-	atomic.StoreInt64(&b.val, int64(val))
+	b.Int64.Store(int64(val))
 }
 
 func (b *SyncInt) Add(val int) {
-	atomic.AddInt64(&b.val, int64(val))
+	b.Int64.Add(int64(val))
 }
 
 func (b *SyncInt) MarshalText() (text []byte, err error) {
