@@ -313,18 +313,19 @@ func (db *BlockDB) writeOne() (written bool) {
 		return
 	}
 
-	db.disk_access.Lock()
-
+	// Compute compression into locals - don't touch rec yet
 	var cbts []byte
+	var compressed, snappied bool
 	if db.do_not_compress {
-		rec.compressed, rec.snappied = false, false
+		compressed, snappied = false, false
 		cbts = b2w.data
 	} else {
-		rec.compressed, rec.snappied = true, true
+		compressed, snappied = true, true
 		cbts = snappy.Encode(nil, b2w.data)
 	}
-	rec.blen = uint32(len(cbts))
-	rec.ipos = db.maxidxfilepos
+	blen := uint32(len(cbts))
+
+	db.disk_access.Lock()
 
 	if db.max_data_file_size != 0 && uint64(db.maxdatfilepos)+uint64(len(cbts)) > db.max_data_file_size {
 		if tmpf, _ := os.Create(db.dat_fname(db.maxdatfileidx+1, false)); tmpf != nil {
@@ -341,12 +342,15 @@ func (db *BlockDB) writeOne() (written bool) {
 		}
 	}
 
-	rec.datfileidx = db.maxdatfileidx
-	rec.fpos = uint64(db.maxdatfilepos)
-	if rec.compressed {
+	// Capture positions from locals for the index record
+	datfileidx := db.maxdatfileidx
+	fpos := uint64(db.maxdatfilepos)
+	ipos := db.maxidxfilepos
+
+	if compressed {
 		fl[0] |= BLOCK_COMPRSD
 	}
-	if rec.snappied {
+	if snappied {
 		fl[0] |= BLOCK_SNAPPED
 	}
 	if rec.trusted {
@@ -356,11 +360,11 @@ func (db *BlockDB) writeOne() (written bool) {
 	//copy(fl[4:32], b2w.h[:28])
 	fl[0] |= BLOCK_LENGTH | BLOCK_INDEX
 	binary.LittleEndian.PutUint32(fl[32:36], uint32(len(b2w.data)))
-	binary.LittleEndian.PutUint32(fl[28:32], rec.datfileidx)
+	binary.LittleEndian.PutUint32(fl[28:32], datfileidx)
 
 	binary.LittleEndian.PutUint32(fl[36:40], uint32(b2w.height))
-	binary.LittleEndian.PutUint64(fl[40:48], uint64(rec.fpos))
-	binary.LittleEndian.PutUint32(fl[48:52], uint32(rec.blen))
+	binary.LittleEndian.PutUint64(fl[40:48], fpos)
+	binary.LittleEndian.PutUint32(fl[48:52], blen)
 	binary.LittleEndian.PutUint32(fl[52:56], uint32(b2w.txcount))
 	copy(fl[56:136], b2w.data[:80])
 
@@ -373,9 +377,19 @@ func (db *BlockDB) writeOne() (written bool) {
 	}
 
 	db.maxidxfilepos += 136
-	db.maxdatfilepos += int64(rec.blen)
+	db.maxdatfilepos += int64(blen)
 
 	db.disk_access.Unlock()
+
+	// Now publish the rec fields under db.mutex so readers (addToCache, BlockGetInternal) see them atomically
+	db.mutex.Lock()
+	rec.compressed = compressed
+	rec.snappied = snappied
+	rec.blen = blen
+	rec.datfileidx = datfileidx
+	rec.fpos = fpos
+	rec.ipos = ipos // must be last - transitions from -1 to real value, signals "written to disk"
+	db.mutex.Unlock()
 
 	written = true
 
