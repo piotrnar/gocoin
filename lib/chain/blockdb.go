@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -108,6 +109,7 @@ type BlockDB struct {
 	data_files_keep              uint32
 	data_files_backup            bool
 	do_not_compress              bool
+	issue_73_cnt                 int // TODO: remove it after investigating issue #73
 }
 
 func NewBlockDBExt(dir string, opts *BlockDBOpts) (db *BlockDB) {
@@ -401,8 +403,14 @@ func (db *BlockDB) BlockInvalid(hash []byte) {
 	db.mutex.Lock()
 	cur, ok := db.blockIndex[idx]
 	if !ok {
+		cnt := db.issue_73_cnt
+		db.issue_73_cnt++
 		db.mutex.Unlock()
-		println("BlockInvalid: no such block", btc.NewUint256(hash).String())
+		if cnt < 10 {
+			println("BlockInvalid: no such block", btc.NewUint256(hash).String())
+		} else if cnt == 10 {
+			println(string(debug.Stack()))
+		}
 		return
 	}
 	if cur.trusted {
