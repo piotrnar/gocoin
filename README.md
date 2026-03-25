@@ -17,7 +17,7 @@ and - in consequece - an extraordinary blochchain processing performance.
 System memory and time Gocoin node needs to sync the blockchain up to
 the given block number, with comparision to Bitcoin Core 30.2:
 
-![SyncChart](https://raw.githubusercontent.com/piotrnar/gocoin_website/refs/heads/main/quick_sync_gocoin_vs_core_mar26-4way.png)
+![SyncChart](https://raw.githubusercontent.com/piotrnar/gocoin_website/refs/heads/main/quick_sync_gocoin_vs_core_mar26.png)
 *The above data was collected using [Hetzner](https://hetzner.com) dedicated server
 with Intel i7-7700 CPU, 64GB RAM, 2x512GB SSD and 1Gbit internet connection.
 Clients using their default configuration.
