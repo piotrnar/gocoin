@@ -20,9 +20,9 @@ the given block number, with comparision to Bitcoin Core 30.2:
 ![SyncChart](https://raw.githubusercontent.com/piotrnar/gocoin_website/refs/heads/main/quick_sync_gocoin_vs_core_mar26.png)
 *The above data was collected using [Hetzner](https://hetzner.com) dedicated server
 with Intel i7-7700 CPU, 64GB RAM, 2x512GB SSD and 1Gbit internet connection.
-Clients using their default configuration (changed setting in brackets).
+Nodes using their default configuration (changed setting in brackets).
 For other performance charts see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.
-Note that results may vary (even by 10-20%), depending the luck of connecting to 'good' peers.*
+Note that results may vary (even by 10-20%), depending on the luck of connecting to 'good' peers.*
 
 # Requirements
 
