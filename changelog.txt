@@ -15,6 +15,7 @@
 * Client: during initial chain sync (IBD), do not connect to peers that do not serve all the blocks
 * Lib/chain: fixed race condidtion in blockdb.go (potentially hurtful)
 * Client/WebUI: auto reload SSL certificate when it is due to expire
+* Client: Warns about negative values of "CFG.Memory.GCPercTrshold" on Windows (known to cause problems)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
