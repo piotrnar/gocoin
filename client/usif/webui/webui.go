@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/piotrnar/gocoin"
@@ -184,6 +186,63 @@ func (nl null_logger) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
+type certReloader struct {
+	certPath string
+	keyPath  string
+	mu       sync.Mutex // serializes reloads
+	cert     atomic.Pointer[tls.Certificate]
+}
+
+func newCertReloader(certPath, keyPath string) (*certReloader, error) {
+	cr := &certReloader{certPath: certPath, keyPath: keyPath}
+	if err := cr.reload(); err != nil {
+		return nil, err
+	}
+	return cr, nil
+}
+
+func (cr *certReloader) reload() error {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+
+	// Someone else may have reloaded while we were waiting for the lock.
+	if existing := cr.cert.Load(); existing != nil && existing.Leaf != nil &&
+		time.Now().Before(existing.Leaf.NotAfter) {
+		return nil
+	}
+
+	cert, err := tls.LoadX509KeyPair(cr.certPath, cr.keyPath)
+	if err != nil {
+		return err
+	}
+	// Parse the leaf so we can check NotAfter later without re-parsing.
+	if cert.Leaf == nil && len(cert.Certificate) > 0 {
+		leaf, err := x509.ParseCertificate(cert.Certificate[0])
+		if err != nil {
+			return err
+		}
+		cert.Leaf = leaf
+	}
+	cr.cert.Store(&cert)
+	println("SSL certificate loaded, expires:", cert.Leaf.NotAfter.String())
+	return nil
+}
+
+func (cr *certReloader) GetCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	cert := cr.cert.Load()
+	if cert != nil && cert.Leaf != nil && time.Now().Before(cert.Leaf.NotAfter) {
+		return cert, nil
+	}
+	// Expired - try to reload.
+	if err := cr.reload(); err != nil {
+		// Reload failed. Fall back to the old cert so the handshake can
+		// still proceed; the client will see the expired cert and decide.
+		println("cert reload failed:", err.Error())
+		return cert, nil
+	}
+	return cr.cert.Load(), nil
+}
+
 func start_ssl_server() {
 	// try to start SSL server...
 	dat, err := os.ReadFile("ssl_cert/ca.crt")
@@ -207,11 +266,18 @@ func start_ssl_server() {
 	}
 	ssl_serv_addr := fmt.Sprint(":", port)
 
+	cr, err := newCertReloader("ssl_cert/server.crt", "ssl_cert/server.key")
+	if err != nil {
+		println("cert load error:", err.Error())
+		return
+	}
+
 	server := &http.Server{
 		Addr:    ssl_serv_addr,
 		Handler: usif.TrackingMiddleware(http.DefaultServeMux),
 		TLSConfig: &tls.Config{
-			ClientAuth: tls.RequireAndVerifyClientCert,
+			ClientAuth:     tls.RequireAndVerifyClientCert,
+			GetCertificate: cr.GetCertificate,
 		},
 		ErrorLog: log.New(new(null_logger), "", 0),
 	}
@@ -223,7 +289,7 @@ func start_ssl_server() {
 	}
 
 	println("Starting SSL server at", ssl_serv_addr, "...")
-	err = server.ListenAndServeTLS("ssl_cert/server.crt", "ssl_cert/server.key")
+	err = server.ListenAndServeTLS("", "")
 	if err != nil {
 		println(err.Error())
 	}

@@ -14,6 +14,7 @@
 * The DLL based speedup is now using directly libsecp256k1.dll from Bitcoin Core (not the secp256k1.dll)
 * Client: during initial chain sync (IBD), do not connect to peers that do not serve all the blocks
 * Lib/chain: fixed race condidtion in blockdb.go (potentially hurtful)
+* Client/WebUI: auto reload SSL certificate when it is due to expire
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
