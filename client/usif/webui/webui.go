@@ -187,14 +187,16 @@ func (nl null_logger) Write(p []byte) (n int, err error) {
 }
 
 type certReloader struct {
-	certPath string
-	keyPath  string
-	mu       sync.Mutex // serializes reloads
-	cert     atomic.Pointer[tls.Certificate]
+	certPath    string
+	keyPath     string
+	mu          sync.Mutex // serializes reloads
+	cert        atomic.Pointer[tls.Certificate]
+	lastAttempt time.Time     // last time we tried to reload
+	retryAfter  time.Duration // minimum gap between reload attempts
 }
 
-func newCertReloader(certPath, keyPath string) (*certReloader, error) {
-	cr := &certReloader{certPath: certPath, keyPath: keyPath}
+func newCertReloader(certPath, keyPath string, retryAfter time.Duration) (*certReloader, error) {
+	cr := &certReloader{certPath: certPath, keyPath: keyPath, retryAfter: retryAfter}
 	if err := cr.reload(); err != nil {
 		return nil, err
 	}
@@ -210,6 +212,12 @@ func (cr *certReloader) reload() error {
 		time.Now().Before(existing.Leaf.NotAfter) {
 		return nil
 	}
+
+	// Don't hammer the disk if the file isn't being updated.
+	if !cr.lastAttempt.IsZero() && time.Since(cr.lastAttempt) < cr.retryAfter {
+		return nil
+	}
+	cr.lastAttempt = time.Now()
 
 	cert, err := tls.LoadX509KeyPair(cr.certPath, cr.keyPath)
 	if err != nil {
@@ -233,7 +241,7 @@ func (cr *certReloader) GetCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate
 	if cert != nil && cert.Leaf != nil && time.Now().Before(cert.Leaf.NotAfter) {
 		return cert, nil
 	}
-	// Expired - try to reload.
+	// Expired - try to reload (may be a no-op if we tried recently).
 	if err := cr.reload(); err != nil {
 		// Reload failed. Fall back to the old cert so the handshake can
 		// still proceed; the client will see the expired cert and decide.
@@ -266,7 +274,7 @@ func start_ssl_server() {
 	}
 	ssl_serv_addr := fmt.Sprint(":", port)
 
-	cr, err := newCertReloader("ssl_cert/server.crt", "ssl_cert/server.key")
+	cr, err := newCertReloader("ssl_cert/server.crt", "ssl_cert/server.key", 5*time.Minute)
 	if err != nil {
 		println("cert load error:", err.Error())
 		return
