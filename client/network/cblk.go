@@ -266,6 +266,11 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 			c.DoS("CmpctBlkErrD")
 			return
 		}
+		if idx >= len(col.Txs) {
+			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error F", hex.EncodeToString(pl))
+			c.DoS("CmpctBlkErrF")
+			return
+		}
 		idx += exp
 		offs += n
 		n = btc.TxSize(pl[offs:])
