@@ -239,7 +239,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 	shortidx_idx = offs
 	shortids := make(map[uint64][]byte, shortidscnt)
 	for i := 0; i < int(shortidscnt); i++ {
-		if len(pl[offs:offs+6]) < 6 {
+		if len(pl) < offs+6 {
 			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error B2", hex.EncodeToString(pl))
 			c.DoS("CmpctBlkErrB2")
 			return
