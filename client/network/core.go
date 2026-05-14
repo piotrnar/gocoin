@@ -55,7 +55,8 @@ const (
 	PeerTickPeriod  = 100 * time.Millisecond // run the peer's tick not more often than this
 	InvsFlushPeriod = 10 * time.Millisecond  // send all the pending invs to the peer not more often than this
 
-	MAX_GETMP_TXS = 1e6
+	MAX_GETMP_TXS  = 1e6
+	MAX_LOCATOR_SZ = 101
 )
 
 var (
@@ -790,13 +791,13 @@ func maxmsgsize(cmd string) uint {
 	case "block":
 		return 4e6 // max segwit block size 4MB
 	case "getblocks":
-		return 4 + 9 + 101*32 + 32 // MAX_LOCATOR_SZ = 101
+		return 4 + 9 + MAX_LOCATOR_SZ*32 + 32
 	case "getdata":
 		return 9 + 50000*36 // core: MAX_INV_SZ = 50000
 	case "headers":
 		return 9 + 2000*89 // core: MAX_HEADERS_RESULTS = 2000
 	case "getheaders":
-		return 4 + 9 + 101*32 + 32 // MAX_LOCATOR_SZ = 101
+		return 4 + 9 + MAX_LOCATOR_SZ*32 + 32
 	case "cmpctblock":
 		return 1e6 // 1MB shall be enough
 	case "getblocktxn":

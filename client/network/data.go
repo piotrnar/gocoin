@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"io"
 	"os"
 	"slices"
@@ -273,9 +274,18 @@ func parseLocatorsPayload(pl []byte) (h2get []*btc.Uint256, hashstop *btc.Uint25
 	if cnt, er = btc.ReadVLen(b); er != nil {
 		return
 	}
+	if cnt > MAX_LOCATOR_SZ {
+		println("parseLocatorsPayload: limit allocator size form", cnt, "to", MAX_LOCATOR_SZ)
+		cnt = MAX_LOCATOR_SZ
+	}
 
 	// block locator hashes
 	if cnt > 0 {
+		if b.Len() < int(cnt)*32 {
+			println("parseLocatorsPayload: message too short", b.Len(), int(cnt)*32)
+			er = errors.New("parseLocatorsPayload: message too short")
+			return
+		}
 		h2get = make([]*btc.Uint256, cnt)
 		for i := 0; i < int(cnt); i++ {
 			h2get[i] = new(btc.Uint256)
