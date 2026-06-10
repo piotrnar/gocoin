@@ -559,13 +559,19 @@ func NetworkTick() {
 					}
 				}
 				if !still_hope {
-					/*println(time.Now().Format("15:04:05"), "Drop block", v.Height, v.BlockHash.String(), " while @", common.Last.BlockHeight())
-					println("  announced", time.Since(v.Started).String(), "ago, with SendInvs:", v.SendInvs)
-					print("  only from:")
-					for _, cid := range v.OnlyFetchFrom {
-						print(" ", cid)
+					if !common.Testnet {
+						/* I have seen it happening in mainnet:
+						Revert LastCommitedHeader to 952928
+						*** Block 952924 000000000000000000013ca80e14421269687c9700132b78a77dbdcad1857f41 disarded
+						*/
+						println(time.Now().Format("15:04:05"), "Drop block", v.Height, v.BlockHash.String(), " while @", common.Last.BlockHeight())
+						println("  announced", time.Since(v.Started).String(), "ago, with SendInvs:", v.SendInvs)
+						print("  only from:")
+						for _, cid := range v.OnlyFetchFrom {
+							print(" ", cid)
+						}
+						println()
 					}
-					println()*/
 					common.CountSafe("BlockDlFailed")
 					DelB2G(idx)
 					DiscardBlock(v.BlockTreeNode)
