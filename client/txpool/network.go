@@ -178,7 +178,7 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 				if pos[i].WasCoinbase {
 					if common.Last.BlockHeight()+1-pos[i].BlockHeight < chain.COINBASE_MATURITY {
 						rejectTx(ntx.Tx, TX_REJECTED_CB_INMATURE, nil)
-						fmt.Println(tx.Hash.String(), "trying to spend inmature coinbase block", pos[i].BlockHeight, "at", common.Last.BlockHeight())
+						fmt.Println(tx.Hash.String(), "trying to spend immature coinbase block", pos[i].BlockHeight, "at", common.Last.BlockHeight())
 						return TX_REJECTED_CB_INMATURE, nil
 					}
 				}

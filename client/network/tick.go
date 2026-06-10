@@ -575,7 +575,7 @@ func NetworkTick() {
 					common.CountSafe("BlockDlFailed")
 					DelB2G(idx)
 					DiscardBlock(v.BlockTreeNode)
-					println("*** Block", v.Height, v.BlockHash.String(), "disarded")
+					println("*** Block", v.Height, v.BlockHash.String(), "discarded")
 				}
 			}
 		}
