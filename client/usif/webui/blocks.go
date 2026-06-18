@@ -48,14 +48,18 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 	common.Last.Mutex.Unlock()
 
 	for cnt := uint32(0); end != nil && cnt < common.Get(&common.CFG.WebUI.ShowBlocks); cnt++ {
-		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
+		cbl, _, e := common.BlockChain.Blocks.BlockGetExt(end.BlockHash)
 		if e != nil {
 			break
 		}
-		block, e := btc.NewBlockX(bl, end.BlockHash)
-		if e != nil {
-			break
+		if cbl.Block == nil {
+			cbl.Block, e = btc.NewBlockX(cbl.Data, end.BlockHash)
+			if e != nil {
+				break
+			}
 		}
+		block := cbl.Block
+
 		common.BlockChain.BlockIndexAccess.Lock()
 		node := common.BlockChain.BlockIndex[end.BlockHash.BIdx()]
 		common.BlockChain.BlockIndexAccess.Unlock()
@@ -69,7 +73,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.Timestamp = block.BlockTime()
 		b.Hash = end.BlockHash.String()
 		b.TxCnt = block.TxCount
-		b.Size = len(bl)
+		b.Size = len(block.Raw)
 		b.Weight = block.BlockWeight
 		b.Version = block.Version()
 
@@ -135,7 +139,6 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 	} else {
 		println(er.Error())
 	}
-
 }
 
 func json_blfees(w http.ResponseWriter, r *http.Request) {
