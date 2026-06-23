@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"runtime"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -381,11 +380,6 @@ func Reset() {
 	} else if CFG.Memory.GCPercTrshold == 0 {
 		fmt.Println("INFO: GCPercTrshold config value changed from", CFG.Memory.GCPercTrshold, "to 1")
 		CFG.Memory.GCPercTrshold = 1
-	}
-	if runtime.GOOS == "windows" && CFG.Memory.GCPercTrshold < 0 {
-		println("WARNING: Disabling GC on Windows can cause massive virtual memory fragmentation")
-		println("         and out-of-memory crashes due to Windows' strict commit charge limits.")
-		println("         Consider using GCPercTrshold with a positive value instead.")
 	}
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	UpdateMemoryLimit()

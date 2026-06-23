@@ -15,7 +15,6 @@
 * Client: during initial chain sync (IBD), do not connect to peers that do not serve all the blocks
 * Lib/chain: fixed race condidtion in blockdb.go (potentially hurtful)
 * Client/WebUI: auto reload SSL certificate when it is due to expire
-* Client: Warns about negative values of "CFG.Memory.GCPercTrshold" on Windows (known to cause problems)
 * Client: fixed a potential DoS attack vector: "getblocks" or "getheaders" message with a corrupt number of locators
 * Client: fixed a potential DoS attack vector: "cmpctblock" message with a corrupt payload
 * Client/WebUI: vastly improved performance of "blocks.json" by keeping built block's txs in its blocks cache
