@@ -18,6 +18,7 @@
 * Client: fixed a potential DoS attack vector: "getblocks" or "getheaders" message with a corrupt number of locators
 * Client: fixed a potential DoS attack vector: "cmpctblock" message with a corrupt payload
 * Client/WebUI: vastly improved performance of "blocks.json" by keeping built block's txs in its blocks cache
+* Wallet: From now creates transactions with version value of 2, allowing to specify "-txver <value>" to change it
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

@@ -198,7 +198,7 @@ func write_tx_file(tx *btc.Tx) {
 func make_signed_tx() {
 	// Make an empty transaction
 	tx := new(btc.Tx)
-	tx.Version = 1
+	tx.Version = uint32(*tx_version)
 	tx.Lock_time = uint32(*lock_time)
 	tx.AllocVerVars() // otherwise any reference to tx.Spent_outputs will panic
 
