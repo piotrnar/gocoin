@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sync"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -15,7 +14,7 @@ import (
 )
 
 const (
-	CURRENT_FILE_VERSION = 3
+	CURRENT_FILE_VERSION = 4
 	BALANCES_SUBDIR      = "bal"
 )
 
@@ -85,12 +84,11 @@ func newAddrBal(rd *bufio.Reader) (res *OneAllAddrBal) {
 	return
 }
 
-func load_map(dir string, idx int, wg *sync.WaitGroup) {
+func load_map(dir string) {
 	var le uint64
 	var er error
 
-	defer wg.Done()
-	if f, _ := os.Open(dir + IDX2SYMB[idx]); f != nil {
+	if f, _ := os.Open(dir + "ALL"); f != nil {
 		rd := bufio.NewReaderSize(f, 0x4000)
 		if le, er = btc.ReadVLen(rd); er != nil {
 			return
@@ -104,11 +102,11 @@ func load_map(dir string, idx int, wg *sync.WaitGroup) {
 			themap[ke] = newAddrBal(rd)
 		}
 		f.Close()
-		allBalances[idx] = themap
+		allBalances = themap
 	}
 }
 
-func save_map(fn string, tm map[OneAddrIndex]*OneAllAddrBal, wg *sync.WaitGroup) {
+func save_map(fn string, tm map[OneAddrIndex]*OneAllAddrBal) {
 	if f, _ := os.Create(fn); f != nil {
 		wr := bufio.NewWriterSize(f, 0x100000)
 		btc.WriteVlen(wr, uint64(len(tm)))
@@ -118,7 +116,6 @@ func save_map(fn string, tm map[OneAddrIndex]*OneAllAddrBal, wg *sync.WaitGroup)
 		wr.Flush()
 		f.Close()
 	}
-	wg.Done()
 }
 
 func LoadBalances() (er error) {
@@ -133,12 +130,7 @@ func LoadBalances() (er error) {
 
 	dir += string(os.PathSeparator)
 
-	var wg sync.WaitGroup
-	for i := range allBalances {
-		wg.Add(1)
-		go load_map(dir, i, &wg)
-	}
-	wg.Wait()
+	load_map(dir)
 
 	for i := range allBalances {
 		if allBalances[i] == nil {
@@ -181,12 +173,7 @@ func SaveBalances() (er error) {
 	}
 	dir += string(os.PathSeparator)
 
-	var wg sync.WaitGroup
-	for i := range allBalances {
-		wg.Add(1)
-		go save_map(dir+IDX2SYMB[i], allBalances[i], &wg)
-	}
-	wg.Wait()
+	save_map(dir+"ALL", allBalances)
 	LAST_SAVED_FNAME = fname
 	return
 }

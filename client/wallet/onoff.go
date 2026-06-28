@@ -15,7 +15,7 @@ var (
 )
 
 func InitMaps(empty bool) {
-	var szs [IDX_CNT]int
+	var szs int
 
 	if !empty {
 		LoadMapSizes()
@@ -23,9 +23,7 @@ func InitMaps(empty bool) {
 		// If yet unknown, just continue with zero size maps
 	}
 
-	for i := range allBalances {
-		allBalances[i] = make(map[OneAddrIndex]*OneAllAddrBal, szs[i])
-	}
+	allBalances = make(map[OneAddrIndex]*OneAllAddrBal, szs)
 	useMapCnt = int(common.Get(&common.CFG.AllBalances.UseMapCnt))
 }
 
@@ -84,15 +82,11 @@ const (
 )
 
 var (
-	WalletAddrsCount map[uint64][IDX_CNT]int = make(map[uint64][IDX_CNT]int) //index:MinValue, [0]-P2KH, [1]-P2SH, [2]-P2WSH, [3]-P2WKH, [4]-P2TAP
+	WalletAddrsCount map[uint64]int = make(map[uint64]int) //index:MinValue, [0]-P2KH, [1]-P2SH, [2]-P2WSH, [3]-P2WKH, [4]-P2TAP
 )
 
 func UpdateMapSizes() {
-	var tmp [IDX_CNT]int
-	for i := range tmp {
-		tmp[i] = len(allBalances[i])
-	}
-	WalletAddrsCount[common.AllBalMinVal()] = tmp
+	WalletAddrsCount[common.AllBalMinVal()] = len(allBalances)
 	buf := new(bytes.Buffer)
 	gob.NewEncoder(buf).Encode(WalletAddrsCount)
 	os.WriteFile(common.GocoinHomeDir+MAPSIZ_FILE_NAME, buf.Bytes(), 0600)

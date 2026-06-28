@@ -8,7 +8,6 @@ import (
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/siphash"
 	"github.com/piotrnar/gocoin/lib/script"
 	"github.com/piotrnar/gocoin/lib/utxo"
 )
@@ -38,7 +37,7 @@ type OneAllAddrBal struct {
 }
 
 var (
-	allBalances [IDX_CNT]map[OneAddrIndex]*OneAllAddrBal
+	allBalances map[OneAddrIndex]*OneAllAddrBal
 	accessMutex sync.Mutex
 	useMapCnt   int
 )
@@ -57,27 +56,27 @@ func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 }
 
 func ourHash(dat []byte) OneAddrIndex {
-	return OneAddrIndex(siphash.Hash(0, 0, dat))
-	/*var ou [32]byte
+	//return OneAddrIndex(siphash.Hash(0, 0, dat))
+	var ou [32]byte
 	btc.ShaHash(dat, ou[:])
-	return OneAddrIndex(binary.LittleEndian.Uint64(ou[:8]))*/
+	return OneAddrIndex(binary.LittleEndian.Uint64(ou[:8]))
 }
 
 func Script2Idx(pkscr []byte) (idx int, uidx OneAddrIndex) {
 	if script.IsP2KH(pkscr) {
-		uidx = ourHash(pkscr[3:23])
+		uidx = ourHash(pkscr)
 		idx = IDX_P2KH
 	} else if script.IsP2SH(pkscr) {
-		uidx = ourHash(pkscr[2:22])
+		uidx = ourHash(pkscr)
 		idx = IDX_P2SH
 	} else if script.IsP2WPKH(pkscr) {
-		uidx = ourHash(pkscr[2:22])
+		uidx = ourHash(pkscr)
 		idx = IDX_P2WKH
 	} else if script.IsP2WSH(pkscr) {
-		uidx = ourHash(pkscr[2:34])
+		uidx = ourHash(pkscr)
 		idx = IDX_P2WSH
 	} else if script.IsP2TAP(pkscr) {
-		uidx = ourHash(pkscr[2:34])
+		uidx = ourHash(pkscr)
 		idx = IDX_P2TAP
 	} else {
 		idx = -1
@@ -87,7 +86,6 @@ func Script2Idx(pkscr []byte) (idx int, uidx OneAddrIndex) {
 
 func NewUTXO(tx *utxo.UtxoRec) {
 	var uidx OneAddrIndex
-	var idx int
 	var rec *OneAllAddrBal
 	var nr OneAllAddrInp
 
@@ -101,13 +99,11 @@ func NewUTXO(tx *utxo.UtxoRec) {
 		if out.Value < common.AllBalMinVal() {
 			continue
 		}
-		if idx, uidx = Script2Idx(out.PKScr); idx < 0 {
-			continue
-		}
-		rec = allBalances[idx][uidx]
+		uidx = ourHash(out.PKScr)
+		rec = allBalances[uidx]
 		if rec == nil {
 			rec = &OneAllAddrBal{}
-			allBalances[idx][uidx] = rec
+			allBalances[uidx] = rec
 		}
 
 		binary.LittleEndian.PutUint32(nr[utxo.UtxoIdxLen:], vout)
@@ -136,7 +132,7 @@ func NewUTXO(tx *utxo.UtxoRec) {
 func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 	var uidx OneAddrIndex
 	var rec *OneAllAddrBal
-	var i, idx int
+	var i int
 	var nr OneAllAddrInp
 	var ok bool
 	copy(nr[:utxo.UtxoIdxLen], tx.TxID[:]) //RecIdx
@@ -144,10 +140,8 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 		if !outs[vout] || out == nil || out.Value < common.AllBalMinVal() {
 			continue
 		}
-		if idx, uidx = Script2Idx(out.PKScr); idx < 0 {
-			continue
-		}
-		if rec, ok = allBalances[idx][uidx]; !ok {
+		uidx = ourHash(out.PKScr)
+		if rec, ok = allBalances[uidx]; !ok {
 			println("ERROR: balance rec not found for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String(),
 				btc.NewUint256(tx.TxID[:]).String(), vout, btc.UintToBtc(out.Value))
 			continue
@@ -162,7 +156,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 			}
 			delete(rec.unspMap, nr)
 			if len(rec.unspMap) == 0 {
-				delete(allBalances[idx], uidx)
+				delete(allBalances, uidx)
 			} else {
 				rec.Value -= out.Value
 			}
@@ -174,7 +168,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 			continue
 		}
 		if len(rec.unsp) == 1 {
-			delete(allBalances[idx], uidx)
+			delete(allBalances, uidx)
 		} else {
 			rec.Value -= out.Value
 			rec.unsp = append(rec.unsp[:i], rec.unsp[i+1:]...)
@@ -243,35 +237,8 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	accessMutex.Lock() // in case this function was not called from the main thread
 	defer accessMutex.Unlock()
 
-	if aa.SegwitProg != nil {
-		if aa.SegwitProg.Version == 1 && len(aa.SegwitProg.Program) == 32 {
-			uidx = ourHash(aa.SegwitProg.Program)
-			rec = allBalances[IDX_P2TAP][uidx]
-		} else {
-			if aa.SegwitProg.Version != 0 {
-				return
-			}
-			switch len(aa.SegwitProg.Program) {
-			case 20:
-				copy(aa.Hash160[:], aa.SegwitProg.Program)
-				uidx = ourHash(aa.Hash160[:])
-				rec = allBalances[IDX_P2WKH][uidx]
-			case 32:
-				uidx = ourHash(aa.SegwitProg.Program)
-				rec = allBalances[IDX_P2WSH][uidx]
-			default:
-				return
-			}
-		}
-	} else if aa.Version == btc.AddrVerPubkey(common.Testnet) {
-		uidx = ourHash(aa.Hash160[:])
-		rec = allBalances[IDX_P2KH][uidx]
-	} else if aa.Version == btc.AddrVerScript(common.Testnet) {
-		uidx = ourHash(aa.Hash160[:])
-		rec = allBalances[IDX_P2SH][uidx]
-	} else {
-		return
-	}
+	uidx = ourHash(aa.OutScript())
+	rec = allBalances[uidx]
 	if rec != nil {
 		rec.Browse(func(v *OneAllAddrInp) {
 			if qr, vout := v.GetRec(); qr != nil {
@@ -299,39 +266,35 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	return
 }
 
-func browse(cb func(addr_type int, addr_hash OneAddrIndex, coins *OneAllAddrBal)) {
-	for idx := range allBalances {
-		for k, r := range allBalances[idx] {
-			cb(idx, k, r)
-		}
+func browse(cb func(addr_hash OneAddrIndex, coins *OneAllAddrBal)) {
+	for k, r := range allBalances {
+		cb(k, r)
 	}
 }
 
-func Browse(cb func(addr_type int, addr_hash OneAddrIndex, coins *OneAllAddrBal)) {
+func Browse(cb func(addr_hash OneAddrIndex, coins *OneAllAddrBal)) {
 	accessMutex.Lock()
 	browse(cb)
 	accessMutex.Unlock()
 }
 
 func PrintStat() {
-	var maps, outs, vals [IDX_CNT]uint64
+	var maps, outs, vals uint64
 
 	accessMutex.Lock()
 	fmt.Println("AllBalMinVal:", btc.UintToBtc(common.AllBalMinVal()),
 		"  UseMapCnt:", useMapCnt, "  Saved As:", LAST_SAVED_FNAME)
 
-	browse(func(idx int, k OneAddrIndex, r *OneAllAddrBal) {
-		vals[idx] += r.Value
+	browse(func(k OneAddrIndex, r *OneAllAddrBal) {
+		vals += r.Value
 		if r.unspMap != nil {
-			maps[idx]++
-			outs[idx] += uint64(len(r.unspMap))
+			maps++
+			outs += uint64(len(r.unspMap))
 		} else {
-			outs[idx] += uint64(len(r.unsp))
+			outs += uint64(len(r.unsp))
 		}
 	})
-	for idx := range outs {
-		fmt.Println("AllBalances", IDX2SYMB[idx], ":", len(allBalances[idx]), "records,",
-			outs[idx], "outputs,", btc.UintToBtc(vals[idx]), "BTC,", maps[idx], "maps")
-	}
+	fmt.Println("AllBalances:", len(allBalances), "records,",
+		outs, "outputs,", btc.UintToBtc(vals), "BTC,", maps, "maps")
 	accessMutex.Unlock()
 }

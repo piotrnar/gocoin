@@ -18,7 +18,6 @@ import (
 type OneWalletAddrs struct {
 	rec *wallet.OneAllAddrBal
 	Key wallet.OneAddrIndex
-	Idx int
 }
 
 type SortedWalletAddrs []OneWalletAddrs
@@ -51,7 +50,7 @@ func best_val(par string) {
 }
 
 func all_addrs(par string) {
-	var outs, vals, cnts [wallet.IDX_CNT]uint64
+	var outs, vals, cnts uint64
 	var best SortedWalletAddrs
 	var cnt int = 15
 	var mode int = wallet.IDX_CNT
@@ -105,18 +104,15 @@ func all_addrs(par string) {
 		MIN_OUTS = 0
 	}
 
-	wallet.Browse(func(idx int, k wallet.OneAddrIndex, rec *wallet.OneAllAddrBal) {
-		cnts[idx]++
-		vals[idx] += rec.Value
-		outs[idx] += uint64(rec.Count())
+	wallet.Browse(func(k wallet.OneAddrIndex, rec *wallet.OneAllAddrBal) {
+		cnts++
+		vals += rec.Value
+		outs += uint64(rec.Count())
 		if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
-			best = append(best, OneWalletAddrs{Idx: idx, Key: k, rec: rec})
+			best = append(best, OneWalletAddrs{Key: k, rec: rec})
 		}
 	})
-	for idx := range outs {
-		fmt.Println(btc.UintToBtc(vals[idx]), "BTC in", outs[idx], "unspent recs from",
-			cnts[idx], wallet.IDX2SYMB[idx], "addresses")
-	}
+	fmt.Println(btc.UintToBtc(vals), "BTC in", outs, "unspent recs from", cnts)
 
 	if sort_by_cnt {
 		fmt.Println("Top addresses with at least", MIN_OUTS, "unspent outputs:", len(best))
