@@ -32,7 +32,7 @@ type OneAllAddrInp [utxo.UtxoIdxLen + 4]byte
 type OneAddrIndex uint64
 
 type OneAllAddrBal struct {
-	unspMap map[OneAllAddrInp]bool
+	unspMap map[OneAllAddrInp]struct{}
 	unsp    []OneAllAddrInp
 	Value   uint64 // Highest bit of it means P2SH
 }
@@ -58,6 +58,9 @@ func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 
 func ourHash(dat []byte) OneAddrIndex {
 	return OneAddrIndex(siphash.Hash(0, 0, dat))
+	/*var ou [32]byte
+	btc.ShaHash(dat, ou[:])
+	return OneAddrIndex(binary.LittleEndian.Uint64(ou[:8]))*/
 }
 
 func Script2Idx(pkscr []byte) (idx int, uidx OneAddrIndex) {
@@ -112,17 +115,17 @@ func NewUTXO(tx *utxo.UtxoRec) {
 		rec.Value += out.Value
 
 		if rec.unspMap != nil {
-			rec.unspMap[nr] = true
+			rec.unspMap[nr] = struct{}{}
 			continue
 		}
 		if len(rec.unsp) >= useMapCnt-1 {
 			// Switch to using map
-			rec.unspMap = make(map[OneAllAddrInp]bool, 2*useMapCnt)
+			rec.unspMap = make(map[OneAllAddrInp]struct{}, 2*useMapCnt)
 			for _, v := range rec.unsp {
-				rec.unspMap[v] = true
+				rec.unspMap[v] = struct{}{}
 			}
 			rec.unsp = nil
-			rec.unspMap[nr] = true
+			rec.unspMap[nr] = struct{}{}
 			continue
 		}
 

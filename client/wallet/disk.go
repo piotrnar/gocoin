@@ -65,12 +65,12 @@ func newAddrBal(rd *bufio.Reader) (res *OneAllAddrBal) {
 	}
 	if int(le) >= useMapCnt {
 		var k OneAllAddrInp
-		b.unspMap = make(map[OneAllAddrInp]bool, int(le))
+		b.unspMap = make(map[OneAllAddrInp]struct{}, int(le))
 		for ; le > 0; le-- {
 			if _, er = io.ReadFull(rd, k[:]); er != nil {
 				return
 			}
-			b.unspMap[k] = true
+			b.unspMap[k] = struct{}{}
 		}
 	} else {
 		b.unsp = make([]OneAllAddrInp, int(le))
