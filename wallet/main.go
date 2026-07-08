@@ -177,6 +177,11 @@ func main() {
 		cleanExit(0)
 	}
 
+	if waltype != 4 && (*dumpwords || bip39wrds != 0) {
+		fmt.Println("ERROR: BIP39 features not supported for wallet type", waltype)
+		cleanExit(1)
+	}
+
 	// make the wallet...
 	// this will handle: *dumpwords, *dumpxprv, *encrypt and *decrypt
 	make_wallet()
