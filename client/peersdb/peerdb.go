@@ -26,10 +26,13 @@ const (
 	ExpireDeadPeerAfter   = (1 * 24 * time.Hour)
 	ExpireAlivePeerAfter  = (3 * 24 * time.Hour)
 	ExpireBannedPeerAfter = (7 * 24 * time.Hour)
-	MinPeersInDB          = 2500
-	MaxPeersInDB          = 70000
 	MaxPeersDeviation     = 2500
 	ExpirePeersPeriod     = (5 * time.Minute)
+)
+
+var (
+	MinPeersInDB = int(2500)
+	MaxPeersInDB = int(70000)
 )
 
 /*
@@ -228,21 +231,19 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 	}
 	ipa, er := net.ResolveIPAddr("ip4", ipstr)
 	if er == nil {
-		if ipa == nil || len(ipa.IP) != 4 && len(ipa.IP) != 16 {
-			e = errors.New("peerdb.NewAddrFromString(" + ipstr + ") - address error")
-		} else {
+		if len(ipa.IP) == net.IPv6len {
+			ipa.IP = ipa.IP.To4()
+		}
+		if len(ipa.IP) == net.IPv4len {
 			p = NewPeer(nil)
 			p.Services = Services
 			p.Port = port
-			if len(ipa.IP) == 4 {
-				copy(p.Ip4[:], ipa.IP[:])
-			} else {
-				//copy(p.Ip4[:], ipa.IP[12:16]) - we do not support ipv6
-				copy(p.Ip6[:], ipa.IP[:12])
-			}
+			copy(p.Ip4[:], ipa.IP[:])
 			if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp != nil {
 				p = NewPeer(dbp) // if we already had it, take the previous record
 			}
+		} else {
+			e = errors.New("peerdb.NewAddrFromString(" + ipstr + ") - address error")
 		}
 	} else {
 		e = errors.New("peerdb.NewAddrFromString(" + ipstr + ") - " + er.Error())
@@ -295,36 +296,26 @@ func DeleteFromIP(ip []byte) int {
 func ExpirePeers() {
 	peerdb_mutex.Lock()
 	defer peerdb_mutex.Unlock()
-	if PeerDB.Count() > 11*MinPeersInDB/10 {
+	if PeerDB.Count() > 11*MinPeersInDB/10 { // we run this procedure if there is 10% more peers than MinPeersInDB
 		common.CountSafe("PeersExpireNeeded")
 		now := time.Now()
 		expire_dead_before_time := uint32(now.Add(-ExpireDeadPeerAfter).Unix())
 		expire_alive_before_time := uint32(now.Add(-ExpireAlivePeerAfter).Unix())
 		expire_banned_before_time := uint32(now.Add(-ExpireBannedPeerAfter).Unix())
-		recs := make(manyPeers, PeerDB.Count())
-		var i, c_dead1, c_dead2, c_seen_alive, c_banned, c_invalid int
+		recs := make(ManyPeers, 0, PeerDB.Count())
+		var c_dead1, c_dead2, c_seen_alive, c_banned, c_invalid int
 		PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
-			if i >= len(recs) {
-				println("ERROR: PeersDB grew since we checked its size. Please report!")
-				return 0
-			}
-			recs[i] = NewPeer(v)
-			i++
+			recs = append(recs, NewPeer(v))
 			return 0
 		})
-		if i < len(recs) {
-			println("ERROR: PeersDB shrunk since we checked its size. Please report!")
-			recs = recs[:i]
+		if cap(recs) != len(recs) {
+			println("ERROR: PeersDB shrunk since we checked its size. Please report!", cap(recs), len(recs))
 		}
 		sort.Sort(recs)
-		for i = len(recs) - 1; i >= 0; i-- {
+		for i := len(recs) - 1; i >= 0; i-- {
 			var delit bool
 			rec := recs[i]
-			if !rec.ValidIP() {
-				// There may be some old (pre Aug 2026) IPv6 type addresses, so we make sure to discard them
-				delit = true
-				c_invalid++
-			} else if !rec.SeenAlive {
+			if !rec.SeenAlive {
 				if PeerDB.Count() > MaxPeersInDB-MaxPeersDeviation {
 					// if DB is full, we delete all the oldest never-alive records
 					delit = true
@@ -384,13 +375,6 @@ func IsV4Mapped(ip6 []byte) bool {
 	}
 	// bytes 8-11 must be 0x00 0x00 0xff 0xff
 	return binary.BigEndian.Uint32(ip6[8:12]) == 0x0000ffff
-}
-
-func (p *PeerAddr) ValidIP() bool {
-	if !IsV4Mapped(p.Ip6[:]) {
-		return false
-	}
-	return sys.ValidIp4(p.Ip4[:]) && !sys.IsIPBlocked(p.Ip4[:])
 }
 
 func (p *PeerAddr) Save() {
@@ -495,38 +479,36 @@ func (p *PeerAddr) String() (s string) {
 	return
 }
 
-type manyPeers []*PeerAddr
+type ManyPeers []*PeerAddr
 
-func (mp manyPeers) Len() int {
+func (mp ManyPeers) Len() int {
 	return len(mp)
 }
 
-func (mp manyPeers) Less(i, j int) bool {
+func (mp ManyPeers) Less(i, j int) bool {
 	return mp[i].Time > mp[j].Time
 }
 
-func (mp manyPeers) Swap(i, j int) {
+func (mp ManyPeers) Swap(i, j int) {
 	mp[i], mp[j] = mp[j], mp[i]
 }
 
 // GetRecentPeersExt fetches a given number of best (most recenty seen) peers.
-func GetRecentPeers(limit uint, sort_result bool, ignorePeer func(*PeerAddr) bool) (res manyPeers) {
+func GetRecentPeers(limit uint, sort_result bool, ignorePeer func(*PeerAddr) bool) (res ManyPeers) {
 	if proxyPeer != nil {
 		if ignorePeer == nil || !ignorePeer(proxyPeer) {
-			return manyPeers{proxyPeer}
+			return ManyPeers{proxyPeer}
 		}
-		return manyPeers{}
+		return ManyPeers{}
 	}
-	res = make(manyPeers, 0)
+	res = make(ManyPeers, 0)
 	peerdb_mutex.Lock()
 	PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		ad := NewPeer(v)
-		if ad.ValidIP() {
-			if ignorePeer == nil || !ignorePeer(ad) {
-				res = append(res, ad)
-				if !sort_result && len(res) >= int(limit) {
-					return qdb.BR_ABORT
-				}
+		if ignorePeer == nil || !ignorePeer(ad) {
+			res = append(res, ad)
+			if !sort_result && len(res) >= int(limit) {
+				return qdb.BR_ABORT
 			}
 		}
 		return 0
@@ -574,6 +556,11 @@ func initSeeds(seeds []string, port uint16) {
 // InitPeers should be called from the main thread.
 func InitPeers(dir string) {
 	PeerDB, _ = qdb.NewDB(dir+"peers3", true)
+
+	if common.Testnet {
+		MinPeersInDB /= 2
+		MaxPeersInDB /= 2
+	}
 
 	if ConnectOnly != "" {
 		x := strings.Index(ConnectOnly, ":")

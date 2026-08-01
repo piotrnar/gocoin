@@ -11,6 +11,7 @@ import (
 	"github.com/piotrnar/gocoin/client/peersdb"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 func show_node_stats(par string) {
@@ -45,9 +46,13 @@ func show_node_stats(par string) {
 func show_addresses(par string) {
 	pars := strings.Split(par, " ")
 	if len(pars) < 1 || pars[0] == "" {
-		bcnt, acnt := 0, 0
+		var bcnt, acnt, localip int
 		peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			pr := peersdb.NewPeer(v)
+			if !sys.ValidIp4(pr.Ip4[:]) {
+				localip++
+				fmt.Println("Local IP", pr.String())
+			}
 			if pr.Banned != 0 {
 				bcnt++
 			}
@@ -59,6 +64,7 @@ func show_addresses(par string) {
 		fmt.Println("Peers in DB:", peersdb.PeerDB.Count())
 		fmt.Println("Peers seen alive:", acnt)
 		fmt.Println("Peers banned:", bcnt)
+		fmt.Println("Local IPs:", localip)
 		fmt.Println("QDB stats:", peersdb.PeerDB.GetStats())
 		return
 	}

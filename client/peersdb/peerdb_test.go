@@ -70,12 +70,12 @@ func TestNewAddrFromString(t *testing.T) {
 
 	// mainnet
 	common.DefaultTcpPort = 8333
-	test_one_addr(t, "fi.gocoin.pl", [4]byte{95, 217, 73, 162}, 8333)
+	test_one_addr(t, "gocoin.pl", [4]byte{207, 90, 207, 47}, 8333)
 	test_one_addr(t, "1.2.3.4", [4]byte{1, 2, 3, 4}, 8333)
 
 	// Testnet
 	common.DefaultTcpPort = 18333
-	test_one_addr(t, "kaja.gocoin.pl", [4]byte{195, 136, 152, 164}, 18333)
+	test_one_addr(t, "www.gocoin.pl", [4]byte{207, 90, 207, 47}, 18333)
 	test_one_addr(t, "255.254.253.252", [4]byte{255, 254, 253, 252}, 18333)
 
 	var e error

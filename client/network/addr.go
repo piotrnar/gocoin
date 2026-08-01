@@ -132,7 +132,7 @@ func (c *OneConnection) SendOwnAddr() {
 
 // ParseAddr parses the network's "addr" message.
 func (c *OneConnection) ParseAddr(pl []byte) {
-	var c_ip_invalid, c_future, c_old, c_new_rejected, c_new_taken, c_stale, c_no_segwit uint64
+	var c_ip6, c_ip_invalid, c_future, c_old, c_new_rejected, c_new_taken, c_stale, c_no_segwit uint64
 	have_enough := peersdb.PeerDB.Count() > peersdb.MinPeersInDB
 	b := bytes.NewBuffer(pl)
 	cnt, _ := btc.ReadVLen(b)
@@ -145,7 +145,9 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 			break
 		}
 		a := peersdb.NewPeer(buf[:])
-		if (a.Services & btc.SERVICE_SEGWIT) == 0 {
+		if peersdb.IsV4Mapped(a.Ip6[:]) {
+			c_ip6++
+		} else if (a.Services & btc.SERVICE_SEGWIT) == 0 {
 			c_no_segwit++
 		} else if !sys.ValidIp4(a.Ip4[:]) {
 			c_ip_invalid++
@@ -187,6 +189,9 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 		}
 	}
 	common.CounterMutex.Lock()
+	if c_ip6 > 0 {
+		common.CountAdd("AddrIPv6", c_ip6)
+	}
 	if c_ip_invalid > 0 {
 		common.CountAdd("AddrIPinvalid", c_ip_invalid)
 	}
