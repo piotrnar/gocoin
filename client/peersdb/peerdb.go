@@ -548,11 +548,13 @@ func initSeeds(seeds []string, port uint16) {
 			//println(len(ad), "addrs from", seeds[i])
 			for j := range ad {
 				ip := net.ParseIP(ad[j])
-				if len(ip) == 16 && IsV4Mapped(ip[12:16]) /*Ipv6 support disabled*/ {
-					p := NewPeer(nil)
+				if len(ip) == net.IPv6len {
+					ip = ip.To4()
+				}
+				if len(ip) == net.IPv4len /*Ipv6 support disabled*/ {
+					p := NewPeer(nil) // This inits Ip6 field accordingly
 					p.Services = 0xFFFFFFFFFFFFFFFF
-					copy(p.Ip6[:], ip[:12])
-					copy(p.Ip4[:], ip[12:16])
+					copy(p.Ip4[:], ip)
 					p.Port = port
 					if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp != nil {
 						_p := NewPeer(dbp)
@@ -583,13 +585,16 @@ func InitPeers(dir string) {
 			println(e.Error(), ConnectOnly)
 			os.Exit(1)
 		}
-		if len(oa.IP) < 16 {
-			println("ERROR: cCould not resolve IP addess of", ConnectOnly)
+		if len(oa.IP) == net.IPv6len {
+			oa.IP = oa.IP.To4()
+		}
+		if len(oa.IP) != net.IPv4len {
+			println("ERROR: Could not resolve IPv4 address of", ConnectOnly)
 			os.Exit(1)
 		}
 		proxyPeer = NewPeer(nil) // this sets Ip6 field to 00000000000000000000ffff
 		proxyPeer.Services = Services
-		copy(proxyPeer.Ip4[:], oa.IP[12:16])
+		copy(proxyPeer.Ip4[:], oa.IP)
 		proxyPeer.Port = uint16(oa.Port)
 		fmt.Printf("Connect to bitcoin network via %d.%d.%d.%d:%d\n",
 			proxyPeer.Ip4[0], proxyPeer.Ip4[1], proxyPeer.Ip4[2], proxyPeer.Ip4[3], proxyPeer.Port)
