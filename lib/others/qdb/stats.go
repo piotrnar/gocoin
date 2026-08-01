@@ -19,7 +19,7 @@ func (db *DB) GetStats() (s string) {
 	db.counter_mutex.Lock()
 	ck := make([]string, len(db.counter))
 	idx := 0
-	for k, _ := range db.counter {
+	for k := range db.counter {
 		ck[idx] = k
 		idx++
 	}

@@ -392,7 +392,7 @@ func (db *DB) sync() {
 		db.cnt("SyncOK")
 		bidx := new(bytes.Buffer)
 		db.checklogfile()
-		for k, _ := range db.PendingRecords {
+		for k := range db.PendingRecords {
 			rec := db.Idx.get(k)
 			if rec != nil {
 				fpos := db.addtolog(nil, k, rec.Slice())
