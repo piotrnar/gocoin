@@ -112,7 +112,7 @@ func write_extra_field(b *bytes.Buffer, dat []byte) {
 
 func NewPeer(v []byte) (p *PeerAddr) {
 	p = new(PeerAddr)
-	if v == nil || len(v) < 30 {
+	if len(v) < 30 {
 		p.Ip6[10], p.Ip6[11] = 0xff, 0xff
 		p.Time = uint32(time.Now().Unix())
 		return
@@ -199,7 +199,7 @@ func (p *PeerAddr) Bytes() (res []byte) {
 func (p *PeerAddr) UniqID() uint64 {
 	if !p.key_set {
 		h := crc64.New(crctab)
-		h.Write(p.Ip6[:])
+		h.Write(p.Ip6[:]) // since we do not support Ipv6 we could optimize by removing it, but it'd make the DB files backward incompatible
 		h.Write(p.Ip4[:])
 		h.Write([]byte{byte(p.Port >> 8), byte(p.Port)})
 		p.key_set = true
@@ -226,7 +226,7 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 		}
 		ipstr = ipstr[:x] // remove port number
 	}
-	ipa, er := net.ResolveIPAddr("ip", ipstr)
+	ipa, er := net.ResolveIPAddr("ip4", ipstr)
 	if er == nil {
 		if ipa == nil || len(ipa.IP) != 4 && len(ipa.IP) != 16 {
 			e = errors.New("peerdb.NewAddrFromString(" + ipstr + ") - address error")
@@ -237,7 +237,7 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 			if len(ipa.IP) == 4 {
 				copy(p.Ip4[:], ipa.IP[:])
 			} else {
-				copy(p.Ip4[:], ipa.IP[12:16])
+				//copy(p.Ip4[:], ipa.IP[12:16]) - we do not support ipv6
 				copy(p.Ip6[:], ipa.IP[:12])
 			}
 			if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp != nil {
@@ -302,7 +302,7 @@ func ExpirePeers() {
 		expire_alive_before_time := uint32(now.Add(-ExpireAlivePeerAfter).Unix())
 		expire_banned_before_time := uint32(now.Add(-ExpireBannedPeerAfter).Unix())
 		recs := make(manyPeers, PeerDB.Count())
-		var i, c_dead1, c_dead2, c_seen_alive, c_banned int
+		var i, c_dead1, c_dead2, c_seen_alive, c_banned, c_invalid int
 		PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			if i >= len(recs) {
 				println("ERROR: PeersDB grew since we checked its size. Please report!")
@@ -317,10 +317,14 @@ func ExpirePeers() {
 			recs = recs[:i]
 		}
 		sort.Sort(recs)
-		for i = len(recs) - 1; i > MinPeersInDB; i-- {
+		for i = len(recs) - 1; i >= 0; i-- {
 			var delit bool
 			rec := recs[i]
-			if !rec.SeenAlive {
+			if !rec.ValidIP() {
+				// There may be some old (pre Aug 2026) IPv6 type addresses, so we make sure to discard them
+				delit = true
+				c_invalid++
+			} else if !rec.SeenAlive {
 				if PeerDB.Count() > MaxPeersInDB-MaxPeersDeviation {
 					// if DB is full, we delete all the oldest never-alive records
 					delit = true
@@ -363,11 +367,30 @@ func ExpirePeers() {
 		if c_banned > 0 {
 			common.CountAdd("PeersExpiredBanned", uint64(c_banned))
 		}
+		if c_invalid > 0 {
+			common.CountAdd("PeersExpiredBadIP", uint64(c_invalid))
+		}
 		common.CounterMutex.Unlock()
 		PeerDB.Defrag(false)
 	} else {
 		common.CountSafe("PeersExpireNone")
 	}
+}
+
+func IsV4Mapped(ip6 []byte) bool {
+	// bytes 0-7 must be zero
+	if binary.BigEndian.Uint64(ip6[0:8]) != 0 {
+		return false
+	}
+	// bytes 8-11 must be 0x00 0x00 0xff 0xff
+	return binary.BigEndian.Uint32(ip6[8:12]) == 0x0000ffff
+}
+
+func (p *PeerAddr) ValidIP() bool {
+	if !IsV4Mapped(p.Ip6[:]) {
+		return false
+	}
+	return sys.ValidIp4(p.Ip4[:]) && !sys.IsIPBlocked(p.Ip4[:])
 }
 
 func (p *PeerAddr) Save() {
@@ -498,7 +521,7 @@ func GetRecentPeers(limit uint, sort_result bool, ignorePeer func(*PeerAddr) boo
 	peerdb_mutex.Lock()
 	PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		ad := NewPeer(v)
-		if sys.ValidIp4(ad.Ip4[:]) && !sys.IsIPBlocked(ad.Ip4[:]) {
+		if ad.ValidIP() {
 			if ignorePeer == nil || !ignorePeer(ad) {
 				res = append(res, ad)
 				if !sort_result && len(res) >= int(limit) {
@@ -525,7 +548,7 @@ func initSeeds(seeds []string, port uint16) {
 			//println(len(ad), "addrs from", seeds[i])
 			for j := range ad {
 				ip := net.ParseIP(ad[j])
-				if len(ip) == 16 {
+				if len(ip) == 16 && IsV4Mapped(ip[12:16]) /*Ipv6 support disabled*/ {
 					p := NewPeer(nil)
 					p.Services = 0xFFFFFFFFFFFFFFFF
 					copy(p.Ip6[:], ip[:12])
@@ -564,7 +587,7 @@ func InitPeers(dir string) {
 			println("ERROR: cCould not resolve IP addess of", ConnectOnly)
 			os.Exit(1)
 		}
-		proxyPeer = NewPeer(nil)
+		proxyPeer = NewPeer(nil) // this sets Ip6 field to 00000000000000000000ffff
 		proxyPeer.Services = Services
 		copy(proxyPeer.Ip4[:], oa.IP[12:16])
 		proxyPeer.Port = uint16(oa.Port)

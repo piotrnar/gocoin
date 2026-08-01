@@ -19,6 +19,7 @@
 * Client: fixed a potential DoS attack vector: "cmpctblock" message with a corrupt payload
 * Client/WebUI: vastly improved performance of "blocks.json" by keeping built block's txs in its blocks cache
 * Wallet: From now creates transactions with version value of 2, allowing to specify "-txver <value>" to change it
+* Client/PeersDB: stop adding IPv6 peers to the DB as we do not support them anyway (thanks @brunoerg)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
