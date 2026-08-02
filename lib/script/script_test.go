@@ -9,7 +9,50 @@ import (
 	"testing"
 
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/secp256k1"
 )
+
+// The internal pubkey that bitcoin core's script_tests.cpp uses to auto-generate
+// the tapscript control blocks - x-only pubkey of the private key value of 1.
+var taproot_internal_key, _ = hex.DecodeString(
+	"79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798")
+
+// make_taproot_leaf builds the control block and the tweaked output key for a tree
+// consisting of a single tapscript leaf. This is what bitcoin core does for the
+// #CONTROLBLOCK# and #TAPROOTOUTPUT# placeholders in script_tests.json
+func make_taproot_leaf(script []byte) (control, output []byte) {
+	sha := btc.Hasher(btc.HASHER_TAPLEAF)
+	sha.Write([]byte{TAPROOT_LEAF_TAPSCRIPT})
+	btc.WriteVlen(sha, uint64(len(script)))
+	sha.Write(script)
+	merkle_root := sha.Sum(nil) // single leaf, so the leaf hash is the merkle root
+
+	sha = btc.Hasher(btc.HASHER_TAPTWEAK)
+	sha.Write(taproot_internal_key)
+	sha.Write(merkle_root)
+
+	var tweak secp256k1.Number
+	tweak.SetBytes(sha.Sum(nil))
+
+	var pk secp256k1.XY
+	pk.ParseXOnlyPubkey(taproot_internal_key)
+	if !pk.ECPublicTweakAdd(&tweak) {
+		panic("cannot tweak the taproot internal key")
+	}
+	pk.X.Normalize()
+	pk.Y.Normalize()
+
+	output = make([]byte, 32)
+	pk.X.GetB32(output)
+
+	control = make([]byte, 33)
+	control[0] = TAPROOT_LEAF_TAPSCRIPT
+	if pk.Y.IsOdd() {
+		control[0] |= 1
+	}
+	copy(control[1:], taproot_internal_key)
+	return
+}
 
 type one_test_vector struct {
 	sigscr, pkscr []byte
@@ -51,6 +94,7 @@ func TestScritps(t *testing.T) {
 			var all_good bool
 
 			vec := new(one_test_vector)
+			var taproot_output []byte
 			for ii := range mm {
 				switch segwitdata := mm[ii].(type) {
 				case []interface{}:
@@ -59,7 +103,15 @@ func TestScritps(t *testing.T) {
 						case string:
 							var by []byte
 							s := segwitdata[iii].(string)
-							by, e = hex.DecodeString(s)
+							if str, ok := strings.CutPrefix(s, "#SCRIPT#"); ok {
+								// a non-hex tapscript, given in the text form
+								by, e = btc.DecodeScript(str)
+							} else if s == "#CONTROLBLOCK#" && len(vec.witness) > 0 {
+								// auto-generate the control block for the preceding tapscript
+								by, taproot_output = make_taproot_leaf(vec.witness[len(vec.witness)-1])
+							} else {
+								by, e = hex.DecodeString(s)
+							}
 							if e != nil {
 								t.Error("error parsing serwit script", s)
 								skip = true
@@ -82,8 +134,14 @@ func TestScritps(t *testing.T) {
 							break
 						}
 					} else if bfield == 1 {
-						vec.pkscr, e = btc.DecodeScript(s)
-						if e != nil {
+						if s == "0x51 0x20 #TAPROOTOUTPUT#" {
+							if taproot_output == nil {
+								t.Error("taproot output key not generated")
+								skip = true
+								break
+							}
+							vec.pkscr = append([]byte{0x51, 0x20}, taproot_output...)
+						} else if vec.pkscr, e = btc.DecodeScript(s); e != nil {
 							skip = true
 							break
 						}
