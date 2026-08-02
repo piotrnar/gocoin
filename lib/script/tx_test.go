@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -37,7 +38,31 @@ func (tv *testvector) String() (s string) {
 	return
 }
 
-func parserec(vv []interface{}) (ret *testvector) {
+// ALL_VERIFY_FLAGS is a set of all the script verification flags that we know of.
+// It is the gocoin's equivalent of the bitcoin core's script_verify_flags full mask.
+const ALL_VERIFY_FLAGS = VER_P2SH | VER_STRICTENC | VER_DERSIG | VER_LOW_S |
+	VER_NULLDUMMY | VER_SIGPUSHONLY | VER_MINDATA | VER_BLOCK_OPS | VER_CLEANSTACK |
+	VER_CLTV | VER_CSV | VER_WITNESS | VER_WITNESS_PROG | VER_MINIMALIF | VER_NULLFAIL |
+	VER_WITNESS_PUBKEY | VER_CONST_SCRIPTCODE | VER_TAPROOT | VER_DIS_TAPVER |
+	VER_DIS_SUCCESS | VER_DIS_PUBKEYTYPE
+
+// trim_flags removes the flags that cannot be used without their prerequisites.
+// It mirrors TrimFlags() from bitcoin core's src/test/transaction_tests.cpp
+func trim_flags(fl uint32) uint32 {
+	if (fl & VER_P2SH) == 0 { // WITNESS requires P2SH
+		fl &^= VER_WITNESS
+	}
+	if (fl & VER_WITNESS) == 0 { // CLEANSTACK requires WITNESS (and thus also P2SH)
+		fl &^= VER_CLEANSTACK
+	}
+	return fl
+}
+
+// parserec decodes a single test vector.
+// If excluded_flags is true, the flags field of the record lists the flags that shall
+// NOT be applied (all the other ones will be), which is the convention used by the
+// current version of tx_valid.json. Otherwise the field lists the flags to be applied.
+func parserec(vv []interface{}, excluded_flags bool) (ret *testvector) {
 	ret = new(testvector)
 	for i, u := range vv[0].([]interface{}) {
 		switch uu := u.(type) {
@@ -54,11 +79,20 @@ func parserec(vv []interface{}) (ret *testvector) {
 	}
 	ret.tx = vv[1].(string)
 	params := vv[2].(string)
+	if params == "BADTX" {
+		// The tx is expected to fail CheckTransaction(), not the script verification.
+		ret.skip = "BADTX"
+		return
+	}
 	var e error
 	ret.ver_flags, e = decode_flags(params) // deifned in script_test.go
 	if e != nil {
 		println("skip", params)
 		ret.skip = e.Error()
+		return
+	}
+	if excluded_flags {
+		ret.ver_flags = trim_flags(ALL_VERIFY_FLAGS &^ ret.ver_flags)
 	}
 	return
 }
@@ -174,13 +208,26 @@ func TestValidTransactions(t *testing.T) {
 		return
 	}
 	m := str.([]interface{})
+
+	// Newer versions of tx_valid.json list the flags to be EXCLUDED, instead of the
+	// ones to be applied. The file's own header tells us which convention it follows.
+	excluded_flags := false
+	for _, v := range m {
+		if vv, ok := v.([]interface{}); ok && len(vv) == 1 {
+			if s, ok := vv[0].(string); ok && strings.Contains(s, "excluded verifyFlags") {
+				excluded_flags = true
+				break
+			}
+		}
+	}
+
 	cnt := 0
 	for _, v := range m {
 		switch vv := v.(type) {
 		case []interface{}:
 			if len(vv) == 3 {
 				cnt++
-				tv := parserec(vv)
+				tv := parserec(vv, excluded_flags)
 				if tv.skip != "" {
 					//println(tv.skip)
 				} else if !execute_test_tx(t, tv) {
@@ -216,7 +263,7 @@ func TestInvalidTransactions(t *testing.T) {
 				if cnt == 64000 {
 					DBG_SCR = true
 				}
-				tv := parserec(vv)
+				tv := parserec(vv, false)
 				if tv.skip != "" {
 					//println(tv.skip)
 				} else if execute_test_tx(t, tv) {
