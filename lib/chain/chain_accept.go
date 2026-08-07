@@ -301,20 +301,22 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 			e = errors.New(fmt.Sprint("VerifyScripts failed ", ver_err_cnt, "time (s)"))
 			return
 		}
-	}
-
-	if check_seq_locks {
-		if e = ch.checkSequenceLocks(&seq_locks, changes.Height); e != nil {
-			return
+		if check_seq_locks {
+			if e = ch.checkSequenceLocks(&seq_locks, changes.Height); e != nil {
+				return
+			}
+			ch.checkSequenceLocksCnt++
 		}
 	}
 
-	if sumblockin < sumblockout {
+	if sumblockin < sumblockout { // could do it only for non-trusted blocks but this check is cheap
 		e = fmt.Errorf("out:%d > in:%d", sumblockout, sumblockin)
 		return
 	}
 
 	if sigopscost > btc.MAX_BLOCK_SIGOPS_COST {
+		// could do it only for non-trusted blocks but this check is cheap
+		// (we had to calculate sigopscost for the caller anyway)
 		e = errors.New("commitTxs(): too many sigops - RPC_Result:bad-blk-sigops")
 		return
 	}
