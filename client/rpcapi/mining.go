@@ -15,6 +15,16 @@ import (
 	"github.com/piotrnar/gocoin/lib/script"
 )
 
+/*
+TODO:
+
+Because of the fix for "BIP68 relative lock-time (sequence locks) never enforced on blocks" issue,
+some checks need to be added to the mining API.
+
+Cheapest approach: at mempool-acceptance time compute each transaction's seqLocks (input heights are already
+looked up there) and store it alongside SigopsCost, then re-check it next to the existing IsFinal() call.
+*/
+
 var (
 	DO_SEGWIT        = false   // set to false for old miners that use "getblocktemplate" but dont support segwit (e.gg. bfgminer 5.5.0)
 	DO_NOT_SUBMIT    = false   // set it to true if you dont want to commit newly mined blocks to the blockchian/network
