@@ -34,8 +34,9 @@ var (
 
 	NetBlocksSize sys.SyncInt
 
-	exitat     *int  = flag.Int("exitat", 0, "Auto exit node after comitting block with the given height (-1 for current last)")
-	saveonexit *bool = flag.Bool("save", true, "Save UTXO.db before exiting (use with -exitat)")
+	exitat      *int  = flag.Int("exitat", 0, "Auto exit node after comitting block with the given height (-1 for current last)")
+	saveonexit  *bool = flag.Bool("save", true, "Save UTXO.db before exiting (use with -exitat)")
+	neverstrust *bool = flag.Bool("ntrust", true, "Never trust any blocks, ever during rebuild (forces script revalidation)")
 
 	highestAcceptedBlock uint32
 	retryCachedBlocks    bool
@@ -120,7 +121,9 @@ func defrag_utxo() {
 
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
-	if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted.Get() {
+	if *neverstrust {
+		bl.Trusted.Clr()
+	} else if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted.Get() {
 		bl.Trusted.Set()
 	}
 
