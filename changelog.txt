@@ -21,6 +21,7 @@
 * Wallet: From now creates transactions with version value of 2, allowing to specify "-txver <value>" to change it
 * Client/PeersDB: stop adding IPv6 peers to the DB as we do not support them anyway (thanks @brunoerg)
 * Lib/Script: Updated some json test files (in "lib/test") with new ones from the bitcoin repo ("src/test/data")
+* Lib/chain: Fix for "BIP68 relative lock-time (sequence locks) never enforced on blocks" issue reported by @brunoerg
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
