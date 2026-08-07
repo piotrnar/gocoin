@@ -358,6 +358,22 @@ func (tx *Tx) CheckTransaction() error {
 		return errors.New("CheckTransaction() : size limits failed - RPC_Result:bad-txns-oversize")
 	}
 
+	// Check for output value overflow (CVE-2010-5139).
+	// Note: satoshi's client stores values as signed int64 and rejects negative ones
+	// with bad-txns-vout-negative. Here the values are unsigned, so the wire encoding
+	// of a "negative" amount simply reads as a value above MAX_MONEY and is rejected
+	// by the check below - the accept/reject outcome is the same.
+	var valueout uint64
+	for i := range tx.TxOut {
+		if tx.TxOut[i].Value > MAX_MONEY {
+			return errors.New("CheckTransaction() : txout.Value too high - RPC_Result:bad-txns-vout-toolarge")
+		}
+		valueout += tx.TxOut[i].Value
+		if valueout > MAX_MONEY {
+			return errors.New("CheckTransaction() : txout total too high - RPC_Result:bad-txns-txouttotal-toolarge")
+		}
+	}
+
 	if tx.IsCoinBase() {
 		if len(tx.TxIn[0].ScriptSig) < 2 || len(tx.TxIn[0].ScriptSig) > 100 {
 			return fmt.Errorf("CheckTransaction() : coinbase script size %d - RPC_Result:bad-cb-length",
