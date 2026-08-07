@@ -185,11 +185,23 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 			}
 		}
 		totinp += pos[i].Value
+		if pos[i].Value > btc.MAX_MONEY || totinp > btc.MAX_MONEY {
+			rejectTx(ntx.Tx, TX_REJECTED_BAD_VALUE, nil)
+			return TX_REJECTED_BAD_VALUE, nil
+		}
 	}
 
 	// Check if total output value does not exceed total input
 	for i := range tx.TxOut {
+		if tx.TxOut[i].Value > btc.MAX_MONEY {
+			rejectTx(ntx.Tx, TX_REJECTED_BAD_VALUE, nil)
+			return TX_REJECTED_BAD_VALUE, nil
+		}
 		totout += tx.TxOut[i].Value
+		if totout > btc.MAX_MONEY {
+			rejectTx(ntx.Tx, TX_REJECTED_BAD_VALUE, nil)
+			return TX_REJECTED_BAD_VALUE, nil
+		}
 	}
 
 	if totout > totinp {

