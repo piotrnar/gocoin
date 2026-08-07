@@ -203,6 +203,9 @@ func EC_Sign(msg, key, r, s []byte) int {
 }
 
 func Schnorr_Verify(pkey, sign, msg []byte) int {
+	if len(pkey) != 32 || len(sign) != 64 || len(msg) != 32 {
+		return 0
+	}
 	return int(C.gocoin_schnorr_verify((*C.uchar)(unsafe.Pointer(&msg[0])),
 		(*C.uchar)(unsafe.Pointer(&sign[0])), (*C.uchar)(unsafe.Pointer(&pkey[0]))))
 }

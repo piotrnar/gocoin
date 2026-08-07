@@ -207,6 +207,10 @@ func EC_Verify(pkey, sign, hash []byte) bool {
 func Schnorr_Verify(pkey, sign, msg []byte) bool {
 	var pubkey [64]byte
 
+	if len(pkey) != 32 || len(sign) != 64 || len(msg) != 32 {
+		return false
+	}
+
 	r, _, _ := syscall.SyscallN(procXonlyPubkeyParse.Addr(),
 		ctx,
 		uintptr(unsafe.Pointer(&pubkey[0])),

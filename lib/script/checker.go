@@ -163,5 +163,11 @@ func (c *SigChecker) CheckSchnorrSignature(sig, pubkey []byte, sigversion int, e
 		sig = sig[:64]
 	}
 	sh := c.Tx.TaprootSigHash(execdata, c.Idx, hashtype, sigversion == SIGVERSION_TAPSCRIPT)
+	if sh == nil {
+		if DBG_ERR {
+			fmt.Println("SCRIPT_ERR_SCHNORR_SIG_HASHTYPE")
+		}
+		return false
+	}
 	return btc.SchnorrVerify(pubkey, sig, sh)
 }

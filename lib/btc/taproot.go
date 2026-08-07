@@ -34,11 +34,21 @@ type taprootSHType struct {
 
 // TaprootSigHash implements taproot's sighash algorithm
 // script - if true uses TAPSCRIPT mode (not TAPROOT)
+// Returns nil if the sighash is undefined for the given parameters, in which
+// case the caller must fail the script (BIP341; core's
+// SignatureHashSchnorr() returns false in exactly the same situations).
+// Never return a "dummy" hash here - a hash an attacker can predict is a hash
+// an attacker can sign. Both SchnorrVerify() and SchnorrSign() reject a
+// message that is not 32 bytes long, so a nil returned from here fails closed.
 func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, in_pos int, hash_type byte, script bool) []byte {
 	var ext_flag, key_version byte
 
 	if script {
 		ext_flag = 1
+	}
+
+	if in_pos < 0 || in_pos >= len(tx.TxIn) || len(tx.Spent_outputs) < len(tx.TxIn) {
+		return nil
 	}
 
 	tx.hashLock.Lock()
@@ -58,7 +68,7 @@ func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, in_pos int, hash_typ
 
 	input_type := hash_type & SIGHASH_INPUT_MASK
 	if !(hash_type <= 0x03 || (hash_type >= 0x81 && hash_type <= 0x83)) {
-		return make([]byte, 32)
+		return nil
 	}
 	sha.Write([]byte{hash_type})
 
@@ -144,7 +154,7 @@ func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, in_pos int, hash_typ
 	// Data about the output (if only one).
 	if output_type == SIGHASH_SINGLE {
 		if in_pos >= len(tx.TxOut) {
-			return make([]byte, 32)
+			return nil
 		}
 		sh := sha256.New()
 		binary.Write(sh, binary.LittleEndian, tx.TxOut[in_pos].Value)
