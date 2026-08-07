@@ -271,12 +271,31 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 			}
 		}
 
+		// Make sure the sums cannot wrap around. This is also enforced by
+		// CheckTransaction(), but that one is skipped for trusted blocks.
+		if txinsum > btc.MAX_MONEY {
+			e = errors.New("commitTxs(): input values out of range - RPC_Result:bad-txns-inputvalues-outofrange")
+			return
+		}
 		sumblockin += txinsum
 
 		for j := range tx.TxOut {
+			if tx.TxOut[j].Value > btc.MAX_MONEY {
+				e = errors.New("commitTxs(): txout.Value too high - RPC_Result:bad-txns-vout-toolarge")
+				return
+			}
 			txoutsum += tx.TxOut[j].Value
+			if txoutsum > btc.MAX_MONEY {
+				e = errors.New("commitTxs(): txout total too high - RPC_Result:bad-txns-txouttotal-toolarge")
+				return
+			}
 		}
 		sumblockout += txoutsum
+
+		if sumblockin > btc.MAX_MONEY || sumblockout > btc.MAX_MONEY {
+			e = errors.New("commitTxs(): block values out of range - RPC_Result:bad-txns-inputvalues-outofrange")
+			return
+		}
 
 		if i > 0 {
 			tx.CalculatedFee = txinsum - txoutsum
