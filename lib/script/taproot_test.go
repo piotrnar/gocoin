@@ -240,6 +240,22 @@ func poc_spend_tx(input_tx *btc.Tx, sig_scr []byte, witness [][]byte) (output_tx
 	return
 }
 
+// PoC: gocoin accepts a taproot script-path spend whose Schnorr signature
+// carries an invalid hashtype byte (0x04).
+//
+// Bitcoin Core rejects such spends: SignatureHashSchnorr() returns false for
+// hashtypes outside {0x00..0x03, 0x81..0x83} and CheckSchnorrSignature()
+// fails the script with SCRIPT_ERR_SCHNORR_SIG_HASHTYPE.
+//
+// Gocoin's TaprootSigHash (lib/btc/taproot.go:60-62) returns an all-zero
+// 32-byte hash in that case, so a BIP340 signature of the zero message
+// verifies OK.
+//
+// Drop this file into lib/script/ and run:
+//   go test -v -run TestPoCInvalidHashtype
+//
+// Credits: Bitcoin Red Team / @brunoerg
+
 func TestPoCInvalidHashtype(t *testing.T) {
 	DBG_ERR = false
 	// keypair with private key 2
