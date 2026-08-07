@@ -18,9 +18,6 @@ func SchnorrsigChallenge(e *Number, r32, msg32, pubkey32 []byte) {
 }
 
 func SchnorrVerify(pkey, sig, msg []byte) (ret bool) {
-	if len(pkey) != 32 || len(sig) != 64 || len(msg) != 32 {
-		return false
-	}
 	var rx Field
 	var pk, r XY
 	var rj, pkj XYZ
