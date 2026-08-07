@@ -119,6 +119,9 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 
 	blUnsp := make(map[[32]byte][]*btc.TxOut, len(bl.Txs))
 
+	var seq_locks seqLocks
+	check_seq_locks := (bl.VerifyFlags & script.VER_CSV) != 0
+
 	var wg sync.WaitGroup
 	var wait4compl bool
 	var ver_err_cnt uint32
@@ -148,6 +151,7 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 
 			// first collect all the inputs, their amounts and spend scripts
 			for j := range tx.TxIn {
+				var coin_height uint32
 				inp := &tx.TxIn[j].Input
 				spent_map, was_spent := changes.DeledTxs[inp.Hash]
 				if was_spent {
@@ -190,6 +194,7 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 
 					tout = t[inp.Vout]
 					t[inp.Vout] = nil // and now mark it as spent:
+					coin_height = changes.Height
 				} else {
 					if tout.WasCoinbase && changes.Height-tout.BlockHeight < COINBASE_MATURITY {
 						e = errors.New("Trying to spend prematured coinbase: " + btc.NewUint256(inp.Hash[:]).String())
@@ -201,6 +206,7 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 						changes.DeledTxs[inp.Hash] = spent_map
 					}
 					spent_map[inp.Vout] = true
+					coin_height = tout.BlockHeight
 
 					if changes.UndoData != nil {
 						var urec *utxo.UtxoRec
@@ -223,6 +229,11 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 
 				if !tx_trusted {
 					tx.Spent_outputs[j] = tout
+				}
+
+				// BIP68 - relative lock-time of version 2 (or higher) transactions
+				if check_seq_locks && tx.Version >= 2 {
+					seq_locks.add(tx.TxIn[j].Sequence, coin_height)
 				}
 
 				if (bl.VerifyFlags & script.VER_P2SH) != 0 {
@@ -288,6 +299,12 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 		if ver_err_cnt > 0 {
 			println("VerifyScript failed", ver_err_cnt, "time (s)")
 			e = errors.New(fmt.Sprint("VerifyScripts failed ", ver_err_cnt, "time (s)"))
+			return
+		}
+	}
+
+	if check_seq_locks {
+		if e = ch.checkSequenceLocks(&seq_locks, changes.Height); e != nil {
 			return
 		}
 	}
