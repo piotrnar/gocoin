@@ -86,6 +86,10 @@ func (w *HDWallet) Child(i uint32) (res *HDWallet) {
 	var ha, newkey []byte
 	var chksum [20]byte
 
+	if w.Depth == 255 {
+		panic("HDWallet.Child(): maximum BIP32 depth reached")
+	}
+
 	if IsPrivateHDPrefix(w.Prefix) {
 		pub := PublicFromPrivate(w.Key[1:], true)
 		mac := hmac.New(sha512.New, w.ChCode)

@@ -210,6 +210,45 @@ func TestChildren(t *testing.T) {
 	}
 }
 
+func mustPanic(t *testing.T, name string, f func()) {
+	t.Helper()
+	defer func() {
+		if recover() == nil {
+			t.Errorf("%s: expected a panic, got none", name)
+		}
+	}()
+	f()
+}
+
+func TestChildDepthOverflow(t *testing.T) {
+	w := MasterKey([]byte("Random seed"), false)
+	if w.Depth != 0 {
+		t.Fatalf("master key Depth is %d, expected 0", w.Depth)
+	}
+
+	for i := 0; i < 255; i++ {
+		w = w.Child(uint32(i) | 0x80000000)
+		if int(w.Depth) != i+1 {
+			t.Fatalf("Depth is %d after %d derivations", w.Depth, i+1)
+		}
+	}
+
+	if d := w.Serialize()[4]; d != 255 {
+		t.Fatalf("serialized depth byte is %d, expected 255", d)
+	}
+
+	rt, err := StringWallet(w.String())
+	if err != nil {
+		t.Fatalf("StringWallet() at depth 255: %s", err.Error())
+	}
+	if rt.Depth != 255 {
+		t.Fatalf("Depth is %d after round trip, expected 255", rt.Depth)
+	}
+
+	mustPanic(t, "private derivation at depth 255", func() { w.Child(0x80000000) })
+	mustPanic(t, "public derivation at depth 255", func() { w.Pub().Child(0) })
+}
+
 // benchmarks
 
 func BenchmarkStringChildPub(b *testing.B) {
