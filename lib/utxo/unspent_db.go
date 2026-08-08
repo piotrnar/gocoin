@@ -83,7 +83,6 @@ type UnspentDB struct {
 	mapDefragsTime  time.Duration
 	recRelocateCnt  atomic.Int64
 	dataSize        atomic.Int64
-	totalTxs        atomic.Int64
 }
 
 type NewUnspentOpts struct {
@@ -184,8 +183,6 @@ redo:
 	} else {
 		info = fmt.Sprint("\rLoading ", u64, " plain txs from ", fname, " - ")
 	}
-
-	db.totalTxs.Store(int64(u64))
 
 	// use background routine for map updates
 	ch = make(chan []one_rec, CHANNEL_SIZE)
@@ -670,7 +667,6 @@ func (db *UnspentDB) del(ind UtxoKeyType, outs []bool) {
 		delete(db.HashMap[ind[0]], ind)
 		db.DeletedRecords[ind[0]]++
 		db.dataSize.Add(-int64(len(*v)))
-		db.totalTxs.Add(-1)
 	}
 	db.MapMutex[ind[0]].Unlock()
 	Memory_Free(v)
@@ -717,7 +713,6 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 				db.HashMap[ind[0]][ind] = v
 				db.MapMutex[ind[0]].Unlock()
 				db.dataSize.Add(int64(len(*v)))
-				db.totalTxs.Add(1)
 			}
 		}
 		wg.Done()
@@ -848,10 +843,6 @@ func (db *UnspentDB) UTXOStats() string {
 	}
 	wg.Wait()
 
-	if lele != uint64(db.totalTxs.Load()) {
-		println("ERROR: Txs count mismatch:", outcnt, db.totalTxs.Load())
-	}
-
 	fmt.Fprintf(o, "UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, lele, float64(sumcb)/1e8)
 	fmt.Fprintf(o, " MaxTxOutCnt: %d  DirtyDB: %t  Writing: %t  Abort: %t  Compressed: %t\n",
@@ -875,13 +866,10 @@ func (db *UnspentDB) GetStats() (s string) {
 		db.MapMutex[i].RUnlock()
 	}
 
-	if hml != int(db.totalTxs.Load()) {
-		println("ERROR: Txs count mismatch:", hml, db.totalTxs.Load())
-	}
 	wr := new(bytes.Buffer)
 
 	fmt.Fprintf(wr, "UNSPENT: %d txs.  MaxCnt:%d  Dirt:%t  Writ:%t  Abort:%t  Compr:%t\n",
-		db.totalTxs.Load(), len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(),
+		hml, len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(),
 		len(db.abortwritingnow) > 0, db.ComprssedUTXO)
 	fmt.Fprintf(wr, " Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
@@ -937,7 +925,10 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 }
 
 func (db *UnspentDB) GetUTXOSize() (data, count, footprint int) {
-	data, count = int(db.dataSize.Load()), int(db.totalTxs.Load())
+	data = int(db.dataSize.Load())
+	for i := range db.HashMap {
+		count += len(db.HashMap[i])
+	}
 	footprint = data + count*DATA_SIZE_EXTRA_PER_RECORD
 	return
 }
