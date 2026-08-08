@@ -36,8 +36,6 @@ type Chain struct {
 	}
 	blockTreeAccess  sync.Mutex
 	BlockIndexAccess sync.Mutex
-
-	checkSequenceLocksCnt int // TODO: remove it after verifying the fix for "BIP68 relative lock-time (sequence locks) never enforced on blocks" issue reported by @brunoerg
 }
 
 type NewChanOpts struct {
@@ -163,8 +161,8 @@ func (ch *Chain) Idle() bool {
 func (ch *Chain) Stats() (s string) {
 	last := ch.LastBlock()
 	ch.BlockIndexAccess.Lock()
-	s = fmt.Sprintf("CHAIN: blocks:%d  Height:%d  MedianTime:%d  SLCheckCnt:%d\n",
-		len(ch.BlockIndex), last.Height, last.GetMedianTimePast(), ch.checkSequenceLocksCnt)
+	s = fmt.Sprintf("CHAIN: blocks:%d  Height:%d  MedianTime:%d\n",
+		len(ch.BlockIndex), last.Height, last.GetMedianTimePast())
 	ch.BlockIndexAccess.Unlock()
 	s += ch.Blocks.GetStats()
 	s += ch.Unspent.GetStats()

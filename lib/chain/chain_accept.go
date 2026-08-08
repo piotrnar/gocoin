@@ -324,7 +324,6 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 			if e = ch.checkSequenceLocks(&seq_locks, changes.Height); e != nil {
 				return
 			}
-			ch.checkSequenceLocksCnt++
 		}
 	}
 
