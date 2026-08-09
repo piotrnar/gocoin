@@ -187,66 +187,71 @@ func (nl null_logger) Write(p []byte) (n int, err error) {
 }
 
 type certReloader struct {
-	certPath    string
-	keyPath     string
-	mu          sync.Mutex // serializes reloads
-	cert        atomic.Pointer[tls.Certificate]
-	lastAttempt time.Time     // last time we tried to reload
-	retryAfter  time.Duration // minimum gap between reload attempts
+	certPath string
+	keyPath  string
+
+	mu      sync.Mutex // serializes reloads
+	modTime time.Time  // mod time of certPath, as of the last successful load
+	lastErr string     // to not print the same error over and over
+
+	cert atomic.Pointer[tls.Certificate]
 }
 
-func newCertReloader(certPath, keyPath string, retryAfter time.Duration) (*certReloader, error) {
-	cr := &certReloader{certPath: certPath, keyPath: keyPath, retryAfter: retryAfter}
+func newCertReloader(certPath, keyPath string) (*certReloader, error) {
+	cr := &certReloader{certPath: certPath, keyPath: keyPath}
 	if err := cr.reload(); err != nil {
 		return nil, err
 	}
 	return cr, nil
 }
 
+// Reloads the key pair, but only if the cert file's mod time has changed.
+// Returns nil if there was nothing to do.
 func (cr *certReloader) reload() error {
+	fi, err := os.Stat(cr.certPath)
+	if err != nil {
+		return err
+	}
+
 	cr.mu.Lock()
 	defer cr.mu.Unlock()
 
-	// Someone else may have reloaded while we were waiting for the lock.
-	if existing := cr.cert.Load(); existing != nil && existing.Leaf != nil &&
-		time.Now().Before(existing.Leaf.NotAfter) {
+	// Someone else may have reloaded it while we were waiting for the lock.
+	// Note: modTime is only updated after a successful load, so a failed
+	// attempt (e.g. server.key not written yet) will be retried.
+	if fi.ModTime().Equal(cr.modTime) {
 		return nil
 	}
-
-	// Don't hammer the disk if the file isn't being updated.
-	if !cr.lastAttempt.IsZero() && time.Since(cr.lastAttempt) < cr.retryAfter {
-		return nil
-	}
-	cr.lastAttempt = time.Now()
 
 	cert, err := tls.LoadX509KeyPair(cr.certPath, cr.keyPath)
 	if err != nil {
 		return err
 	}
-	// Parse the leaf so we can check NotAfter later without re-parsing.
+
+	// Parse the leaf, to have the expiration date at hand.
 	if cert.Leaf == nil && len(cert.Certificate) > 0 {
-		leaf, err := x509.ParseCertificate(cert.Certificate[0])
-		if err != nil {
+		if cert.Leaf, err = x509.ParseCertificate(cert.Certificate[0]); err != nil {
 			return err
 		}
-		cert.Leaf = leaf
 	}
+
 	cr.cert.Store(&cert)
+	cr.modTime = fi.ModTime()
+	cr.lastErr = ""
 	println("SSL certificate loaded, expires:", cert.Leaf.NotAfter.String())
 	return nil
 }
 
 func (cr *certReloader) GetCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	cert := cr.cert.Load()
-	if cert != nil && cert.Leaf != nil && time.Now().Before(cert.Leaf.NotAfter) {
-		return cert, nil
-	}
-	// Expired - try to reload (may be a no-op if we tried recently).
 	if err := cr.reload(); err != nil {
-		// Reload failed. Fall back to the old cert so the handshake can
-		// still proceed; the client will see the expired cert and decide.
-		println("cert reload failed:", err.Error())
-		return cert, nil
+		// Reload failed. Fall back to the cert we already have, so the
+		// handshake can still proceed.
+		cr.mu.Lock()
+		if err.Error() != cr.lastErr {
+			cr.lastErr = err.Error()
+			println("cert reload failed:", cr.lastErr)
+		}
+		cr.mu.Unlock()
 	}
 	return cr.cert.Load(), nil
 }
@@ -274,7 +279,7 @@ func start_ssl_server() {
 	}
 	ssl_serv_addr := fmt.Sprint(":", port)
 
-	cr, err := newCertReloader("ssl_cert/server.crt", "ssl_cert/server.key", 5*time.Minute)
+	cr, err := newCertReloader("ssl_cert/server.crt", "ssl_cert/server.key")
 	if err != nil {
 		println("cert load error:", err.Error())
 		return
