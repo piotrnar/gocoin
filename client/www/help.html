@@ -17,7 +17,7 @@ marked as trusted, so the node does not verify their signatures, which speeds th
 &bull; The theme icon switches between the light and the dark theme.<br>
 &bull; Each menu item has an access key, so you can jump between the pages with <b>Alt+1</b> ... <b>Alt+9</b>.<br>
 <br>
-<span class="note">Wallet and MakeTx are greyed out whenever the wallet functionality is off.</span>
+<span class="note">Wallet and Spend are greyed out whenever the wallet functionality is off.</span>
 
 <hr>
 <a name="home" href="/home"><h2>Home</h2></a>
@@ -29,7 +29,7 @@ settings of the web interface to a JSON file.<br>
 <span class="but"><img valign="bottom" class="import_icon" height="16"> Import</span> (restore)
 the settings from a previously created JSON file.<br>
 The settings include all the wallets from the <a href="/wallet">Wallet</a> page
-and the address book from the <a href="/send">MakeTx</a> page.<br>
+and the address book from the <a href="/send">Spend</a> page.<br>
 The checkbox next to them makes the WebUI follow your system's light/dark mode automatically.
 
 <h3>Recent Blocks</h3>
@@ -47,7 +47,7 @@ Click <img class="free" valign="bottom"> to release as much memory as possible b
 Change the values you need and press either <span class="but">Apply</span> or <span class="but">Apply &amp; Save</span>.
 If you do not save, the changes will be lost at the next shut down of the node.<br>
 <span class="but">Save config</span> stores the current settings - use it whenever you have changed something
-in a running node (e.g. on the <a href="/net">Network</a> or <a href="/txs">Transactions</a> page)
+in a running node (e.g. on the <a href="/net">Network</a> or <a href="/txs">Mempool</a> page)
 and you want to keep it permanently.<br>
 <span class="note">Some config values are only applied after a restart.</span>
 
@@ -72,7 +72,7 @@ and <span class="but">Delete This Wallet</span> to remove the current one.<br>
 <span class="but">Edit</span> lets you rename the wallet and edit its list of addresses.
 Only list <b>public addresses</b> there - one per line, optionally followed by a label.
 Lines starting with <b>#</b> are ignored, except for <b># SegWit</b>, <b># SegWit P2SH</b> and <b># SegWit Tap</b>
-which switch the format that the following change addresses get translated to in <a href="/send">MakeTx</a>.
+which switch the format that the following change addresses get translated to in <a href="/send">Spend</a>.
 
 <h3>Current wallet</h3>
 The total balance and the balance of each individual address.<br>
@@ -95,7 +95,7 @@ Disable the wallet to save memory and speed up block chain processing.
 Switching it on and off does not require a restart, but may take a while.
 
 <hr>
-<a name="send" href="/send"><h2>MakeTx</h2></a>
+<a name="send" href="/send"><h2>Spend</h2></a>
 Create a transaction to be signed by gocoin's <b>wallet</b> tool.
 
 <h3>Select Inputs</h3>
@@ -122,8 +122,8 @@ Press this button to download <b>payment.zip</b><br>
 Move this file to the PC with the <b>wallet</b> tool and extract it there.
 Then execute the payment command (by default it is in the file <span class="cod">pay_cmd.txt</span>).<br>
 The <b>wallet</b> tool will create and sign the transaction, just as you have defined it here.
-Load the signed transaction back into the node with <a href="#pushtx">PushTx</a> and broadcast it
-from the <a href="/txs">Transactions</a> page.
+Load the signed transaction back into the node with <a href="#pushtx">Load TX</a> and broadcast it
+from the <a href="/txs">Mempool</a> page.
 
 <hr>
 <a name="net" href="/net"><h2>Network</h2></a>
@@ -156,7 +156,7 @@ and sort the list by speed or by age.<br>
 &bull; <img class="del" valign="bottom"> drops the connection and bans the peer.
 
 <hr>
-<a name="txs" href="/txs"><h2>Transactions</h2></a>
+<a name="txs" href="/txs"><h2>Mempool</h2></a>
 Memory pool monitoring and broadcasting of your own transactions.
 
 <h3>Memory pool chart</h3>
@@ -219,18 +219,18 @@ average block size and the fees collected.<br>
 Below the table you will find the distribution of the block version values and an estimate of the next halving.
 
 <hr>
-<a name="textui" href="/textui"><h2>TextUI</h2></a>
+<a name="textui" href="/textui"><h2>Console</h2></a>
 The node's text console, inside the browser - the same commands that you can type in the terminal window.<br>
 <br>
 Type <b>help</b> for the list of the commands, use <b>Tab</b> to complete and <b>Up</b>/<b>Down</b> to browse the history.<br>
 <span class="note">The console gives a full control over the node, so it is not available in the server mode.</span>
 
 <hr>
-<a name="pushtx" href="javascript:pushtx()"><h2>PushTx</h2></a>
+<a name="pushtx" href="javascript:pushtx()"><h2>Load TX</h2></a>
 Load your own transaction into the node's memory pool.<br>
 The transaction must be in a hex-encoded raw format, with no spaces nor any other characters except hex digits.<br>
 <br>
-If the operation succeeds you will end up at the <a href="/txs">Transactions</a> page, which will decode
+If the operation succeeds you will end up at the <a href="/txs">Mempool</a> page, which will decode
 and display the details of your transaction.
 From there you should broadcast it, in order for the bitcoin network to see it.
 

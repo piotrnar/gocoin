@@ -51,7 +51,7 @@ var (
 			Interface   string
 			AllowedIP   string // comma separated
 			ShowBlocks  uint32
-			AddrListLen uint32 // size of address list in MakeTx tab popups
+			AddrListLen uint32 // size of address list in Spend tab popups
 			Title       string
 			PayCmdName  string
 			ServerMode  bool

@@ -51,12 +51,12 @@ var last_blocks_left = -1
 var webuimenu = [
 	["/home", "Home"],
 	["/wallet", "Wallet"],
-	["/send", "MakeTx"],
+	["/send", "Spend"],
 	["/net", "Network"],
-	["/txs", "Transactions"],
+	["/txs", "Mempool"],
 	["/blocks", "Blocks"],
 	["/miners", "Miners"],
-	["/textui", "TextUI"],
+	["/textui", "Console"],
 	["/counts", "Stats"]
 ]
 
@@ -82,7 +82,7 @@ function beep_clicked() {
 			<col width="30"> <!-- status icons -->
 			<col width="60"> <!-- beep -->
 			<col width="30"> <!-- theme switcher -->
-			<col width="80"> <!-- PushTX -->
+			<col width="100"> <!-- PushTX -->
 			<col> <!-- right menu -->
 		</colgroup>
 
@@ -98,7 +98,7 @@ function beep_clicked() {
 			<img id="dark_light_icon" src="" class="hand" onclick="change_theme()" title="Switch theme">
 		</td>
 		<td align="center">
-			<a href="javascript:pushtx()" class="topmenu" title="Load Raw TX">PushTx</a>
+			<a href="javascript:pushtx()" class="topmenu" title="Load a raw transaction into the mempool">Load TX</a>
 			<input type="text" id="autocopy" style="display:none;font-size:1px;float:right;width:10px;height:4px">
 		<td align="right" id="rightmenu">
 			<a id="helpmenulink" href="{HELPURL}" class="topmenu">Help</a>
