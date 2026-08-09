@@ -24,6 +24,7 @@
 * Lib/chain: Fix for "BIP68 relative lock-time (sequence locks) never enforced on blocks" issue (thanks @brunoerg/RedTeam)
 * Lib: Fix for "gocoin accepts taproot spends for invalid hashtypes" issue (thanks @brunoerg/RedTeam)
 * Fix for "Unlimited coin minting via unchecked tx output values overflow" issue (thanks @brunoerg/RedTeam)
+* Client/WebUI: Added a virtual console - as a new "TextUI" menu item
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
