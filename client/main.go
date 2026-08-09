@@ -19,6 +19,7 @@ import (
 	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/usif/textui"
+	"github.com/piotrnar/gocoin/client/usif/vcon"
 	"github.com/piotrnar/gocoin/client/usif/webui"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -624,12 +625,16 @@ func main() {
 		if clean_function != nil {
 			clean_function()
 		}
+		vcon.Close() // flush whatever is still in the stdout/stderr pipes
 		if exit_val != 0 {
 			os.Exit(exit_val)
 		}
 	}()
 
 	common.InitConfig()
+
+	// hook stdout/stderr/stdin, so the WebUI can mirror the text console
+	vcon.Init(common.CFG.TextUI_Enabled)
 
 	if common.FLAG.LogFile != "" {
 		if cl, er := setupLogging(common.FLAG.LogFile); er == nil {
@@ -771,7 +776,8 @@ func main() {
 			go rpcapi.StartServer(common.RPCPort())
 		}
 
-		if common.CFG.TextUI_Enabled {
+		// the command thread is also needed for the WebUI's virtual console
+		if common.CFG.TextUI_Enabled || common.CFG.WebUI.Interface != "" {
 			go textui.MainThread()
 		}
 

@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"time"
 
 	"github.com/piotrnar/gocoin"
+	"github.com/piotrnar/gocoin/client/usif/vcon"
 )
 
 func setupLogging(path string) (cleanup func(), err error) {
@@ -15,40 +15,15 @@ func setupLogging(path string) (cleanup func(), err error) {
 		return nil, err
 	}
 
-	origStdout := os.Stdout
-	origStderr := os.Stderr
+	fmt.Fprintln(f, time.Now().Format("2006-01-03 15:04:05"), "starting Gocoin client version", gocoin.Version, " PID", os.Getpid())
 
-	rOut, wOut, err := os.Pipe()
-	if err != nil {
-		f.Close()
-		return nil, err
-	}
-	rErr, wErr, err := os.Pipe()
-	if err != nil {
-		f.Close()
-		return nil, err
-	}
-
-	os.Stdout = wOut
-	os.Stderr = wErr
-
-	done := make(chan struct{})
-
-	go func() {
-		io.Copy(io.MultiWriter(origStdout, f), rOut)
-		close(done)
-	}()
-	go func() {
-		io.Copy(io.MultiWriter(origStderr, f), rErr)
-	}()
+	vcon.AddWriter(f)
 
 	cleanup = func() {
-		wOut.Close()
-		wErr.Close()
-		<-done
+		vcon.Close()
+		vcon.DelWriter(f)
 		f.Close()
 	}
 
-	fmt.Fprintln(f, time.Now().Format("2006-01-03 15:04:05"), "starting Gocoin client version", gocoin.Version, " PID", os.Getpid())
 	return cleanup, nil
 }

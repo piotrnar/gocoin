@@ -56,8 +56,14 @@ var webuimenu = [
 	["/txs", "Transactions"],
 	["/blocks", "Blocks"],
 	["/miners", "Miners"],
-	["/counts", "Counters"]
+	["/textui", "TextUI"],
+	["/counts", "Stats"]
 ]
+
+if (server_mode) {
+	// the virtual console gives a full control over the node
+	webuimenu = webuimenu.filter(function(m) {return m[0]!="/textui"})
+}
 
 const BN_OFFLINE = "XXX"
 
@@ -72,8 +78,8 @@ function beep_clicked() {
 	<table width="100%" border="0" cellspacing="0"><tr>
 		<colgroup>
 			<col>  <!-- top menu -->
-			<col width="90"> <!-- block height -->
-			<col width="70"> <!-- status icons -->
+			<col width="80"> <!-- block height -->
+			<col width="30"> <!-- status icons -->
 			<col width="60"> <!-- beep -->
 			<col width="30"> <!-- theme switcher -->
 			<col width="80"> <!-- PushTX -->
@@ -138,7 +144,7 @@ for (var i=0; i < webuimenu.length; i++) {
 	if (document.location.pathname==webuimenu[i][0]) {
 		a.classList.add('menuat')
 	}
-	if (i < webuimenu.length-1) {
+	if (i < webuimenu.length-2) {
 		topmenu.appendChild(a)
 	} else {
 		rightmenu.insertBefore(a, helpmenulink)

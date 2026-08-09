@@ -584,3 +584,13 @@ img.empty_icon {
 	content:url("empty.png");
 	height:16px;
 }
+
+div.console {
+	background-color:#f4f4f4;
+	color:#101010;
+	border:1px solid #b0b0b0;
+}
+
+div.conhint {
+	color:#505070;
+}

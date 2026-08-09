@@ -121,6 +121,12 @@ func p_general(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if page == "textui" && !textui_allowed() {
+		write_html_head(w, r)
+		w.Write([]byte("<br><b>The virtual console is not available in the server mode.</b>"))
+		write_html_tail(w)
+		return
+	}
 	if dat, er := os.ReadFile("www/" + page + ".html"); er == nil {
 		if page == "txs" {
 			txs_page_modify(r, &dat)
@@ -171,6 +177,7 @@ func ServerThread() {
 	http.HandleFunc("/miners.json", json_miners)
 	http.HandleFunc("/blfees.json", json_blfees)
 	http.HandleFunc("/walsta.json", json_wallet_status)
+	http.HandleFunc("/textui.json", json_textui)
 
 	http.HandleFunc("/mempool_fees.txt", txt_mempool_fees)
 	http.HandleFunc("/authkey.txt", p_authkey)
