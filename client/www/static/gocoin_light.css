@@ -17,28 +17,46 @@ a:hover {
 }
 
 a.topmenu {
+	display:inline-block;
 	color:#2020e0;
-	padding-top:2px;
-	padding-bottom:2px;
-	padding-left:6px;
-	padding-right:6px;
-	border: 1px solid white;
+	padding:3px 7px 4px 7px;
+	border: 1px solid transparent;
+	border-radius: 7px;
 	border-collapse: collapse;
 	font-size:16px;
+	font-weight:500;
+	white-space:nowrap;
+	transition: background-color .12s, border-color .12s, color .12s;
 }
 
 a.topmenu:hover {
-	border-radius: 8px;
-	border: 1px solid blue;
+	background-color:#e9edff;
+	border-color:#b9c5ff;
+	color:#1414c0;
 }
 
-a.menuat {
-	border-radius: 8px;
-	border: 1px solid black;
+/* the action links (Load TX) are not navigation, so mark them as such */
+a.topmenu[href^="javascript"] {
+	border-color:#c8d0e8;
+	border-style:dashed;
 }
 
-a.dimenu {
+a.topmenu[href^="javascript"]:hover {
+	border-style:solid;
+}
+
+a.menuat, a.menuat:hover {
+	background-color:#2020e0;
+	border-color:#2020e0;
+	color:#ffffff;
+	box-shadow: 0 1px 2px rgba(32,32,224,0.35);
+}
+
+a.dimenu, a.dimenu:hover {
 	color:#a0a0ff;
+	background-color:transparent;
+	border-color:transparent;
+	box-shadow:none;
 }
 
 .mono {
