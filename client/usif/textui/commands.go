@@ -1,7 +1,6 @@
 package textui
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -19,6 +18,7 @@ import (
 	"github.com/piotrnar/gocoin/client/peersdb"
 	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/client/usif"
+	"github.com/piotrnar/gocoin/client/usif/vcon"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/memsize"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -66,8 +66,16 @@ func newUi(cmds string, sync bool, hn func(string), help string) {
 }
 
 func readline() string {
-	li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
-	return string(li)
+	return vcon.ReadLine()
+}
+
+// Commands returns all the supported commands, each one as "cmd|alias|...|help".
+func Commands() (res []string) {
+	res = make([]string, len(uiCmds))
+	for i, c := range uiCmds {
+		res[i] = strings.Join(c.cmds, "|") + "|" + c.help
+	}
+	return
 }
 
 func AskYesNo(msg string) bool {
