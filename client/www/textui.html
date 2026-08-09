@@ -1,0 +1,251 @@
+<style>
+div.console {
+	height:600px;
+	overflow-y:scroll;
+	overflow-x:auto;
+	padding:6px;
+	white-space:pre;
+	font-family:monospace;
+	font-size:12px;
+	line-height:1.25em;
+}
+table.conin {
+	width:100%;
+	margin-top:6px;
+	border:0;
+}
+table.conin td {
+	padding:0px;
+}
+input#conin {
+	width:100%;
+	font-family:monospace;
+	font-size:13px;
+	padding:4px;
+}
+span.conprompt {
+	font-family:monospace;
+	font-size:14px;
+	font-weight:bold;
+	padding-right:4px;
+}
+div.conhint {
+	font-family:monospace;
+	font-size:11px;
+	height:14px;
+	padding-top:3px;
+}
+</style>
+
+<div class="console mono" id="conout"></div>
+
+<table class="conin"><tr>
+	<td width="12"><span class="conprompt">&gt;</span></td>
+	<td><input type="text" id="conin" autocomplete="off" spellcheck="false" placeholder="type a command and press Enter ('help' for the list, Tab to complete, Up/Down for history)"></td>
+	<td width="70" align="right"><input type="button" id="conclr" value="Clear"></td>
+</tr></table>
+
+<table width="100%" style="margin-top:4px"><tr>
+	<td><div class="conhint" id="conhint"></div></td>
+	<td align="right" class="mono">
+		<span onclick="conasc.click()" class="hand" title="Scroll down on every new output">
+		<input type="checkbox" id="conasc" checked onclick="event.stopPropagation()"> Auto scroll
+		</span>
+		&nbsp;
+		<span id="constat"></span>
+	</td>
+</tr></table>
+
+<script>
+const CON_MAX_LINES = 2000
+
+var con_seq = 0
+var con_lines = []
+var con_cur = ""
+var con_col = 0
+var con_hist = []
+var con_hist_idx = 0
+var con_cmds = []
+var con_poller = null
+
+function con_status(txt, err) {
+	constat.innerText = txt
+	constat.style.color = err ? "red" : ""
+}
+
+function con_feed(txt) {
+	txt = txt.replace(/\x1b\[[0-9;?]*[ -\/]*[@-~]/g, "") // just in case of any ANSI codes
+	for (var i=0; i<txt.length; i++) {
+		var c = txt.charAt(i)
+		if (c=="\n") {
+			con_lines.push(con_cur)
+			con_cur = ""
+			con_col = 0
+		} else if (c=="\r") {
+			con_col = 0 // the node uses it to overwrite progress lines
+		} else {
+			if (con_col < con_cur.length) {
+				con_cur = con_cur.substring(0, con_col) + c + con_cur.substring(con_col+1)
+			} else {
+				con_cur += c
+			}
+			con_col++
+		}
+	}
+	if (con_lines.length > CON_MAX_LINES) {
+		con_lines.splice(0, con_lines.length-CON_MAX_LINES)
+	}
+}
+
+function con_render() {
+	conout.textContent = con_lines.join("\n") + "\n" + con_cur
+	if (conasc.checked) {
+		conout.scrollTop = conout.scrollHeight
+	}
+}
+
+function con_poll() {
+	var aj = ajax()
+	aj.onerror = function() {
+		con_status("offline", true)
+		con_poller = setTimeout(con_poll, 5000)
+	}
+	aj.onload = function() {
+		if (aj.status!=200) {
+			con_status("error "+aj.status, true)
+			con_poller = setTimeout(con_poll, 5000)
+			return
+		}
+		try {
+			var res = JSON.parse(aj.responseText)
+			if (res.Cmds) {
+				con_cmds = res.Cmds
+			}
+			if (res.Data) {
+				con_feed(res.Data)
+				con_render()
+			}
+			con_seq = res.Seq
+			con_status("connected")
+		} catch(e) {
+			con_status(e, true)
+		}
+		con_poller = setTimeout(con_poll, 100)
+	}
+	aj.open("GET", "textui.json?wait=1&seq="+con_seq+(con_cmds.length?"":"&cmds=1"), true)
+	aj.send(null)
+}
+
+function con_send(cmd) {
+	var aj = ajax()
+	aj.onerror = function() {
+		con_status("offline", true)
+	}
+	aj.onload = function() {
+		if (aj.status!=200) {
+			con_status("error "+aj.status, true)
+			return
+		}
+		try {
+			var res = JSON.parse(aj.responseText)
+			if (res.Error) {
+				con_status(res.Error, true)
+			}
+		} catch(e) {
+			con_status(e, true)
+		}
+	}
+	aj.open("GET", "textui.json?sid="+sid+"&cmd="+encodeURIComponent(cmd), true)
+	aj.send(null)
+}
+
+// each record of con_cmds is "cmd|alias|...|help text"
+function con_cmd_names(cmd) {
+	var res = []
+	for (var i=0; i<con_cmds.length; i++) {
+		var ss = con_cmds[i].split("|")
+		for (var j=0; j<ss.length-1; j++) {
+			if (ss[j].indexOf(cmd)==0) res.push(ss[j])
+		}
+	}
+	return res
+}
+
+function con_cmd_help(cmd) {
+	for (var i=0; i<con_cmds.length; i++) {
+		var ss = con_cmds[i].split("|")
+		for (var j=0; j<ss.length-1; j++) {
+			if (ss[j]==cmd) return ss[0] + " - " + ss[ss.length-1]
+		}
+	}
+	return ""
+}
+
+function con_complete() {
+	var val = conin.value
+	if (val.indexOf(" ")>=0) return // only the command itself gets completed
+	var mm = con_cmd_names(val)
+	if (mm.length==1) {
+		conin.value = mm[0] + " "
+		con_hint()
+	} else if (mm.length>1) {
+		conhint.innerText = mm.join("  ")
+	}
+}
+
+function con_hint() {
+	var cmd = conin.value.split(" ")[0]
+	conhint.innerText = cmd ? con_cmd_help(cmd) : ""
+}
+
+conin.onkeydown = function(e) {
+	if (e.key=="Enter") {
+		var cmd = conin.value
+		conin.value = ""
+		conhint.innerText = ""
+		if (cmd!="" && con_hist[con_hist.length-1]!=cmd) {
+			con_hist.push(cmd)
+		}
+		con_hist_idx = con_hist.length
+		con_send(cmd)
+	} else if (e.key=="ArrowUp") {
+		if (con_hist_idx > 0) {
+			con_hist_idx--
+			conin.value = con_hist[con_hist_idx]
+			con_hint()
+		}
+		e.preventDefault()
+	} else if (e.key=="ArrowDown") {
+		if (con_hist_idx < con_hist.length-1) {
+			con_hist_idx++
+			conin.value = con_hist[con_hist_idx]
+		} else {
+			con_hist_idx = con_hist.length
+			conin.value = ""
+		}
+		con_hint()
+		e.preventDefault()
+	} else if (e.key=="Tab") {
+		con_complete()
+		e.preventDefault()
+	}
+}
+
+conin.onkeyup = function(e) {
+	if (e.key!="Tab" && e.key!="ArrowUp" && e.key!="ArrowDown") con_hint()
+}
+
+conclr.onclick = function() {
+	con_lines = []
+	con_cur = ""
+	con_col = 0
+	con_render()
+	conin.focus()
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+	con_status("connecting...")
+	conin.focus()
+	con_poll()
+})
+</script>
