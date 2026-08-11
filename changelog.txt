@@ -28,6 +28,7 @@
 * Client/WebUI: Rewritten the Help page, to cover the current set of pages and their features
 * Client/WebUI: Renamed menu items: MakeTx -> Spend, Transactions -> Mempool, TextUI -> Console, PushTx -> Load TX
 * Client/WebUI: Restyled the top menu - the items are pills now, with the current page clearly marked
+* Lib/btc: Fixed a potential DoS attack vector: allocating tx/block slices from unchecked CompactSize counts (thanks @brunoerg)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

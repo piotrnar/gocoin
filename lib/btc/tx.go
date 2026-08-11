@@ -430,6 +430,9 @@ func NewTxOut(b []byte) (txout *TxOut, offs int) {
 	}
 	offs += n
 
+	if le < 0 || le > len(b)-offs {
+		return nil, 0
+	}
 	txout.Pk_script = make([]byte, le)
 	copy(txout.Pk_script[:], b[offs:offs+le])
 	offs += le
@@ -454,6 +457,9 @@ func NewTxIn(b []byte) (txin *TxIn, offs int) {
 	}
 	offs += n
 
+	if le < 0 || le > len(b)-offs {
+		return nil, 0
+	}
 	txin.ScriptSig = make([]byte, le)
 	copy(txin.ScriptSig[:], b[offs:offs+le])
 	offs += le
@@ -496,10 +502,16 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 		return nil, 0
 	}
 	offs += n
+	if le < 0 || le > len(b)-offs {
+		return nil, 0
+	}
 	tx.TxIn = make([]*TxIn, le)
 	for i := range tx.TxIn {
 		var ti *TxIn
 		ti, n = NewTxIn(b[offs:])
+		if ti == nil || n == 0 {
+			return nil, 0
+		}
 		offs += n
 		tx.TxIn[i] = ti
 	}
@@ -510,10 +522,16 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 		return nil, 0
 	}
 	offs += n
+	if le < 0 || le > len(b)-offs {
+		return nil, 0
+	}
 	tx.TxOut = make([]*TxOut, le)
 	for i := range tx.TxOut {
 		var to *TxOut
 		to, n = NewTxOut(b[offs:])
+		if to == nil || n == 0 {
+			return nil, 0
+		}
 		offs += n
 		tx.TxOut[i] = to
 	}
@@ -529,6 +547,9 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 				return nil, 0
 			}
 			offs += n
+			if le < 0 || le > len(b)-offs {
+				return nil, 0
+			}
 			tx.SegWit[i] = make([][]byte, le)
 			for idx = 0; idx < le; idx++ {
 				lel, n = VLen(b[offs:])
@@ -536,6 +557,9 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 					return nil, 0
 				}
 				offs += n
+				if lel < 0 || lel > len(b)-offs {
+					return nil, 0
+				}
 				tx.SegWit[i][idx] = make([]byte, lel)
 				copy(tx.SegWit[i][idx], b[offs:offs+lel])
 				offs += lel

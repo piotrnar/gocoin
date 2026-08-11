@@ -112,6 +112,9 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 		}
 		bl.TxOffset += 80
 	}
+	if bl.TxCount < 0 || bl.TxCount > len(bl.Raw)-bl.TxOffset {
+		return errors.New("block's txn_count field too large - RPC_Result:bad-blk-length")
+	}
 	bl.Txs = make([]*Tx, bl.TxCount)
 
 	offs := bl.TxOffset
