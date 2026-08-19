@@ -7,10 +7,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/bip39"
@@ -96,6 +97,31 @@ func hdwal_private_prefix() uint32 {
 			return btc.TestPrivate
 		}
 	}
+}
+
+// normalizeMnemonic reduces buf to lower case a-z words separated by single
+// spaces, in place. The result aliases buf, so wiping buf wipes the result.
+// It is character for character equivalent to the previous implementation
+// (strings.ToLower + regexp replace of [^a-z] + collapse of blank fields),
+// but allocates nothing and produces no immutable copy of the secret.
+func normalizeMnemonic(buf []byte) []byte {
+	out := buf[:0]
+	var pending bool
+	for i := 0; i < len(buf); {
+		r, sz := utf8.DecodeRune(buf[i:])
+		i += sz
+		r = unicode.ToLower(r)
+		if r < 'a' || r > 'z' {
+			pending = len(out) > 0
+			continue
+		}
+		if pending {
+			out = append(out, ' ')
+			pending = false
+		}
+		out = append(out, byte(r))
+	}
+	return out
 }
 
 // make_wallet gets the secret seed and generates "keycnt" key pairs (both private and public).
@@ -185,6 +211,10 @@ func make_wallet() {
 		}
 	}
 
+	if bip39wrds == -1 && len(secret_seed) > 0 {
+		secret_seed = append(secret_seed, ' ') // make sure there is a space between the words
+	}
+
 	pass, er := getpass()
 	if er != nil {
 		println("Error reading seed password:", er.Error())
@@ -224,32 +254,20 @@ func make_wallet() {
 	} else /*if waltype==4*/ {
 		if bip39wrds != 0 {
 			var er error
-			var mnemonic, password string
+			var mnemonic, password []byte
+			var bip39pwbuf [1024]byte
+			defer sys.ClearBuffer(bip39pwbuf[:])
 			if bip39wrds == -1 {
-				mnemonic = strings.ToLower(string(pass))
-				sys.ClearBuffer(pass)
-				re := regexp.MustCompile("[^a-z]")
-				a := re.ReplaceAll([]byte(mnemonic), []byte(" "))
-				lns := strings.Split(string(a), " ")
-				mnemonic = ""
-				for _, l := range lns {
-					if l != "" {
-						if mnemonic != "" {
-							mnemonic = mnemonic + " " + l
-						} else {
-							mnemonic = l
-						}
-					}
-				}
+				// aliases pass, so the deferred ClearBuffer(pass) covers it
+				mnemonic = normalizeMnemonic(pass)
 				if *bip39pass {
-					var pass [1024]byte
 					fmt.Print("Enter the BIP39 password: ")
-					if n := sys.ReadPassword(pass[:]); n <= 0 {
+					if n := sys.ReadPassword(bip39pwbuf[:]); n <= 0 {
 						fmt.Println("You entered empty password. Just do not use -p switch if there is no password.")
 						os_exit = 0
 						return
 					} else {
-						password = string(pass[:n])
+						password = bip39pwbuf[:n]
 					}
 				}
 			} else {
@@ -258,10 +276,10 @@ func make_wallet() {
 				s.Write(pass)
 				s.Write([]byte("|gocoin|"))
 				s.Write(pass)
-				s.Write([]byte{byte(bip39wrds / 3 * 32)})
+				s.Write([]byte{byte(bip39wrds / 3 * 32)}) // Mind that it will overflow to 0 for 24 words, but gives a unique value so serves the purpose
 				seed_key = s.Sum(nil)
 				sys.ClearBuffer(pass)
-				mnemonic, er = bip39.NewMnemonic(seed_key[:(bip39wrds/3)*4])
+				mnemonic, er = bip39.NewMnemonicBytes(seed_key[:(bip39wrds/3)*4])
 				sys.ClearBuffer(seed_key)
 				if er != nil {
 					println(er.Error())
@@ -271,7 +289,7 @@ func make_wallet() {
 			}
 			if *dumpwords {
 				fmt.Println("===================== BIP39 mnemonic =====================")
-				words := strings.Split(mnemonic, " ")
+				words := bytes.Fields(mnemonic)
 				for i := range words {
 					fmt.Printf(" %2d: %-8s ", i+1, words[i])
 					if (i & 3) == 3 {
@@ -281,9 +299,9 @@ func make_wallet() {
 				fmt.Println("==========================================================")
 				would_exit = true
 			}
-			seed_key, er = bip39.NewSeedWithErrorChecking(mnemonic, password)
-			sys.ClearBuffer([]byte(mnemonic))
-			sys.ClearBuffer([]byte(password))
+			seed_key, er = bip39.NewSeedWithErrorCheckingBytes(mnemonic, password)
+			sys.ClearBuffer(mnemonic)
+			sys.ClearBuffer(password)
 			if er != nil {
 				println(er.Error())
 				os_exit = 1
@@ -356,7 +374,12 @@ do_it_again:
 		} else /*if waltype==4*/ {
 			// HD wallet
 			_hd := hdwal.Child(uint32(i) + hdpath_last)
-			copy(prv_key, _hd.Key[1:])
+			if n := copy(prv_key, _hd.Key[1:]); n != 32 {
+				println("ERROR: HD child key is", n, "bytes - abort!")
+				sys.ClearBuffer(prv_key)
+				os_exit = 1
+				return
+			}
 			sys.ClearBuffer(_hd.Key)
 			sys.ClearBuffer(_hd.ChCode)
 		}

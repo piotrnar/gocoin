@@ -29,6 +29,13 @@
 * Client/WebUI: Renamed menu items: MakeTx -> Spend, Transactions -> Mempool, TextUI -> Console, PushTx -> Load TX
 * Client/WebUI: Restyled the top menu - the items are pills now, with the current page clearly marked
 * Lib/btc: Fixed a potential DoS attack vector: allocating tx/block slices from unchecked CompactSize counts (thanks @brunoerg)
+* Wallet: Seed password, BIP39 mnemonic and BIP39 password are no longer copied into Go strings, so they can actually be wiped
+* Wallet: Buffer holding BIP39 password is now wiped as well (it used to shadow the seed password variable and was never cleared)
+* Wallet: Added a sanity check on the length of the private key returned by HD Child(), to never use a zero padded key
+* Lib/others/bip39: Added []byte based API: NewMnemonicBytes, NewSeedBytes, NewSeedWithErrorCheckingBytes, etc.
+* Wallet: Fixed a panic in getpass() when the seed password given via -stdin was longer than 1024 bytes
+* Wallet: The seed password is now rejected, instead of being silently truncated, when it exceeds 1024 bytes
+* Wallet: The seed file is now read with io.ReadFull() - a short read used to be ignored and could silently derive a different wallet
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

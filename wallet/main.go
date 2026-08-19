@@ -73,7 +73,7 @@ var (
 	lock_time  *uint = flag.Uint("locktime", 0, "Specify lock time value (timestamp if 500000000 or more, otherwise block number)")
 	tx_version *uint = flag.Uint("txver", 2, "Specify transaction version value")
 
-	bip39pass *bool = flag.Bool("p39", false, "Ask for BIP39 password (use with bip39 set to -1)")
+	bip39pass *bool = flag.Bool("p39", false, "Ask for BIP39 password (up to 1024 characters) (use together with bip39=-1 cfg value)")
 )
 
 // cleanExit exits after cleaning up private data from memory.

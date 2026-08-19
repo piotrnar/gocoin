@@ -19,6 +19,13 @@ import (
 // loadedTxs is a cache for txs from already loaded from balance/ folder.
 var loadedTxs map[[32]byte]*btc.Tx = make(map[[32]byte]*btc.Tx)
 
+// MaxPassLen is the maximum accepted length of the seed password, in bytes.
+const MaxPassLen = 1024
+
+// ErrPassTooLong is returned when the seed password exceeds MaxPassLen,
+// from whichever source it was provided.
+var ErrPassTooLong = fmt.Errorf("seed password provided is longer than %d bytes", MaxPassLen)
+
 // getline reads a line from stdin.
 func getline() string {
 	li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
@@ -42,7 +49,9 @@ func wallet_generation_mode() bool {
 }
 
 func getpass() ([]byte, error) {
-	var pass [1024]byte
+	// pass is one byte longer than MaxPassLen, so that an over long password
+	// can be detected instead of being silently truncated.
+	var pass [MaxPassLen + 1]byte
 	var n int
 	var e error
 	var f *os.File
@@ -51,13 +60,17 @@ func getpass() ([]byte, error) {
 		if *ask4pass {
 			return nil, errors.New("both -p and -stdin switches are not allowed")
 		}
-		d, er := io.ReadAll(os.Stdin)
+		d, er := io.ReadAll(io.LimitReader(os.Stdin, MaxPassLen+1))
 		if er != nil {
 			return nil, er
 		}
 		n = len(d)
 		if n <= 0 {
 			return nil, errors.New("empty seed password provided via stdin")
+		}
+		if n > MaxPassLen {
+			sys.ClearBuffer(d)
+			return nil, ErrPassTooLong
 		}
 		copy(pass[:n], d)
 		sys.ClearBuffer(d)
@@ -67,10 +80,18 @@ func getpass() ([]byte, error) {
 	if !*ask4pass {
 		f, e = os.Open(PassSeedFilename)
 		if e == nil {
-			n, _ = f.Read(pass[:])
+			n, e = io.ReadFull(f, pass[:])
 			f.Close()
+			if e != nil && e != io.EOF && e != io.ErrUnexpectedEOF {
+				sys.ClearBuffer(pass[:])
+				return nil, e
+			}
 			if n <= 0 {
 				return nil, errors.New("empty seed file " + PassSeedFilename)
+			}
+			if n > MaxPassLen {
+				sys.ClearBuffer(pass[:])
+				return nil, ErrPassTooLong
 			}
 			goto check_pass
 		}
@@ -83,12 +104,21 @@ func getpass() ([]byte, error) {
 	if n <= 0 {
 		return nil, errors.New("empty seed password entered by the user")
 	}
+	if n > MaxPassLen {
+		sys.ClearBuffer(pass[:n])
+		return nil, ErrPassTooLong
+	}
 
 	if wallet_generation_mode() {
 		if !*singleask {
 			fmt.Print("Re-enter the seed password (to be sure): ")
-			var pass2 [1024]byte
+			var pass2 [MaxPassLen + 1]byte
 			p2len := sys.ReadPassword(pass2[:])
+			if p2len > MaxPassLen {
+				sys.ClearBuffer(pass[:n])
+				sys.ClearBuffer(pass2[:p2len])
+				return nil, ErrPassTooLong
+			}
 			if p2len != n || !bytes.Equal(pass[:n], pass2[:p2len]) {
 				sys.ClearBuffer(pass[:n])
 				sys.ClearBuffer(pass2[:p2len])

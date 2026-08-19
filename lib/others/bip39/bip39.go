@@ -5,6 +5,7 @@
 package bip39
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -12,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"runtime"
 	"strings"
 
 	"crypto/hmac"
@@ -266,7 +268,7 @@ func NewSeedWithErrorChecking(mnemonic string, password string) ([]byte, error) 
 // NewSeed creates a hashed seed output given a provided string and password.
 // No checking is performed to validate that the string provided is a valid mnemonic.
 func NewSeed(mnemonic string, password string) []byte {
-	return pbkdf2Key([]byte(mnemonic), []byte("mnemonic"+password), 2048, 64, sha512.New)
+	return NewSeedBytes([]byte(mnemonic), []byte(password))
 }
 
 // IsMnemonicValid attempts to verify that the provided mnemonic is valid.
@@ -410,4 +412,137 @@ func pbkdf2Key(password, salt []byte, iter, keyLen int, h func() hash.Hash) []by
 		}
 	}
 	return dk[:keyLen]
+}
+
+// ---------------------------------------------------------------------------
+// Byte oriented API.
+//
+// These functions are behaviourally identical to their string counterparts
+// above, but never place secret material into a Go string. Strings are
+// immutable, so any secret that becomes one can no longer be wiped.
+// ---------------------------------------------------------------------------
+
+// wipe overwrites b with zeros. It is marked noinline and keeps b alive so the
+// compiler cannot discard the stores as dead.
+//
+//go:noinline
+func wipe(b []byte) {
+	for i := range b {
+		b[i] = 0
+	}
+	runtime.KeepAlive(b)
+}
+
+// NewMnemonicBytes is the []byte returning equivalent of NewMnemonic.
+// The returned slice may be wiped by the caller once it is no longer needed.
+func NewMnemonicBytes(entropy []byte) ([]byte, error) {
+	entBits := len(entropy) * 8
+	if err := validateEntropyBitSize(entBits); err != nil {
+		return nil, err
+	}
+	csBits := entBits / 32
+	nwords := (entBits + csBits) / 11
+
+	sum := computeChecksum(entropy)
+	defer wipe(sum)
+
+	// bit i of (entropy || sum[0])
+	bit := func(i int) int {
+		var by byte
+		if o := i >> 3; o < len(entropy) {
+			by = entropy[o]
+		} else {
+			by = sum[0]
+		}
+		return int(by>>(7-uint(i&7))) & 1
+	}
+
+	out := make([]byte, 0, nwords*9)
+	for w := 0; w < nwords; w++ {
+		idx := 0
+		for b := 0; b < 11; b++ {
+			idx = idx<<1 | bit(w*11+b)
+		}
+		if w > 0 {
+			out = append(out, ' ')
+		}
+		out = append(out, wordList[idx]...)
+	}
+	return out, nil
+}
+
+// EntropyFromMnemonicBytes is the []byte taking equivalent of EntropyFromMnemonic.
+func EntropyFromMnemonicBytes(mnemonic []byte) ([]byte, error) {
+	words := bytes.Fields(mnemonic)
+	nwords := len(words)
+	if nwords%3 != 0 || nwords < 12 || nwords > 24 {
+		return nil, ErrInvalidMnemonic
+	}
+	entBits := nwords * 11 * 32 / 33
+	csBits := entBits / 32
+
+	buf := make([]byte, (nwords*11+7)/8)
+	defer wipe(buf)
+
+	pos := 0
+	for _, w := range words {
+		// m[string(b)] does not allocate - the compiler special cases it.
+		idx, ok := wordMap[string(w)]
+		if !ok {
+			return nil, ErrInvalidMnemonic
+		}
+		for b := 10; b >= 0; b-- {
+			if (idx>>uint(b))&1 != 0 {
+				buf[pos>>3] |= 1 << (7 - uint(pos&7))
+			}
+			pos++
+		}
+	}
+
+	entropy := make([]byte, entBits/8)
+	copy(entropy, buf)
+
+	sum := computeChecksum(entropy)
+	defer wipe(sum)
+
+	var diff byte
+	for i := 0; i < csBits; i++ {
+		b := entBits + i
+		got := (buf[b>>3] >> (7 - uint(b&7))) & 1
+		want := (sum[0] >> (7 - uint(i))) & 1
+		diff |= got ^ want
+	}
+	if diff != 0 {
+		wipe(entropy)
+		return nil, ErrChecksumIncorrect
+	}
+	return entropy, nil
+}
+
+// IsMnemonicValidBytes is the []byte taking equivalent of IsMnemonicValid.
+func IsMnemonicValidBytes(mnemonic []byte) error {
+	entropy, err := EntropyFromMnemonicBytes(mnemonic)
+	if err != nil {
+		return err
+	}
+	wipe(entropy)
+	return nil
+}
+
+// NewSeedBytes is the []byte taking equivalent of NewSeed.
+func NewSeedBytes(mnemonic, password []byte) []byte {
+	salt := make([]byte, 0, len("mnemonic")+len(password))
+	salt = append(salt, "mnemonic"...)
+	salt = append(salt, password...)
+	defer wipe(salt)
+	return pbkdf2Key(mnemonic, salt, 2048, 64, sha512.New)
+}
+
+// NewSeedWithErrorCheckingBytes is the []byte taking equivalent of
+// NewSeedWithErrorChecking.
+func NewSeedWithErrorCheckingBytes(mnemonic, password []byte) ([]byte, error) {
+	if err := IsMnemonicValidBytes(mnemonic); err != nil {
+		return nil, err
+	}
+	return NewSeedBytes(mnemonic, password), nil
 }
