@@ -36,6 +36,7 @@
 * Wallet: Fixed a panic in getpass() when the seed password given via -stdin was longer than 1024 bytes
 * Wallet: The seed password is now rejected, instead of being silently truncated, when it exceeds 1024 bytes
 * Wallet: The seed file is now read with io.ReadFull() - a short read used to be ignored and could silently derive a different wallet
+* Lib/Others: Re-synced sources of "scrypt" module from upstream "golang.org/x/crypto/scrypt"
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
