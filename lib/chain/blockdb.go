@@ -448,13 +448,15 @@ func (db *BlockDB) BlockTrusted(hash []byte) {
 
 func (db *BlockDB) setBlockFlag(cur *oneBl, fl byte) {
 	var b [1]byte
-	cur.trusted = true
+	if (fl & BLOCK_TRUSTED) != 0 {
+		cur.trusted = true
+	}
 	db.disk_access.Lock()
-	cpos, _ := db.blockindx.Seek(0, os.SEEK_CUR) // remember our position
+	cpos, _ := db.blockindx.Seek(0, os.SEEK_CUR)
 	db.blockindx.ReadAt(b[:], cur.ipos)
 	b[0] |= fl
 	db.blockindx.WriteAt(b[:], cur.ipos)
-	db.blockindx.Seek(cpos, os.SEEK_SET) // restore the end posistion
+	db.blockindx.Seek(cpos, os.SEEK_SET)
 	db.disk_access.Unlock()
 }
 

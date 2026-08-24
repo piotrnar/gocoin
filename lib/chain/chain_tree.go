@@ -312,7 +312,7 @@ func (cur *BlockTreeNode) delAllChildren(ch *Chain, deleteCallback func(*btc.Uin
 		}
 		cur.Childs[i].delAllChildren(ch, deleteCallback)
 		delete(ch.BlockIndex, cur.Childs[i].BlockHash.BIdx())
-		ch.Blocks.BlockInvalid(cur.BlockHash.Hash[:])
+		ch.Blocks.BlockInvalid(cur.Childs[i].BlockHash.Hash[:])
 	}
 	cur.Childs = nil
 }
