@@ -125,8 +125,8 @@ func CachedBlocksAdd(newbl *BlockRcvd) {
 	CachedBlocksMutex.Unlock()
 }
 
-func CachedBlocksDel(oldbl *BlockRcvd) {
-	CachedBlocksMutex.Lock()
+// caller must hold CachedBlocksMutex
+func cachedBlocksDel(oldbl *BlockRcvd) {
 	height := oldbl.BlockTreeNode.Height
 	if idxrec, ok := CachedBlocksIdx[height]; ok {
 		if len(idxrec) == 1 {
@@ -150,6 +150,11 @@ func CachedBlocksDel(oldbl *BlockRcvd) {
 		panic("CachedBlocksDel called on block that is not in CachedBlocksIdx")
 	}
 	CachedBlocksBytes.Add(-oldbl.Size)
+}
+
+func CachedBlocksDel(oldbl *BlockRcvd) {
+	CachedBlocksMutex.Lock()
+	cachedBlocksDel(oldbl)
 	CachedBlocksMutex.Unlock()
 }
 
@@ -168,19 +173,26 @@ func resetLastCommitedHeaderBelow(root *chain.BlockTreeNode) {
 
 // make sure to call it with MutexRcv locked
 func DiscardBlock(n *chain.BlockTreeNode) {
+	CachedBlocksMutex.Lock()
+	discardBlock(n)
+	CachedBlocksMutex.Unlock()
+}
+
+// caller must hold both MutexRcv and CachedBlocksMutex
+func discardBlock(n *chain.BlockTreeNode) {
 	if LastCommitedHeader == n {
 		LastCommitedHeader = n.Parent
 		println("Revert LastCommitedHeader to", LastCommitedHeader.Height)
 	}
 	for _, c := range n.Childs {
-		DiscardBlock(c)
+		discardBlock(c)
 	}
 	DiscardedBlocks[n.BlockHash.BIdx()] = true
 	delete(ReceivedBlocks, n.BlockHash.BIdx())
 	if cl, ok := CachedBlocksIdx[n.Height]; ok {
 		for _, clb := range cl {
 			if clb.BlockTreeNode == n {
-				CachedBlocksDel(clb)
+				cachedBlocksDel(clb)
 				common.CountSafe("BlockDiscardCach")
 				break
 			}
