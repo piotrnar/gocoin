@@ -13,6 +13,9 @@ import (
 )
 
 const (
+	// If the newest header we have is not older than this, our header chain is at the network's tip.
+	HeadersSyncDoneMargin = 6 * 3600
+
 	PH_STATUS_NEW   = 1
 	PH_STATUS_FRESH = 2
 	PH_STATUS_OLD   = 3
@@ -73,6 +76,11 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	AddB2G(b2g)
 	if node.Height > LastCommitedHeader.Height {
 		LastCommitedHeader = node
+		if !HeadersSyncDone.Get() && node.Timestamp()+HeadersSyncDoneMargin > uint32(time.Now().Unix()) {
+			HeadersSyncDone.Set()
+			fmt.Println("All headers fetched up to", node.Height, "after", time.Since(common.StartTime).String(),
+				"- block chain at", common.Last.BlockHeight())
+		}
 		//println("LastCommitedHeader:", LastCommitedHeader.Height, "-change to", LastCommitedHeader.BlockHash.String())
 	} else {
 		//println("LastCommitedHeader:", LastCommitedHeader.Height, "new:", node.Height, "-keep!")

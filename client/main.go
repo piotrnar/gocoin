@@ -715,6 +715,9 @@ func main() {
 		} else {
 			network.LastCommitedHeader = common.Last.Block
 		}
+		if network.LastCommitedHeader.Timestamp()+network.HeadersSyncDoneMargin > uint32(time.Now().Unix()) {
+			network.HeadersSyncDone.Set() // already at the tip, so do not report it later
+		}
 
 		if common.CFG.TXPool.SaveOnDisk && !common.FLAG.NoMempoolLoad {
 			txpool.MempoolLoad()

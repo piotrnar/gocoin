@@ -55,6 +55,7 @@ var (
 	IndexToBlocksToGet       map[uint32][]btc.BIDX          = make(map[uint32][]btc.BIDX)
 	LowestIndexToBlocksToGet atomic.Uint32
 	LastCommitedHeader       *chain.BlockTreeNode
+	HeadersSyncDone          sys.SyncBool // set when our header chain reaches the network's tip
 	MutexRcv                 sync.Mutex
 
 	NetBlocks chan *BlockRcvd     = make(chan *BlockRcvd, 512)
