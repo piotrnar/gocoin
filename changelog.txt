@@ -45,8 +45,14 @@
 * Client: new DiscardBranch() - removes the block's tree nodes and remembers their hashes, so a corrupt block cannot be re-downloaded after a peer re-announces its header
 * Client: unified the discarding logic - DiscardBlock() and DiscardBranch() share one routine cleaning up BlocksToGet, ReceivedBlocks, the blocks cache and the temp files
 * Client: DiscardBlock() also removes the descendants of the discarded block from BlocksToGet, instead of only relying on CheckParentDiscarded() to catch them later
-* Client: DiscardedBlocks map is now pruned, to not grow indefinitely
+* Client: discarding a block now also prunes it from BlocksToGetFailed and deletes its data from the temp folder
 * Client: report the time it took to fetch all the block headers, once the header chain reaches the network's tip
+* Client: fixed a valid block being permanently discarded when the peer that announced it disconnected before serving it (issue #75)
+* Client: blocks that we only failed to download are no longer remembered as invalid, so peers announcing their headers again do not get banned (issue #75)
+* Client: a block we cannot fetch from the peers that announced it is now unpinned after 5 minutes, so any peer can serve it, instead of being dropped after an hour
+* Client: OnlyFetchFrom identifies the announcing peers by UniqID instead of ConnID, so a peer that reconnects is still a valid source of the block
+* Client: "inv" from a peer that has a block we are waiting for now also marks him as a source we can fetch the block from
+* Client: ProcessNewHeader() reuses the existing block tree node, instead of AcceptHeader() creating a duplicate one, when a block we had given up on gets announced again
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

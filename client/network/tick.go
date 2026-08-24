@@ -524,10 +524,10 @@ func NetworkTick() {
 	var cnt_headers_in_progress int
 	var max_headers_got_cnt int
 	var _v *OneConnection
-	valid_conn_ids := make([]uint32, 0, len(OpenCons))
+	valid_peer_ids := make([]uint64, 0, len(OpenCons))
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
-		valid_conn_ids = append(valid_conn_ids, v.ConnID)
+		valid_peer_ids = append(valid_peer_ids, v.PeerAddr.UniqID())
 		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress {
 			cnt_headers_in_progress++
 		} else if !v.X.LastHeadersEmpty {
@@ -545,39 +545,45 @@ func NetworkTick() {
 	if len(BlocksToGetFailed) > 0 && now.After(BlocksToGetFailedCheck) {
 		new_BlocksToGetFailed := make(map[btc.BIDX]struct{})
 		for idx := range BlocksToGetFailed {
-			if v, ok := BlocksToGet[idx]; ok {
-				if time.Since(v.Started) < 60*time.Minute {
-					// give each block some time, to be annunced by other peers
-					new_BlocksToGetFailed[idx] = struct{}{}
-					continue
-				}
+			v, ok := BlocksToGet[idx]
+			if !ok {
+				continue // we are not interested in this block anymore
+			}
+			age := time.Since(v.Started)
+
+			if age >= GiveUpOnBlockAfter {
+				// Nobody has served us this block for a very long time, so stop asking.
+				// Note: we have not verified it, so do not mark it as invalid. If any
+				// peer announces its header again, we will fetch it again - and we will
+				// not ban anybody for announcing it.
+				common.CountSafe("BlockDlGivenUp")
+				println(time.Now().Format("15:04:05"), "Give up on block", v.Height,
+					v.BlockHash.String(), "announced", age.String(), "ago, while @",
+					common.Last.BlockHeight())
+				DelB2G(idx)
+				DiscardBlock(v.BlockTreeNode, false)
+				continue
+			}
+
+			if len(v.OnlyFetchFrom) != 0 {
 				var still_hope bool
-				for _, fid := range v.OnlyFetchFrom {
-					if slices.Contains(valid_conn_ids, fid) {
+				for _, pid := range v.OnlyFetchFrom {
+					if slices.Contains(valid_peer_ids, pid) {
 						still_hope = true
 						break
 					}
 				}
-				if !still_hope {
-					if !common.Testnet {
-						/* I have seen it happening in mainnet:
-						Revert LastCommitedHeader to 952928
-						*** Block 952924 000000000000000000013ca80e14421269687c9700132b78a77dbdcad1857f41 disarded
-						*/
-						println(time.Now().Format("15:04:05"), "Drop block", v.Height, v.BlockHash.String(), " while @", common.Last.BlockHeight())
-						println("  announced", time.Since(v.Started).String(), "ago, with SendInvs:", v.SendInvs)
-						print("  only from:")
-						for _, cid := range v.OnlyFetchFrom {
-							print(" ", cid)
-						}
-						println()
-					}
-					common.CountSafe("BlockDlFailed")
-					DelB2G(idx)
-					DiscardBlock(v.BlockTreeNode)
-					println("*** Block", v.Height, v.BlockHash.String(), "discarded")
+				if !still_hope || age >= UnpinBlockAfter {
+					// Either none of the peers that announced this block is connected
+					// anymore, or they are taking too long. Never discard a block just
+					// because of that - let any peer serve it to us instead.
+					common.CountSafe("BlockDlUnpinned")
+					v.OnlyFetchFrom = nil
 				}
 			}
+
+			// Keep watching it, so we can eventually give up on it, if it never arrives.
+			new_BlocksToGetFailed[idx] = struct{}{}
 		}
 		BlocksToGetFailed = new_BlocksToGetFailed
 		if len(BlocksToGetFailed) > 0 {

@@ -249,7 +249,8 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		// update network.LastCommitedHeader
 		network.MutexRcv.Lock()
 		prev_last_header := network.LastCommitedHeader
-		network.DiscardBlock(newbl.BlockTreeNode) // this function can also modify network.LastCommitedHeader
+		// the block has failed verification, so it is invalid for real
+		network.DiscardBlock(newbl.BlockTreeNode, true) // this function can also modify network.LastCommitedHeader
 		if common.Last.Block.Height > network.LastCommitedHeader.Height {
 			network.LastCommitedHeader, _ = common.Last.Block.FindFarthestNode()
 		}
@@ -390,8 +391,10 @@ not_found:
 func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 	network.MutexRcv.Lock()
 	defer network.MutexRcv.Unlock()
-	if network.DiscardedBlocks[n.Parent.BlockHash.BIdx()] {
-		network.DiscardedBlocks[n.BlockHash.BIdx()] = true
+	if invalid, ok := network.DiscardedBlocks[n.Parent.BlockHash.BIdx()]; ok {
+		// a child of an invalid block is invalid, but a child of a block that we only
+		// gave up on fetching is not - inherit the parent's status
+		network.DiscardedBlocks[n.BlockHash.BIdx()] = invalid
 		return true
 	}
 	return false

@@ -32,24 +32,30 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	c.InvStore(MSG_BLOCK, bl.Hash.Hash[:])
 	c.Mutex.Unlock()
 
-	if _, ok = DiscardedBlocks[bl.Hash.BIdx()]; ok {
-		common.CountSafe("HdrRejected")
-		//fmt.Println("", bl.Hash.String(), "-header for already rejected block")
-		return PH_STATUS_FATAL, nil
+	bidx := bl.Hash.BIdx()
+
+	if invalid, ok := DiscardedBlocks[bidx]; ok {
+		if invalid {
+			common.CountSafe("HdrRejected")
+			//fmt.Println("", bl.Hash.String(), "-header for already rejected block")
+			return PH_STATUS_FATAL, nil
+		}
+		// We only gave up on downloading this one - it was never proven invalid.
+		// Somebody is announcing it again, so give it another chance.
+		common.CountSafe("HdrUndiscarded")
+		delete(DiscardedBlocks, bidx)
 	}
 
-	if _, ok = ReceivedBlocks[bl.Hash.BIdx()]; ok {
+	if _, ok = ReceivedBlocks[bidx]; ok {
 		common.CountSafe("HeaderOld")
 		//fmt.Println("", i, bl.Hash.String(), "-already received")
 		return PH_STATUS_OLD, nil
 	}
 
-	if b2g, ok = BlocksToGet[bl.Hash.BIdx()]; ok {
+	if b2g, ok = BlocksToGet[bidx]; ok {
 		common.CountSafe("HeaderFresh")
 		//fmt.Println(c.PeerAddr.Ip(), "block", bl.Hash.String(), " not new but get it")
-		if len(b2g.OnlyFetchFrom) > 0 && !slices.Contains(b2g.OnlyFetchFrom, c.ConnID) {
-			b2g.OnlyFetchFrom = append(b2g.OnlyFetchFrom, c.ConnID)
-		}
+		b2g.addFetchSource(c)
 		return PH_STATUS_FRESH, b2g
 	}
 
@@ -71,7 +77,12 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 		}
 	}
 
-	node := common.BlockChain.AcceptHeader(bl)
+	// The node may still be in the tree - e.g. when we are reviving a block that we
+	// had previously given up on. AcceptHeader() would add a duplicate in such case.
+	node, have_node := common.BlockChain.BlockIndex[bidx]
+	if !have_node {
+		node = common.BlockChain.AcceptHeader(bl)
+	}
 	b2g = &OneBlockToGet{Started: c.LastMsgTime, Block: bl, BlockTreeNode: node, InProgress: 0}
 	AddB2G(b2g)
 	if node.Height > LastCommitedHeader.Height {
@@ -98,9 +109,21 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	b2g.Block.Trusted.Store(b2g.BlockTreeNode.Trusted.Get())
 
 	if !doingChainSync() {
-		b2g.OnlyFetchFrom = []uint32{c.ConnID}
+		b2g.OnlyFetchFrom = []uint64{c.PeerAddr.UniqID()}
 	}
 	return PH_STATUS_NEW, b2g
+}
+
+// addFetchSource remembers that the given peer also has this block, so we are allowed
+// to fetch it from him. It does nothing for the blocks that are not pinned to any peer.
+// Make sure to call it with MutexRcv locked.
+func (b2g *OneBlockToGet) addFetchSource(c *OneConnection) {
+	if len(b2g.OnlyFetchFrom) == 0 {
+		return // it can be fetched from anyone anyway
+	}
+	if uid := c.PeerAddr.UniqID(); !slices.Contains(b2g.OnlyFetchFrom, uid) {
+		b2g.OnlyFetchFrom = append(b2g.OnlyFetchFrom, uid)
+	}
 }
 
 func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {

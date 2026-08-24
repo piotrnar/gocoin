@@ -423,7 +423,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			if idxlst, ok := IndexToBlocksToGet[bh]; ok {
 				for _, idx := range idxlst {
 					v := BlocksToGet[idx]
-					if len(v.OnlyFetchFrom) != 0 && !slices.Contains(v.OnlyFetchFrom, c.ConnID) {
+					if len(v.OnlyFetchFrom) != 0 && !slices.Contains(v.OnlyFetchFrom, c.PeerAddr.UniqID()) {
 						BlocksToGetFailed[idx] = struct{}{}
 						BlocksToGetFailedCheck = time.Time{}
 						continue

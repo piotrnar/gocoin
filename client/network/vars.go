@@ -37,12 +37,26 @@ type BlockRcvd struct {
 	Size int
 }
 
+const (
+	// UnpinBlockAfter is how long we keep fetching a block only from the peers that
+	// announced it. After that time any peer can serve it to us.
+	UnpinBlockAfter = 5 * time.Minute
+
+	// GiveUpOnBlockAfter is how long we keep trying to fetch a block before dropping it.
+	// Such a block is not marked as invalid, so we will fetch it again (and not ban
+	// anyone) if its header gets announced to us once more.
+	GiveUpOnBlockAfter = 60 * time.Minute
+)
+
 type OneBlockToGet struct {
 	Started   time.Time
 	TmPreproc time.Time
 	*btc.Block
 	*chain.BlockTreeNode
-	OnlyFetchFrom []uint32
+	// OnlyFetchFrom holds peersdb.PeerAddr.UniqID() of the peers that announced this
+	// block to us. While it is not empty, we only fetch the block from those peers.
+	// Note: it must not be ConnID, as the same peer reconnecting gets a new ConnID.
+	OnlyFetchFrom []uint64
 	InProgress    uint32
 	SendInvs      bool
 }
@@ -67,7 +81,15 @@ var (
 	CachedMaxHeight     uint32
 	CachedBlocksBytes   sys.SyncInt
 	MaxCachedBlocksSize sys.SyncInt
-	DiscardedBlocks     map[btc.BIDX]bool = make(map[btc.BIDX]bool)
+
+	// DiscardedBlocks are the blocks we do not want to fetch anymore.
+	// The value tells whether we know the block to be invalid:
+	//   true  - the block (or one of its ancestors) failed verification. A peer
+	//           announcing it is misbehaving, so we ban it.
+	//   false - we only gave up on downloading it. Nobody is to blame and the block
+	//           may well be valid, so if a peer announces its header again, we undo
+	//           the discard and fetch it once more.
+	DiscardedBlocks map[btc.BIDX]bool = make(map[btc.BIDX]bool)
 
 	HeadersReceived sys.SyncInt
 )
@@ -180,14 +202,15 @@ func delBlockFromDiskCache(hash *btc.Uint256) {
 	os.Remove(tmpfn + ".hashes")
 }
 
-// DiscardBlock marks the given block, and all of its descendants, as never to be
-// fetched again. The tree nodes are left in place - see DiscardBranch() if you also
-// need them gone.
+// DiscardBlock marks the given block, and all of its descendants, as not to be
+// fetched. Set invalid to true only if the block has actually failed verification -
+// see the comment at DiscardedBlocks. The tree nodes are left in place - see
+// DiscardBranch() if you also need them gone.
 // Make sure to call it with MutexRcv locked.
-func DiscardBlock(n *chain.BlockTreeNode) {
+func DiscardBlock(n *chain.BlockTreeNode, invalid bool) {
 	resetLastCommitedHeaderBelow(n)
 	CachedBlocksMutex.Lock()
-	discardBlock(n)
+	discardBlock(n, invalid)
 	CachedBlocksMutex.Unlock()
 }
 
@@ -198,18 +221,19 @@ func DiscardBlock(n *chain.BlockTreeNode) {
 // Make sure to call it with MutexRcv locked and BlockIndexAccess unlocked.
 func DiscardBranch(n *chain.BlockTreeNode) {
 	// do the bookkeeping first - after DeleteBranch() the child links are gone
-	DiscardBlock(n)
+	DiscardBlock(n, true)
 	common.BlockChain.DeleteBranch(n, nil)
 	common.CountSafe("BlockBranchDiscrd")
 }
 
 // caller must hold both MutexRcv and CachedBlocksMutex
-func discardBlock(n *chain.BlockTreeNode) {
+func discardBlock(n *chain.BlockTreeNode, invalid bool) {
 	for _, c := range n.Childs {
-		discardBlock(c)
+		discardBlock(c, invalid)
 	}
 	bidx := n.BlockHash.BIdx()
-	DiscardedBlocks[bidx] = true
+	// never downgrade a block that we already know to be invalid
+	DiscardedBlocks[bidx] = invalid || DiscardedBlocks[bidx]
 	delete(ReceivedBlocks, bidx)
 	delete(BlocksToGetFailed, bidx)
 	if _, ok := BlocksToGet[bidx]; ok {

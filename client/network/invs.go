@@ -88,6 +88,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 						}
 						common.CountSafe("InvBlockFresh")
 						//println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", b2g.Block.Height, bhash.String())
+						b2g.addFetchSource(c) // he has it, so we are allowed to fetch it from him
 						c.MutexSetBool(&c.X.GetBlocksDataNow, true)
 					} else {
 						common.CountSafe("InvBlockNew")
