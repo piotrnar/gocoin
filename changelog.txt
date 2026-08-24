@@ -41,6 +41,7 @@
 * Lib/chain: fixed a rare panic ("Trusted block cannot be invalid") caused by BlockInvalid() wrongly setting the trusted flag
 * Client: fixed a dangling LastCommitedHeader after DeleteBranch() when the discarded block had descendant headers
 * Client: fixed a problem for DiscardBlock touching CachedBlocksIdx under the wrong mutex
+* Client: fixed the failed-blocks sweep re-running on every network tick instead of once per minute
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

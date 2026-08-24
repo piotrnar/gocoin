@@ -547,7 +547,7 @@ func NetworkTick() {
 		for idx := range BlocksToGetFailed {
 			if v, ok := BlocksToGet[idx]; ok {
 				if time.Since(v.Started) < 60*time.Minute {
-					// give each block 5 minutes, to be annunced by other peers
+					// give each block some time, to be annunced by other peers
 					new_BlocksToGetFailed[idx] = struct{}{}
 					continue
 				}
@@ -580,7 +580,7 @@ func NetworkTick() {
 			}
 		}
 		BlocksToGetFailed = new_BlocksToGetFailed
-		if len(BlocksToGetFailed) > 0 && BlocksToGetFailedCheck.IsZero() {
+		if len(BlocksToGetFailed) > 0 {
 			BlocksToGetFailedCheck = now.Add(time.Minute) // some were not old enough yet. check them again in a minute
 		}
 	}
