@@ -172,10 +172,6 @@ func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
 	c.SendRawMsg("blocktxn", msg.Bytes(), c.X.AuthAckGot)
 }
 
-func delB2G_callback(hash *btc.Uint256) {
-	DelB2G(hash.BIdx())
-}
-
 func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 	pl := cmd.pl
 	if len(pl) < 90 {
@@ -392,9 +388,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 
 			if b2g.Block.MerkleRootMatch() {
 				println("It was a wrongly mined one - clean it up")
-				DelB2G(bidx) //remove it from BlocksToGet
-				resetLastCommitedHeaderBelow(b2g.BlockTreeNode)
-				common.BlockChain.DeleteBranch(b2g.BlockTreeNode, delB2G_callback)
+				DiscardBranch(b2g.BlockTreeNode)
 			}
 
 			//c.DoS("BadCmpctBlockA")
@@ -522,9 +516,7 @@ func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
 
 		if b2g.Block.MerkleRootMatch() {
 			println("It was a wrongly mined one - clean it up")
-			DelB2G(idx) //remove it from BlocksToGet
-			resetLastCommitedHeaderBelow(b2g.BlockTreeNode)
-			common.BlockChain.DeleteBranch(b2g.BlockTreeNode, delB2G_callback)
+			DiscardBranch(b2g.BlockTreeNode)
 		}
 
 		return

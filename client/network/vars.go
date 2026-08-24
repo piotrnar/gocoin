@@ -1,6 +1,7 @@
 package network
 
 import (
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -171,27 +172,55 @@ func resetLastCommitedHeaderBelow(root *chain.BlockTreeNode) {
 	}
 }
 
-// make sure to call it with MutexRcv locked
+// delBlockFromDiskCache removes the block's data that we stored in the temp folder.
+func delBlockFromDiskCache(hash *btc.Uint256) {
+	tmpfn := common.TempBlocksDir() + hash.String()
+	os.Remove(tmpfn)
+	os.Remove(tmpfn + ".hashes")
+}
+
+// DiscardBlock marks the given block, and all of its descendants, as never to be
+// fetched again. The tree nodes are left in place - see DiscardBranch() if you also
+// need them gone.
+// Make sure to call it with MutexRcv locked.
 func DiscardBlock(n *chain.BlockTreeNode) {
+	resetLastCommitedHeaderBelow(n)
 	CachedBlocksMutex.Lock()
 	discardBlock(n)
 	CachedBlocksMutex.Unlock()
 }
 
+// DiscardBranch does what DiscardBlock() does, but additionally removes the given
+// block and all of its descendants from the chain's tree. Use it for the blocks that
+// we know are invalid, so their hashes are remembered in DiscardedBlocks and we do
+// not fetch them again when a peer re-announces the header.
+// Make sure to call it with MutexRcv locked and BlockIndexAccess unlocked.
+func DiscardBranch(n *chain.BlockTreeNode) {
+	// do the bookkeeping first - after DeleteBranch() the child links are gone
+	DiscardBlock(n)
+	common.BlockChain.DeleteBranch(n, nil)
+	common.CountSafe("BlockBranchDiscrd")
+}
+
 // caller must hold both MutexRcv and CachedBlocksMutex
 func discardBlock(n *chain.BlockTreeNode) {
-	if LastCommitedHeader == n {
-		LastCommitedHeader = n.Parent
-		println("Revert LastCommitedHeader to", LastCommitedHeader.Height)
-	}
 	for _, c := range n.Childs {
 		discardBlock(c)
 	}
-	DiscardedBlocks[n.BlockHash.BIdx()] = true
-	delete(ReceivedBlocks, n.BlockHash.BIdx())
+	bidx := n.BlockHash.BIdx()
+	DiscardedBlocks[bidx] = true
+	delete(ReceivedBlocks, bidx)
+	delete(BlocksToGetFailed, bidx)
+	if _, ok := BlocksToGet[bidx]; ok {
+		DelB2G(bidx) // no point in fetching it anymore
+		common.CountSafe("BlockDiscardB2G")
+	}
 	if cl, ok := CachedBlocksIdx[n.Height]; ok {
 		for _, clb := range cl {
 			if clb.BlockTreeNode == n {
+				if clb.Block == nil {
+					delBlockFromDiskCache(n.BlockHash)
+				}
 				cachedBlocksDel(clb)
 				common.CountSafe("BlockDiscardCach")
 				break

@@ -42,6 +42,10 @@
 * Client: fixed a dangling LastCommitedHeader after DeleteBranch() when the discarded block had descendant headers
 * Client: fixed a problem for DiscardBlock touching CachedBlocksIdx under the wrong mutex
 * Client: fixed the failed-blocks sweep re-running on every network tick instead of once per minute
+* Client: new DiscardBranch() - removes the block's tree nodes and remembers their hashes, so a corrupt block cannot be re-downloaded after a peer re-announces its header
+* Client: unified the discarding logic - DiscardBlock() and DiscardBranch() share one routine cleaning up BlocksToGet, ReceivedBlocks, the blocks cache and the temp files
+* Client: DiscardBlock() also removes the descendants of the discarded block from BlocksToGet, instead of only relying on CheckParentDiscarded() to catch them later
+* Client: DiscardedBlocks map is now pruned, to not grow indefinitely
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
