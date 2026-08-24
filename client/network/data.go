@@ -174,9 +174,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 		if b2g.Block.MerkleRootMatch() && !strings.Contains(er.Error(), "RPC_Result:bad-witness-nonce-size") {
 			println(" <- It was a wrongly mined one - give it up")
 			DelB2G(idx) //remove it from BlocksToGet
-			if b2g.BlockTreeNode == LastCommitedHeader {
-				LastCommitedHeader = LastCommitedHeader.Parent
-			}
+			resetLastCommitedHeaderBelow(b2g.BlockTreeNode)
 			common.BlockChain.DeleteBranch(b2g.BlockTreeNode, delB2G_callback)
 		} else {
 			println(" <- Merkle Root not matching - discard the data:", len(b2g.Block.Txs), b2g.Block.TxCount,

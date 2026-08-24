@@ -153,6 +153,19 @@ func CachedBlocksDel(oldbl *BlockRcvd) {
 	CachedBlocksMutex.Unlock()
 }
 
+// resetLastCommitedHeaderBelow moves LastCommitedHeader to root.Parent if
+// LastCommitedHeader is root itself or any of root's descendants - i.e. if it
+// sits inside the branch that is about to be removed by DeleteBranch().
+// Call with MutexRcv locked.
+func resetLastCommitedHeaderBelow(root *chain.BlockTreeNode) {
+	for n := LastCommitedHeader; n != nil && n.Height >= root.Height; n = n.Parent {
+		if n == root {
+			LastCommitedHeader = root.Parent
+			return
+		}
+	}
+}
+
 // make sure to call it with MutexRcv locked
 func DiscardBlock(n *chain.BlockTreeNode) {
 	if LastCommitedHeader == n {

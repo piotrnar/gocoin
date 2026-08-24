@@ -393,9 +393,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 			if b2g.Block.MerkleRootMatch() {
 				println("It was a wrongly mined one - clean it up")
 				DelB2G(bidx) //remove it from BlocksToGet
-				if b2g.BlockTreeNode == LastCommitedHeader {
-					LastCommitedHeader = LastCommitedHeader.Parent
-				}
+				resetLastCommitedHeaderBelow(b2g.BlockTreeNode)
 				common.BlockChain.DeleteBranch(b2g.BlockTreeNode, delB2G_callback)
 			}
 
@@ -525,9 +523,7 @@ func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
 		if b2g.Block.MerkleRootMatch() {
 			println("It was a wrongly mined one - clean it up")
 			DelB2G(idx) //remove it from BlocksToGet
-			if b2g.BlockTreeNode == LastCommitedHeader {
-				LastCommitedHeader = LastCommitedHeader.Parent
-			}
+			resetLastCommitedHeaderBelow(b2g.BlockTreeNode)
 			common.BlockChain.DeleteBranch(b2g.BlockTreeNode, delB2G_callback)
 		}
 

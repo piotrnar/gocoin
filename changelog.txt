@@ -37,6 +37,9 @@
 * Wallet: The seed password is now rejected, instead of being silently truncated, when it exceeds 1024 bytes
 * Wallet: The seed file is now read with io.ReadFull() - a short read used to be ignored and could silently derive a different wallet
 * Lib/Others: Re-synced sources of "scrypt" module from upstream "golang.org/x/crypto/scrypt"
+* Lib/chain: fixed DeleteBranch() invalidating the parent block instead of each child being removed (issue #73)
+* Lib/chain: fixed a rare panic ("Trusted block cannot be invalid") caused by BlockInvalid() wrongly setting the trusted flag
+* Client: fixed a dangling LastCommitedHeader after DeleteBranch() when the discarded block had descendant headers
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
