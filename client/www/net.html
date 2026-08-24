@@ -728,7 +728,9 @@ function draw_chart() {
 		} catch(e) {
 			console.log(e)
 		}
-		setTimeout(draw_chart, 990*seconds)
+		// the chart records only change at unix times divisible by "seconds",
+		// so schedule the next refresh just after the upcoming slot boundary
+		setTimeout(draw_chart, 1000*(seconds - (Date.now()/1e3)%seconds + 0.5))
 	}
 	aj.open("GET","bwchar.json?seconds="+seconds, true)
 	aj.send(null)

@@ -206,3 +206,82 @@ func SetUploadLimit(val uint64) {
 func UploadLimit() (res uint64) {
 	return atomic.LoadUint64(&upload_limit)
 }
+
+const (
+	BwChartSlots     = 200 // number of records in the bandwidth chart
+	BwChartMaxPeriod = 300 // BwChartSlots*BwChartMaxPeriod must be less than len(DlBytesPrevSec)
+)
+
+type BwChartDat struct {
+	Avg [BwChartSlots]uint64 // average B/s within the slot. index 0 is the most recent slot
+	Max [BwChartSlots]uint64 // peak B/s within the slot
+}
+
+type bwChartCache struct {
+	dat     BwChartDat
+	period  int64
+	end_sec int64 // unix time where the current (still incomplete) slot begins
+	valid   bool
+}
+
+var (
+	dl_chart_cache bwChartCache
+	ul_chart_cache bwChartCache
+)
+
+// update refreshes the cached chart records with time period aligned slots.
+// The slot boundaries are at unix times divisible by the period, so records of
+// completed slots never change and only the newly completed ones (usually none
+// or one) need to be calculated. Make sure to call it with bw_mutex locked,
+// just after TickRecv() / TickSent().
+func (c *bwChartCache) update(arr []uint64, idx uint16, last_sec int64, period int64) {
+	end := last_sec - last_sec%period // beginning of the current (incomplete) slot
+	shift := BwChartSlots             // by default recalculate all the records...
+	if c.valid && c.period == period && end >= c.end_sec {
+		if end == c.end_sec {
+			return // no new slot completed since the last call - the cache is up to date
+		}
+		if new_slots := (end - c.end_sec) / period; new_slots < BwChartSlots {
+			shift = int(new_slots) // ... but usually only this many
+		}
+	}
+	if shift < BwChartSlots {
+		copy(c.dat.Avg[shift:], c.dat.Avg[:BwChartSlots-shift])
+		copy(c.dat.Max[shift:], c.dat.Max[:BwChartSlots-shift])
+	}
+	// arr[idx-k] holds the byte count of the unix second last_sec-k (for k>=1)
+	for i := shift - 1; i >= 0; i-- {
+		var sum, max uint64
+		slot_end := end - int64(i)*period
+		for s := slot_end - period; s < slot_end; s++ {
+			v := arr[idx-uint16(last_sec-s)]
+			sum += v
+			if v > max {
+				max = v
+			}
+		}
+		c.dat.Avg[i] = sum / uint64(period)
+		c.dat.Max[i] = max
+	}
+	c.period = period
+	c.end_sec = end
+	c.valid = true
+}
+
+// GetBwChart fills the given records with the bandwidth chart data, where each
+// record averages the given number of seconds (from 1 to BwChartMaxPeriod).
+func GetBwChart(period int64, dl, ul *BwChartDat) {
+	if period < 1 {
+		period = 1
+	} else if period > BwChartMaxPeriod {
+		period = BwChartMaxPeriod
+	}
+	bw_mutex.Lock()
+	TickRecv()
+	TickSent()
+	dl_chart_cache.update(DlBytesPrevSec[:], DlBytesPrevSecIdx, dl_last_sec, period)
+	*dl = dl_chart_cache.dat
+	ul_chart_cache.update(UlBytesPrevSec[:], UlBytesPrevSecIdx, ul_last_sec, period)
+	*ul = ul_chart_cache.dat
+	bw_mutex.Unlock()
+}

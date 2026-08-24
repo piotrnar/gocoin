@@ -137,49 +137,25 @@ func json_bwchar(w http.ResponseWriter, r *http.Request) {
 	if len(r.Form["seconds"]) > 0 {
 		cnt, _ = strconv.ParseUint(r.Form["seconds"][0], 10, 32)
 	}
-	if cnt < 1 {
-		cnt = 1
-	} else if cnt > 300 {
-		cnt = 300
-	}
+
+	var dl, ul common.BwChartDat
+	common.GetBwChart(int64(cnt), &dl, &ul)
 
 	var out struct {
-		DL           [200]uint64 // max 200 records (from 200 seconds to ~16.7 hours)
-		UL           [200]uint64
+		DL           [common.BwChartSlots]uint64 // max 200 records (from 200 seconds to ~16.7 hours)
+		UL           [common.BwChartSlots]uint64
 		MaxDL, MaxUL uint64
 	}
-
-	common.LockBw()
-	common.TickRecv()
-	common.TickSent()
-
-	idx := uint16(common.DlBytesPrevSecIdx)
-	for i := range out.DL {
-		var sum uint64
-		for c := 0; c < int(cnt); c++ {
-			idx--
-			sum += common.DlBytesPrevSec[idx]
-			if common.DlBytesPrevSec[idx] > out.MaxDL {
-				out.MaxDL = common.DlBytesPrevSec[idx]
-			}
+	out.DL = dl.Avg
+	out.UL = ul.Avg
+	for i := 0; i < common.BwChartSlots; i++ {
+		if dl.Max[i] > out.MaxDL {
+			out.MaxDL = dl.Max[i]
 		}
-		out.DL[i] = sum / cnt
-	}
-
-	idx = uint16(common.UlBytesPrevSecIdx)
-	for i := range out.UL {
-		var sum uint64
-		for c := 0; c < int(cnt); c++ {
-			idx--
-			sum += common.UlBytesPrevSec[idx]
-			if common.UlBytesPrevSec[idx] > out.MaxUL {
-				out.MaxUL = common.UlBytesPrevSec[idx]
-			}
+		if ul.Max[i] > out.MaxUL {
+			out.MaxUL = ul.Max[i]
 		}
-		out.UL[i] = sum / cnt
 	}
-
-	common.UnlockBw()
 
 	bx, er := json.Marshal(out)
 	if er == nil {
