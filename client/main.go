@@ -37,7 +37,7 @@ var (
 
 	exitat      *int  = flag.Int("exitat", 0, "Auto exit node after comitting block with the given height (-1 for current last)")
 	saveonexit  *bool = flag.Bool("save", true, "Save UTXO.db before exiting (use with -exitat)")
-	neverstrust *bool = flag.Bool("ntrust", true, "Never trust any blocks, ever during rebuild (forces script revalidation)")
+	neverstrust *bool = flag.Bool("ntrust", false, "Never trust any blocks, ever during rebuild (forces script revalidation)")
 
 	highestAcceptedBlock uint32
 	retryCachedBlocks    bool
