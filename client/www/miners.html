@@ -12,19 +12,6 @@ function printable(str) {
 function show_versions(row, id) {
 	var s = "*** Blocks mined by " + id + ' ***'
 
-	var vrs = new Array()
-	row["vers"].forEach(function(cnt, ver, m) {
-		vrs.push([ver, cnt])
-	})
-	vrs.sort(function(a,b){
-		return (a[1]>b[1]) ? -1 : ((a[1]==b[1]) ? 0 : 1);
-	})
-	s += "\n\n  Version   Cnt\n"
-	s += " ================\n"
-	for (var i=0; i<vrs.length; i++) {
-		s += "  " + vrs[i][0].toString(16) + ("    " + vrs[i][1]).slice(-5) + "\n"
-	}
-
 	s += "\n\n  Height   Version   Length    Fees BTC    SPB   Coinbase Strings\n"
 	s += " =======================================================================================================\n"
 	var mbs = row["mbs"]
@@ -41,6 +28,19 @@ function show_versions(row, id) {
 			("              " + val2str_pad(mbs[i].Fees, true)).slice(-12) +
 			("     " + (mbs[i].Fees / mbs[i].Length).toFixed(1)).slice(-7) +
 			"  " + str.replace(/[^ -~]+/g, ' ') + "\n"
+	}
+
+	var vrs = new Array()
+	row["vers"].forEach(function(cnt, ver, m) {
+		vrs.push([ver, cnt])
+	})
+	vrs.sort(function(a,b){
+		return (a[1]>b[1]) ? -1 : ((a[1]==b[1]) ? 0 : 1);
+	})
+	s += "\n\n  Version   Cnt\n"
+	s += " ================\n"
+	for (var i=0; i<vrs.length; i++) {
+		s += "  " + vrs[i][0].toString(16) + ("    " + vrs[i][1]).slice(-5) + "\n"
 	}
 
 	verinfo.innerText = s
