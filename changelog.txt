@@ -63,6 +63,7 @@
 * Client/WebUI: the main thread lock is now released before sending the response, in dl_payment() and output_utxo_tx_xml()
 * Client/TextUI: the "net" command prints its output after releasing Mutex_net, so a dead terminal cannot hang the node
 * Client/WebUI/Miners: By defualt now it shows pie-chart, insted of the previous table (can bring it back with the radio button)
+* Wallet: default fee value changed from 0.001 to 0.0001 BTC
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
