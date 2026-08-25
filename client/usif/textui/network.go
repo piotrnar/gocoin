@@ -131,8 +131,12 @@ func net_stats(par string) {
 		return
 	}
 
+	// Build the whole output while holding Mutex_net, but print it only after unlocking.
+	// Printing to a dead terminal (e.g. an ssh session broken by an IP address change) can
+	// block forever and, with Mutex_net held, that would hang the entire node.
+	var sb strings.Builder
 	network.Mutex_net.Lock()
-	fmt.Printf("%d active net connections, %d outgoing\n", len(network.OpenCons), network.OutConsActive)
+	fmt.Fprintf(&sb, "%d active net connections, %d outgoing\n", len(network.OpenCons), network.OutConsActive)
 	srt := make(SortedKeys, len(network.OpenCons))
 	cnt := 0
 	for k, v := range network.OpenCons {
@@ -146,47 +150,49 @@ func net_stats(par string) {
 		v := network.OpenCons[srt[idx].Key]
 		v.GetStats(&res)
 		v.Mutex.Lock()
-		fmt.Printf("%8d) ", v.ConnID)
+		fmt.Fprintf(&sb, "%8d) ", v.ConnID)
 
 		if v.X.Incomming {
-			fmt.Print("<- ")
+			sb.WriteString("<- ")
 		} else {
-			fmt.Print(" ->")
+			sb.WriteString(" ->")
 		}
-		fmt.Printf(" %21s %5dms", v.PeerAddr.Ip(), v.GetAveragePing())
-		//fmt.Printf(" %7d : %-16s %7d : %-16s", v.X.LastBtsRcvd, v.X.LastCmdRcvd, v.X.LastBtsSent, v.X.LastCmdSent)
-		fmt.Printf(" %10s %10s", common.BytesToString(v.X.BytesReceived), common.BytesToString(v.X.BytesSent))
-		fmt.Printf(" %5d", res.BlocksReceived)
+		fmt.Fprintf(&sb, " %21s %5dms", v.PeerAddr.Ip(), v.GetAveragePing())
+		//fmt.Fprintf(&sb, " %7d : %-16s %7d : %-16s", v.X.LastBtsRcvd, v.X.LastCmdRcvd, v.X.LastBtsSent, v.X.LastCmdSent)
+		fmt.Fprintf(&sb, " %10s %10s", common.BytesToString(v.X.BytesReceived), common.BytesToString(v.X.BytesSent))
+		fmt.Fprintf(&sb, " %5d", res.BlocksReceived)
 		if len(v.GetBlockInProgress) != 0 {
-			fmt.Printf(" %4d", len(v.GetBlockInProgress))
+			fmt.Fprintf(&sb, " %4d", len(v.GetBlockInProgress))
 		} else {
-			fmt.Print("     ")
+			sb.WriteString("     ")
 		}
-		fmt.Print("  ", v.Node.Agent)
+		fmt.Fprint(&sb, "  ", v.Node.Agent)
 		if v.X.IsSpecial {
-			fmt.Print(" F")
+			sb.WriteString(" F")
 		}
 
 		if b2s := v.BytesToSent(); b2s > 0 {
-			fmt.Print("  ", b2s)
+			fmt.Fprint(&sb, "  ", b2s)
 		}
 		v.Mutex.Unlock()
-		fmt.Println()
+		sb.WriteString("\n")
 	}
 
 	if network.ExternalAddrLen() > 0 {
-		fmt.Print("External addresses:")
+		sb.WriteString("External addresses:")
 		network.ExternalIpMutex.Lock()
 		for ip, cnt := range network.ExternalIp4 {
-			fmt.Printf(" %d.%d.%d.%d(%d)", byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip), cnt)
+			fmt.Fprintf(&sb, " %d.%d.%d.%d(%d)", byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip), cnt)
 		}
 		network.ExternalIpMutex.Unlock()
-		fmt.Println()
+		sb.WriteString("\n")
 	} else {
-		fmt.Println("No known external address")
+		sb.WriteString("No known external address\n")
 	}
 
 	network.Mutex_net.Unlock()
+
+	fmt.Print(sb.String())
 
 	fmt.Println("GetMPInProgress:", len(txpool.GetMPInProgressTicket) != 0)
 

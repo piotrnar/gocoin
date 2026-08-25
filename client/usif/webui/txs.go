@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -56,7 +57,7 @@ func txs_page_modify(r *http.Request, page *[]byte) {
 	}
 }
 
-func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
+func output_tx_xml(w io.Writer, tx *btc.Tx) {
 	tx.AllocVerVars()
 	defer tx.Clean()
 	tx.Spent_outputs = make([]*btc.TxOut, len(tx.TxIn))
@@ -132,7 +133,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 	w.Write([]byte("</output_list>"))
 }
 
-func tx_xml(w http.ResponseWriter, v *txpool.OneTxToSend, verbose bool) {
+func tx_xml(w io.Writer, v *txpool.OneTxToSend, verbose bool) {
 	w.Write([]byte("<tx><status>OK</status>"))
 	fmt.Fprint(w, "<id>", v.Tx.Hash.String(), "</id>")
 	fmt.Fprint(w, "<version>", v.Tx.Version, "</version>")
@@ -170,7 +171,7 @@ func tx_xml(w http.ResponseWriter, v *txpool.OneTxToSend, verbose bool) {
 	w.Write([]byte("</tx>"))
 }
 
-func output_utxo_tx_xml(w http.ResponseWriter, minedid, minedat string) {
+func output_utxo_tx_xml(w io.Writer, minedid, minedat string) {
 	txid := btc.NewUint256FromString(minedid)
 	if txid == nil {
 		return
@@ -181,26 +182,30 @@ func output_utxo_tx_xml(w http.ResponseWriter, minedid, minedat string) {
 		return
 	}
 
+	var buf bytes.Buffer
+
 	lck := new(usif.OneLock)
 	lck.In.Add(1)
 	lck.Out.Add(1)
 	usif.LocksChan <- lck
 	lck.In.Wait()
 
-	w.Write([]byte("<tx>"))
-	fmt.Fprint(w, "<id>", minedid, "</id>")
+	buf.WriteString("<tx>")
+	fmt.Fprint(&buf, "<id>", minedid, "</id>")
 	if dat, er := common.GetRawTx(uint32(block_number), txid); er == nil {
-		w.Write([]byte("<status>OK</status>"))
-		w.Write([]byte(fmt.Sprint("<size>", len(dat), "</size>")))
+		buf.WriteString("<status>OK</status>")
+		buf.WriteString(fmt.Sprint("<size>", len(dat), "</size>"))
 		tx, _ := btc.NewTx(dat)
-		output_tx_xml(w, tx)
+		output_tx_xml(&buf, tx)
 	} else {
-		w.Write([]byte("<status>Not found</status>"))
+		buf.WriteString("<status>Not found</status>")
 	}
-	w.Write([]byte("</tx>"))
+	buf.WriteString("</tx>")
 
+	// the main thread is blocked until here, so never write to the socket above
 	lck.Out.Done()
 
+	w.Write(buf.Bytes())
 }
 
 /* memory pool transaction sorting stuff */
@@ -266,16 +271,20 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 		if txid == nil {
 			return
 		}
-		txpool.TxMutex.Lock()
-		defer txpool.TxMutex.Unlock()
-		if t2s, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
-			tx_xml(w, t2s, true)
-		} else {
-			w.Write([]byte("<tx>"))
-			fmt.Fprint(w, "<id>", txid.String(), "</id>")
-			w.Write([]byte("<status>Not found</status>"))
-			w.Write([]byte("</tx>"))
-		}
+		var buf bytes.Buffer
+		func() {
+			txpool.TxMutex.Lock()
+			defer txpool.TxMutex.Unlock()
+			if t2s, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
+				tx_xml(&buf, t2s, true)
+			} else {
+				buf.WriteString("<tx>")
+				fmt.Fprint(&buf, "<id>", txid.String(), "</id>")
+				buf.WriteString("<status>Not found</status>")
+				buf.WriteString("</tx>")
+			}
+		}()
+		w.Write(buf.Bytes())
 		return
 	}
 
@@ -341,54 +350,63 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 		txs2s_sort_desc = len(r.Form["descending"]) > 0
 	}
 
-	txpool.TxMutex.Lock()
-	defer txpool.TxMutex.Unlock()
+	var buf bytes.Buffer
+	func() {
+		txpool.TxMutex.Lock()
+		defer txpool.TxMutex.Unlock()
 
-	sorted := make(sortedTxList, len(txpool.TransactionsToSend))
-	var cnt int
-	for _, v := range txpool.TransactionsToSend {
-		if len(r.Form["ownonly"]) > 0 && !v.Local {
-			continue
+		sorted := make(sortedTxList, len(txpool.TransactionsToSend))
+		var cnt int
+		for _, v := range txpool.TransactionsToSend {
+			if len(r.Form["ownonly"]) > 0 && !v.Local {
+				continue
+			}
+			sorted[cnt] = v
+			cnt++
 		}
-		sorted[cnt] = v
-		cnt++
-	}
-	sorted = sorted[:cnt]
-	sort.Sort(sorted)
+		sorted = sorted[:cnt]
+		sort.Sort(sorted)
 
-	w.Write([]byte("<txpool>"))
-	for cnt = 0; cnt < len(sorted) && cnt < txs2s_count; cnt++ {
-		v := sorted[cnt]
-		tx_xml(w, v, false)
-	}
-	w.Write([]byte("</txpool>"))
+		buf.WriteString("<txpool>")
+		for cnt = 0; cnt < len(sorted) && cnt < txs2s_count; cnt++ {
+			v := sorted[cnt]
+			tx_xml(&buf, v, false)
+		}
+		buf.WriteString("</txpool>")
+	}()
+	w.Write(buf.Bytes())
 }
 
 func xml_txsre(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"text/xml"}
-	w.Write([]byte("<txbanned>"))
+
+	var buf bytes.Buffer
+	buf.WriteString("<txbanned>")
 	txpool.TxMutex.Lock()
 	for idx := txpool.TRIdxHead; idx != txpool.TRIdxTail; {
 		idx = txpool.TRIdxPrev(idx)
 		if !txpool.TRIdIsZeroArrayRec(idx) {
 			v := txpool.TransactionsRejected[txpool.TRIdxArray[idx]]
-			w.Write([]byte("<tx>"))
-			fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
-			fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
-			fmt.Fprint(w, "<size>", v.Size, "</size>")
-			fmt.Fprint(w, "<syssize>", v.Footprint, "</syssize>")
-			fmt.Fprint(w, "<inmem>", v.Tx != nil, "</inmem>")
-			fmt.Fprint(w, "<reason>", txpool.ReasonToString(v.Reason), "</reason>")
-			w.Write([]byte("</tx>"))
+			buf.WriteString("<tx>")
+			fmt.Fprint(&buf, "<id>", v.Id.String(), "</id>")
+			fmt.Fprint(&buf, "<time>", v.Time.Unix(), "</time>")
+			fmt.Fprint(&buf, "<size>", v.Size, "</size>")
+			fmt.Fprint(&buf, "<syssize>", v.Footprint, "</syssize>")
+			fmt.Fprint(&buf, "<inmem>", v.Tx != nil, "</inmem>")
+			fmt.Fprint(&buf, "<reason>", txpool.ReasonToString(v.Reason), "</reason>")
+			buf.WriteString("</tx>")
 		}
 	}
 	txpool.TxMutex.Unlock()
-	w.Write([]byte("</txbanned>"))
+	buf.WriteString("</txbanned>")
+	w.Write(buf.Bytes())
 }
 
 func xml_txw4i(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"text/xml"}
-	w.Write([]byte("<pending>"))
+
+	var buf bytes.Buffer
+	buf.WriteString("<pending>")
 	txpool.TxMutex.Lock()
 	type onerec struct {
 		val  uint64
@@ -404,25 +422,26 @@ func xml_txw4i(w http.ResponseWriter, r *http.Request) {
 	})
 	for _, k := range w4ilist {
 		v := txpool.WaitingForInputs[k.bidx]
-		w.Write([]byte("<wait4>"))
-		fmt.Fprint(w, "<id>", v.TxID.String(), "</id>")
+		buf.WriteString("<wait4>")
+		fmt.Fprint(&buf, "<id>", v.TxID.String(), "</id>")
 		for _, x := range v.Ids {
-			w.Write([]byte("<tx>"))
+			buf.WriteString("<tx>")
 			if v, ok := txpool.TransactionsRejected[x]; ok {
-				fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
-				fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
-				fmt.Fprint(w, "<size>", v.Size, "</size>")
+				fmt.Fprint(&buf, "<id>", v.Id.String(), "</id>")
+				fmt.Fprint(&buf, "<time>", v.Time.Unix(), "</time>")
+				fmt.Fprint(&buf, "<size>", v.Size, "</size>")
 			} else {
-				fmt.Fprint(w, "<id>FATAL ERROR!!! This should not happen! Please report</id>")
-				fmt.Fprint(w, "<time>", time.Now().Unix(), "</time>")
-				fmt.Fprint(w, "<size>666</size>")
+				fmt.Fprint(&buf, "<id>FATAL ERROR!!! This should not happen! Please report</id>")
+				fmt.Fprint(&buf, "<time>", time.Now().Unix(), "</time>")
+				fmt.Fprint(&buf, "<size>666</size>")
 			}
-			w.Write([]byte("</tx>"))
+			buf.WriteString("</tx>")
 		}
-		w.Write([]byte("</wait4>"))
+		buf.WriteString("</wait4>")
 	}
 	txpool.TxMutex.Unlock()
-	w.Write([]byte("</pending>"))
+	buf.WriteString("</pending>")
+	w.Write(buf.Bytes())
 }
 
 func raw_tx(w http.ResponseWriter, r *http.Request) {
@@ -467,31 +486,34 @@ func raw_tx(w http.ResponseWriter, r *http.Request) {
 
 func json_txstat(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"application/json"}
-	w.Write([]byte("{"))
+
+	var buf bytes.Buffer
+	buf.WriteString("{")
 
 	txpool.TxMutex.Lock()
 
-	w.Write([]byte(fmt.Sprint("\"t2s_cnt\":", len(txpool.TransactionsToSend), ",")))
-	w.Write([]byte(fmt.Sprint("\"t2s_size\":", txpool.TransactionsToSendSize, ",")))
-	w.Write([]byte(fmt.Sprint("\"t2s_weight\":", txpool.TransactionsToSendWeight, ",")))
-	w.Write([]byte(fmt.Sprint("\"tre_cnt\":", len(txpool.TransactionsRejected), ",")))
-	w.Write([]byte(fmt.Sprint("\"tre_size\":", txpool.TransactionsRejectedSize, ",")))
-	w.Write([]byte(fmt.Sprint("\"ptr1_cnt\":", len(txpool.TransactionsPending), ",")))
-	w.Write([]byte(fmt.Sprint("\"ptr2_cnt\":", len(network.NetTxs), ",")))
-	w.Write([]byte(fmt.Sprint("\"spent_outs_cnt\":", len(txpool.SpentOutputs), ",")))
-	w.Write([]byte(fmt.Sprint("\"awaiting_inputs\":", len(txpool.WaitingForInputs), ",")))
-	w.Write([]byte(fmt.Sprint("\"awaiting_inputs_size\":", txpool.WaitingForInputsSize, ",")))
-	w.Write([]byte(fmt.Sprint("\"min_fee_per_kb\":", common.MinFeePerKB(), ",")))
-	w.Write([]byte(fmt.Sprint("\"tx_pool_on\":", common.Get(&common.CFG.TXPool.Enabled), ",")))
-	w.Write([]byte(fmt.Sprint("\"tx_routing_on\":", common.Get(&common.CFG.TXRoute.Enabled), ",")))
-	w.Write([]byte(fmt.Sprint("\"sorting_disabled\":", txpool.SortingDisabled, ",")))
-	w.Write([]byte(fmt.Sprint("\"sorting_list_dirty\":", txpool.SortListDirty, ",")))
-	w.Write([]byte(fmt.Sprint("\"fee_packages_dirty\":", txpool.FeePackagesDirty, ",")))
-	w.Write([]byte(fmt.Sprint("\"current_fee_adjusted_spkb\":", txpool.CurrentFeeAdjustedSPKB, "")))
+	fmt.Fprint(&buf, "\"t2s_cnt\":", len(txpool.TransactionsToSend), ",")
+	fmt.Fprint(&buf, "\"t2s_size\":", txpool.TransactionsToSendSize, ",")
+	fmt.Fprint(&buf, "\"t2s_weight\":", txpool.TransactionsToSendWeight, ",")
+	fmt.Fprint(&buf, "\"tre_cnt\":", len(txpool.TransactionsRejected), ",")
+	fmt.Fprint(&buf, "\"tre_size\":", txpool.TransactionsRejectedSize, ",")
+	fmt.Fprint(&buf, "\"ptr1_cnt\":", len(txpool.TransactionsPending), ",")
+	fmt.Fprint(&buf, "\"ptr2_cnt\":", len(network.NetTxs), ",")
+	fmt.Fprint(&buf, "\"spent_outs_cnt\":", len(txpool.SpentOutputs), ",")
+	fmt.Fprint(&buf, "\"awaiting_inputs\":", len(txpool.WaitingForInputs), ",")
+	fmt.Fprint(&buf, "\"awaiting_inputs_size\":", txpool.WaitingForInputsSize, ",")
+	fmt.Fprint(&buf, "\"min_fee_per_kb\":", common.MinFeePerKB(), ",")
+	fmt.Fprint(&buf, "\"tx_pool_on\":", common.Get(&common.CFG.TXPool.Enabled), ",")
+	fmt.Fprint(&buf, "\"tx_routing_on\":", common.Get(&common.CFG.TXRoute.Enabled), ",")
+	fmt.Fprint(&buf, "\"sorting_disabled\":", txpool.SortingDisabled, ",")
+	fmt.Fprint(&buf, "\"sorting_list_dirty\":", txpool.SortListDirty, ",")
+	fmt.Fprint(&buf, "\"fee_packages_dirty\":", txpool.FeePackagesDirty, ",")
+	fmt.Fprint(&buf, "\"current_fee_adjusted_spkb\":", txpool.CurrentFeeAdjustedSPKB, "")
 
 	txpool.TxMutex.Unlock()
 
-	w.Write([]byte("}\n"))
+	buf.WriteString("}\n")
+	w.Write(buf.Bytes())
 }
 
 func txt_mempool_fees(w http.ResponseWriter, r *http.Request) {
@@ -502,108 +524,110 @@ func txt_mempool_fees(w http.ResponseWriter, r *http.Request) {
 func json_mpfees(w http.ResponseWriter, r *http.Request) {
 	var division, maxweight uint64
 	var e error
-
-	txpool.TxMutex.Lock()
-	defer txpool.TxMutex.Unlock()
-
-	if len(r.Form["max"]) > 0 {
-		maxweight, e = strconv.ParseUint(r.Form["max"][0], 10, 64)
-		if e != nil {
-			maxweight = txpool.TransactionsToSendWeight
-		}
-	} else {
-		maxweight = txpool.TransactionsToSendWeight
-	}
-
-	if maxweight > txpool.TransactionsToSendWeight {
-		maxweight = txpool.TransactionsToSendWeight
-	}
-
-	if len(r.Form["div"]) > 0 {
-		division, e = strconv.ParseUint(r.Form["div"][0], 10, 64)
-		if e != nil {
-			division = maxweight / 100
-		}
-	} else {
-		division = maxweight / 100
-	}
-
-	if division < 1 {
-		division = 1
-	}
-
-	sorted := txpool.GetMempoolFees(maxweight)
-
 	var bx []byte
 	var er error
 
-	if len(r.Form["full"]) > 0 {
-		type one_stat_row struct {
-			Current_tx_id     string
-			Txs_so_far        uint
-			Txs_cnt_here      uint
-			Real_len_so_far   uint
-			Weight_so_far     uint
-			Current_tx_weight uint
-			Current_tx_spb    float64
-			Time_received     uint
-			Fees_so_far       uint64
-			Ord_weight_so_far uint
-			Ord_fees_so_far   uint64
-		}
-		var mempool_stats []one_stat_row
+	func() {
+		txpool.TxMutex.Lock()
+		defer txpool.TxMutex.Unlock()
 
-		var totweight, totfee, ordweight, ordfees uint64
-		var txcntsofar int
-		for cnt, v := range sorted {
-			newtotweight := totweight + uint64(v.Weight)
-			totfee += v.Fee
-			for _, tx := range v.Txs {
-				if yes, _ := tx.ContainsOrdFile(true); yes {
-					ordweight += uint64(tx.Weight())
-					ordfees += v.Fee
+		if len(r.Form["max"]) > 0 {
+			maxweight, e = strconv.ParseUint(r.Form["max"][0], 10, 64)
+			if e != nil {
+				maxweight = txpool.TransactionsToSendWeight
+			}
+		} else {
+			maxweight = txpool.TransactionsToSendWeight
+		}
+
+		if maxweight > txpool.TransactionsToSendWeight {
+			maxweight = txpool.TransactionsToSendWeight
+		}
+
+		if len(r.Form["div"]) > 0 {
+			division, e = strconv.ParseUint(r.Form["div"][0], 10, 64)
+			if e != nil {
+				division = maxweight / 100
+			}
+		} else {
+			division = maxweight / 100
+		}
+
+		if division < 1 {
+			division = 1
+		}
+
+		sorted := txpool.GetMempoolFees(maxweight)
+
+		if len(r.Form["full"]) > 0 {
+			type one_stat_row struct {
+				Current_tx_id     string
+				Txs_so_far        uint
+				Txs_cnt_here      uint
+				Real_len_so_far   uint
+				Weight_so_far     uint
+				Current_tx_weight uint
+				Current_tx_spb    float64
+				Time_received     uint
+				Fees_so_far       uint64
+				Ord_weight_so_far uint
+				Ord_fees_so_far   uint64
+			}
+			var mempool_stats []one_stat_row
+
+			var totweight, totfee, ordweight, ordfees uint64
+			var txcntsofar int
+			for cnt, v := range sorted {
+				newtotweight := totweight + uint64(v.Weight)
+				totfee += v.Fee
+				for _, tx := range v.Txs {
+					if yes, _ := tx.ContainsOrdFile(true); yes {
+						ordweight += uint64(tx.Weight())
+						ordfees += v.Fee
+					}
+				}
+
+				if cnt == 0 || cnt+1 == len(sorted) || (newtotweight/division) != (totweight/division) {
+					cur_spb := 4.0 * float64(v.Fee) / float64(v.Weight)
+					mempool_stats = append(mempool_stats, one_stat_row{
+						Txs_so_far:        uint(txcntsofar),
+						Txs_cnt_here:      uint(len(v.Txs)),
+						Weight_so_far:     uint(newtotweight),
+						Current_tx_weight: uint(v.Weight),
+						Current_tx_spb:    cur_spb,
+						Current_tx_id:     v.Txs[0].Hash.String(),
+						Fees_so_far:       totfee,
+						Time_received:     uint(v.Txs[0].Firstseen.Unix()),
+						Ord_weight_so_far: uint(ordweight),
+						Ord_fees_so_far:   ordfees,
+					})
+				}
+				txcntsofar += len(v.Txs)
+				totweight = newtotweight
+				if totweight >= maxweight {
+					break
 				}
 			}
+			bx, er = json.Marshal(mempool_stats)
+		} else {
+			var mempool_stats [][3]uint64
+			var totweight uint64
+			var totfeessofar uint64
+			for cnt, r := range sorted {
+				wgh := r.Weight
+				fee := r.Fee
+				totfeessofar += fee
+				newtotweight := totweight + wgh
 
-			if cnt == 0 || cnt+1 == len(sorted) || (newtotweight/division) != (totweight/division) {
-				cur_spb := 4.0 * float64(v.Fee) / float64(v.Weight)
-				mempool_stats = append(mempool_stats, one_stat_row{
-					Txs_so_far:        uint(txcntsofar),
-					Txs_cnt_here:      uint(len(v.Txs)),
-					Weight_so_far:     uint(newtotweight),
-					Current_tx_weight: uint(v.Weight),
-					Current_tx_spb:    cur_spb,
-					Current_tx_id:     v.Txs[0].Hash.String(),
-					Fees_so_far:       totfee,
-					Time_received:     uint(v.Txs[0].Firstseen.Unix()),
-					Ord_weight_so_far: uint(ordweight),
-					Ord_fees_so_far:   ordfees,
-				})
+				if cnt == 0 || cnt+1 == len(sorted) || (newtotweight/division) != (totweight/division) {
+					mempool_stats = append(mempool_stats, [3]uint64{newtotweight, 4000 * fee / wgh, totfeessofar})
+				}
+				totweight = newtotweight
 			}
-			txcntsofar += len(v.Txs)
-			totweight = newtotweight
-			if totweight >= maxweight {
-				break
-			}
+			bx, er = json.Marshal(mempool_stats)
 		}
-		bx, er = json.Marshal(mempool_stats)
-	} else {
-		var mempool_stats [][3]uint64
-		var totweight uint64
-		var totfeessofar uint64
-		for cnt, r := range sorted {
-			wgh := r.Weight
-			fee := r.Fee
-			totfeessofar += fee
-			newtotweight := totweight + wgh
+	}()
 
-			if cnt == 0 || cnt+1 == len(sorted) || (newtotweight/division) != (totweight/division) {
-				mempool_stats = append(mempool_stats, [3]uint64{newtotweight, 4000 * fee / wgh, totfeessofar})
-			}
-			totweight = newtotweight
-		}
-		bx, er = json.Marshal(mempool_stats)
-	}
 	if er == nil {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)

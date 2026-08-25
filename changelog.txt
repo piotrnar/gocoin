@@ -57,6 +57,11 @@
 * Client: "inv" from a peer that has a block we are waiting for now also marks him as a source we can fetch the block from
 * Client: ProcessNewHeader() reuses the existing block tree node, instead of AcceptHeader() creating a duplicate one, when a block we had given up on gets announced again
 * Client: BlockChainSynchronized is cleared again when the node falls 6+ blocks behind the header chain, so a node catching up after a stall no longer pins every re-learned block to a single peer (fixes #78)
+* Client/WebUI: both http servers now have Read/Write/Idle timeouts set, so writing to a dead TCP connection can no longer block a handler forever
+* Client/WebUI: netcon.json no longer holds Mutex_net while sending the response - a stalled http client used to hang the entire node (the main thread waiting inside NetworkTick)
+* Client/WebUI: the mempool handlers (txs2s.xml, txsre.xml, txw4i.xml, txstat.json, mpfees.json) build their output while holding TxMutex, but send it only after unlocking
+* Client/WebUI: the main thread lock is now released before sending the response, in dl_payment() and output_utxo_tx_xml()
+* Client/TextUI: the "net" command prints its output after releasing Mutex_net, so a dead terminal cannot hang the node
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

@@ -12,6 +12,23 @@ import (
 	"github.com/piotrnar/gocoin/client/txpool"
 )
 
+// Takes a snapshot of the stats of all the open connections.
+// Note: never write anything to the network (nor to stdout) while holding Mutex_net.
+func get_net_cons() (net_cons []network.ConnInfo) {
+	network.Mutex_net.Lock()
+	defer network.Mutex_net.Unlock()
+
+	net_cons = make([]network.ConnInfo, len(network.OpenCons))
+	tmp, _ := network.GetSortedConnections()
+	i := len(net_cons)
+	for _, v := range tmp {
+		i--
+		v.Conn.GetStats(&net_cons[i])
+		net_cons[i].HasImmunity = v.MinutesOnline < network.ImmunityMinutes()
+	}
+	return
+}
+
 func json_netcon(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -24,19 +41,7 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	network.Mutex_net.Lock()
-	defer network.Mutex_net.Unlock()
-
-	net_cons := make([]network.ConnInfo, len(network.OpenCons))
-	tmp, _ := network.GetSortedConnections()
-	i := len(net_cons)
-	for _, v := range tmp {
-		i--
-		v.Conn.GetStats(&net_cons[i])
-		net_cons[i].HasImmunity = v.MinutesOnline < network.ImmunityMinutes()
-	}
-
-	bx, er := json.Marshal(net_cons)
+	bx, er := json.Marshal(get_net_cons())
 	if er == nil {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)

@@ -36,6 +36,17 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 
 	var err string
 
+	// The main thread is blocked from the moment we take the lock, until unlock_main_thread()
+	// gets called. Never write anything to the http socket while the lock is being held.
+	var main_lock *usif.OneLock
+	unlock_main_thread := func() {
+		if main_lock != nil {
+			main_lock.Out.Done()
+			main_lock = nil
+		}
+	}
+	defer unlock_main_thread()
+
 	if len(r.Form["outcnt"]) == 1 {
 		var thisbal utxo.AllUnspentTx
 		var pay_cmd string
@@ -54,12 +65,11 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 
 		outcnt, _ := strconv.ParseUint(r.Form["outcnt"][0], 10, 32)
 
-		lck := new(usif.OneLock)
-		lck.In.Add(1)
-		lck.Out.Add(1)
-		usif.LocksChan <- lck
-		lck.In.Wait()
-		defer lck.Out.Done()
+		main_lock = new(usif.OneLock)
+		main_lock.In.Add(1)
+		main_lock.Out.Add(1)
+		usif.LocksChan <- main_lock
+		main_lock.In.Wait()
 
 		for i := 1; i <= int(outcnt); i++ {
 			is := fmt.Sprint(i)
@@ -209,6 +219,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		fz.Write([]byte(hex.EncodeToString(tx.Serialize())))
 
 		zi.Close()
+		unlock_main_thread()
 		w.Header()["Content-Type"] = []string{"application/zip"}
 		w.Write(buf.Bytes())
 		return
@@ -216,6 +227,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		err = "Bad request"
 	}
 error:
+	unlock_main_thread()
 	generate_error_page(w, r, err, "send")
 }
 

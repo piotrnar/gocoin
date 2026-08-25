@@ -19,6 +19,17 @@ import (
 	"github.com/piotrnar/gocoin/client/usif"
 )
 
+// Timeouts for both of the WebUI servers.
+// Without them, writing a response to a dead TCP connection (e.g. after the node's
+// IP address has changed) blocks the handler until the kernel gives up retransmitting,
+// which can take up to half an hour. If such a handler happens to be holding one of
+// the shared mutexes, the whole node hangs for that long.
+const (
+	WebUIReadTimeout  = 60 * time.Second
+	WebUIWriteTimeout = 60 * time.Second // must be bigger than TextUIMaxWait
+	WebUIIdleTimeout  = 120 * time.Second
+)
+
 var start_time time.Time
 
 func load_template(fn string) string {
@@ -183,7 +194,15 @@ func ServerThread() {
 	http.HandleFunc("/authkey.txt", p_authkey)
 
 	go start_ssl_server()
-	http.ListenAndServe(common.CFG.WebUI.Interface, usif.TrackingMiddleware(http.DefaultServeMux))
+
+	server := &http.Server{
+		Addr:         common.CFG.WebUI.Interface,
+		Handler:      usif.TrackingMiddleware(http.DefaultServeMux),
+		ReadTimeout:  WebUIReadTimeout,
+		WriteTimeout: WebUIWriteTimeout,
+		IdleTimeout:  WebUIIdleTimeout,
+	}
+	server.ListenAndServe()
 }
 
 type null_logger struct {
@@ -293,8 +312,11 @@ func start_ssl_server() {
 	}
 
 	server := &http.Server{
-		Addr:    ssl_serv_addr,
-		Handler: usif.TrackingMiddleware(http.DefaultServeMux),
+		Addr:         ssl_serv_addr,
+		Handler:      usif.TrackingMiddleware(http.DefaultServeMux),
+		ReadTimeout:  WebUIReadTimeout,
+		WriteTimeout: WebUIWriteTimeout,
+		IdleTimeout:  WebUIIdleTimeout,
 		TLSConfig: &tls.Config{
 			ClientAuth:     tls.RequireAndVerifyClientCert,
 			GetCertificate: cr.GetCertificate,
