@@ -13,7 +13,7 @@ var (
 	testnet      bool   = false
 	waltype      uint   = 3
 	uncompressed bool   = false
-	fee          string = "0.001"
+	fee          string = "0.0001"
 	apply2bal    bool   = true
 	secret_seed  []byte
 	litecoin     bool = false
