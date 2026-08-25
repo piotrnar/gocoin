@@ -892,6 +892,20 @@ func BlocksToGetCnt() (res int) {
 	return
 }
 
+// UnpinAllBlocksToGet removes the OnlyFetchFrom restriction from all the pending
+// blocks, so any peer can serve them to us. Called when getting back into the
+// chain-sync mode, after the node has fallen too far behind the header chain.
+func UnpinAllBlocksToGet() {
+	MutexRcv.Lock()
+	for _, v := range BlocksToGet {
+		if len(v.OnlyFetchFrom) != 0 {
+			v.OnlyFetchFrom = nil
+			common.CountSafe("BlockUnpinnedResync")
+		}
+	}
+	MutexRcv.Unlock()
+}
+
 // we do some things differenty during IBD
 func doingChainSync() bool {
 	return !common.BlockChainSynchronized.Load()

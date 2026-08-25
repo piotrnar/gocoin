@@ -56,6 +56,7 @@
 * Client: OnlyFetchFrom identifies the announcing peers by UniqID instead of ConnID, so a peer that reconnects is still a valid source of the block
 * Client: "inv" from a peer that has a block we are waiting for now also marks him as a source we can fetch the block from
 * Client: ProcessNewHeader() reuses the existing block tree node, instead of AcceptHeader() creating a duplicate one, when a block we had given up on gets announced again
+* Client: BlockChainSynchronized is cleared again when the node falls 6+ blocks behind the header chain, so a node catching up after a stall no longer pins every re-learned block to a single peer (fixes #78)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

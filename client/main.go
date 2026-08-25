@@ -51,6 +51,11 @@ const (
 	SaveBlockChainAfter       = 2 * time.Second
 	SaveBlockChainAfterNoSync = 10 * time.Minute
 	ReenableMempoolSorting    = 2 * time.Second
+
+	// ResyncAfterBlocksBehind is how many blocks behind the best known header
+	// the node must fall (e.g. after a long network stall) for it to clear
+	// BlockChainSynchronized and get back into the chain-sync mode.
+	ResyncAfterBlocksBehind = 6 // around one hour worth of blocks
 )
 
 func reset_save_timer() {
@@ -842,6 +847,23 @@ func main() {
 				network.NetworkTick()
 
 				if common.BlockChainSynchronized.Load() {
+					network.MutexRcv.Lock()
+					header_height := network.LastCommitedHeader.Height
+					network.MutexRcv.Unlock()
+					if int(header_height)-int(common.Last.BlockHeight()) >= ResyncAfterBlocksBehind {
+						// We have fallen too far behind the header chain (e.g. after
+						// a long network stall), so consider the chain not synchronized
+						// anymore. Among other things, this stops pinning each block
+						// re-learned from headers to the single peer that announced it.
+						fmt.Println("Blockchain out of sync again - back to the chain-sync mode, while @",
+							common.Last.BlockHeight(), "with headers @", header_height)
+						common.BlockChainSynchronized.Store(false)
+						common.CountSafe("ChainSyncRestarted")
+						network.UnpinAllBlocksToGet() // let any peer serve the blocks pinned so far
+						startup_ticks = 1             // so we can quickly re-enter the synchronized state
+						reset_save_timer()
+						break
+					}
 					if common.WalletPendingTick() {
 						wallet.OnOff <- true
 					}
