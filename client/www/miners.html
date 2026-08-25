@@ -144,6 +144,7 @@ function refresh_mining_info() {
 				totfees += m.TotalFees
 				totbts += m.TotalBytes
 			}
+			update_miners_chart(cs.Miners, cs.BlockCount, cs.AvgHashrate)
 			blockver_tab_n.innerHTML = height_max-height_min+1
 			block_short_history_td.style.display = 'table-cell'
 			var vvs = []
@@ -169,6 +170,204 @@ function refresh_mining_info() {
 }
 
 
+// ------------- hash-rate distribution donut chart -------------
+
+const chart_colors = ["#4e79a7","#f28e2b","#e15759","#76b7b2","#59a14f",
+	"#edc948","#b07aa1","#ff9da7","#9c755f","#86bcb6","#d37295","#a0cbe8"]
+const CHART_MIN_FRAC = 0.01  // group smaller pools into "Others"
+
+var chart_slices = []
+var chart_hover = -1
+var chart_total_hashrate = 0
+
+function update_miners_chart(miners, block_count, avg_hashrate) {
+	chart_total_hashrate = avg_hashrate
+	chart_slices = []
+	var oth = null
+	var sorted = miners.slice().sort(function(a,b) {return b.Blocks-a.Blocks})
+	for (var i=0; i<sorted.length; i++) {
+		var m = sorted[i]
+		var frac = m.Blocks/block_count
+		if (frac<CHART_MIN_FRAC || chart_slices.length>=chart_colors.length) {
+			if (oth==null) {
+				oth = {name:"Others", frac:0, blocks:0, pools:0, color:"#8a8a8a"}
+				chart_slices.push(oth)
+			}
+			oth.frac += frac
+			oth.blocks += m.Blocks
+			oth.pools++
+		} else {
+			chart_slices.push({name:m.Name, frac:frac, blocks:m.Blocks,
+				color:chart_colors[chart_slices.length], mnr:m})
+		}
+	}
+	miners_chart_div.style.display = 'block'
+	draw_miners_chart()
+}
+
+function chart_theme_colors() {
+	var st = getComputedStyle(document.body)
+	return {text:st.color, bg:st.backgroundColor}
+}
+
+function draw_miners_chart() {
+	var cv = miners_chart
+	var W = 780, H = 330
+	var dpr = window.devicePixelRatio || 1
+	cv.width = W*dpr;  cv.height = H*dpr
+	cv.style.width = W+'px';  cv.style.height = H+'px'
+	var c = cv.getContext("2d")
+	c.setTransform(dpr, 0, 0, dpr, 0, 0)
+	c.clearRect(0, 0, W, H)
+
+	var th = chart_theme_colors()
+	var CX=175, CY=165, R=138, R2=72
+
+	// slices
+	var a = -Math.PI/2
+	for (var i=0; i<chart_slices.length; i++) {
+		var sl = chart_slices[i]
+		var a2 = a + sl.frac*2*Math.PI
+		var mid = (a+a2)/2
+		var ox=0, oy=0
+		if (i==chart_hover) {
+			ox = Math.cos(mid)*7
+			oy = Math.sin(mid)*7
+		}
+		sl.a1 = a;  sl.a2 = a2
+		c.beginPath()
+		c.arc(CX+ox, CY+oy, R, a, a2)
+		c.arc(CX+ox, CY+oy, R2, a2, a, true)
+		c.closePath()
+		c.fillStyle = sl.color
+		c.globalAlpha = (chart_hover>=0 && i!=chart_hover) ? 0.55 : 1.0
+		c.fill()
+		c.globalAlpha = 1.0
+		c.strokeStyle = th.bg
+		c.lineWidth = 2
+		c.stroke()
+
+		// percentage on bigger slices
+		if (sl.frac >= 0.045) {
+			var tr = (R+R2)/2
+			c.fillStyle = chart_dark_color(sl.color) ? "#fff" : "#222"
+			c.font = "bold 12px Arial"
+			c.textAlign = "center"
+			c.textBaseline = "middle"
+			c.fillText((100*sl.frac).toFixed(1)+"%", CX+ox+Math.cos(mid)*tr, CY+oy+Math.sin(mid)*tr)
+		}
+		a = a2
+	}
+
+	// center label
+	c.textAlign = "center"
+	c.fillStyle = th.text
+	if (chart_hover>=0) {
+		var sl = chart_slices[chart_hover]
+		c.font = "bold 15px Arial"
+		c.fillText(chart_trim(c, sl.name, 2*R2-20), CX, CY-24)
+		c.font = "13px Arial"
+		c.fillText((100*sl.frac).toFixed(2)+"%  ("+sl.blocks+" blk)", CX, CY-2)
+		c.font = "bold 14px Arial"
+		c.fillText(bignum(sl.frac*chart_total_hashrate)+"H/s", CX, CY+20)
+		if (sl.pools)  {
+			c.font = "11px Arial"
+			c.fillText(sl.pools+" pools", CX, CY+38)
+		}
+	} else {
+		c.font = "13px Arial"
+		c.fillText("Network", CX, CY-12)
+		c.font = "bold 15px Arial"
+		c.fillText(bignum(chart_total_hashrate)+"H/s", CX, CY+10)
+	}
+
+	// legend
+	var LX = 372, LH = 24
+	var ly = Math.max(12, CY - chart_slices.length*LH/2)
+	c.textBaseline = "middle"
+	for (var i=0; i<chart_slices.length; i++, ly+=LH) {
+		var sl = chart_slices[i]
+		sl.ly = ly
+		if (i==chart_hover) {
+			c.fillStyle = th.text
+			c.globalAlpha = 0.12
+			c.fillRect(LX-6, ly-2, W-LX+2, LH)
+			c.globalAlpha = 1.0
+		}
+		c.fillStyle = sl.color
+		c.fillRect(LX, ly+4, 12, 12)
+		c.strokeStyle = th.bg
+		c.strokeRect(LX, ly+4, 12, 12)
+		c.fillStyle = th.text
+		c.textAlign = "left"
+		c.font = (i==chart_hover ? "bold " : "") + "13px Arial"
+		c.fillText(chart_trim(c, sl.name, 190), LX+20, ly+10)
+		c.textAlign = "right"
+		c.font = "13px Arial"
+		c.fillText((100*sl.frac).toFixed(1)+"%", LX+265, ly+10)
+		c.fillText(bignum(sl.frac*chart_total_hashrate)+"H/s", LX+380, ly+10)
+	}
+}
+
+function chart_trim(c, s, maxw) {
+	if (c.measureText(s).width <= maxw)  return s
+	while (s.length>1 && c.measureText(s+"\u2026").width > maxw)  s = s.slice(0, -1)
+	return s+"\u2026"
+}
+
+function chart_dark_color(col) {
+	var r = parseInt(col.substr(1,2),16), g = parseInt(col.substr(3,2),16), b = parseInt(col.substr(5,2),16)
+	return (0.299*r + 0.587*g + 0.114*b) < 150
+}
+
+function chart_slice_at(x, y) {
+	// legend hit?
+	for (var i=0; i<chart_slices.length; i++) {
+		if (x>=366 && chart_slices[i].ly!=undefined && y>=chart_slices[i].ly-2 && y<chart_slices[i].ly+22)
+			return i
+	}
+	// donut hit?
+	var dx = x-175, dy = y-165
+	var d = Math.sqrt(dx*dx + dy*dy)
+	if (d<72 || d>145)  return -1
+	var a = Math.atan2(dy, dx)
+	if (a < -Math.PI/2)  a += 2*Math.PI
+	for (var i=0; i<chart_slices.length; i++) {
+		if (a>=chart_slices[i].a1 && a<chart_slices[i].a2)  return i
+	}
+	return -1
+}
+
+function chart_mousemove(ev) {
+	var r = miners_chart.getBoundingClientRect()
+	var i = chart_slice_at(ev.clientX-r.left, ev.clientY-r.top)
+	miners_chart.style.cursor = (i>=0 && chart_slices[i].mnr) ? "pointer" : "default"
+	if (i != chart_hover) {
+		chart_hover = i
+		draw_miners_chart()
+	}
+}
+
+function chart_mouseout() {
+	if (chart_hover != -1) {
+		chart_hover = -1
+		draw_miners_chart()
+	}
+}
+
+function chart_click(ev) {
+	var r = miners_chart.getBoundingClientRect()
+	var i = chart_slice_at(ev.clientX-r.left, ev.clientY-r.top)
+	if (i<0 || !chart_slices[i].mnr)  return
+	var m = chart_slices[i].mnr
+	var vers = new Map()
+	for (var j=0; j<m.MinedBlocks.length; j++) {
+		var v = m.MinedBlocks[j].Version
+		vers.set(v, (vers.get(v)||0)+1)
+	}
+	show_versions({"vers":vers, "mbs":m.MinedBlocks}, m.Name)
+}
+
 </script>
 <table><tr>
 <td valign="top" width="800"><img id="loading_icon" src="static/loading.gif" style="display:inline"><div id="mining_info_div" style="display:none">
@@ -184,6 +383,11 @@ which changes in <b id="el_diff_change_in" class="size120"></b> blocks<br>
 
 Total mining fees amount to <b id="el_total_fees"></b> BTC
 with the average of <b id="el_avg_fpblock" class="size120"></b> BTC/block or estimated <b id="el_avg_fpbyte"></b> SPB
+</div>
+<div id="miners_chart_div" style="display:none; margin-bottom:10px">
+	<canvas id="miners_chart" width="780" height="330"
+		onmousemove="chart_mousemove(event)" onmouseout="chart_mouseout()" onclick="chart_click(event)"
+		title="Hash-rate distribution. Click a slice for the pool's block details."></canvas>
 </div>
 <table id="minerstab" class="bord" width="100%">
 	<tr>
@@ -334,6 +538,13 @@ function blocks_version_stats() {
 	}
 	aj.open("GET","blkver.json",true)
 	aj.send(null)
+}
+
+// redraw the chart (with new colors) when the theme is switched
+if (typeof dark_light_icon != "undefined") {
+	dark_light_icon.addEventListener("theme_changed", function() {
+		if (chart_slices.length)  setTimeout(draw_miners_chart, 100)  // give the new css time to load
+	})
 }
 
 // reaload page on new block
