@@ -76,6 +76,7 @@
 ["trustpool", "/trustpool/", ""],
 ["Innopolis", "Innopolis", ""],
 ["GDPool", "GDPool", ""],
+["NiceHashMining", "/NiceHashMining/", ""],
 ["RSK Merged", "_RSK_", ""],
 ["P2Pool", "_p2pool_", ""]
 ]
