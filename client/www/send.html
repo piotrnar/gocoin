@@ -44,7 +44,7 @@ function build_change_list() {
 		wpkh = translate_address(wallet[i].addr)
 
 		if (wpkh != '') {
-			op.text += 'SW:' + wallet[i].label
+			op.text += wallet[i].label
 			op.text += " - " + wpkh
 			op.value = wpkh
 		} else {
@@ -481,7 +481,7 @@ function open_address_book(idx) {
 		}
 
 		if (wpkh != '') {
-			var label = 'SW:' + addrbook[i].label
+			var label = addrbook[i].label
 			op = document.createElement("option")
 			op.text += label
 			op.text += " - " + wpkh
