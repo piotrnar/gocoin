@@ -1350,12 +1350,34 @@ func evalScript(p []byte, stack *scrStack, checker *SigChecker, ver_flags uint32
 	return true
 }
 
+// pushDataScript re-encodes data the same way CScript::operator<<(vector<uchar>)
+// does in Bitcoin Core: a minimal push opcode/length header followed by the
+// raw bytes. This mirrors FindAndDelete's use of "CScript() << vchSig" and
+// must NOT be confused with the (unrelated) CompactSize/VarInt encoding used
+// elsewhere for tx/block (de)serialization - the two formats only happen to
+// coincide for lengths below 0x4c (76).
+func pushDataScript(data []byte) []byte {
+	l := len(data)
+	var hdr []byte
+	switch {
+	case l < btc.OP_PUSHDATA1: // 0..75: direct push opcode == length
+		hdr = []byte{byte(l)}
+	case l <= 0xff: // OP_PUSHDATA1 <len>
+		hdr = []byte{btc.OP_PUSHDATA1, byte(l)}
+	case l <= 0xffff: // OP_PUSHDATA2 <len_le16>
+		hdr = []byte{btc.OP_PUSHDATA2, byte(l), byte(l >> 8)}
+	default: // OP_PUSHDATA4 <len_le32>
+		hdr = []byte{btc.OP_PUSHDATA4, byte(l), byte(l >> 8), byte(l >> 16), byte(l >> 24)}
+	}
+	res := make([]byte, 0, len(hdr)+l)
+	res = append(res, hdr...)
+	res = append(res, data...)
+	return res
+}
+
 func delSig(where, sig []byte) (res []byte, cnt int) {
 	// place the push opcode in front of the signature
-	push_sig_scr := make([]byte, len(sig)+5)
-	n := int(btc.PutVlen(push_sig_scr, len(sig)))
-	copy(push_sig_scr[n:], sig)
-	sig = push_sig_scr[:n+len(sig)]
+	sig = pushDataScript(sig)
 
 	// set the cap to the maximum possible size, to speed up further append-s
 	res = make([]byte, 0, len(where))
