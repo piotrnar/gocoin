@@ -64,6 +64,7 @@
 * Client/TextUI: the "net" command prints its output after releasing Mutex_net, so a dead terminal cannot hang the node
 * Client/WebUI/Miners: By defualt now it shows pie-chart, insted of the previous table (can bring it back with the radio button)
 * Wallet: default fee value changed from 0.001 to 0.0001 BTC
+* Client: fixed a panic ("index out of range [-1]") in retry_cached_blocks() when the blocks cache had gaps in the heights (e.g. after giving up on downloading a block)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

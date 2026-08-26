@@ -320,25 +320,38 @@ func retry_cached_blocks() bool {
 
 	common.CountSafe("RedoCachedBlks")
 
-	cached_min_height := network.CachedMinHeight
+	var cached_min_height uint32
+	var height_initiated bool
 
 try_next_one:
 	network.CachedBlocksMutex.Lock()
 	newbl = nil
 	if len(network.CachedBlocksIdx) > 0 {
-		if lowest_cached_blocks != nil {
+		if !height_initiated {
+			// read it under the mutex, not to race with CachedBlocksAdd/Del
+			cached_min_height = network.CachedMinHeight
+			height_initiated = true
+		} else if lowest_cached_blocks != nil {
 			if lowest_cached_block_idx > 0 {
 				lowest_cached_block_idx--
 			} else {
 				lowest_cached_blocks = nil
 				cached_min_height++
-				if cached_min_height > network.CachedMaxHeight {
-					goto not_found
-				}
 			}
 		}
 		if lowest_cached_blocks == nil {
-			lowest_cached_blocks = network.CachedBlocksIdx[cached_min_height]
+			// the cache does not have to hold blocks at every height between
+			// CachedMinHeight and CachedMaxHeight (e.g. after giving up on some
+			// blocks discarded the cached descendants), so skip the empty heights
+			for {
+				if cached_min_height > network.CachedMaxHeight {
+					goto not_found
+				}
+				if lowest_cached_blocks = network.CachedBlocksIdx[cached_min_height]; lowest_cached_blocks != nil {
+					break
+				}
+				cached_min_height++
+			}
 			lowest_cached_block_idx = len(lowest_cached_blocks) - 1 // start form the last one, which will make it quicker to delete it later
 		}
 		newbl = lowest_cached_blocks[lowest_cached_block_idx]
