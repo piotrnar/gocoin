@@ -68,7 +68,11 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 
 	if len(pl) >= 82 {
 		le, of := btc.VLen(pl[80:])
-		if of == 0 || len(pl) < 80+le {
+		// of==0 means the var_int was corrupt or its value did not fit in a
+		// non-negative int. le<0 is a belt-and-braces guard (VLen no longer
+		// returns negatives). The len check must be written so it cannot be
+		// bypassed by a huge/negative le: compare the remaining bytes against le.
+		if of == 0 || le < 0 || len(pl)-(80+of) < le {
 			c.Mutex.Unlock()
 			return errors.New("MsgCorrupt")
 		}

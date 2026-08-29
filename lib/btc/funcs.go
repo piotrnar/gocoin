@@ -78,8 +78,16 @@ func VLenSize(uvl uint64) int {
 	return 9
 }
 
+// maxInt is the largest value representable by a (signed) int on the current
+// platform: 2^63-1 on 64-bit, 2^31-1 on 32-bit.
+const maxInt = int(^uint(0) >> 1)
+
 // VLen returns var_int and number of bytes that the var_int took.
 // If there is not enough bytes in the buffer, it returns 0, 0.
+// It also returns 0, 0 if the decoded value would not fit in a non-negative
+// int (i.e. bit 63 set on 64-bit, or the value exceeds maxInt on 32-bit).
+// This makes sure callers never receive a negative length, which - when used
+// as a slice bound or a make() size - would panic on attacker-controlled data.
 func VLen(b []byte) (le int, var_int_siz int) {
 	if len(b) > 0 {
 		switch b[0] {
@@ -89,11 +97,19 @@ func VLen(b []byte) (le int, var_int_siz int) {
 			}
 		case 0xfe:
 			if len(b) >= 5 {
-				return int(binary.LittleEndian.Uint32(b[1:5])), 5
+				v := binary.LittleEndian.Uint32(b[1:5])
+				if uint64(v) > uint64(maxInt) { // only possible on 32-bit builds
+					return 0, 0
+				}
+				return int(v), 5
 			}
 		case 0xff:
 			if len(b) >= 9 {
-				return int(binary.LittleEndian.Uint64(b[1:9])), 9
+				v := binary.LittleEndian.Uint64(b[1:9])
+				if v > uint64(maxInt) {
+					return 0, 0
+				}
+				return int(v), 9
 			}
 		default:
 			return int(b[0]), 1

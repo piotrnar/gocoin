@@ -268,12 +268,16 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 			c.DoS("CmpctBlkErrD")
 			return
 		}
-		if idx >= len(col.Txs) {
+		idx += exp
+		// The bound must be checked on the cumulative index (after adding exp),
+		// as that is what actually indexes col.Txs below. Checking only the raw
+		// differential index let a crafted sequence of prefilled indexes push
+		// the cumulative value past len(col.Txs) and panic on the assignment.
+		if idx < 0 || idx >= len(col.Txs) {
 			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error F", hex.EncodeToString(pl))
 			c.DoS("CmpctBlkErrF")
 			return
 		}
-		idx += exp
 		offs += n
 		n = btc.TxSize(pl[offs:])
 		if n == 0 {
