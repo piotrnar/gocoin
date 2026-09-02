@@ -322,3 +322,26 @@ func TestPoCValueOverflow(t *testing.T) {
 		t.Error("CONSENSUS DIVERGENCE CONFIRMED: 2^64 satoshis can be minted by a gocoin miner")
 	}
 }
+
+// TestVerifyTxScriptNeverPanics makes sure VerifyTxScript() converts an
+// unexpected panic into a failed script (result==false) instead of letting it
+// escape. VerifyTxScript() runs inside parallel goroutines during tx and block
+// verification; a panic there is not caught by the per-connection recover and
+// would crash the whole node on attacker-controlled data.
+func TestVerifyTxScriptNeverPanics(t *testing.T) {
+	// A tx with a single input, but a checker pointing one past the last input.
+	// The very first thing VerifyTxScript() does is read tx.TxIn[Idx], so this
+	// forces an out-of-range panic that the recover must swallow.
+	tx := new(btc.Tx)
+	tx.TxIn = []*btc.TxIn{{ScriptSig: []byte{}}}
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("VerifyTxScript let a panic escape: %v", r)
+		}
+	}()
+
+	if VerifyTxScript(nil, &SigChecker{Tx: tx, Idx: 1}, VER_P2SH) {
+		t.Fatal("expected a failed (false) result for an out-of-range input index")
+	}
+}

@@ -82,6 +82,22 @@ func VerifyTxScript(pkScr []byte, checker *SigChecker, ver_flags uint32) (result
 		return HookVerifyTxScript(pkScr, checker, ver_flags)
 	}
 
+	// Defense in depth: evalScript() recovers panics of its own, but the
+	// witness/taproot/P2SH glue in this function (and the helpers it calls)
+	// runs outside that recover. VerifyTxScript() is executed in parallel
+	// goroutines during tx and block verification, where a panic would not be
+	// caught by the per-connection handler and would take the whole node down.
+	// Treat any unexpected panic here as a failed script rather than a crash.
+	defer func() {
+		if r := recover(); r != nil {
+			result = false
+			if DBG_ERR {
+				fmt.Println("VerifyTxScript panic:", r)
+				fmt.Println(string(debug.Stack()))
+			}
+		}
+	}()
+
 	var execdata btc.ScriptExecutionData
 
 	tx := checker.Tx

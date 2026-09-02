@@ -18,6 +18,8 @@
 * Client/WebUI: auto reload SSL certificate when it changes on the disk (checks for file modification time)
 * Client: fixed a potential DoS attack vector: "getblocks" or "getheaders" message with a corrupt number of locators
 * Client: fixed a potential DoS attack vector: "cmpctblock" message with a corrupt payload
+* Client: fixed a potential DoS attack vector: "getblocktxn" message with a corrupt transaction index (an index with bit 63 set became negative when cast to int, bypassing the bounds check and panicking on the block's tx slice)
+* Lib/Script: VerifyTxScript() now recovers from unexpected panics (returns a failed script instead of crashing) - it runs in parallel goroutines where a panic would otherwise bring the whole node down
 * Client/WebUI: vastly improved performance of "blocks.json" by keeping built block's txs in its blocks cache
 * Wallet: From now creates transactions with version value of 2, allowing to specify "-txver <value>" to change it
 * Client/PeersDB: stop adding IPv6 peers to the DB as we do not support them anyway (thanks @brunoerg)

@@ -151,8 +151,18 @@ func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
 			c.DoS("GetBlockTxnERR")
 			return
 		}
+		// Both idx (from the peer) and exp_idx are uint64, so do the bound check
+		// entirely in uint64 space. Casting to int first let a var_int with bit
+		// 63 set become negative, pass the "int(idx) >= len" guard, and then
+		// panic at crec.Block.Txs[idx] (index out of range) on attacker-
+		// controlled data. The addition can also wrap around, so reject that too.
+		if idx+exp_idx < idx { // uint64 overflow
+			println(c.ConnID, "GetBlockTxnIdx+")
+			c.DoS("GetBlockTxnIdx+")
+			return
+		}
 		idx += exp_idx
-		if int(idx) >= len(crec.Block.Txs) {
+		if idx >= uint64(len(crec.Block.Txs)) {
 			println(c.ConnID, "GetBlockTxnIdx+")
 			c.DoS("GetBlockTxnIdx+")
 			return
