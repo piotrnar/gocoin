@@ -557,9 +557,9 @@ func NetworkTick() {
 				// peer announces its header again, we will fetch it again - and we will
 				// not ban anybody for announcing it.
 				common.CountSafe("BlockDlGivenUp")
-				println(time.Now().Format("15:04:05"), "Give up on block", v.Height,
-					v.BlockHash.String(), "announced", age.String(), "ago, while @",
-					common.Last.BlockHeight())
+				/*println(time.Now().Format("15:04:05"), "Give up on block", v.Height,
+				v.BlockHash.String(), "announced", age.String(), "ago, while @",
+				common.Last.BlockHeight())*/
 				DelB2G(idx)
 				DiscardBlock(v.BlockTreeNode, false)
 				continue
