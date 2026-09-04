@@ -81,7 +81,7 @@ function refresh_mining_info() {
 				var m = cs.Miners[i]
 				var td, row = minerstab.insertRow(-1)
 
-				row.className = 'hand'
+				row.className = 'hand hov'
 				row["mbs"] = m.MinedBlocks
 				onc(row, m.Name)
 
@@ -214,7 +214,7 @@ function apply_miners_view() {
 	miners_chart_div.style.display = (chart && miners_data_ready) ? 'block' : 'none'
 	minerstab.style.display = chart ? 'none' : 'table'
 	//block_short_history_td.style.display = (!chart && miners_data_ready) ? 'table-cell' : 'none'
-	block_short_history_td.style.display = 'table-cell'
+	block_short_history_td.style.display = 'block'
 }
 
 function miners_view_changed() {
@@ -224,8 +224,7 @@ function miners_view_changed() {
 }
 
 function chart_theme_colors() {
-	var st = getComputedStyle(document.body)
-	return {text:st.color, bg:st.backgroundColor}
+	return {text:theme_var('--text'), bg:theme_var('--surface'), muted:theme_var('--text-2')}
 }
 
 function draw_miners_chart() {
@@ -241,6 +240,7 @@ function draw_miners_chart() {
 	var th = chart_theme_colors()
 	var CX=175, CY=165, R=138, R2=72
 
+	var FONT = getComputedStyle(document.body).fontFamily
 	// slices
 	var a = -Math.PI/2
 	for (var i=0; i<chart_slices.length; i++) {
@@ -269,7 +269,7 @@ function draw_miners_chart() {
 		if (sl.frac >= 0.045) {
 			var tr = (R+R2)/2
 			c.fillStyle = chart_dark_color(sl.color) ? "#fff" : "#222"
-			c.font = "bold 12px Arial"
+			c.font = "bold 12px "+FONT
 			c.textAlign = "center"
 			c.textBaseline = "middle"
 			c.fillText((100*sl.frac).toFixed(1)+"%", CX+ox+Math.cos(mid)*tr, CY+oy+Math.sin(mid)*tr)
@@ -282,20 +282,22 @@ function draw_miners_chart() {
 	c.fillStyle = th.text
 	if (chart_hover>=0) {
 		var sl = chart_slices[chart_hover]
-		c.font = "bold 15px Arial"
+		c.font = "bold 15px "+FONT
 		c.fillText(chart_trim(c, sl.name, 2*R2-20), CX, CY-24)
-		c.font = "13px Arial"
+		c.font = "13px "+FONT
 		c.fillText((100*sl.frac).toFixed(2)+"%  ("+sl.blocks+" blk)", CX, CY-2)
-		c.font = "bold 14px Arial"
+		c.font = "bold 14px "+FONT
 		c.fillText(bignum(sl.frac*chart_total_hashrate)+"H/s", CX, CY+20)
 		if (sl.pools)  {
-			c.font = "11px Arial"
+			c.font = "11px "+FONT
 			c.fillText(sl.pools+" pools", CX, CY+38)
 		}
 	} else {
-		c.font = "13px Arial"
+		c.font = "13px "+FONT
+		c.fillStyle = th.muted
 		c.fillText("Network", CX, CY-12)
-		c.font = "bold 15px Arial"
+		c.fillStyle = th.text
+		c.font = "bold 15px "+FONT
 		c.fillText(bignum(chart_total_hashrate)+"H/s", CX, CY+10)
 	}
 
@@ -318,10 +320,10 @@ function draw_miners_chart() {
 		c.strokeRect(LX, ly+4, 12, 12)
 		c.fillStyle = th.text
 		c.textAlign = "left"
-		c.font = (i==chart_hover ? "bold " : "") + "13px Arial"
+		c.font = (i==chart_hover ? "bold " : "") + "13px "+FONT
 		c.fillText(chart_trim(c, sl.name, 190), LX+20, ly+10)
 		c.textAlign = "right"
-		c.font = "13px Arial"
+		c.font = "13px "+FONT
 		c.fillText((100*sl.frac).toFixed(1)+"%", LX+265, ly+10)
 		c.fillText(bignum(sl.frac*chart_total_hashrate)+"H/s", LX+380, ly+10)
 	}
@@ -387,106 +389,94 @@ function chart_click(ev) {
 }
 
 </script>
-<table><tr>
-<td valign="top" width="800"><img id="loading_icon" src="static/loading.gif" style="display:inline"><div id="mining_info_div" style="display:none">
-<table width="100%">
-<tr><td>
-<div style="margin-bottom:8px">
-Data from last <b id="el_min_hrs"></b> hours.
- The oldest block starting at <b id="el_first_block_time"></b><br>
-Total number of blocks was <b id="el_block_cnt"></b>,
- making average of <b id="el_blocks_per_hour" class="size120"></b> per hour,
- with the size of <b id="el_avg_block_size"></b><br>
-Network's rate of <b id="el_avg_hashrate"></b>,
-at average difficulty <b id="el_avg_diff"></b>,
-which changes in <b id="el_diff_change_in" class="size120"></b> blocks<br>
+<div class="grid-side">
+<div class="stack">
 
-Total mining fees amount to <b id="el_total_fees"></b> BTC
-with the average of <b id="el_avg_fpblock" class="size120"></b> BTC/block or estimated <b id="el_avg_fpbyte"></b> SPB
+<div class="panel">
+<div class="panel-head">
+	<h2>Mining statistics</h2>
+	<div class="panel-tools">
+		<img id="loading_icon" src="static/loading.gif" style="display:inline" alt="loading">
+		<div class="chips">
+			<label class="chip" title="Show hash-rate distribution chart"><input type="radio" name="miners_view" id="miners_view_chart" onchange="miners_view_changed()" checked><span>Chart</span></label>
+			<label class="chip" title="Show the miners table"><input type="radio" name="miners_view" id="miners_view_table" onchange="miners_view_changed()"><span>Table</span></label>
+		</div>
+	</div>
 </div>
-</td>
-<td style="vertical-align: bottom">
-<div style="text-align:right; margin-bottom:8px">
-	<span onclick="miners_view_chart.click()" class="hand" title="Show hash-rate distribution chart">
-	<input type="radio" name="miners_view" id="miners_view_chart" onchange="miners_view_changed()" checked
-		onclick="event.stopPropagation()"> Chart
-	</span>
-	&nbsp;
-	<span onclick="miners_view_table.click()" class="hand" title="Show the miners table">
-	<input type="radio" name="miners_view" id="miners_view_table" onchange="miners_view_changed()"
-		onclick="event.stopPropagation()"> Table
-	</span>
+<div id="mining_info_div" style="display:none">
+<div class="panel-body" style="color:var(--text-2);line-height:1.7">
+	Data from the last <b id="el_min_hrs"></b> hours, the oldest block from <b id="el_first_block_time"></b>.<br>
+	<b id="el_block_cnt"></b> blocks in total, on average <b id="el_blocks_per_hour" class="size120"></b> per hour,
+	of <b id="el_avg_block_size"></b> bytes.<br>
+	Network hash rate <b id="el_avg_hashrate"></b> at average difficulty <b id="el_avg_diff"></b>,
+	which changes in <b id="el_diff_change_in" class="size120"></b> blocks.<br>
+	Total mining fees <b id="el_total_fees"></b> BTC, on average <b id="el_avg_fpblock" class="size120"></b> BTC per block, or about <b id="el_avg_fpbyte"></b> SPB.
 </div>
-</td>
-</tr>
-</table>
-<div id="miners_chart_div" style="display:none; margin-bottom:10px">
+<div id="miners_chart_div" class="panel-body" style="display:none;padding-top:0">
 	<canvas id="miners_chart" width="780" height="330"
 		onmousemove="chart_mousemove(event)" onmouseout="chart_mouseout()" onclick="chart_click(event)"
-		title="Hash-rate distribution. Click a slice for the pool's block details."></canvas>
+		title="Hash-rate distribution. Click a slice for the pool's block details." style="max-width:100%"></canvas>
 </div>
+<div class="tscroll">
 <table id="minerstab" class="bord" width="100%">
 	<tr>
 		<th width="120" align="left">Miner
 		<th width="80" align="right">Share
-		<th width="40" align="right" title="Total blocks mined">Blks
+		<th width="40" align="right" title="Total blocks mined">Blocks
 		<th width="40" align="right" title="Unique version values">Vers
-		<th width="100" align="right">Hashrate
-		<th width="80" align="right" title="Average Block Length">Average
+		<th width="100" align="right">Hash rate
+		<th width="80" align="right" title="Average block length">Avg bytes
 		<th width="100" align="right">Fees BTC
 		<th width="60" align="right" title="Satoshis per byte">SPB
 	</tr>
 </table>
-<br>
-	<table width="100%" border="0" cellspacing="0" id="halving_tab">
-	<tr>
-		<td colspan="2">
-			The next halving is estimated to happen in
-				&nbsp;&nbsp;
-				<b id="next_halving_days">...</b> days
-				&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-				<b id="next_halving_weeks">...</b> weeks
-				&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-				<b id="next_halving_months">...</b> months
-				&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-				<b id="next_halving_years">...</b> years.
-		</td>
-	</tr>
-	</table>
-
+</div>
+<div class="panel-foot" id="halving_tab">
+	Next halving in about
+	<b id="next_halving_days">...</b> days
+	<span class="sep">·</span><b id="next_halving_weeks">...</b> weeks
+	<span class="sep">·</span><b id="next_halving_months">...</b> months
+	<span class="sep">·</span><b id="next_halving_years">...</b> years
+</div>
+</div>
 </div>
 
 <pre id="verinfo" class="mono"></pre>
 
-</td>
-<td valign="top" id="block_short_history_td" style="display:none">
-	<table class="bord" id="blockver_tab_short" align="right">
+</div>
+
+<div class="stack">
+<div class="panel" id="block_short_history_td" style="display:none">
+	<table class="bord" id="blockver_tab_short">
 	<caption>Last <b id="blockver_tab_n">n</b> blocks</caption>
-	<tr><th>Version<th>Count<th>Share
+	<tr><th>Version<th align="right">Count<th align="right">Share
 	</table>
-</td>
+</div>
 
-<td valign="top" id="block_history_td" style="display:none">
-	<table class="bord" id="blockver_tab_1000" align="right">
+<div id="block_history_td" style="display:none" class="stack">
+	<div class="panel">
+	<table class="bord" id="blockver_tab_1000">
 	<caption>Last 1000 blocks</caption>
-	<tr><th>Version<th>Count<th>Share
+	<tr><th>Version<th align="right">Count<th align="right">Share
 	</table>
+	</div>
 
-	&nbsp;&nbsp;&nbsp;&nbsp;<br>
-	<table class="bord" id="blockver_tab_curr" align="right">
+	<div class="panel">
+	<table class="bord" id="blockver_tab_curr">
 	<caption>Current period</caption>
-	<tr><th>Version<th>Count<th>Share
+	<tr><th>Version<th align="right">Count<th align="right">Share
 	</table>
+	</div>
 
-	&nbsp;&nbsp;&nbsp;&nbsp;<br>
-	<table class="bord" id="blockver_tab_past" align="right">
+	<div class="panel">
+	<table class="bord" id="blockver_tab_past">
 	<caption>Past period</caption>
-	<tr><th>Version<th>Count<th>Share
+	<tr><th>Version<th align="right">Count<th align="right">Share
 	</table>
-</td>
-
-</tr>
-</table>
+	</div>
+</div>
+</div>
+</div>
 
 <script>
 function do_versions(tabid, block_versions, max_block_number, min_block_number) {
@@ -566,7 +556,7 @@ function blocks_version_stats() {
 			do_versions("curr", block_versions, top_block_height, last_epoch_change)
 			do_versions("past", block_versions, last_epoch_change-1, last_epoch_change-2016)
 
-			block_history_td.style.display = 'table-cell'
+			block_history_td.style.display = 'block'
 
 		} catch (e) {
 			blockver_tab.style.display='none'

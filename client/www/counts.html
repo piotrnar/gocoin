@@ -1,107 +1,84 @@
-<style>
-td.gennam {text-align:left}
-td.genval {text-align:right}
-td.txsval {text-align:right}
-td.netcnt {text-align:right}
-td.netbts {text-align:right}
-div.tablab {
-	font-weight:bold;
-	margin-bottom:10px;
-}
-</style>
-<div id="nocounters_message" style="display:none">
-	<br>
-	Counters disabled in the config file (<code>Stats.NoCounters</code>)</div>
-<table width="100%" id="counters_table" style="display:none" border="0">
-<tr>
-<td valign="top" align="left" colspan="2">
-	<span onclick="cnts_combine_groups.click()" class="hand" title="Combine similar counters">
-	<input type="checkbox" id="cnts_combine_groups" onchange="type_changed()"
-		onclick="event.stopPropagation()"> Combine
-	</span>
-</td>
-<td valign="top" align="right" colspan="3">
-	<span onclick="cnts_type_gen.click()" class="hand" title="Show Generic counters">
-	<input type="radio" name="cnts_type" id="cnts_type_gen" onchange="type_changed()" checked
-		onclick="event.stopPropagation()"> Generic
-	</span>
-	<span onclick="cnts_type_net.click()" class="hand" title="Show Network counters">
-	<input type="radio" name="cnts_type" id="cnts_type_net" onchange="type_changed()"
-		onclick="event.stopPropagation()"> Network
-	</span>
-</tr>
-</tr>
+<div id="nocounters_message" class="panel" style="display:none">
+<div class="panel-body">Counters are disabled in the config file (<code class="cod">Stats.NoCounters</code>).</div>
+</div>
 
-<tr id="gen_stats_row" style="display:table-row">
-<td valign="top" align="center">
-	<div class="tablab">Generic counters A</div>
-	<table class="mono bord" width="100%" id="tab_gen_a">
-	<tr>
-		<th>Counter
-		<th>Value
-	</tr>
-	</table>
-</td>
-<td valign="top" align="center">
-	<div class="tablab">Generic counters B</div>
-	<table class="mono bord" width="100%" id="tab_gen_b">
-	<tr>
-		<th>Counter
-		<th>Value
-	</tr>
-	</table>
-</td>
-<td valign="top" align="center">
-	<div class="tablab">Tx generic</div>
-	<table class="mono bord" width="100%" id="tab_txs_a">
-	<tr>
-		<th>Counter
-		<th>Value
-	</tr>
-	</table>
-</td>
-<td valign="top" align="center">
-	<div class="tablab">Tx sorting</div>
-	<table class="mono bord" width="100%" id="tab_txs_b">
-	<tr>
-		<th>Counter
-		<th>Value
-	</tr>
-	</table>
-</td>
-</tr>
+<div id="counters_table" style="display:none">
+<div class="panel">
+<div class="panel-head">
+	<h2>Counters</h2>
+	<label class="tgl" title="Combine similar counters into one row">
+		<input type="checkbox" id="cnts_combine_groups" onchange="type_changed()"><i></i> Combine groups
+	</label>
+	<div class="panel-tools">
+		<div class="chips">
+			<label class="chip" title="Show generic counters"><input type="radio" name="cnts_type" id="cnts_type_gen" onchange="type_changed()" checked><span>Generic</span></label>
+			<label class="chip" title="Show network counters"><input type="radio" name="cnts_type" id="cnts_type_net" onchange="type_changed()"><span>Network</span></label>
+		</div>
+	</div>
+</div>
+</div>
 
-<tr id="net_stats_row" style="display:none">
-<td valign="top" align="center" colspan="5">
-	<div class="tablab">Network commands</div>
+<div id="gen_stats_row" class="cnt-grid">
+	<div class="panel">
+		<div class="panel-head"><h2>Generic A</h2></div>
+		<div class="panel-body flush"><table class="mono bord" id="tab_gen_a"><tr><th>Counter<th align="right">Value</tr></table></div>
+	</div>
+	<div class="panel">
+		<div class="panel-head"><h2>Generic B</h2></div>
+		<div class="panel-body flush"><table class="mono bord" id="tab_gen_b"><tr><th>Counter<th align="right">Value</tr></table></div>
+	</div>
+	<div class="panel">
+		<div class="panel-head"><h2>Tx generic</h2></div>
+		<div class="panel-body flush"><table class="mono bord" id="tab_txs_a"><tr><th>Counter<th align="right">Value</tr></table></div>
+	</div>
+	<div class="panel">
+		<div class="panel-head"><h2>Tx sorting</h2></div>
+		<div class="panel-body flush"><table class="mono bord" id="tab_txs_b"><tr><th>Counter<th align="right">Value</tr></table></div>
+	</div>
+</div>
+
+<div id="net_stats_row" class="panel" style="display:none">
+	<div class="panel-head"><h2>Network commands</h2></div>
+	<div class="panel-body flush tscroll">
 	<table class="mono bord" id="tab_net">
-	<colset>
-		<col width="110">
-		<col width="90">
+	<colgroup>
+		<col width="160">
 		<col width="120">
-		<col width="90">
+		<col width="160">
 		<col width="120">
-	</colset>
+		<col width="160">
+	</colgroup>
 	<tr>
-		<th rowspan="2">Network Message
-		<th colspan="2">Message Received
-		<th colspan="2">Message Sent
+		<th rowspan="2">Network message
+		<th colspan="2" style="text-align:center">Received
+		<th colspan="2" style="text-align:center">Sent
 	</tr>
 	<tr>
-		<th>Times
-		<th>Bytes
-		<th>Times
-		<th>Bytes
+		<th align="right">Times
+		<th align="right">Bytes
+		<th align="right">Times
+		<th align="right">Bytes
 	</tr>
-    </table>
-</td>
-</tr>
-</table>
+	</table>
+	</div>
+</div>
+</div>
+
+<style>
+.cnt-grid { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:16px; align-items:start; }
+.cnt-grid > .panel { margin-bottom:16px; }
+.cnt-grid table { font-size:12px; }
+.cnt-grid td.gennam { color: var(--text-2); }
+.cnt-grid td.gennam:hover { color: var(--text); }
+tr.cnt_combined td.gennam { font-weight:600; color: var(--text); }
+@media (max-width: 1000px) { .cnt-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .cnt-grid { grid-template-columns: 1fr; } }
+</style>
 <script>
 function type_changed() {
 	if (cnts_type_gen.checked) {
 		net_stats_row.style.display = 'none'
-		gen_stats_row.style.display = 'table-row'
+		gen_stats_row.style.display = 'grid'
 		localStorage.setItem("counters_view_type", "gen")
 
 		cnts_combine_groups.disabled = false
@@ -109,7 +86,7 @@ function type_changed() {
 		css('tr.cnt_combined', 'display', cnts_combine_groups.checked?'table-row':'none')
 		css('tr.cnt_expanded', 'display', cnts_combine_groups.checked?'none':'table-row')
 	} else {
-		net_stats_row.style.display = 'table-row'
+		net_stats_row.style.display = 'block'
 		gen_stats_row.style.display = 'none'
 		localStorage.setItem("counters_view_type", "net")
 		cnts_combine_groups.disabled = true
@@ -127,7 +104,7 @@ function group_only(s) {
 
 function make_clickable(el, prefix='') {
 	var s = el.innerText
-	el.title = 'Click to Copy'
+	el.title = 'Click to copy the counter name'
 	el.classList.add('hand')
 	el["text2copy"] = prefix+group_only(s)
 	el.addEventListener("click", copyonclick)
@@ -263,7 +240,7 @@ function ref_counters() {
 				tab_net.deleteRow(tab_net.rows.length-2)
 			}
 			nocounters_message.style.display='none'
-			counters_table.style.display='table'
+			counters_table.style.display='block'
 		} catch(e) {
 			console.log("error", e)
 		}

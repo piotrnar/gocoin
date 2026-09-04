@@ -1,5 +1,10 @@
-<br>
-Your node is restarting. Once it is back online, reload the <a href="/">Home</a> page.
+<div class="panel">
+<div class="panel-head"><h2>Restarting the node</h2></div>
+<div class="panel-body">
+	<p style="margin:0">The node is restarting. Once it is back online this page returns to <a href="/">Home</a> by itself.</p>
+	<p class="muted" style="margin:10px 0 0"><img src="static/loading.gif" alt="" style="vertical-align:middle"> Waiting for the node to come back…</p>
+</div>
+</div>
 <script>
 blno.addEventListener("lastblock", function(e) {
 	setTimeout(function() {

@@ -1,3 +1,18 @@
+<style>
+.help { max-width: 860px; line-height: 1.6; }
+.help h2 { font-size: 19px; margin: 6px 0 10px; }
+.help h2 a, .help a h2 { color: var(--text); }
+.help h3 { margin-top: 20px; }
+.help hr { margin: 28px 0 18px; }
+.help img[src], .help img[class] { vertical-align: -3px; }
+.help .note { margin: 6px 0; }
+.help a[name] { text-decoration: none; }
+.help a[name] h2::after { content: " #"; color: var(--text-3); font-weight: 400; opacity: 0; transition: opacity .15s; }
+.help a[name]:hover h2::after { opacity: 1; }
+</style>
+<div class="panel">
+<div class="panel-head"><h2>Help</h2><div class="panel-tools"><span class="muted">Press Alt+1 … Alt+9 to jump between pages</span></div></div>
+<div class="panel-body help">
 <h3>Other help topics</h3>
 &bull; External link: <a target="_blank" href="http://gocoin.pl/">Gocoin Homepage with User manual</a><br>
 &bull; External link: <a target="_blank" href="https://gocoin.pl/gocoin_manual_client_config.html">Configuration file reference</a><br>
@@ -9,12 +24,12 @@ switching the mempool options and the virtual console.</span>
 <hr>
 <h2>Top bar</h2>
 The bar above is present on every page.<br>
-&bull; The bold number is the height of the chain. Hover over it to see when the last block arrived.<br>
+&bull; The dark pill on the right shows the height of the chain; it pulses when a new block arrives. Hover over it to see when the last block arrived.<br>
 &bull; <img src="static/chainsync.png" height="16" valign="bottom"> shows up while the chain is not in sync.
 Click on it to enter the hash of the highest block you trust - the blocks up to that one are then
 marked as trusted, so the node does not verify their signatures, which speeds the sync up considerably.<br>
-&bull; <img class="music_icon" valign="bottom"> - beep on each new block.<br>
-&bull; The theme icon switches between the light and the dark theme.<br>
+&bull; <img class="music_icon"> - beep on each new block.<br>
+&bull; The sun/moon button switches between the light and the dark theme.<br>
 &bull; Each menu item has an access key, so you can jump between the pages with <b>Alt+1</b> ... <b>Alt+9</b>.<br>
 <br>
 <span class="note">Wallet and Spend are greyed out whenever the wallet functionality is off.</span>
@@ -241,3 +256,6 @@ The node's internal real time counters and statistics.<br>
 Switch between the <b>Generic</b> counters and the <b>Network</b> ones (per message type, received and sent).
 Tick <b>Combine</b> to group similar counters together.<br>
 <span class="note">The counters are not collected if <span class="cod">Stats.NoCounters</span> is set in the config file.</span>
+
+</div>
+</div>

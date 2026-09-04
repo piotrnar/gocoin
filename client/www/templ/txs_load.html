@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		if (warn_idx>0) {
 			raw_data = raw_data.substr(0, warn_idx)
 		}
-		alert(raw_data)
+		gc_alert(raw_data, {title:"Transaction loaded with a warning"})
 	}
 	show_txs2s('&ownonly=1')
 })

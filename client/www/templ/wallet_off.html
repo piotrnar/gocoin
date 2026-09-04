@@ -1,28 +1,42 @@
-<br>
-<i id="wallet_min_warning" class="walminwarn" style="float:right" title="Modify MinValue in gocoin.conf to change it">
-Minimum output value to be included in wallet's balance: <b id="min_val_btc"></b> BTC</i>
+<div class="panel">
+<div class="panel-head">
+	<h2>Wallet is off</h2>
+	<div class="panel-tools">
+		<i id="wallet_min_warning" class="walminwarn" title="Modify MinValue in gocoin.conf to change it">
+		Minimum output value counted in balances: <b id="min_val_btc"></b> BTC</i>
+	</div>
+</div>
+<div class="panel-body">
+
 <div id="wal_off" style="display:none">
-Wallet functionality is not available at this moment.
+	<p style="margin:0 0 6px">Wallet functionality is not available at this moment.</p>
+	<div id="wal_oin" style="display:none" class="muted">It will enable itself in <b id="ais"></b> seconds…</div>
 
-<div id="wal_oin" style="display:none"><br>It will auto enable in <b id="ais"></b>...</div>
-
-<form id="form_a" method="post" action="cfg" style="margin-top:20px;display:none">
-<input type="hidden" name="wallet" value="on">
-<input type="hidden" name="page" id="page_a">
-<input type="submit" id="enable_wallet_button" value="Enable wallet functionality now">
-</form>
+	<form id="form_a" method="post" action="cfg" style="margin-top:16px;display:none">
+	<input type="hidden" name="wallet" value="on">
+	<input type="hidden" name="page" id="page_a">
+	<input type="submit" id="enable_wallet_button" class="primary" value="Enable wallet functionality now">
+	</form>
 </div>
 
 <div id="wal_pro" style="display:none">
-Wallet functionality is being enabled - <b id="perc_compl"></b> complete
+	<p style="margin:0 0 8px">Wallet functionality is being enabled — <b id="perc_compl"></b> complete</p>
+	<div class="progress"><div class="progress-bar" id="perc_bar"></div></div>
 
-<form id="form_b" method="post" action="cfg" style="margin-top:20px;display:none">
-<input type="hidden" name="wallet" value="off">
-<input type="hidden" name="page" id="page_b">
-<input type="submit" value="Abort enabling wallet functionality">
-</form>
+	<form id="form_b" method="post" action="cfg" style="margin-top:16px;display:none">
+	<input type="hidden" name="wallet" value="off">
+	<input type="hidden" name="page" id="page_b">
+	<input type="submit" class="danger" value="Abort enabling wallet functionality">
+	</form>
+</div>
+
 </div>
 </div>
+
+<style>
+.progress { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; max-width: 460px; }
+.progress-bar { height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width .4s ease; }
+</style>
 
 <script>
 
@@ -49,6 +63,7 @@ function hande_stat(stat) {
 
 	// in progress
 	perc_compl.innerText = (stat.WalletProgress/10).toFixed(0) + '%'
+	perc_bar.style.width = (stat.WalletProgress/10).toFixed(0) + '%'
 	wal_off.style.display = 'none'
 	wal_pro.style.display = 'block'
 	return 1000

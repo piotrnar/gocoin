@@ -4,6 +4,10 @@ function redirect() {
 }
 setTimeout(redirect, 5000)
 </script>
-<b style="color:red"><!--ERROR_MSG--></b><br>
-<br>
-<a href="javascript:redirect()">You will be automatically redirected in 5 seconds...</a>
+<div class="panel">
+<div class="panel-head"><h2>Something went wrong</h2></div>
+<div class="panel-body">
+	<div class="note" style="border-left-color:var(--neg);background:var(--tint-neg);color:var(--neg);font-style:normal;font-weight:600"><!--ERROR_MSG--></div>
+	<p class="muted" style="margin:12px 0 0">You will be taken back automatically in 5 seconds, or <a href="javascript:redirect()">go back now</a>.</p>
+</div>
+</div>

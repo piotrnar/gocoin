@@ -3,198 +3,149 @@
 <script type="text/javascript" src="static/jquery.flot.time.min.js"></script>
 <script type="text/javascript" src="static/jquery.flot.crosshair.js"></script>
 <script type="text/javascript" src="static/feeschart.js"></script>
-<table width="100%" border="0">
-<colgroup>
-	<col width="50%">
-	<col width="50%">
-</colgroup>
 
-<tr><td colspan="2" style="padding:0px">
-<div align="right" style="float:right;font-size:14px;padding-top:0px">
-WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" accept=".json">
-<a href="javascript:export_settings()" title="Backup settings"><img valign="bottom" class="export_icon" height="18"> Export</a>
-&nbsp;
-<a href="javascript:import_file_click()" title="Restore settings"><img valign="bottom" class="import_icon" height="18"> Import</a>
-&nbsp;&nbsp;
-<span class="hand" title="Auto switch dark/light theme" onclick="auto_theme_switch_box.click()" title="Switch light/dark mode automatically">
-<input type="checkbox" id="auto_theme_switch_box" onchange="auto_theme_switch()" onclick="event.stopPropagation()"><img valign="bottom" id="auto_theme_switch_img" height="20"></span>
+<div class="panel">
+<div class="panel-head">
+	<h2>Recent blocks</h2>
+	<div class="panel-tools">
+		<div class="stat-row" style="margin-right:6px">
+			<span title="Mining hash rate">hash rate <a href="https://www.blockchain.com/explorer/charts/hash-rate" target="_blank"><b id="si_network_hashrate"></b></a></span>
+			<span title="Average transaction fee">fee <a href="https://mempool.space/" target="_blank"><b id="si_avg_fee_spb"></b> SPB</a></span>
+			<span title="Average block size">block <a href="https://www.blockchain.com/explorer/charts/avg-block-size" target="_blank" id="si_avg_block_size"></a></span>
+		</div>
+		<input style="display:none" type="file" id="import_file" accept=".json">
+		<a href="javascript:export_settings()" class="btn btn-sm" title="Backup WebUI settings (wallets, address book, preferences)"><img class="export_icon"> Export</a>
+		<a href="javascript:import_file_click()" class="btn btn-sm" title="Restore WebUI settings from a backup"><img class="import_icon"> Import</a>
+		<label class="tgl" title="Follow the system's light/dark mode automatically">
+			<input type="checkbox" id="auto_theme_switch_box" onchange="auto_theme_switch()"><i></i>
+			<img id="auto_theme_switch_img" alt=""> Auto theme
+		</label>
+	</div>
 </div>
-<h2 style="margin-top:10px;margin-bottom:5px">Recent Blocks</h2>
+<div class="panel-body">
+	<div class="chips" style="margin-bottom:10px">
+		<label class="chip"><input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()"><span>Average SPB</span></label>
+		<label class="chip"><input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()"><span>Block size KB</span></label>
+		<label class="chip"><input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()"><span>Transactions</span></label>
+		<label class="chip"><input type="radio" name="chart_type" id="chart_type_wgt" onchange="draw_chart()"><span>Weight</span></label>
+		<span class="sep">|</span>
+		<label class="chip" title="Moving average"><input type="checkbox" id="chart_type_avg" onchange="draw_chart()"><span><span id="avg_size">.</span>-block average</span></label>
+		<label class="chip" title="See how much is used by Ordinal Inscriptions" id="ord_label"><input type="checkbox" id="chart_type_ord" onchange="draw_chart()"><span>Ordinals %</span></label>
+	</div>
+	<div id="chart" class="chartbox" style="height:220px"></div>
+</div>
+</div>
 
-<table width="100%"><tr style="border:0">
-<td style="padding:0">
-<span onclick="chart_type_spb.click()" class="hand">
-	<input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()" onclick="event.stopPropagation()"> Average SPB
-</span>
-&nbsp;&bull;&nbsp;
-<span onclick="chart_type_siz.click()" class="hand">
-	<input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()" onclick="event.stopPropagation()"> Blocksize KB
-</span>
-&nbsp;&bull;&nbsp;
-<span onclick="chart_type_txs.click()" class="hand">
-	<input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()" onclick="event.stopPropagation()"> Transactions
-</span>
-&nbsp;&bull;&nbsp;
-<span onclick="chart_type_wgt.click()" class="hand">
-	<input type="radio" name="chart_type" id="chart_type_wgt" onchange="draw_chart()" onclick="event.stopPropagation()"> Weight
-</span>
-&nbsp;&bull;&nbsp;
+<div class="panel">
+<div class="panel-head">
+	<h2>Last block</h2>
+	<div class="panel-tools">
+		<span class="muted">Last header</span> <b title="Last known header" id="si_last_hdr_height"></b>
+	</div>
+</div>
+<div class="panel-body">
+	<div class="kv kv-wide">
+		<span class="k">Hash</span><span class="v hash kv-span"><b id="last_block_hash"></b></span>
+		<span class="k">Version</span><span class="v mono"><b id="last_block_version"></b></span>
+		<span class="k">Received</span><span class="v"><b id="last_block_received"></b></span>
+		<span class="k">Difficulty</span><span class="v"><b id="last_block_difficulty"></b></span>
+		<span class="k">Timestamp</span><span class="v nw"><b id="last_block_timestamp"></b></span>
+		<span class="k">Median</span><span class="v nw"><b id="last_block_median"></b></span>
+		<span class="k"></span><span class="v"></span>
+	</div>
+</div>
+</div>
 
-<span onclick="chart_type_avg.click()" class="hand" style="display:inline">
-	<input type="checkbox" id="chart_type_avg" onchange="draw_chart()" onclick="event.stopPropagation()">
-	<span id="avg_size">.</span> bl. avg
-</span>
-&nbsp;
-<span onclick="chart_type_ord.click()" class="hand" title="See how much is used by Ordinal Inscriptions" id="ord_label">
-	<input type="checkbox" id="chart_type_ord" onchange="draw_chart()" onclick="event.stopPropagation()">
-	Ord. %
-</span>
+<div class="grid2">
+<div class="panel">
+<div class="panel-head"><h2>Network</h2></div>
+<div class="panel-body">
+	<div class="kv">
+		<span class="k">Connections</span>
+		<span class="v"><b id="bw_open_conns_total"></b>
+			<span class="sep">·</span><img title="outgoing" class="outgoing"> <b id="bw_open_conns_out"></b>
+			<span class="sep">·</span><img title="incoming" class="incoming"> <b id="bw_open_conns_in"></b></span>
+		<span class="k">Downloading</span>
+		<span class="v"><b id="bw_dl_speed_now"></b> KB/s <span class="muted">(max <b id="bw_dl_speed_max"></b> KB/s, total <b id="bw_dl_total"></b>)</span></span>
+		<span class="k">Uploading</span>
+		<span class="v"><b id="bw_ul_speed_now"></b> KB/s <span class="muted">(max <b id="bw_ul_speed_max"></b> KB/s, total <b id="bw_ul_total"></b>)</span></span>
+		<span class="k">External IP</span>
+		<span class="v"><b id="external_ip0"></b> <span id="external_others" class="muted small"></span></span>
+		<span class="k" title="Public Authorization Key">Auth key</span>
+		<span class="v hash small"><b id="pub_auth_key"></b></span>
+	</div>
+</div>
+</div>
 
-</td>
-<td align="right" style="padding:0px">
-	<table>
-	<tr style="border:0"><td style="padding-top:0px;padding-bottom:0px;" >Average:
-	<td align="right" style="padding-top:0px;padding-bottom:0px;" nowrap="nowrap" title="Mining hash rate"><a href="https://www.blockchain.com/explorer/charts/hash-rate" target="_blank"><span id="si_network_hashrate"></span></a>
-	<td align="right" style="padding-top:0px;padding-bottom:0px;" title="Transaction fee"><a href="https://mempool.space/" target="_blank"><span id="si_avg_fee_spb"></span> SPB</a>
-	<td align="right" style="padding-top:0px;padding-bottom:0px;" title="Block size"><a href="https://www.blockchain.com/explorer/charts/avg-block-size" target="_blank" id="si_avg_block_size"></a>
-	</table>
-
-</td>
-</tr></table>
-<div id="chart" style="height:200px;margin-left:0px;margin-right:5px;margin-top:0px;margin-bottom:5px"></div>
-
-
-<tr><td colspan="2">
-	<h2>Last Block</h2>
-<table border="0" width="100%">
-	<tr><td align="right" class="nw">Block Hash:<td colspan="7"><b id="last_block_hash"></b>
-		<td align="right" class="nw">Last Header:
-			<td><b title="Last known header" id="si_last_hdr_height"></b>
-
-	<tr>
-		<td align="right" colspan="1">Version:
-			<td colspan="1"><b id="last_block_version"></b>
-		<td align="right">Received:
-			<td><b id="last_block_received"></b>
-		<td align="right">Timestamp:
-			<td class="nw"><b id="last_block_timestamp"></b>
-		<td align="right">Median:
-			<td class="nw"><b id="last_block_median"></b>
-		<td align="right">Difficulty:
-			<td><b id="last_block_difficulty"></b>
-	</table>
-</td>
-</tr>
-
-<tr><td valign="top">
-	<h2>Network</h2>
-	<table width="90%">
-	<colgroup>
-		<col width="25%">
-		<col width="20%">
-		<col width="25%">
-		<col width="30%">
-	</colgroup>
-	<tr><td nowrap="nowrap">Connections:
-		<td align="right"><b id="bw_open_conns_total"></b>
-		<td align="right" class="nw"><img title="outgoing" class="outgoing"> <b id="bw_open_conns_out"></b>
-		<td align="right" class="nw"><img title="incoming" class="incoming"> <b id="bw_open_conns_in"></b>
-	<tr><td>Downloading:
-		<td align="right" class="nw"><b id="bw_dl_speed_now"></b> KB/s
-		<td align="right" class="nw"><b id="bw_dl_speed_max"></b> KB/s max
-		<td align="right" class="nw"><b id="bw_dl_total"></b> tot
-	<tr><td>Uploading:
-		<td align="right" class="nw"><b id="bw_ul_speed_now"></b> KB/s
-		<td align="right" class="nw"><b id="bw_ul_speed_max"></b> KB/s max
-		<td align="right" class="nw"><b id="bw_ul_total"></b> tot
-	<tr><td>External IP:
-		<td colspan="1" align="right" id="external_ip0" style="font-weight:bold">
-		<td colspan="2" align="right" id="external_others" style="font-size:70%;font-style:italic">
-	<tr title="Public Authorization Key"><td>Auth Key:
-		<td colspan="3" align="left" class="small"><b id="pub_auth_key"></b>
-	</table>
-<td valign="top">
+<div class="panel">
+<div class="panel-head">
 	<h2>Node</h2>
-	<table width="100%">
-	<tr><td>Uptime:<td>
-		<span style="float:right;">PID <b id="process_pid">???</b></span>
-		<b id="si_node_uptime"></b>
-		&nbsp;&bull;&nbsp;
-		<b title="Known peers" id="si_known_peers"></b> peers
-		&nbsp;&bull;&nbsp;
-		<b title="ECDSA verify operations" id="si_ecdsa_verify_cnt"></b> ECs
-	<tr><td>Mem Used MB:<td>
-		<b title="Native Go heap" id="si_heap_size"></b> +
-		<b title="UTXO records" id="si_qdb_extramem"></b>
-		(<b title="Native Go + UTXO" id="si_total_mem"></b>
-		/
-		<b title="Heap sys mem" id="si_heapsys_mem"></b>)
-		&bull;
-		<b id="si_gcs_data">0</b>
-		<span style="float:right;">
-			<img id="el_free_mem" class="free hand" onclick="freemem()" title="Free all possible memory">
-		</span>
+	<div class="panel-tools">
+		<span class="muted">PID</span> <b id="process_pid">???</b>
+		<img id="el_free_mem" class="free hand" style="display:none" onclick="freemem()" title="Free all possible memory">
+	</div>
+</div>
+<div class="panel-body">
+	<div class="kv">
+		<span class="k">Uptime</span>
+		<span class="v"><b id="si_node_uptime"></b>
+			<span class="sep">·</span><b title="Known peers" id="si_known_peers"></b> peers
+			<span class="sep">·</span><b title="ECDSA verify operations" id="si_ecdsa_verify_cnt"></b> ECs</span>
+		<span class="k">Memory MB</span>
+		<span class="v"><b title="Native Go heap" id="si_heap_size"></b> + <b title="UTXO records" id="si_qdb_extramem"></b>
+			<span class="muted">(<b title="Native Go + UTXO" id="si_total_mem"></b> / <b title="Heap sys mem" id="si_heapsys_mem"></b>)</span>
+			<span class="sep">·</span><b id="si_gcs_data">0</b></span>
+		<span class="k">Mempool</span>
+		<span class="v"><b title="Accepted" id="ts_t2s_size"></b>
+			<span class="sep">·</span><b title="Rejected" id="ts_tre_size"></b>
+			<span class="sep">·</span><b title="UTXOs spent in memory" id="outspent"></b>
+			<span class="sep">·</span><b title="Minimum SPB" id="min_spb"></b> spb
+			<span style="float:right"><img id="packaging_icon" class="empty_icon"> <img id="sorting_icon" class="empty_icon"></span></span>
+		<span class="k">Pending</span>
+		<span class="v"><b id="si_net_tx_qsize"></b> txs,
+			<b id="si_net_block_qsize"></b> blocks,
+			<b id="si_blocks_cached"></b> <span id="si_blocks_cached_label"></span>,
+			<b id="si_blocks_to_get"></b> to get
+			<img id="si_saving" src="static/saving.png" style="float:right;display:none" title="Saving UTXO.db in progress"></span>
+	</div>
 
-	<tr><td nowrap="nowrap">TX Mempool:<td aligh="left">
-		<b title="Accepted" id="ts_t2s_size"></b>
-		&nbsp;&bull;&nbsp;
-		<b title="Rejected" id="ts_tre_size" style="font-weight:bold"></b>
-		&nbsp;&bull;&nbsp;
-		<b title="UTXOs spent in memory" id="outspent" style="font-weight:bold"></b>
-		&nbsp;&bull;&nbsp;
-		<b title="Minimum SPB" id="min_spb" style="font-weight:bold"></b> spb
-		&nbsp;
-		<span style="float:right;">
-			<img id="packaging_icon" class="empty_icon">
-			<img id="sorting_icon" class="empty_icon">
-		</span>
-	<tr><td>Pending Data:<td><b id="si_net_tx_qsize"></b> txs,
-		&nbsp;<b id="si_net_block_qsize"></b> blocks,
-		&nbsp;<b id="si_blocks_cached"></b> <span id="si_blocks_cached_label"></span>,
-		&nbsp;<b id="si_blocks_to_get"></b> to get
-		<img id="si_saving" src="static/saving.png" style="float:right;display:none" title="Saving UTXO.db in progress">
-	</tr>
-	<tr id="showcfg" style="display:none">
+	<div id="showcfg" style="display:none;margin-top:14px">
+	<form method="post" style="margin:0" action="cfg" onsubmit="return node_ctl_submit(this, event)">
+	<div style="display:flex;gap:8px;flex-wrap:wrap">
+		<input type="button" value="Edit config" onclick="shwcfg()">
+		<input type="button" value="Save config" onclick="savecfg()">
+		<span style="flex:1"></span>
+		<input type="submit" name="restart" value="Restart node">
+		<input type="submit" name="shutdown" value="Shutdown" class="danger">
+	</div>
+	</form>
+	</div>
+</div>
+</div>
+</div>
 
-<form method="post" style="margin:0" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');">
-<td align="left" style="padding:0px" colspan="2">
-<table width="100%" cellspacing="0" cellpadding="0"><tr>
-<td align="left">
-	<input type="button" value="Edit config" onclick="shwcfg()">
-	<input type="button" value="Save config" onclick="savecfg()">
-</td>
-<td align="right">
-	<input type="submit" name="restart" value="Restart node">
-	<input type="submit" name="shutdown" value="Shutdown">
-</td>
-</tr></table>
-</form>
-</td>
-
-</tr>
-	</table>
-</table>
-
-<div id="formcfg" style="display:none">
-<h2>Configuration</h2>
-<table width="100%">
-<form method="post" action="cfg">
-<tr><td colspan="2"align="left">See <a href="http://gocoin.pl/gocoin_manual_client_config.html" target="_blank">help page</a> for the format of the configuration data.
-<tr><td colspan="2">
-	<textarea name="configjson" id="configjson" style="width:100%" rows="26"></textarea>
-<tr><td align="center">
-	<i>Please note that some config values require a restart in order to be applied.
-	<td align="right">
+<div id="formcfg" class="panel" style="display:none">
+<div class="panel-head">
+	<h2>Configuration</h2>
+	<div class="panel-tools">See the <a href="http://gocoin.pl/gocoin_manual_client_config.html" target="_blank">config reference</a> for the format.</div>
+</div>
+<form method="post" action="cfg" style="margin:0">
+<div class="panel-body">
+	<textarea name="configjson" id="configjson" style="width:100%" rows="26" spellcheck="false"></textarea>
+</div>
+<div class="panel-foot" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+	<i>Some config values need a restart before they take effect.</i>
+	<span style="flex:1"></span>
 	<input type="button" value="Cancel" onclick="cfg_cancel()">
 	<input type="submit" name="apply" value="Apply">
-	<input type="submit" name="save" value="Apply & Save">
+	<input type="submit" name="save" value="Apply & Save" class="primary">
+</div>
 </form>
-</table>
 </div>
 
 <script>
 if (!server_mode) {
-	showcfg.style.display='table-row'
+	showcfg.style.display='block'
 	el_free_mem.style.display='inline'
 }
 
@@ -202,6 +153,14 @@ auto_theme_switch_box.checked = auto_dark_mode
 function auto_theme_switch() {
 	localStorage.setItem("auto_dark_mode", !auto_dark_mode)
 	location.reload()
+}
+
+function node_ctl_submit(form, ev) {
+	var sub = ev.submitter
+	var shut = sub && sub.name=="shutdown"
+	return gc_confirm_submit(form, ev,
+		shut ? "Shut down this node? You will not be able to start it again from here." : "Restart this node now?",
+		{title: shut ? "Shut down node" : "Restart node", ok: shut ? "Shut down" : "Restart", danger: shut})
 }
 
 var previousPoint = null;
@@ -221,17 +180,7 @@ restore_chart_setting()
 var chart_type_ord_prev = chart_type_ord.checked
 
 function showTooltip(x, y, contents) {
-	$('<div id="tooltip">' + contents + '</div>').css( {
-		position: 'absolute',
-		display: 'none',
-		top: y - 30,
-		left: x + 5,
-		border: '2px solid #fdd',
-		padding: '5px',
-		'font-size' : '14px',
-		'background-color': dark_mode ? '#111111' : '#fee',
-		opacity: 1
-	}).appendTo("body").fadeIn(200);
+	flot_tooltip("tooltip", x, y, contents)
 }
 
 function handlehover(event, pos, item) {
@@ -241,16 +190,15 @@ function handlehover(event, pos, item) {
 			$("#tooltip").remove();
 
 			var rec = cs[item.dataIndex]
-			var str = 'Block #'+rec.Height+', Version 0x'+rec.Version.toString(16)+'<br>'
-			str += tim2str(rec.Received)+' ... '+tim2str(rec.Timestamp, true)+'<br>'
+			var str = '<b>Block #'+rec.Height+'</b> <span class="muted">version 0x'+rec.Version.toString(16)+'</span><br>'
+			str += tim2str(rec.Received)+' … '+tim2str(rec.Timestamp, true)+'<br>'
 			str += ''+rec.TxCnt+' transactions / '+rec.Size+' bytes<br>'
 			str += val2str(rec.Reward)+' BTC / ' + rec.FeeSPB.toFixed(2)+' SPB<br>'
-			str += 'Block Weight: ' + rec.Weight + "<br>"
+			str += 'Block weight: ' + rec.Weight + "<br>"
 			str += 'Mined by ' + rec.Miner + '<br>'
-			str += 'Ords use ' + (100*rec.OrdCnt/rec.TxCnt).toFixed(0) + '% txs, '
+			str += '<span class="muted">Ordinals: ' + (100*rec.OrdCnt/rec.TxCnt).toFixed(0) + '% txs, '
 			str += (100*rec.OrdSize/rec.Size).toFixed(0) + '% size, '
-			str += (100*rec.OrdWeight/rec.Weight).toFixed(0) + '% of weight'
-			//if (rec.Weight > 0)
+			str += (100*rec.OrdWeight/rec.Weight).toFixed(0) + '% weight</span>'
 
 			showTooltip(item.pageX, item.pageY, str)
 		}
@@ -266,8 +214,6 @@ function handleclick(event, pos, item) {
 		var rec = cs[item.dataIndex]
 		if (rec.HaveFeeStats) {
 			show_block_fees(rec.Height,rec.Size,rec.Miner.substr(0,12))
-		} else {
-			//alert("No fee stats for this block")
 		}
 	}
 }
@@ -291,37 +237,35 @@ function draw_chart() {
 	aj.onload=function() {
 		try {
 			_cs = JSON.parse(aj.responseText)
-            var plot_data = [ { data : [], points: { show:true, fill:true, fillColor: flot_points_fill_color() }, lines: {show:true, fill:true}},
+			var plot_data = [ { data : [], points: { show:true, fill:true, fillColor: flot_points_fill_color() }, lines: {show:true, fill:true}},
 							{ data : [], bars:{ show:true, fill:true,  lineWidth:5}, color:"black" } ];
-			var plot_options = {
+			var plot_options = flot_theme({
 				grid: { hoverable: true, clickable: true,  markings:[] },
 				xaxis: { mode: 'time', timeformat: "%H:%M", timezone: "browser" },
 				yaxis : {labelWidth : 30, min : 0, position : "right"}
-			}
+			})
 
 			if (chart_type_siz.checked) {
-				plot_data[0].color = '#4DA74D'
+				plot_data[0].color = theme_var('--pos')
 				localStorage.setItem("home_chart", "siz")
 			} else if (chart_type_spb.checked) {
-				plot_data[0].color = '#CB4B4B'
+				plot_data[0].color = theme_var('--neg')
 				localStorage.setItem("home_chart", "spb")
 			} else if (chart_type_wgt.checked) {
-				plot_data[0].color = '#BD9B33'
+				plot_data[0].color = theme_var('--accent')
 				localStorage.setItem("home_chart", "wgt")
 			} else {
-				plot_data[0].color = '#9440ED'
+				plot_data[0].color = theme_var('--violet')
 				localStorage.setItem("home_chart", "txs")
 			}
 			localStorage.setItem("home_chart_avg", chart_type_avg.checked)
 			localStorage.setItem("home_chart_ord", chart_type_ord.checked)
 
-			//console.log(_cs)
 			cs = new Array()
 			for (var i=0; i<_cs.length; i++) {
 				if (_cs[i].TxCnt==1) {
-					//plot_data[1].data.push([_cs[i].Timestamp*1000, 100])
 					var tt = _cs[i].Timestamp*1000
-                    plot_options.grid.markings.push({ xaxis: { from: tt, to: tt+240000 }, color: dark_mode ? "#404030" : "#f0f0d0" })
+					plot_options.grid.markings.push({ xaxis: { from: tt, to: tt+240000 }, color: theme_var('--tint-accent') })
 					continue // ignore blocks with a single conbase tx
 				}
 				cs.push(_cs[i])
@@ -396,20 +340,20 @@ var last_block_height = -1
 function shwcfg() {
 	var aj = ajax()
 	aj.onerror=function() {
-		alert('Error communicating with the server')
+		gc_alert('Could not fetch the configuration from the node.', {title:"Error"})
 	}
 	aj.onload=function() {
 		configjson.value=aj.responseText
 		showcfg.style.display='none'
 		formcfg.style.display='block'
-		window.scrollTo(0,document.body.scrollHeight)
+		formcfg.scrollIntoView({behavior:'smooth', block:'start'})
 	}
 	aj.open("GET","cfg?getconfig&sid="+sid,true)
 	aj.send(null)
 }
 
 function cfg_cancel() {
-	showcfg.style.display='table-row'
+	showcfg.style.display='block'
 	formcfg.style.display='none'
 	window.scrollTo(0,0)
 }
@@ -418,6 +362,10 @@ blno.addEventListener("lastblock", function(e) {
 	var stat = e.block
 	if (last_block_height != stat.Height) {
 		last_block_hash.innerText = stat.Hash
+		last_block_hash.title = 'Click to copy'
+		last_block_hash.className = 'hand'
+		last_block_hash["text2copy"] = stat.Hash
+		last_block_hash.onclick = copyonclick
 		last_block_timestamp.innerText = tim2str(stat.Timestamp)
 		last_block_height = stat.Height
 		last_block_difficulty.innerText = bignum(stat.Diff)
@@ -478,13 +426,13 @@ function refreshsysinfo() {
 			si_node_uptime.innerText = period2str(si.Node_uptime)
 			si_last_hdr_height.innerText = si.LastHeaderHeight
 			si_network_hashrate.innerText = bignum(si.NetworkHashRate) +'H/s'
-			si_saving.style.display = si.SavingUTXO ? "block" : "none"
+			si_saving.style.display = si.SavingUTXO ? "inline" : "none"
 
 			process_pid.innerText = si.ProcessPID
-			process_pid.title = 'Click to Copy'
+			process_pid.title = 'Click to copy'
 			process_pid.className = 'hand'
 			process_pid["text2copy"] = si.ProcessPID
-			process_pid.addEventListener("click", copyonclick)
+			process_pid.onclick = copyonclick
 		} catch(e) {
 			console.log(e)
 		}
@@ -520,8 +468,7 @@ function refreshbwinfo() {
 				external_ip0.innerText = '?'
 				external_ip0.title = ''
 				external_ip0.className = ''
-				external_ip0["text2copy"] = ips
-				external_ip0.removeEventListener("click", copyonclick)
+				external_ip0.onclick = null
 				external_others.innerHTML = ''
 			} else {
 				var ht=''
@@ -537,10 +484,10 @@ function refreshbwinfo() {
 					}
 				}
 				external_ip0.innerText = bw.ExternalIP[0].Ip
-				external_ip0.title = bw.ExternalIP[0].Count+' times, last at '+tim2str(bw.ExternalIP[0].Timestamp) + ' (Click to Copy)'
+				external_ip0.title = bw.ExternalIP[0].Count+' times, last at '+tim2str(bw.ExternalIP[0].Timestamp) + ' (click to copy)'
 				external_ip0.className = 'hand'
 				external_ip0["text2copy"] = external_ip0.innerText
-				external_ip0.addEventListener("click", copyonclick)
+				external_ip0.onclick = copyonclick
 				external_others.innerHTML = ht
 			}
 		} catch(e) {
@@ -568,7 +515,6 @@ function refreshtxstat() {
 			ts_tre_size.innerText = bignum(ts.tre_size)+'B'
 			ts_tre_size.title = ts.tre_cnt + ' txs rejected'
 			min_spb.innerText = (ts.min_fee_per_kb/1000.0).toFixed(1)
-			var mpf = ''
 			if (ts.sorting_disabled) {
 				sorting_icon.className = "empty_icon"
 				sorting_icon.title = "Auto sorting disabled"
@@ -614,10 +560,8 @@ function import_file_selected(e) {
 	var f = import_file.files[0]
 	var reader = new FileReader()
 	reader.onload = function(e) {
-		//console.log('aac', e, e.target.result)
 		try {
 			var sets = JSON.parse(e.target.result)
-			var wlts = ''
 			localStorage.clear()
 			for (var nam in sets) {
 				localStorage.setItem(nam, sets[nam])
@@ -625,6 +569,7 @@ function import_file_selected(e) {
 			location.reload()
 		} catch (ex) {
 			console.log(ex)
+			gc_alert('The selected file is not a valid settings backup.', {title:"Import failed"})
 		}
 	};
 	reader.readAsText(f)
@@ -632,12 +577,12 @@ function import_file_selected(e) {
 
 function freemem() {
 	if (server_mode) {
-		alert('Freeing memory is not available in Server Mode')
+		gc_alert('Freeing memory is not available in Server Mode.')
 		return
 	}
-	if (confirm("Request node to free all the possible memory")) {
-		config('freemem')
-	}
+	gc_confirm("Ask the node to release all the memory it can back to the system?", {title:"Free memory", ok:"Free memory"}).then(function(yes) {
+		if (yes) config('freemem')
+	})
 }
 
 
@@ -648,14 +593,14 @@ function get_auth_key() {
 		pub_auth_key.innerText = "..."
 		pub_auth_key.title = ""
 		pub_auth_key.className = ""
-		pub_auth_key.addEventListener("click", copyonclick)
+		pub_auth_key.onclick = null
 	}
 	aj.onload=function() {
 		pub_auth_key.innerText = '@'+aj.responseText
-		pub_auth_key.title = "Click to Copy"
+		pub_auth_key.title = "Click to copy"
 		pub_auth_key.className = "hand"
 		pub_auth_key["text2copy"] = pub_auth_key.innerText
-		pub_auth_key.addEventListener("click", copyonclick)
+		pub_auth_key.onclick = copyonclick
 	}
 	aj.open("GET","authkey.txt",true)
 	aj.send(null)
@@ -664,9 +609,6 @@ function get_auth_key() {
 get_auth_key()
 
 document.addEventListener('DOMContentLoaded', function() {
-	window.onkeyup = function (event) {
-		if(event.keyCode == 27)  closepopup()
-	}
 	import_file.addEventListener('change', import_file_selected, false);
 })
 

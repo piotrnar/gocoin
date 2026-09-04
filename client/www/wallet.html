@@ -2,16 +2,19 @@
 <script type="text/javascript" src="static/qrcode.min.js"></script>
 <script type="text/javascript" src="static/crypto.js"></script>
 <script type="text/javascript" src="static/bech32.js"></script>
-<div id="light" class="white_content" style="height:auto;left:20%;width:60%">
-<table width="100%">
-<tr><td align="right"><img title="Close this popup" class="del" onclick="closepopup()">
-<tr><td align="center"><span class="qr_addr_label" id="qr_label"></span>
-<tr><td align="center"><input type="text" class="qr_addr_addr" id="qr_address" onclick="this.select()" readonly="readonly">
-<img src="static/copy.png" title="Copy to clipboard" class="hand" onclick="qr_address.select();document.execCommand('copy')">
-<tr><td align="center">
-<table width="320"><tr><td class="qrcode"><div id="qrcode" style="width:300px"></div></td></tr></table>
-<tr><td align="right">&nbsp;
-</table>
+<div id="light" class="white_content narrow">
+<div class="popup-head">
+	<h3 class="qr_addr_label" id="qr_label"></h3>
+	<span class="spacer"></span>
+	<button type="button" class="popup-close" title="Close this popup" onclick="closepopup()">&#215;</button>
+</div>
+<div style="text-align:center">
+	<div class="qrbox"><div id="qrcode" style="width:300px;height:300px"></div></div>
+	<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px">
+		<input type="text" class="qr_addr_addr" id="qr_address" onclick="this.select()" readonly="readonly">
+		<img src="static/copy.png" title="Copy to clipboard" class="copyic" style="height:15px" onclick="copy_text(qr_address.value)">
+	</div>
+</div>
 </div><div id="fade" class="black_overlay"></div>
 
 <script>
@@ -25,22 +28,9 @@ function showqrcode(label, addr) {
 	qr_address.value = addr
 	qr_address.style.width = (addr.length+1) + 'ch'
 	qrcode.makeCode(addr)
-
-	if (prvpos==null) {
-		fade.addEventListener('click', closepopup)
-		fade.style.cursor = 'pointer'
-		fade.title = 'Click here to close the popup'
-	}
-
-	prvpos = document.body.scrollTop
-	window.scrollTo(0,0)
-
-	light.style.display='block'
-	fade.style.display='block'
-	document.addEventListener("scroll", noscroll)
+	openpopup()
 }
 function showtheqr(img) {
-	console.log('jade', img, "lab:", img["qr_label"], "  ad:", img["qr_addr"])
 	showqrcode(img.qr_label, img.qr_addr)
 }
 
@@ -74,9 +64,8 @@ function add_address_and_icons(td, adr, lab) {
 	// add copy icon
 	var img = document.createElement("img")
 	img["text2copy"] = adr
-	img.style.verticalAlign = "bottom"
 	img.src = "static/copy.png"
-	img.className = "hand"
+	img.className = "copyic"
 	img.title = "Copy to clipboard"
 	img.addEventListener("click", copyonclick)
 	td.appendChild(img)
@@ -229,7 +218,7 @@ function fetch_wallet_balance(name) {
 					}
 					totouts += rec.OutCnt
 				} else {
-					td.innerHTML = '<a href="javascript:setunused('+idxx+')"><img class="del"></a>'
+					td.innerHTML = '<img class="del" title="Remove this unused address from the wallet" onclick="setunused('+idxx+')">'
 				}
 
 				totvalin += rec.PendingValue
@@ -348,7 +337,8 @@ function setunused(idx) {
 	var adr = tr["btc_addr"] //tr.cells[0].innerText
 
 	var name = qswal.options[qswal.selectedIndex].text
-	if (confirm("Remove " + adr + " from the current browser wallet?")) {
+	gc_confirm("Remove this address from the wallet \"" + name + "\"?\n" + adr, {title:"Remove address", ok:"Remove", danger:true}).then(function(yes) {
+		if (!yes) return
 		lines = localStorage.getItem("gocoinWal_"+name).split('\n')
 		var s = ''
 		for (var i=0; i<lines.length; i++) {
@@ -359,7 +349,7 @@ function setunused(idx) {
 		}
 		localStorage.setItem("gocoinWal_"+name, s)
 		switch_to_webwallet(name)
-	}
+	})
 }
 function edit_label() {
 	var idx = this.row_idx
@@ -367,8 +357,8 @@ function edit_label() {
 	var adr = tr["btc_addr"] //tr.cells[0].innerText
 	var lab = tr["addr_label"]
 
-	var newlab = prompt("Edit label in the current browser wallet for:\n" + adr, lab)
-	if (newlab) {
+	gc_prompt("Label for the address\n" + adr, lab, {title:"Edit label", ok:"Save"}).then(function(newlab) {
+		if (!newlab) return
 		var name = qswal.options[qswal.selectedIndex].text
 		lines = localStorage.getItem("gocoinWal_"+name).split('\n')
 		var s = ''
@@ -385,7 +375,7 @@ function edit_label() {
 		}
 		localStorage.setItem("gocoinWal_"+name, s)
 		switch_to_webwallet(name)
-	}
+	})
 }
 function close_editor() {
 	showwal.style.display='block'
@@ -418,10 +408,11 @@ function save_web_wallet() {
 
 function delete_wallet() {
 	var name = qswal.options[qswal.selectedIndex].text
-	if (confirm("Delete wallet "+name+" from the browser?")) {
+	gc_confirm("Delete the wallet \"" + name + "\" from this browser? This cannot be undone.", {title:"Delete wallet", ok:"Delete", danger:true}).then(function(yes) {
+		if (!yes) return
 		localStorage.removeItem("gocoinWal_"+name)
 		location.reload()
-	}
+	})
 }
 
 function create_switch_buttons() {
@@ -434,7 +425,7 @@ function create_switch_buttons() {
 			var but = document.createElement("input")
 			but.type = "button"
 			but.value = na
-			but.style.margin = 5
+			but.className = "btn-sm walbtn" + (na==wal_name ? " primary" : "")
 			but.onclick = switchwallet_button_click_browser
 			browser_wallets.appendChild(but)
 		}
@@ -519,85 +510,86 @@ function at_click() {
 </script>
 <select id="qswal" style="display:none"></select>
 
-<h2>Your wallets
-<span style="float:right" >
-<input id="move_left" type="button" value="Move left" onclick="move_wallet_left()">
-<input id="move_right" type="button" value="Move right"  onclick="move_wallet_right()">
-<input type="button" id="delwal_button" value="Delete This Wallet" onclick="delete_wallet()">
-</span>
-</h2>
-<div id="browser_wallets">Available wallets: </div>
-<hr>
+<div class="panel">
+<div class="panel-head">
+	<h2>Your wallets</h2>
+	<div id="browser_wallets" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
+	<div class="panel-tools">
+		<input id="move_left" type="button" value="← Move" onclick="move_wallet_left()" class="btn-sm" title="Move this wallet left">
+		<input id="move_right" type="button" value="Move →" onclick="move_wallet_right()" class="btn-sm" title="Move this wallet right">
+		<input type="button" id="delwal_button" value="Delete this wallet" onclick="delete_wallet()" class="btn-sm danger">
+	</div>
+</div>
+</div>
 
-<div id="showwal">
-<h2>Current wallet: <span id="cur_wallet_name"></span> <img title="Loading balance" id="loading_icon" src="static/loading.gif" style="display:none">
-
-<span style="float:right">
-<input type="button" value="Edit" onclick="edit_wallet()">
-</span>
-</h2>
-
-Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)
-&nbsp;&bull;&nbsp;
-<span class="hand" onclick="show_mempol.click()">
-	<input type="checkbox" id="show_mempol" onchange="show_mempool_clicked()" onclick="event.stopPropagation()"> Show unconfirmed
-</span>
-<i id="wallet_min_warning" class="walminwarn" style="float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
-<img class="warning" style="vertical-align:middle">Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
-<br><br>
-
+<div id="showwal" class="panel">
+<div class="panel-head">
+	<h2>Wallet <span id="cur_wallet_name" class="cod" style="font-size:14px"></span></h2>
+	<img title="Loading balance" id="loading_icon" src="static/loading.gif" style="display:none" alt="">
+	<div class="panel-tools">
+		<label class="tgl"><input type="checkbox" id="show_mempol" onchange="show_mempool_clicked()"><i></i> Show unconfirmed</label>
+		<input type="button" value="Edit" onclick="edit_wallet()" class="btn-sm">
+	</div>
+</div>
+<div class="panel-body" style="padding-top:10px;padding-bottom:10px">
+	<div class="stat-row">
+		<span>balance <b id="total_btc" class="size120"></b> BTC</span>
+		<span>in <b id="unspent_outs"></b> outputs</span>
+		<span><a href="javascript:get_balance_zip()" title="Download the balance for gocoin's wallet tool">balance.zip</a></span>
+		<span id="arriving_info_id" style="display:none" class="unspent_plus">+ <b id="arriving_btc"></b> BTC arriving in <b id="arriving_cnt"></b> outputs</span>
+		<span id="spending_info_id" style="display:none" class="unspent_minus">− <b id="spending_btc"></b> BTC leaving from <b id="spending_cnt"></b> outputs</span>
+		<i id="wallet_min_warning" class="walminwarn" style="display:none;margin-left:auto" title="Modify MinValue in gocoin.conf to change it">
+		<img class="warning">Only counting outputs of at least <b id="min_val_btc"></b> BTC</i>
+	</div>
+</div>
+<div class="panel-body flush tscroll">
 <table class="wal bord" id="walltab">
 <tr>
-<th width="360" align="left" class="hand" onclick="at_click()" style="padding-left:23px"
+<th width="360" align="left" class="hand" onclick="at_click()"
 	title="Click to change address type displayed in this column (needs raw-pubkey wallet)">
-	Base Address (<span id="at_type_str"></span>)
+	Base address <span class="muted">(<span id="at_type_str"></span>)</span> ⇄
 <th align="left" width="100">Label
 <th align="right">Balance&nbsp;BTC
-<th width="50">
-<th align="left" width="330" class="hand" onclick="switch_segwit_p2sh()" style="padding-left:23px"
+<th width="20">
+<th align="left" width="330" class="hand" onclick="switch_segwit_p2sh()"
 	title="Click to change address type displayed in this column (for segwit version 0)">
-	Version 0 Segwit Address (<span id="p2sh_sw_mode_str"></span>)
-<th width="40">Outs
+	Segwit v0 address <span class="muted">(<span id="p2sh_sw_mode_str"></span>)</span> ⇄
+<th width="40" align="right">Outs
 </table>
-<table width="100%"><tr>
-<td width="50%" id="arriving_info_id" style="display:none" class="unspent_plus">Unconfirmed arriving: <b id="arriving_btc"></b> BTC in <b id="arriving_cnt"></b> outputs</td>
-<td width="50%" id="spending_info_id" style="display:none" class="unspent_minus">Unconfirmed spending: <b id="spending_btc"></b> BTC from <b id="spending_cnt"></b> outputs</td>
-</tr></table>
-
-<br>
+</div>
+<div class="panel-foot">Click a label to edit it. Column headers marked ⇄ switch the address format shown.</div>
 </div>
 
-<div id="formwal" style="display:none">
-<h2>Edit wallet
-<input style="float:right" type="button" value="Cancel" onclick="close_editor()">
-</h2>
-<table width="100%">
-<form method="post" id="wallet_edit_form" action="cfg" onsubmit="return false;">
-<tr>
-	<td align="left">
-		<input type="checkbox" id="allow_name_change" onchange="allow_name_change_clicked()">
-		Choose new name: <input type="text" disabled="true" id="walletfname" name="walletfname" value="" class="mono">
-	<td align="right">
-		<input type="button" value="Save Wallet" onclick="save_web_wallet()">
-<tr><td colspan="2">
-	<textarea name="walletdata" id="walletdata" style="width:100%" rows="25">{WALLET_DATA}</textarea><br>
-	<i>
-	Only list your wallet's <b>public addresses</b> here!
-	Empty lines and lines starting with <b>#</b> are ignored.<br>
-	Make a line of <b># SegWit</b> or <b># SegWit P2SH</b> or <b># SegWit Tap</b>
-	 to auto-translate change addresses to SegWit format in <a href="send">Spend</a> tab.
-	</i>
+<div id="formwal" class="panel" style="display:none">
+<div class="panel-head">
+	<h2>Edit wallet</h2>
+	<div class="panel-tools">
+		<input type="button" value="Cancel" onclick="close_editor()" class="btn-sm">
+		<input type="button" value="Save wallet" onclick="save_web_wallet()" class="btn-sm primary">
+	</div>
+</div>
+<form method="post" id="wallet_edit_form" action="cfg" onsubmit="return false;" style="margin:0">
+<div class="panel-body">
+	<div class="field" style="margin-bottom:10px">
+		<label class="tgl"><input type="checkbox" id="allow_name_change" onchange="allow_name_change_clicked()"><i></i> Rename to</label>
+		<input type="text" disabled="true" id="walletfname" name="walletfname" value="" class="mono">
+	</div>
+	<textarea name="walletdata" id="walletdata" style="width:100%" rows="20" spellcheck="false">{WALLET_DATA}</textarea>
+	<p class="muted small" style="margin:8px 0 0">
+	Only list your wallet's <b>public addresses</b> here, one per line, optionally followed by a label.
+	Empty lines and lines starting with <b>#</b> are ignored.
+	A line of <b># SegWit</b>, <b># SegWit P2SH</b> or <b># SegWit Tap</b>
+	auto-translates change addresses to that format on the <a href="send">Spend</a> page.
+	</p>
+</div>
 </form>
-</table>
 </div>
 
-
-<form id="form_b" method="post" action="cfg" style="margin:0px;text-align:center" onsubmit="return confirm('Disable wallet functionality')">
+<form id="form_b" method="post" action="cfg" style="margin:0;text-align:center;display:none" onsubmit="return gc_confirm_submit(this, event, 'Disable the wallet functionality? It lowers memory usage and speeds up block processing.', {title:'Disable wallet', ok:'Disable'})">
 <input type="hidden" name="wallet" value="off">
 <input type="hidden" name="page" value="/wallet">
 <input type="submit" value="Disable wallet functionality for lower memory usage and faster block processing">
 </form>
-
 
 <script>
 if (typeof(localStorage.gocoinWallets)=="string") {
@@ -622,7 +614,7 @@ blno.addEventListener("lastblock", function(e) {
 		_lblo = e.block.Height
 		if (e.block.MinValue>0) {
 			min_val_btc.innerText = val2str(e.block.MinValue)
-			wallet_min_warning.style.display = 'block'
+			wallet_min_warning.style.display = 'inline'
 		}
 	} else if (e.block.Height!=_lblo) {
 		_lblo = e.block.Height
@@ -640,9 +632,6 @@ qswal.addEventListener("loadwallet", function(e) {
 document.addEventListener('DOMContentLoaded', function() {
 	show_mempol.checked = localStorage.getItem("wallet_show_mempool") == 'true'
 	quick_switch_wallet() // this is to force loading wallet after loading
-	window.onkeyup = function (event) {
-		if(event.keyCode == 27)  closepopup()
-	}
 })
 
 p2sh_sw_mode = (localStorage.getItem("wallet_segwit_p2sh")==="true")

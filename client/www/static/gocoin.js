@@ -87,19 +87,20 @@ function tim2str(tim, timeonly) {
 }
 
 function pushtx() {
-	var rawtx = prompt("Enter raw transaction data (hexdump)")
-	if (rawtx!=null) {
+	gc_prompt("Paste the raw transaction data (hex) to load it into the mempool.", "",
+		{title:"Load transaction", multiline:true, ok:"Load", placeholder:"0200000001..."}).then(function(rawtx) {
+		if (rawtx==null || rawtx.trim()=="") return
 		var form = document.createElement("form")
 		form.setAttribute("method", "post")
 		form.setAttribute("action", "txs")
 		var rtx = document.createElement("input")
 		rtx.setAttribute("type", "hidden")
 		rtx.setAttribute("name", "rawtx")
-		rtx.setAttribute("value", rawtx)
+		rtx.setAttribute("value", rawtx.trim())
 		form.appendChild(rtx)
 		document.body.appendChild(form)
 		form.submit()
-	}
+	})
 }
 
 function savecfg() {
@@ -280,26 +281,46 @@ function quick_switch_wallet() {
 	}
 }
 
-function noscroll() {
-	scroll(0,0)
+
+/* ---------------------------------------------------------------------------
+   Popups (#light / #fade) shared by several pages
+   --------------------------------------------------------------------------- */
+function noscroll() {} // kept for compatibility, no longer needed (popups are position:fixed)
+
+function openpopup() {
+	if (typeof light == "undefined" || typeof fade == "undefined") return
+	if (!fade["_bound"]) {
+		fade["_bound"] = true
+		fade.addEventListener('click', closepopup)
+		fade.title = 'Click here to close the popup'
+	}
+	light.style.display = 'block'
+	fade.style.display = 'block'
+	document.body.classList.add('modal-open')
+}
+
+function popup_is_open() {
+	return typeof light != "undefined" && light.style.display == 'block'
 }
 
 function closepopup_x(fees) {
-	if (light.style.display!='none') {
-		if (fees) {
-			$("#block_fees").unbind("plothover")
-			$("#fees_tooltip").remove()
-		}
-		light.style.display='none'
-		fade.style.display='none'
-		window.scrollTo(0,prvpos)
-		document.removeEventListener("scroll", noscroll)
+	if (!popup_is_open()) return
+	if (fees && typeof $ != "undefined" && $("#block_fees").length) {
+		$("#block_fees").unbind("plothover")
+		$("#fees_tooltip").remove()
 	}
+	light.style.display = 'none'
+	fade.style.display = 'none'
+	document.body.classList.remove('modal-open')
 }
 
 function closepopup() {
 	closepopup_x(true)
 }
+
+document.addEventListener('keyup', function(event) {
+	if (event.key == "Escape" && !document.querySelector('.dlg-overlay')) closepopup()
+})
 
 function css(selector, property, value) {
 	for (var i=0; i<document.styleSheets.length;i++) {//Loop through all styles
@@ -310,14 +331,212 @@ function css(selector, property, value) {
 	}
 }
 
+/* ---------------------------------------------------------------------------
+   Clipboard + toast
+   --------------------------------------------------------------------------- */
+var _toast_timer = null
+function gc_toast(msg) {
+	var t = document.getElementById('gc_toast')
+	if (!t) {
+		t = document.createElement('div')
+		t.id = 'gc_toast'
+		t.className = 'toast'
+		document.body.appendChild(t)
+	}
+	t.textContent = msg
+	void t.offsetWidth
+	t.classList.add('show')
+	if (_toast_timer) clearTimeout(_toast_timer)
+	_toast_timer = setTimeout(function() { t.classList.remove('show') }, 1400)
+}
+
+function copy_text(txt) {
+	function fallback() {
+		try {
+			autocopy.style.display = 'inline'
+			autocopy.value = txt
+			autocopy.select()
+			document.execCommand('copy')
+			autocopy.style.display = 'none'
+		} catch (e) {}
+	}
+	if (navigator.clipboard && window.isSecureContext) {
+		navigator.clipboard.writeText(txt).catch(fallback)
+	} else {
+		fallback()
+	}
+	gc_toast("Copied to clipboard")
+}
+
 function copyonclick(e) {
-	autocopy.style.display = 'inline'
-	autocopy.value = e.srcElement["text2copy"]
-	autocopy.select()
-	document.execCommand('copy')
-	autocopy.style.display = 'none'
+	var el = e.currentTarget || e.srcElement
+	var txt = el["text2copy"]
+	if (typeof txt == "undefined" && e.srcElement) txt = e.srcElement["text2copy"]
+	if (typeof txt == "undefined") return
+	copy_text(txt)
+	e.stopPropagation()
+}
+
+/* ---------------------------------------------------------------------------
+   Dialogs (replacement for prompt / confirm / alert)
+   gc_prompt(msg, def, opts) -> Promise<string|null>
+   gc_confirm(msg, opts)     -> Promise<bool>
+   gc_alert(msg, opts)       -> Promise<void>
+   opts: {title, ok, cancel, danger, multiline, placeholder, mono}
+   --------------------------------------------------------------------------- */
+function gc_dialog(kind, msg, def, opts) {
+	opts = opts || {}
+	return new Promise(function(resolve) {
+		var ov = document.createElement('div')
+		ov.className = 'dlg-overlay'
+		var box = document.createElement('div')
+		box.className = 'dlg' + (opts.danger ? ' danger' : '') + (opts.multiline ? ' wide' : '')
+		box.setAttribute('role', kind=='alert' ? 'alertdialog' : 'dialog')
+		box.setAttribute('aria-modal', 'true')
+
+		var title = opts.title || (kind=='confirm' ? 'Please confirm' : (kind=='alert' ? 'Notice' : 'Input needed'))
+		var h = document.createElement('div')
+		h.className = 'dlg-title'
+		h.textContent = title
+		box.appendChild(h)
+
+		var m = document.createElement('div')
+		m.className = 'dlg-msg'
+		if (opts.html) m.innerHTML = msg; else m.textContent = msg
+		box.appendChild(m)
+
+		var input = null
+		if (kind=='prompt') {
+			input = document.createElement(opts.multiline ? 'textarea' : 'input')
+			if (!opts.multiline) input.type = 'text'
+			input.value = (def==null) ? '' : def
+			if (opts.placeholder) input.placeholder = opts.placeholder
+			input.setAttribute('autocomplete', 'off')
+			input.setAttribute('spellcheck', 'false')
+			box.appendChild(input)
+		}
+
+		var act = document.createElement('div')
+		act.className = 'dlg-actions'
+		var okb = document.createElement('button')
+		okb.type = 'button'
+		okb.className = 'btn ' + (opts.danger ? 'danger' : 'primary')
+		okb.textContent = opts.ok || 'OK'
+		var cancel = null
+		if (kind!='alert') {
+			cancel = document.createElement('button')
+			cancel.type = 'button'
+			cancel.className = 'btn'
+			cancel.textContent = opts.cancel || 'Cancel'
+			act.appendChild(cancel)
+		}
+		act.appendChild(okb)
+		box.appendChild(act)
+		ov.appendChild(box)
+		document.body.appendChild(ov)
+
+		var prev_focus = document.activeElement
+		var done = false
+		function finish(val) {
+			if (done) return
+			done = true
+			ov.classList.add('closing')
+			document.removeEventListener('keydown', onkey, true)
+			setTimeout(function() {
+				if (ov.parentNode) ov.parentNode.removeChild(ov)
+				try { if (prev_focus && prev_focus.focus) prev_focus.focus() } catch (e) {}
+				resolve(val)
+			}, 140)
+		}
+		function ok() {
+			if (kind=='prompt') finish(input.value)
+			else if (kind=='confirm') finish(true)
+			else finish(undefined)
+		}
+		function no() {
+			if (kind=='prompt') finish(null)
+			else if (kind=='confirm') finish(false)
+			else finish(undefined)
+		}
+		function onkey(ev) {
+			if (ev.key=='Escape') { ev.preventDefault(); ev.stopPropagation(); no() }
+			else if (ev.key=='Enter' && !(opts.multiline && !ev.ctrlKey && !ev.metaKey)) {
+				if (kind!='prompt' || document.activeElement==input || document.activeElement==okb || document.activeElement==box) {
+					ev.preventDefault(); ev.stopPropagation(); ok()
+				}
+			} else if (ev.key=='Tab') {
+				// keep focus inside the dialog
+				var f = box.querySelectorAll('input,textarea,button')
+				var first = f[0], last = f[f.length-1]
+				if (ev.shiftKey && document.activeElement==first) { ev.preventDefault(); last.focus() }
+				else if (!ev.shiftKey && document.activeElement==last) { ev.preventDefault(); first.focus() }
+			}
+		}
+		document.addEventListener('keydown', onkey, true)
+		okb.addEventListener('click', ok)
+		if (cancel) cancel.addEventListener('click', no)
+		ov.addEventListener('mousedown', function(ev) { if (ev.target==ov) no() })
+
+		setTimeout(function() {
+			if (input) { input.focus(); if (!opts.multiline) input.select() }
+			else okb.focus()
+		}, 20)
+	})
+}
+function gc_prompt(msg, def, opts) { return gc_dialog('prompt', msg, def, opts) }
+function gc_confirm(msg, opts) { return gc_dialog('confirm', msg, null, opts) }
+function gc_alert(msg, opts) { return gc_dialog('alert', msg, null, opts) }
+
+// use as: onsubmit="return gc_confirm_submit(this, event, 'Really?', {ok:'Yes'})"
+function gc_confirm_submit(form, ev, msg, opts) {
+	if (form["_gc_confirmed"]) {
+		form["_gc_confirmed"] = false
+		return true
+	}
+	ev.preventDefault()
+	var submitter = ev.submitter
+	gc_confirm(msg, opts).then(function(yes) {
+		if (!yes) return
+		form["_gc_confirmed"] = true
+		if (submitter && form.requestSubmit) form.requestSubmit(submitter)
+		else form.submit()
+	})
+	return false
+}
+
+/* ---------------------------------------------------------------------------
+   Theme helpers for charts
+   --------------------------------------------------------------------------- */
+function theme_var(name) {
+	return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
 
 function flot_points_fill_color() {
-	return dark_mode ? 'black' : 'white'
+	return theme_var('--surface') || (dark_mode ? 'black' : 'white')
+}
+
+// merge theme-aware grid colors into flot options
+function flot_theme(opts) {
+	if (!opts.grid) opts.grid = {}
+	opts.grid.color = theme_var('--text-3')
+	opts.grid.tickColor = theme_var('--line')
+	opts.grid.borderColor = theme_var('--line')
+	opts.grid.borderWidth = 1
+	opts.grid.backgroundColor = 'transparent'
+	return opts
+}
+
+// themed tooltips for flot charts
+function flot_tooltip(id, x, y, contents, cls) {
+	var t = document.createElement('div')
+	t.id = id
+	t.className = 'flot-tip' + (cls ? ' '+cls : '')
+	t.innerHTML = contents
+	t.style.top = (y - 30) + 'px'
+	t.style.left = (x + 8) + 'px'
+	document.body.appendChild(t)
+	// keep it inside the viewport
+	var r = t.getBoundingClientRect()
+	if (r.right > window.innerWidth - 8) t.style.left = (x - r.width - 8) + 'px'
+	if (r.top < 4) t.style.top = (y + 12) + 'px'
 }

@@ -1,165 +1,121 @@
 <style>
-.dbg {
-	/*display:table-cell;*/
-	display:none;
-}
-td.agent {
-	max-width: 200px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap
-}
+.dbg { display:none; }
 </style>
 <script type="text/javascript" src="static/jquery.min.js"></script>
 <script type="text/javascript" src="static/jquery.flot.min.js"></script>
 
-<table width="100%" border="0" cellspacing="0" cellpadding="0">
-<colgroup>
-	<col width="360">
-	<col>
-	<col width="360">
-</colgroup>
-<tr>
-<td align="left">Address: <b id="external_ip"></b>
-<span id="get_mp_in_progress" style="display:none">&nbsp;&bull;&nbsp;<b>GetMPInProgress:<span id="get_mp_conn_id"></span></b></span></td>
-<td align="center">
-	Connections: <b id="out_connections"></b> <img title="outgoing" class="outgoing"> + <b id="in_connections"></b> <img title="incoming" class="incoming">
-</td>
-<td align="right">
-<span style="display:none" id="connect_buttons">
-<input type="button" id="edit_friends" value="Edit Friends" onclick="edit_friends()">
-<input type="button" id="unban_peer_but" value="Unban" onclick="unban_peer()">
-<input type="button" id="conn_peer_but" value="Connect Peer" onclick="connect_peer()">
-</span>
-</td>
-</tr>
-</table>
-
-<div style="display:none" id="friends_form">
-<table width="100%" cellspacing="0" cellpadding="0"><tr><td align="right">
-<form method="post" action="cfg" >
-<table cellspacing="0" cellpadding="0">
-<tr><td colspan="2" align="right">
-	<textarea name="friends_file" id="friends_file_el" style="width:600px" rows="12"></textarea>
-	<br>
-	<i>Valid lines contain <b>hostname:port</b>, <b>@AuthKey</b>, <b>+IP</b> or <b>*AgentPrefix</b>. Use # for comments.</i>
-<tr><td align="center">
-	<td align="right">
-	<input type="button" value="Cancel" onclick="cancel_friends()">
-	<input type="submit" name="apply" value="Save & Connect">
-</table>
-</form>
-</table>
+<div class="panel">
+<div class="panel-head">
+	<h2>Bandwidth</h2>
+	<div class="stat-row">
+		<span id="bw_dl_speed_now_span"><img class="incoming"> <b id="bw_dl_speed_now"></b> KB/s</span>
+		<span id="bw_ul_speed_now_span"><img class="outgoing"> <b id="bw_ul_speed_now"></b> KB/s</span>
+	</div>
+	<div class="panel-tools">
+		<span class="muted">Resolution</span>
+		<select id="bw_chart_seconds" onchange="draw_chart()">
+			<option value="1">1 second</option>
+			<option value="5">5 seconds</option>
+			<option value="30">30 seconds</option>
+			<option value="300">5 minutes</option>
+		</select>
+	</div>
+</div>
+<div class="panel-body">
+	<div id="chart" class="chartbox" style="height:180px"></div>
+</div>
 </div>
 
-<table width="100%" border="0" cellspacing="0" cellpadding="0">
-<colgroup>
-	<col width="360"> <!-- dl/ul speed -->
-	<col width="260"> <!-- TCP listen -->
-	<col width="30"> <!-- on/off icon -->
-	<col width="30"> <!-- listening icon -->
-	<col > <!-- TCP listen -->
-	<col width="200"> <!-- resolution -->
-<colgroup>
-<tr>
-<td align="left"><span id="bw_dl_speed_now_span">
-Downloading at <b id="bw_dl_speed_now"></b> KB/s</span>
-&nbsp;&bull;&nbsp;
-<span id="bw_ul_speed_now_span">Uploading at
-<b id="bw_ul_speed_now"></b> KB/s</span>
-</td>
-<td align="right">Listening for incoming connections:</td>
-<td><img id="listen_tcp_info" src="static/empty.png" height="24" valign="bottom"></td>
-<td><img id="tcp_server_running" valign="middle"></td>
-</td>
-<td></td>
-<td align="right">
-Resolution:
-<select id="bw_chart_seconds" onchange="draw_chart()">
-	<option value="1">1 second</option>
-	<option value="5">5 seconds</option>
-	<option value="30">30 seconds</option>
-	<option value="300">5 minutes</option>
-</select>
-</td>
-</tr>
-<tr>
-<td colspan="6">
-<div id="chart" style="height:180px;margin:0px"></div>
-</td>
-</tr>
-</table>
+<div class="panel">
+<div class="panel-head">
+	<h2>Connections</h2>
+	<div class="stat-row">
+		<span><b id="out_connections"></b> <img title="outgoing" class="outgoing"> + <b id="in_connections"></b> <img title="incoming" class="incoming"></span>
+		<span title="Our address as seen by the network">address <b id="external_ip"></b></span>
+		<span id="get_mp_in_progress" style="display:none"><b>GetMP in progress: <span id="get_mp_conn_id"></span></b></span>
+		<span title="Listening for incoming connections">listening
+			<img id="listen_tcp_info" class="pngswitch" src="static/empty.png" alt="">
+			<img id="tcp_server_running" alt=""></span>
+	</div>
+	<div class="panel-tools">
+		<span style="display:none" id="connect_buttons">
+			<input type="button" id="edit_friends" value="Edit friends" onclick="edit_friends()" class="btn-sm">
+			<input type="button" id="unban_peer_but" value="Unban" onclick="unban_peer()" class="btn-sm">
+			<input type="button" id="conn_peer_but" value="Connect peer" onclick="connect_peer()" class="btn-sm primary">
+		</span>
+	</div>
+</div>
 
-<table style="width:100%">
-<tr>
-<td align="left" valign="top">
-<span class="hand" onclick="stat_freeze.click()">
-	<input type="checkbox" id="stat_freeze" onchange="freeze_stats()" onclick="event.stopPropagation()">Freeze table
-</span>
-&nbsp;&bull;&nbsp;
-<span class="hand" onclick="hide_incoming_cb.click()">
-    <input type="checkbox" id="hide_incoming_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img class="incoming">
-</span>
-&nbsp;
-<span class="hand" onclick="hide_outgoing_cb.click()">
-    <input type="checkbox" id="hide_outgoing_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img class="outgoing">
-</span>
-</td>
-<td align="right">
-<span onclick="net_list_order_sp.click()" class="hand">
-	<input type="radio" name="net_list_order" id="net_list_order_sp" onchange="switch_order_type()" onclick="event.stopPropagation()"> Sort by speed
-</span>
-&nbsp;&bull;&nbsp;
-<span onclick="net_list_order_id.click()" class="hand">
-	<input type="radio" name="net_list_order" id="net_list_order_id" onchange="switch_order_type()" onclick="event.stopPropagation()"> Sort by age
-</span>
-</td>
-</tr>
-</table>
+<div style="display:none" id="friends_form" class="panel-body" >
+	<form method="post" action="cfg" style="margin:0">
+	<textarea name="friends_file" id="friends_file_el" style="width:100%" rows="12" spellcheck="false"></textarea>
+	<div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+		<i class="muted small">Valid lines contain <b>hostname:port</b>, <b>@AuthKey</b>, <b>+IP</b> or <b>*AgentPrefix</b>. Use # for comments.</i>
+		<span style="flex:1"></span>
+		<input type="button" value="Cancel" onclick="cancel_friends()">
+		<input type="submit" name="apply" value="Save & Connect" class="primary">
+	</div>
+	</form>
+</div>
+
+<div class="panel-body" style="display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;padding-top:10px;padding-bottom:10px;border-bottom:1px solid var(--line)">
+	<label class="tgl"><input type="checkbox" id="stat_freeze" onchange="freeze_stats()"><i></i> Freeze table</label>
+	<label class="tgl"><input type="checkbox" id="hide_incoming_cb" onchange="switch_hidden(this)"><i></i> Hide <img class="incoming"></label>
+	<label class="tgl"><input type="checkbox" id="hide_outgoing_cb" onchange="switch_hidden(this)"><i></i> Hide <img class="outgoing"></label>
+	<span style="flex:1"></span>
+	<div class="chips">
+		<label class="chip"><input type="radio" name="net_list_order" id="net_list_order_sp" onchange="switch_order_type()"><span>Sort by speed</span></label>
+		<label class="chip"><input type="radio" name="net_list_order" id="net_list_order_id" onchange="switch_order_type()"><span>Sort by age</span></label>
+	</div>
+</div>
+
+<div class="panel-body flush tscroll">
 <table class="netcons bord" width="100%" id="netcons">
 <tr>
-	<th width="30">ID
-	<th width="80">Age
-	<th width="130" colspan="2">Peer Address
-	<th width="20">Ping
+	<th width="30" align="right">ID
+	<th width="80" align="right">Age
+	<th width="130" colspan="2" align="right">Peer address
+	<th width="20" align="right">Ping
 	<th class="dbg">Rcvd
 	<th class="dbg">Sent
-	<th width="60" >Tot In
-	<th width="60" >Tot Out
-	<th colspan="3">Node Version
-	<th width="60" colspan="2" title="Received / In Progress">Blks
-	<th >Txs
+	<th width="60" align="right">In
+	<th width="60" align="right">Out
+	<th colspan="3" align="right">Node version</th>
+	<th width="60" colspan="2" title="Received / In Progress" align="right">Blocks
+	<th align="right">Txs
 	<th class="dbg" title="Bytes waiting to be sent">ToSend
 	<th class="dbg" title="Max bytes waiting to be sent">MaxSend
 	<th class="r"><img title="Refresh table" class="refresh" onclick="refresh_conns()">
 </tr>
 </table>
-
-
-<table width="100%"><tr>
-<td class="small">
-Node Version Legend:<br>
-&bull; <b>N</b> - Capable of serving the complete block chain<br>
-&bull; <b>n</b> - Limited network (can only serve last 288 blocks)<br>
-&bull; <b>H</b> - Requested BIP130 mode (via <code>sendheaders</code> message)<br>
-&bull; <b>B</b> - Supports Bloom Filtering (for serving SPV clients)<br>
-&bull; <b>1,2</b> - Supports Compact Blocks (<b>+</b> for high bandwidth mode)<br>
-&bull; <b>W</b> - Supports Segregate Witness functionality<br>
-&bull; <b>X</b> - Supports Xtreme Thinblocks functionality<br>
-&bull; <b>O</b> - Blocks only mode (node does not request transactions)<br>
-&bull; <b>E</b> - Supports Encrypted Transport Protocol (BIP 324)<br>
-</td>
-</tr>
-<tr>
-<td>
-<a name="rawdiv"></a>
-<div id="rawdivon" style="position:relative;width:100%;height:auto;display:none">
-<img title="Refresh peer info" class="refresh" style="position:absolute;right:25px;top:5px;z-index:2000" onclick="refresh_raw()">
-<img title="Hide peer info" class="del" style="position:absolute;right:5px;top:5px;z-index:2000" onclick="hide_peer_info()">
-<pre id="rawdiv" class="mono" style="left:0px;top: 0px;z-index:1000;width:100%;"></pre>
 </div>
-</td></tr></table>
 
+<div class="panel-foot">
+	<details>
+	<summary class="hand" style="color:var(--text-2)">Node version legend</summary>
+	<div class="small" style="margin-top:6px;columns:2;column-gap:24px">
+	<b>N</b> – Capable of serving the complete block chain<br>
+	<b>n</b> – Limited network (can only serve last 288 blocks)<br>
+	<b>H</b> – Requested BIP130 mode (via <code>sendheaders</code> message)<br>
+	<b>B</b> – Supports Bloom Filtering (for serving SPV clients)<br>
+	<b>1,2</b> – Supports Compact Blocks (<b>+</b> for high bandwidth mode)<br>
+	<b>W</b> – Supports Segregated Witness<br>
+	<b>X</b> – Supports Xtreme Thinblocks<br>
+	<b>O</b> – Blocks only mode (node does not request transactions)<br>
+	<b>E</b> – Supports Encrypted Transport Protocol (BIP 324)
+	</div>
+	</details>
+</div>
+</div>
+
+<a name="rawdiv"></a>
+<div id="rawdivon" class="panel" style="display:none">
+	<div class="rawtools">
+		<img title="Refresh peer info" class="refresh" onclick="refresh_raw()">
+		<img title="Hide peer info" class="del" onclick="hide_peer_info()">
+	</div>
+	<pre id="rawdiv" class="mono" style="border-radius:var(--radius)"></pre>
+</div>
 
 <script>
 enable_server_switching(!server_mode)
@@ -169,15 +125,17 @@ var curr_monitor_id = -1
 var loading_new_rawdivon = false
 
 function connect_peer() {
-	var ip = prompt("Enter IP of the peer to connect to");
-	if (ip!=null) {
+	gc_prompt("Enter the IP address (optionally with :port) of the peer to connect to.", "", {title:"Connect peer", ok:"Connect", placeholder:"1.2.3.4:8333"}).then(function(ip) {
+		if (ip==null || ip.trim()=="") return
+		ip = ip.trim()
 		var aj = ajax()
 		aj.onload=function() {
 			console.log(aj.responseText)
 		}
 		aj.open("GET",'cfg?conn='+encodeURI(ip)+'&sid='+sid, true);
 		aj.send(null);
-	}
+		gc_toast("Connecting to " + ip)
+	})
 }
 
 function enable_server_switching(enable) {
@@ -198,40 +156,43 @@ function server_on_off() {
 	function on2word(on) {
 		return on ? "Disable" : "Enable"
 	}
-	if (!confirm(on2word(is_on) + " listening for incoming connections?")) return
-
-	aj.onerror=function() {
-		alert("Error contacting the server")
-	}
-	aj.onload=function() {
-		set_server_switch_icon(aj.responseText==='true')
-		enable_server_switching(true)
-	}
-	enable_server_switching(false)
-	aj.open("GET",'cfg?lonoff&sid='+sid, true);
-	aj.send(null);
+	gc_confirm(on2word(is_on) + " listening for incoming connections?", {title:"Incoming connections", ok:on2word(is_on)}).then(function(yes) {
+		if (!yes) return
+		aj.onerror=function() {
+			gc_alert("Error contacting the server", {title:"Error"})
+		}
+		aj.onload=function() {
+			set_server_switch_icon(aj.responseText==='true')
+			enable_server_switching(true)
+		}
+		enable_server_switching(false)
+		aj.open("GET",'cfg?lonoff&sid='+sid, true);
+		aj.send(null);
+	})
 }
 
 function unban_peer() {
-	var ip = prompt("Enter IP of the peer to unban or 'all'");
-	if (ip!=null) {
+	gc_prompt("Enter the IP of the peer to unban, or 'all' to clear the whole ban list.", "", {title:"Unban peer", ok:"Unban", placeholder:"IP address or all"}).then(function(ip) {
+		if (ip==null || ip.trim()=="") return
 		var aj = ajax()
 		aj.onload=function() {
 			console.log(aj.responseText)
+			gc_toast("Unban request sent")
 		}
-		aj.open("GET",'cfg?unban='+encodeURI(ip)+'&sid='+sid, true);
+		aj.open("GET",'cfg?unban='+encodeURI(ip.trim())+'&sid='+sid, true);
 		aj.send(null);
-	}
+	})
 }
 
 function edit_friends() {
 	var aj = ajax()
 	aj.onerror=function() {
-		alert('Error communicating with the server')
+		gc_alert('Error communicating with the server', {title:"Error"})
 	}
 	aj.onload=function() {
 		friends_file_el.value=aj.responseText
 		friends_form.style.display = 'block'
+		friends_file_el.focus()
 	}
 	aj.open("GET","cfg?getfriends&sid="+sid,true)
 	aj.send(null)
@@ -374,10 +335,10 @@ function update_connection_info(ci) {
 		}
 	}
 
-	rawdiv.innerHTML = s
+	rawdiv.innerText = s
 	rawdivon.style.display = 'block'
 	if (loading_new_rawdivon) {
-		window.scrollTo(0,document.body.scrollHeight)
+		rawdivon.scrollIntoView({behavior:'smooth', block:'start'})
 		loading_new_rawdivon = false
 	}
 }
@@ -409,22 +370,23 @@ function raw_load(id,force) {
 
 function net_drop(id) {
 	if (server_mode) {
-		alert('Droping connections is not available in Server Mode')
+		gc_alert('Dropping connections is not available in Server Mode')
 		return
 	}
-	if (confirm("Drop Connection ID "+id+" and ban its IP")) {
-		document.location = 'cfg?drop='+id+'&sid='+sid
-	}
+	gc_confirm("Drop connection " + id + " and ban its IP address?", {title:"Drop connection", ok:"Drop & ban", danger:true}).then(function(yes) {
+		if (yes) document.location = 'cfg?drop='+id+'&sid='+sid
+	})
 	return false
 }
 
 function net_getmp(id) {
-	if (!confirm("Request all missing transactions from Connection ID "+id)) {
-		return
-	}
-	var aj = ajax()
-	aj.open("GET", 'cfg?getmp='+id+'&sid='+sid, true)
-	aj.send(null)
+	gc_confirm("Request all the missing mempool transactions from connection " + id + "?", {title:"Request transactions", ok:"Request"}).then(function(yes) {
+		if (!yes) return
+		var aj = ajax()
+		aj.open("GET", 'cfg?getmp='+id+'&sid='+sid, true)
+		aj.send(null)
+		gc_toast("Request sent to connection " + id)
+	})
 }
 
 function refreshconnections(force) {
@@ -501,7 +463,7 @@ function refreshconnections(force) {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.innerHTML = cs[i].PeerIp
-				td.title = "Click to Copy"
+				td.title = "Click to copy"
 				td.className = 'hand'
 				td["text2copy"] = cs[i].PeerIp
 				td.addEventListener("click", copyonclick)
@@ -671,7 +633,7 @@ function switch_debug_mode() {
 		css('td.agent', 'max-width', '100px')
 	} else {
 		css('.dbg', 'display', 'none')
-		css('td.agent', 'max-width', '350px')
+		css('td.agent', 'max-width', '260px')
 	}
 }
 
@@ -690,10 +652,10 @@ function draw_chart() {
 			cs = JSON.parse(aj.responseText)
 
 			var plot_data = [
-				{ data : [], color:3, lines: {show:true, fill:true} },
-				{ data : [], color:2, lines: {show:true, fill:true} }
+				{ data : [], color:theme_var('--info'), lines: {show:true, fill:true} },
+				{ data : [], color:theme_var('--accent'), lines: {show:true, fill:true} }
 				];
-			var plot_options = {
+			var plot_options = flot_theme({
 				xaxis: { tickSize:60,  tickFormatter : function(a,b) {
 					if (a==0) return ''
 					if (seconds>60) {
@@ -703,7 +665,7 @@ function draw_chart() {
 				} },
 				yaxis : {labelWidth : 40, min : 0, position : "right",  label:"kB/s" },
 				legend: { position: 'nw' }
-			}
+			})
 
 			/*if (cs.MaxUL && cs.MaxUL > cs.MaxDL) {
 				plot_options.yaxis.max = cs.MaxUL/900
@@ -720,8 +682,9 @@ function draw_chart() {
 				tot_ul += cs.UL[i]
 			}
 
-			plot_data[0].label = 'Downloading in kB/s - avg ' + (tot_dl / 256e3).toFixed(1)
-			plot_data[1].label = 'Uploading in kB/s - avg ' + (tot_ul / 256e3).toFixed(1)
+			plot_data[0].label = 'Download kB/s (avg ' + (tot_dl / 256e3).toFixed(1) + ')'
+			plot_data[1].label = 'Upload kB/s (avg ' + (tot_ul / 256e3).toFixed(1) + ')'
+			$("#chart").data("last_plot", [plot_data, plot_options])
 
 			$.plot($("#chart"), plot_data, plot_options)
 
@@ -770,7 +733,7 @@ function refreshbwinfo() {
 			if (bw.ExternalIP.length > 0) {
 				var ips = bw.ExternalIP[0].Ip + ":" + bw.DefaultTCPPort
 				external_ip.innerText = ips
-				external_ip.title = "Click to Copy"
+				external_ip.title = "Click to copy"
 				external_ip.className = 'hand'
 				external_ip["text2copy"] = ips
 				external_ip.addEventListener("click", copyonclick)
@@ -831,5 +794,14 @@ switch_order_type()
 switch_debug_mode()
 draw_chart()
 refreshbwinfo()
+
+dark_light_icon.addEventListener("theme_changed", function(e) {
+	var lp = $("#chart").data("last_plot")
+	if (lp) {
+		lp[0][0].color = theme_var('--info')
+		lp[0][1].color = theme_var('--accent')
+		$.plot($("#chart"), lp[0], flot_theme(lp[1]))
+	}
+})
 
 </script>

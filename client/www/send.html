@@ -1,10 +1,11 @@
 <script type="text/javascript" src="static/crypto.js"></script>
 <script type="text/javascript" src="static/bech32.js"></script>
 <div id="light" class="white_content">
-<table width="100%"><tr>
-<td><h3><b class="mono" id="disp_txid"></b></h3>
-<td align="right"><img title="Close this popup" class="del" onclick="closepopup_x(false)">
-</table>
+<div class="popup-head">
+	<h3 class="mono" id="disp_txid" style="word-break:break-all;font-size:13px"></h3>
+	<span class="spacer"></span>
+	<button type="button" class="popup-close" title="Close this popup" onclick="closepopup_x(false)">&#215;</button>
+</div>
 <pre id="rawdiv"></pre>
 </div><div id="fade" class="black_overlay"></div>
 <script>
@@ -70,7 +71,7 @@ function show_input_tx() {
 		if(aj.readyState==4) {
 			var sta = xval(aj.responseXML,  "status")
 			if (sta!="OK") {
-				alert(sta)
+				gc_alert(sta, {title:"Cannot show transaction"})
 				return
 			}
 			disp_txid.innerHTML = xval(aj.responseXML,  "id")
@@ -95,18 +96,7 @@ function show_input_tx() {
 			s += "Total output: " + (parseFloat(tout)/1e8).toFixed(8) + " BTC\n"
 
 			rawdiv.innerHTML = s
-
-			if (prvpos==null) {
-				fade.addEventListener('click', closepopup)
-				fade.style.cursor = 'pointer'
-				fade.title = 'Click here to close the popup'
-			}
-			prvpos = document.body.scrollTop
-			window.scrollTo(0,0)
-
-			light.style.display='block'
-			fade.style.display='block'
-			document.addEventListener("scroll", noscroll)
+			openpopup()
 		}
 	}
 	aj.open("GET","txs2s.xml?minedid="+this["txid"]+'&minedat='+this["block"]+'&sid='+sid, true);
@@ -176,7 +166,7 @@ function fetch_wallet_balance(name) {
 			for (i in outs) {
 				var row_number = parseInt(i)+1
 				var inp,  td, row = unspent.insertRow(-1)
-				row.className = "how"
+				row.className = "hov"
 				row["addr"] = outs[i].addr2
 				row["value"] = outs[i].value
 				row["label"] = outs[i].label
@@ -470,6 +460,7 @@ function open_address_book(idx) {
 
 	var sel = document.createElement("select")
 	sel.style.width = '100%'
+	sel.className = 'abook'
 	sel.size = ADDR_LIST_SIZE
 
 	for (var i=0; i<addrbook.length; i++) {
@@ -542,13 +533,14 @@ function reslab(idx) {
 
 function del_last_output() {
 	if (outtab.rows.length<=5) {
-		alert('You cannot remove the only output')
+		gc_alert('You cannot remove the only output.')
 		return
 	}
-	if (confirm('Remove the last output?')) {
+	gc_confirm('Remove the last output?', {title:"Remove output", ok:"Remove"}).then(function(yes) {
+		if (!yes) return
 		outtab.deleteRow(outtab.rows.length-4)
 		recalc_to_pay()
-	}
+	})
 }
 
 function add_new_output() {
@@ -556,17 +548,13 @@ function add_new_output() {
 	var val, c, r = outtab.insertRow(idx)
 
 	c = r.insertCell(-1)
-	c.innerHTML = 'Out#'+idx
-	if (idx>1) {
-		c.style.cursor = 'pointer'
-		c.title = 'Click to delete this output'
-		c.id = idx
-		c.onclick = function() {del_output(idx)}
-	}
+	c.className = 'muted nw'
+	c.innerHTML = 'Out #'+idx
 
 	c = r.insertCell(-1)
-	c.innerHTML = '<input type="text" id="inadr'+idx+'" name="adr'+idx+'" size="68" class="mono" onkeyup="reslab('+idx+')" onchange="reslab('+idx+')">'
-	c.innerHTML += ' <input type="button" style="width:100px;font-size:12px;padding:2px" value="'+
+	c.className = 'addrcell'
+	c.innerHTML = '<input type="text" id="inadr'+idx+'" name="adr'+idx+'" size="62" class="mono" placeholder="destination address" onkeyup="reslab('+idx+')" onchange="reslab('+idx+')">'
+	c.innerHTML += ' <input type="button" class="btn-sm abbtn" value="'+
 		addrbook_lab+'" id="addrbook'+idx+'" onclick="open_address_book('+idx+')" tabindex="-1">'
 
 	// amount BTC
@@ -662,87 +650,115 @@ function save_address_book() {
 
 </script>
 
-<form method="post" action="payment.zip">
-<input type="hidden" id="outcnt_val" name="outcnt" value="">
-<h2>Payment details
-<input style="float:right;" id="addrbook_button" type="button" value="Edit Address Book" onclick="edit_address_book()">
-</h2>
+<style>
+#outtab td { padding: 5px 6px; }
+#outtab .addrcell { position: relative; }
+#outtab .addrcell div { left: 6px; right: 6px; top: 100%; z-index: 20; }
+select.abook { border: 1px solid var(--line-2); border-radius: var(--radius-s); box-shadow: var(--shadow-lg); background: var(--surface); }
+select.abook option { padding: 3px 6px; }
+#include_fee_out_checkbox.err { border-radius: 4px; }
+</style>
 
-<div id="addrr_book_div" style="display:none">
-<textarea id="address_book" style="width:100%" rows="15"></textarea>
-<br><br>
+<form method="post" action="payment.zip" style="margin:0">
+<input type="hidden" id="outcnt_val" name="outcnt" value="">
+
+<div class="panel">
+<div class="panel-head">
+	<h2>Payment details</h2>
+	<div class="stat-row">
+		<span>selected <b id="selval">0.00000000</b> BTC</span>
+		<span>in <b id="selcnt">0</b> outputs</span>
+	</div>
+	<div class="panel-tools">
+		<input id="addrbook_button" type="button" value="Edit address book" onclick="edit_address_book()" class="btn-sm">
+	</div>
 </div>
 
-Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs.
-<table class="bord" vspace="10" id="outtab">
+<div id="addrr_book_div" class="panel-body" style="display:none;border-bottom:1px solid var(--line)">
+	<textarea id="address_book" style="width:100%" rows="12" spellcheck="false" placeholder="address label"></textarea>
+	<p class="muted small" style="margin:6px 0 0">One address per line, optionally followed by a label. Lines starting with # are ignored.</p>
+</div>
+
+<div class="panel-body flush tscroll">
+<table class="bord" id="outtab" style="width:100%">
 <tr>
 	<th>&nbsp;
 	<th>Pay to address
-	<th>Amount BTC
+	<th align="right">Amount BTC
 	<th>
-	<th><i>... mBTC</i>
+	<th align="right"><i>mBTC</i>
 </tr>
 
 <tr>
 	<td colspan="2">
-	<table width="100%"><tr>
-	<td><a href="javascript:add_new_output()" title="Add another output">+add output</a>
-	|
-	<a href="javascript:del_last_output()" title="Remove last output">-remove last</a>
-	<td align="center" title="Transaction sequence number (default -3)">Sequence :
-	<input type="text" name="tx_seq" id="tx_seq" class="mono r" size="10" value="-3">
-	<td align="right">Transaction fee:
-	</table>
-	<td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
-	<td style="font-size:10px" title="Fee per byte"><b id="feeperbyte"></b><br>SPB
-	<td><input type="text" id="txfee_mbtc" size="13" class="mono r" readonly="readonly" tabindex="-1">
+	<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+		<a href="javascript:add_new_output()" title="Add another output">+ add output</a>
+		<a href="javascript:del_last_output()" title="Remove last output">− remove last</a>
+		<span class="field" style="margin-left:auto" title="Transaction sequence number (default -3)"><label>Sequence</label>
+		<input type="text" name="tx_seq" id="tx_seq" class="mono r" size="8" value="-3"></span>
+		<span class="muted">Transaction fee</span>
+	</div>
+	<td class="r"><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.0001">
+	<td class="small muted nw" title="Fee per byte" style="text-align:center"><b id="feeperbyte"></b><br>SPB
+	<td class="r"><input type="text" id="txfee_mbtc" size="13" class="mono r" readonly="readonly" tabindex="-1">
 </tr>
 
 <tr title="Transaction change">
-	<td>Change
+	<td class="muted">Change
 	<td><select name="change" style="width:100%" id="changeaddrsel" onchange="recalc_to_pay()">
 			<option value="">The first input's address</option>
 		</select>
 	<td class="r">
 	<input type="text" class="mono r" id="changeval" size="13" readonly="readonly" onclick="this.select()">
-	<td id="include_fee_out_checkbox"><input type="checkbox" id="include_fee_output_in_size_calculation" title="Include in size calculation" onchange="recalc_to_pay()">
+	<td id="include_fee_out_checkbox" style="text-align:center"><input type="checkbox" id="include_fee_output_in_size_calculation" title="Include the change output in the size calculation" onchange="recalc_to_pay()">
 	<td class="r">
 	<input type="text" class="mono r" id="changeval_mbtc" size="13" readonly="readonly" tabindex="-1">
 </tr>
 
 <tr>
-	<td colspan="5" align="left">
-		<input type="checkbox" title="auto adjust the fee" id="auto_adjust_fee" checked="checked" onchange="auto_adjust_fee_clicked()">
-		Auto-calc transaction fee using price of&nbsp;
-		<input type="text" id="spb_to_use" class="mono r" size="7" onchange="recalc_to_pay()"> Satoshis Per Byte.
-		&nbsp;&nbsp;&nbsp;
-		Estimated virtual transaction size: <span id="ets" style="font-weight:bold"></span> bytes
-	<hr>
-		<input type="submit" id="paybut" disabled="disabled" value="Download payment.zip" style="width:100%">
+	<td colspan="5">
+	<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 0">
+		<label class="tgl"><input type="checkbox" title="auto adjust the fee" id="auto_adjust_fee" checked="checked" onchange="auto_adjust_fee_clicked()"><i></i> Auto-calculate the fee at</label>
+		<input type="text" id="spb_to_use" class="mono r" size="7" onchange="recalc_to_pay()"> <span class="muted">satoshis per byte</span>
+		<span style="margin-left:auto" class="muted">Estimated virtual size <b id="ets" style="color:var(--text)"></b> bytes</span>
+	</div>
+	<input type="submit" id="paybut" disabled="disabled" value="Download payment.zip" class="primary btn-block" style="margin-top:8px;padding:9px">
 	</td>
 </tr>
 </table>
-<i><b>Note:</b> all the inputs selected below will be combined within one transaction, despite of the amounts entered above.</i>
+</div>
+<div class="panel-foot"><b>Note:</b> all the inputs selected below are combined into one transaction, regardless of the amounts entered above.</div>
+</div>
 
-<h2>Select Inputs</h2>
-Wallet: <select id="qswal" onchange="quick_switch_wallet()"></select>
--
-total balance of <b id="total_btc"></b> BTC in <b id="outs_cnt"></b> outputs.
-<i id="wallet_min_warning" class="walminwarn" style="float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
-<img class="warning" style="vertical-align:middle">Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
-<br><br>
-<table id="unspent" width="100%">
+<div class="panel">
+<div class="panel-head">
+	<h2>Select inputs</h2>
+	<div class="field"><label>Wallet</label> <select id="qswal" onchange="quick_switch_wallet()"></select></div>
+	<div class="stat-row">
+		<span>balance <b id="total_btc"></b> BTC</span>
+		<span>in <b id="outs_cnt"></b> outputs</span>
+	</div>
+	<div class="panel-tools">
+		<i id="wallet_min_warning" class="walminwarn" style="display:none" title="Modify MinValue in gocoin.conf to change it">
+		<img class="warning">Only counting outputs of at least <b id="min_val_btc"></b> BTC</i>
+	</div>
+</div>
+<div class="panel-body flush tscroll">
+<table id="unspent" class="bord" width="100%">
 <tr>
-	<th width="20">#
-	<th width="40">Block
-	<th>TxID - VOut
-	<th width="80">BTC Value
+	<th width="20" align="right">#
+	<th width="40" align="right">Block
+	<th>TxID – vout
+	<th width="80" align="right">BTC value
 	<th colspan="2">Address
 	<th>&nbsp;
-	<th><input type="checkbox" onchange="allchange(this)">
+	<th style="text-align:center"><input type="checkbox" onchange="allchange(this)" title="Select all">
 </tr>
 <!--UTXOROW-->
 </table>
+</div>
+<div class="panel-foot">Click an address to select all its outputs; click a label to select all outputs with that label. Click a TxID to see the transaction.</div>
+</div>
 
 </form>
 <script>
@@ -764,7 +780,7 @@ blno.addEventListener("lastblock", function(e) {
 		warning_set = true
 		if (e.block.MinValue>0) {
 			min_val_btc.innerText = val2str(e.block.MinValue)
-			wallet_min_warning.style.display = 'block'
+			wallet_min_warning.style.display = 'inline'
 		}
 	}
 })
@@ -775,8 +791,5 @@ qswal.addEventListener("loadwallet", function(e) {
 document.addEventListener('DOMContentLoaded', function() {
 	quick_switch_wallet() // this is to force loading wallet after loading
 	addrbook = parse_wallet(localStorage.getItem("gocoinAddressBook"))
-	window.onkeyup = function (event) {
-		if(event.keyCode == 27)  closepopup_x(false)
-	}
 })
 </script>

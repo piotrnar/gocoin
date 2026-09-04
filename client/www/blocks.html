@@ -1,48 +1,49 @@
 <script type="text/javascript" src="static/jquery.min.js"></script>
 <script type="text/javascript" src="static/jquery.flot.min.js"></script>
 <script type="text/javascript" src="static/jquery.flot.crosshair.js"></script>
-<style>
-td.bordr {
-	border-right: 1px solid;
-}
-</style>
 <script type="text/javascript" src="static/feeschart.js"></script>
 
-<div style="text-align:right;margin-bottom:8px;">
-<span class="hand" onclick="stats_type_min.click()">
-	<input type="radio" name="stats_type" id="stats_type_min" onchange="switch_stats_type()" onclick="event.stopPropagation()"> Mining Information
-</span>
-&nbsp;&bull;&nbsp;
-<span class="hand" onclick="stats_type_pro.click()">
-	<input type="radio" name="stats_type" id="stats_type_pro" onchange="switch_stats_type()" onclick="event.stopPropagation()"> Block Processing
-</span>
+<div class="panel">
+<div class="panel-head">
+	<h2>Recent blocks</h2>
+	<div class="panel-tools">
+		<div class="chips">
+			<label class="chip"><input type="radio" name="stats_type" id="stats_type_min" onchange="switch_stats_type()"><span>Mining information</span></label>
+			<label class="chip"><input type="radio" name="stats_type" id="stats_type_pro" onchange="switch_stats_type()"><span>Block processing</span></label>
+		</div>
+	</div>
 </div>
+<div class="panel-body flush tscroll">
 <table class="blocks bord" id="blkstab">
 <tr>
-	<th colspan="8">Block info
-	<th class="stat0 hand" colspan="4" onclick="stats_type_pro.click()">Mining Information
-	<th class="stat1 hand" colspan="7" onclick="stats_type_min.click()">Block Processing <i>(ms)</i>
+	<th colspan="7" style="text-align:center">Block</th>
+	<th class="stat0 hand" colspan="3" style="text-align:center" onclick="stats_type_pro.click()" title="Switch to block processing">Mining information</th>
+	<th class="stat1 hand" colspan="7" style="text-align:center" onclick="stats_type_min.click()" title="Switch to mining information">Block processing <i>(ms)</i></th>
+</tr>
 <tr>
-	<th width="52">Height
-	<th class="time0" width="70" onclick="swap_time_mode()" style="cursor:pointer">Received
-	<th class="time1" width="70" onclick="swap_time_mode()" style="cursor:pointer;font-size:85%">Timestamp
-	<th width="430">Hash
+	<th width="52" style="text-align:center">Height
+	<th class="time0" width="70" onclick="swap_time_mode()" title="Click to show timestamps" align="right">Received
+	<th class="time1" width="70" onclick="swap_time_mode()" title="Click to show receive times" align="right">Timestamp
+	<th>Hash
 	<th width="35" align="right">TXs
 	<th width="45" align="right" title="Block Weight in thousands">kWght
 	<th width="45" align="right" title="Block Size in thousands of bytes">kBytes
 	<th width="40" align="right">SOps
-	<th class="stat0" width="60">Fees BTC
+	<th class="stat0" width="70" align="right">Fees BTC
 	<th class="stat0" width="30" align="right">SPB
 	<th class="stat0 bordr" align="left">Miner
-	<th class="stat1" title="Received from ConnID">From
-	<th class="stat1" width="10" title="Missing TXs in cmpctblk">Mis
+	<th class="stat1" title="Received from ConnID" align="right">From
+	<th class="stat1" width="10" title="Missing TXs in cmpctblk" align="right">Mis
 	<th class="stat1" width="20" title="Preprocessing time ms" align="right">Pre
 	<th class="stat1" width="20" title="Full download time ms" align="right">D/L
 	<th class="stat1" width="20" title="Queueing time ms" align="right">Que
 	<th class="stat1" width="20" title="Block committed after ms" align="right">Ver
-	<th class="stat1" width="10" title="Extra times received">X
+	<th class="stat1" width="10" title="Extra times received" align="right">X
 </tr>
 </table>
+</div>
+<div class="panel-foot">Click a miner name to highlight all of its blocks. <img src="static/stats.png" style="vertical-align:-3px"> opens the fee distribution of a block. Click a hash to copy it.</div>
+</div>
 <script>
 function switch_stats_type() {
 	if (stats_type_pro.checked) {
@@ -166,7 +167,7 @@ function refreshblocks() {
 				td = row.insertCell(-1)
 				td.className = 'mono block_hash nw hand'
 				td.innerText = cs[i].Hash
-				td.title = "Click to Copy"
+				td.title = "Click to copy"
 				td["text2copy"] = td.innerText
 				td.addEventListener("click", copyonclick)
 
@@ -304,9 +305,6 @@ blno.addEventListener("lastblock", function(e) {
 })
 
 document.addEventListener('DOMContentLoaded', function() {
-	window.onkeyup = function (event) {
-		if(event.keyCode == 27)  closepopup()
-	}
 })
 
 show_timestamp = localStorage.getItem("blocks_show_timestmp")!=="true"

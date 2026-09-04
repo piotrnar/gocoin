@@ -1,60 +1,25 @@
 <style>
-div.console {
-	height:600px;
-	overflow-y:scroll;
-	overflow-x:auto;
-	padding:6px;
-	white-space:pre;
-	font-family:monospace;
-	font-size:12px;
-	line-height:1.25em;
-}
-table.conin {
-	width:100%;
-	margin-top:6px;
-	border:0;
-}
-table.conin td {
-	padding:0px;
-}
-input#conin {
-	width:100%;
-	font-family:monospace;
-	font-size:13px;
-	padding:4px;
-}
-span.conprompt {
-	font-family:monospace;
-	font-size:14px;
-	font-weight:bold;
-	padding-right:4px;
-}
-div.conhint {
-	font-family:monospace;
-	font-size:11px;
-	height:14px;
-	padding-top:3px;
-}
+div.console { height: calc(100vh - 230px); min-height: 360px; }
 </style>
 
-<div class="console mono" id="conout"></div>
-
-<table class="conin"><tr>
-	<td width="12"><span class="conprompt">&gt;</span></td>
-	<td><input type="text" id="conin" autocomplete="off" spellcheck="false" placeholder="type a command and press Enter ('help' for the list, Tab to complete, Up/Down for history)"></td>
-	<td width="70" align="right"><input type="button" id="conclr" value="Clear"></td>
-</tr></table>
-
-<table width="100%" style="margin-top:4px"><tr>
-	<td><div class="conhint" id="conhint"></div></td>
-	<td align="right" class="mono">
-		<span onclick="conasc.click()" class="hand" title="Scroll down on every new output">
-		<input type="checkbox" id="conasc" checked onclick="event.stopPropagation()"> Auto scroll
-		</span>
-		&nbsp;
+<div class="panel">
+<div class="panel-head">
+	<h2>Console</h2>
+	<div class="panel-tools">
 		<span id="constat"></span>
-	</td>
-</tr></table>
+		<label class="tgl" title="Scroll down on every new output"><input type="checkbox" id="conasc" checked><i></i> Auto scroll</label>
+		<input type="button" id="conclr" value="Clear" class="btn-sm">
+	</div>
+</div>
+<div class="panel-body">
+	<div class="console" id="conout"></div>
+	<div class="conline">
+		<span class="conprompt">&gt;</span>
+		<input type="text" id="conin" autocomplete="off" spellcheck="false" placeholder="type a command and press Enter ('help' for the list, Tab to complete, Up/Down for history)">
+	</div>
+	<div class="conhint" id="conhint" style="margin-top:6px"></div>
+</div>
+</div>
 
 <script>
 const CON_MAX_LINES = 2000
@@ -70,7 +35,7 @@ var con_poller = null
 
 function con_status(txt, err) {
 	constat.innerText = txt
-	constat.style.color = err ? "red" : ""
+	constat.className = err ? "err" : ""
 }
 
 function con_feed(txt) {

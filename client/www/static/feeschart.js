@@ -1,54 +1,33 @@
 document.write(`
 <div id="light" class="white_content" style="height:auto">
-<div id="block_fee_stats" width="100%" style="text-align:center">
+<div id="block_fee_stats">
+	<div class="popup-head">
+		<h3>Block <span id="stat_height"></span> <span class="muted" style="font-weight:400">/ <span id="stat_block_size"></span> bytes</span></h3>
+		<span class="spacer"></span>
+		<button type="button" class="popup-close" title="Close this popup" onclick="closepopup()">&#215;</button>
+	</div>
+	<div class="stat-row" style="margin-bottom:10px">
+		<span>max <b id="stat_max_fee"></b> SPB</span>
+		<span>avg <b id="stat_avg_fee"></b> SPB</span>
+		<span>min <b id="stat_min_fee"></b> SPB</span>
+		<span>mined by <b id="stat_mined_by"></b></span>
+	</div>
 
-<div style="margin-top:10px">
-Block number <b id="stat_height"></b> /
-<b id="stat_block_size"></b> bytes
--
-Max <b id="stat_max_fee"></b> SPB
-&nbsp;&bull;&nbsp;
-Avg <b id="stat_avg_fee"></b> SPB
-&nbsp;&bull;&nbsp;
-Min <b id="stat_min_fee"></b> SPB
-&nbsp;&bull;&nbsp;
-Mined by <b id="stat_mined_by"></b>
-<span style="float:right"><img title="Close this popup" class="del" onclick="closepopup()">&nbsp;</span>
-<br><br>
-</div>
+	<div id="stat_error" class="note" style="display:none;border-left-color:var(--neg);background:var(--tint-neg)">Something went wrong (<span id="error_info"></span>)</div>
+	<div id="block_fees" class="chartbox" style="height:370px"></div>
 
-<div id="stat_error" class="err" style="display:none">Something went wrong (<span id="error_info"></span>)</div>
-<div id="block_fees" style="height:370px;margin:5px"></div>
-<br>
-<div width="100%" style="margin-bottom:10px;text-align:right">
-<span class="hand" onclick="block_fees_points.click()">
-	<input type="checkbox" id="block_fees_points" onchange="show_fees_clicked()" onclick="event.stopPropagation()"> Show points
-</span>
-&nbsp;&bull;&nbsp;
-Limit range to
-<span class="hand" onclick="block_fees_full.click()">
-    <input type="radio" name="block_fees_range" id="block_fees_full" onchange="show_fees_clicked()" onclick="event.stopPropagation()">100%
-</span>
-<span class="hand" onclick="block_fees_25.click()">
-	<input type="radio" name="block_fees_range" id="block_fees_25" onchange="show_fees_clicked()" onclick="event.stopPropagation()" checked>25%
-</span>
-<span class="hand" onclick="block_fees_5.click()">
-	<input type="radio" name="block_fees_range" id="block_fees_5" onchange="show_fees_clicked()" onclick="event.stopPropagation()">5%
-</span>
-&nbsp;&bull;&nbsp;
-<span class="hand" onclick="block_fees_raw.click()">
-	<input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="show_fees_clicked()" onclick="event.stopPropagation()" checked> Show as is
-</span>
-&nbsp;&bull;&nbsp;
-<span class="hand" onclick="block_fees_gru.click()">
-	<input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="show_fees_clicked()" onclick="event.stopPropagation()"> Try to group
-</span>
-&nbsp;&bull;&nbsp;
-<span class="hand" onclick="block_fees_spb.click()">
-	<input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="show_fees_clicked()" onclick="event.stopPropagation()"> Sort by SPB
-</span>
-</div>
-
+	<div class="chips" style="margin-top:12px;justify-content:flex-end;width:100%">
+		<label class="chip"><input type="checkbox" id="block_fees_points" onchange="show_fees_clicked()"><span>Show points</span></label>
+		<span class="sep">|</span>
+		<span class="muted small">Y range</span>
+		<label class="chip"><input type="radio" name="block_fees_range" id="block_fees_full" onchange="show_fees_clicked()"><span>100%</span></label>
+		<label class="chip"><input type="radio" name="block_fees_range" id="block_fees_25" onchange="show_fees_clicked()" checked><span>25%</span></label>
+		<label class="chip"><input type="radio" name="block_fees_range" id="block_fees_5" onchange="show_fees_clicked()"><span>5%</span></label>
+		<span class="sep">|</span>
+		<label class="chip"><input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="show_fees_clicked()" checked><span>As is</span></label>
+		<label class="chip"><input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="show_fees_clicked()"><span>Group</span></label>
+		<label class="chip"><input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="show_fees_clicked()"><span>Sort by SPB</span></label>
+	</div>
 </div>
 </div><div id="fade" class="black_overlay"></div>
 `)
@@ -59,36 +38,11 @@ var previousPoint = null
 var max_spb, totbytes
 
 function show_fees_tooltip(x, y, contents) {
-	$('<div id="fees_tooltip">' + contents + '</div>').css( {
-		'position': 'absolute',
-		'display': 'none',
-		'top': y - 29,
-		'left': x + 4,
-		'text-align' : 'center',
-		'z-index': 9999,
-		'border': '2px solid green',
-		'padding': '5px',
-		'font-size' : '12px',
-		'background-color': dark_mode ? '#202020' : '#c0c0c0',
-		'opacity': 1
-	}).appendTo("body").fadeIn(200);
+	flot_tooltip("fees_tooltip", x, y, contents)
 }
 
 function show_cursor_tooltip(x, y, contents) {
-	$('<div id="fees_tooltip">' + contents + '</div>').css( {
-		'position': 'absolute',
-		'display': 'none',
-		'top': y - 29,
-		'left': x + 4,
-		'text-align' : 'center',
-		'border': '1px solid black',
-		'z-index': 9999,
-		'padding': '3px',
-		'font-size' : '12px',
-		'background-color': 'white',
-		'color': 'rgba(170, 0, 0, 0.80)',
-		'opacity': 1
-	}).appendTo("body").fadeIn(200);
+	flot_tooltip("fees_tooltip", x, y, contents, "cursor")
 }
 
 function show_fees_handlehover(event, pos, item) {
@@ -126,18 +80,7 @@ function show_fees_clicked(height) {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
-			if (prvpos==null) {
-				fade.addEventListener('click', closepopup)
-				fade.style.cursor = 'pointer'
-				fade.title = 'Click here to close the popup'
-			}
-
-			prvpos = document.body.scrollTop
-			window.scrollTo(0,0)
-
-			light.style.display='block'
-			fade.style.display='block'
-			document.addEventListener("scroll", noscroll)
+			openpopup()
 
 
 			try {
@@ -178,14 +121,15 @@ function show_fees_clicked(height) {
 				fees_plot_data = [ { data : [] } ];
 
 				localStorage.setItem("fees_chart_points", block_fees_points.checked)
-				var plot_options = {
+				var plot_options = flot_theme({
 					xaxis: { position : "top", alignTicksWithAxis: 200 },
 					yaxis : { position : "right", tickFormatter : function(a) {return a.toFixed((a>9||a==0)?0:(a>0.9?1:2)) + " SPB"}, labelWidth : 60 },
 					crosshair : {mode: "xy"},
 					grid: { hoverable: true, clickable: false },
 					points: { show:block_fees_points.checked, fillColor:flot_points_fill_color() },
-					lines: {show:true, fill:true}
-				}
+					lines: {show:true, fill:true},
+					colors: [theme_var('--info')]
+				})
 
 				var min_spb, spb
 				totbytes = 0
