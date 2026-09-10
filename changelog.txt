@@ -71,6 +71,7 @@
 * Client/Net: fixed a remote crash (DoS) in the "version" message handler - a hostile user-agent length var_int (value with bit 63 set) decoded to a negative int, slipped past the length check and panicked at pl[of:of+le]; any unauthenticated peer could trigger it with its very first message
 * Lib/btc: VLen() no longer returns a negative length for var_ints whose value does not fit in a non-negative int (it returns 0,0 - "invalid" - instead), closing this class of slice/make() panics on attacker-controlled payloads
 * Client/Net: fixed an out-of-bounds panic in the "cmpctblock" handler - the prefilled-tx index bound was checked on the differential index before adding the running offset, letting a crafted sequence push the cumulative index past len(col.Txs)
+* Client/WebUI: New AI-designed interface
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

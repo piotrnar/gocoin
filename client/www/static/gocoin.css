@@ -205,16 +205,6 @@ code, .cod, .mono { font-family: var(--mono); }
 .brand svg { width: 22px; height: 22px; display: block; }
 .brand .mark-a { fill: var(--accent); }
 .brand .mark-b { fill: var(--text); opacity: .85; }
-.testnet-badge {
-	font-size: 10.5px;
-	font-weight: 700;
-	letter-spacing: .04em;
-	color: var(--violet);
-	background: var(--tint-violet);
-	border-radius: 999px;
-	padding: 1px 7px;
-	margin-left: 2px;
-}
 
 nav.nav {
 	display: flex;

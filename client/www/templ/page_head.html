@@ -86,16 +86,6 @@ function beep_clicked() {
 <body>
 <header class="topbar">
 <div class="topbar-in">
-	<a class="brand" href="/home" title="Node dashboard">
-		<svg viewBox="0 0 24 24" aria-hidden="true">
-			<rect class="mark-b" x="2" y="13" width="9" height="9" rx="2"/>
-			<rect class="mark-b" x="13" y="13" width="9" height="9" rx="2"/>
-			<rect class="mark-a" x="7.5" y="2" width="9" height="9" rx="2"/>
-		</svg>
-		<span id="brand_title"></span>
-		<span class="testnet-badge" id="testnet_badge" style="display:none">testnet</span>
-	</a>
-
 	<nav class="nav" id="topmenu" aria-label="Pages"></nav>
 	<span id="rightmenu" style="display:none"></span>
 
@@ -127,9 +117,6 @@ function beep_clicked() {
 if (auto_dark_mode) {
 	dark_light_icon.style.display = "none"
 }
-
-brand_title.innerText = doc_title.replace(" Testnet", "").trim()
-if (testnet) testnet_badge.style.display = "inline-block"
 
 function set_tblock_hash() {
 	gc_prompt("To speed up the chain sync, enter the hash of the highest block you trust. Blocks up to that one will not have their signatures verified.", "",
