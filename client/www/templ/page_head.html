@@ -118,6 +118,10 @@ if (auto_dark_mode) {
 	dark_light_icon.style.display = "none"
 }
 
+if (testnet) {
+	blpill.classList.add('testnet')
+}
+
 function set_tblock_hash() {
 	gc_prompt("To speed up the chain sync, enter the hash of the highest block you trust. Blocks up to that one will not have their signatures verified.", "",
 		{title:"Trusted block", ok:"Apply", placeholder:"block hash (64 hex chars)"}).then(function(hash) {

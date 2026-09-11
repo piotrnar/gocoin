@@ -294,6 +294,8 @@ html[data-theme="dark"] .blpill { background: var(--surface-2); color: var(--tex
 }
 .blpill.tick .dot { animation: ping 1.1s ease-out 1; }
 .blpill.tick #blno { animation: numflash .8s ease-out 1; }
+.blpill.testnet { background: #1f6b46; color: #eafff2; }
+html[data-theme="dark"] .blpill.testnet { background: #16342a; color: #7de3b1; border: 1px solid #2f6b52; }
 .blpill.offline { background: var(--tint-neg); color: var(--neg); border: 1px solid var(--neg); }
 .blpill.offline .dot { background: var(--neg); animation: blink 1.2s ease-in-out infinite; }
 #blno { min-width: 4ch; text-align: right; }
