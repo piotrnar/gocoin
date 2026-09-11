@@ -23,10 +23,10 @@ document.write(`
 		<label class="chip"><input type="radio" name="block_fees_range" id="block_fees_full" onchange="show_fees_clicked()"><span>100%</span></label>
 		<label class="chip"><input type="radio" name="block_fees_range" id="block_fees_25" onchange="show_fees_clicked()" checked><span>25%</span></label>
 		<label class="chip"><input type="radio" name="block_fees_range" id="block_fees_5" onchange="show_fees_clicked()"><span>5%</span></label>
-		<span class="sep">|</span>
+		<span class="sep">|</span>Sorted
 		<label class="chip"><input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="show_fees_clicked()" checked><span>As is</span></label>
 		<label class="chip"><input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="show_fees_clicked()"><span>Group</span></label>
-		<label class="chip"><input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="show_fees_clicked()"><span>Sort by SPB</span></label>
+		<label class="chip"><input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="show_fees_clicked()"><span>SPB</span></label>
 	</div>
 </div>
 </div><div id="fade" class="black_overlay"></div>
