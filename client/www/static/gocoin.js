@@ -540,3 +540,83 @@ function flot_tooltip(id, x, y, contents, cls) {
 	if (r.right > window.innerWidth - 8) t.style.left = (x - r.width - 8) + 'px'
 	if (r.top < 4) t.style.top = (y + 12) + 'px'
 }
+
+/* ---------------------------------------------------------------------------
+   Keep flot charts sized to their container (Home / Network / Mempool pages).
+   Flot only measures its container once, when $.plot() is first called, so
+   without this the canvas keeps its original width whenever the container's
+   size changes. A ResizeObserver reacts to the container's actual size
+   (whatever caused it - window resize, layout reflow, sidebar toggle, ...)
+   instead of guessing from window "resize" events, which don't always fire
+   in step with the container's real width (e.g. fast/large window drags).
+   --------------------------------------------------------------------------- */
+function flot_resize_box(box) {
+	if (typeof jQuery === 'undefined') return
+	var plot = jQuery(box).data('plot')
+	if (plot) {
+		plot.resize()
+		plot.setupGrid()
+		plot.draw()
+	}
+}
+
+if (window.ResizeObserver) {
+	var flot_resize_observer = new ResizeObserver(function(entries) {
+		for (var i=0; i<entries.length; i++) {
+			flot_resize_box(entries[i].target)
+		}
+	})
+	document.addEventListener('DOMContentLoaded', function() {
+		var boxes = document.querySelectorAll('.chartbox')
+		for (var i=0; i<boxes.length; i++) {
+			flot_resize_observer.observe(boxes[i])
+		}
+	})
+} else {
+	// fallback for browsers without ResizeObserver
+	window.addEventListener('resize', function() {
+		var boxes = document.querySelectorAll('.chartbox')
+		for (var i=0; i<boxes.length; i++) {
+			flot_resize_box(boxes[i])
+		}
+	})
+}
+
+/* ---------------------------------------------------------------------------
+   Don't let the page body / footer squeeze narrower than the top menu needs.
+   Once it no longer fits, the whole page should scroll horizontally together
+   rather than the content reflowing while the top menu overflows on its own.
+
+   Note: we can't just read .topbar-in's scrollWidth here - with the default
+   overflow:visible it doesn't reflect the width of overflowing children, it
+   just falls back to the element's own (already-constrained) rendered width.
+   Instead we sum the natural widths of its direct children: they're all
+   flex:0 0 auto (never shrunk), so each one always reports its true size
+   regardless of whatever max-width is currently applied to the container.
+   --------------------------------------------------------------------------- */
+function measure_topbar_natural_width() {
+	var bar = document.querySelector('.topbar-in')
+	if (!bar || !bar.children.length) return null
+	var cs = getComputedStyle(bar)
+	var gap = parseFloat(cs.columnGap) || parseFloat(cs.gap) || 0
+	var total = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0)
+	total += gap * (bar.children.length - 1)
+	for (var i=0; i<bar.children.length; i++) {
+		total += bar.children[i].getBoundingClientRect().width
+	}
+	return total
+}
+
+function sync_topbar_min_width() {
+	var w = measure_topbar_natural_width()
+	if (w == null) return
+	document.documentElement.style.setProperty('--topbar-min-width', Math.ceil(w) + 'px')
+}
+
+document.addEventListener('DOMContentLoaded', sync_topbar_min_width)
+
+var layout_resize_timer = null
+window.addEventListener('resize', function() {
+	clearTimeout(layout_resize_timer)
+	layout_resize_timer = setTimeout(sync_topbar_min_width, 150)
+})
