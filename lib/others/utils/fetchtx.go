@@ -84,17 +84,6 @@ func verify_txid(txid *btc.Uint256, rawtx []byte) bool {
 
 // GetTxFromWeb downloads a raw transaction from a web server (try one after another).
 func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
-	raw = GetTxFromBlockstream(txid, "https://blockstream.info/api/tx/")
-	if raw != nil && verify_txid(txid, raw) {
-		if Verbose {
-			println("GetTxFromBlockstream - OK")
-		}
-		return
-	}
-	if Verbose {
-		println("GetTxFromBlockstream error")
-	}
-
 	raw = GetTxFromBlockstream(txid, "https://mempool.space/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
 		if Verbose {
@@ -104,6 +93,17 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	}
 	if Verbose {
 		println("GetTxFromMempoolSpace error")
+	}
+
+	raw = GetTxFromBlockstream(txid, "https://blockstream.info/api/tx/")
+	if raw != nil && verify_txid(txid, raw) {
+		if Verbose {
+			println("GetTxFromBlockstream - OK")
+		}
+		return
+	}
+	if Verbose {
+		println("GetTxFromBlockstream error")
 	}
 
 	raw = GetTxFromBlockchair(txid, "bitcoin")
@@ -149,17 +149,6 @@ func GetTestnetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 
 // GetTestnetTxFromWeb downloads a testnet's raw transaction from a web server.
 func GetTestnet4TxFromWeb(txid *btc.Uint256) (raw []byte) {
-	raw = GetTxFromBlockstream(txid, "https://blockstream.info/testnet4/api/tx/")
-	if raw != nil && verify_txid(txid, raw) {
-		if Verbose {
-			println("Testnet GetTxFromBlockstream - OK")
-		}
-		return
-	}
-	if Verbose {
-		println("GetTxFromBlockstream error")
-	}
-
 	raw = GetTxFromBlockstream(txid, "https://mempool.space/testnet4/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
 		if Verbose {
@@ -169,6 +158,17 @@ func GetTestnet4TxFromWeb(txid *btc.Uint256) (raw []byte) {
 	}
 	if Verbose {
 		println("GetTxFromMempoolSpace error")
+	}
+
+	raw = GetTxFromBlockstream(txid, "https://blockstream.info/testnet4/api/tx/")
+	if raw != nil && verify_txid(txid, raw) {
+		if Verbose {
+			println("Testnet GetTxFromBlockstream - OK")
+		}
+		return
+	}
+	if Verbose {
+		println("GetTxFromBlockstream error")
 	}
 
 	return
