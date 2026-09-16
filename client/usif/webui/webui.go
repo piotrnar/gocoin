@@ -66,12 +66,28 @@ func new_session_id(w http.ResponseWriter) (sessid string) {
 	return
 }
 
+// Returns true if the request comes from the single-page WebUI application,
+// which only wants the page content, without the html head and tail.
+func spa_request(r *http.Request) bool {
+	return r.Header.Get("X-Gocoin-SPA") != ""
+}
+
 func write_html_head(w http.ResponseWriter, r *http.Request) {
 	start_time = time.Now()
 
 	sessid := sid(r)
 	if sessid == "" {
 		sessid = new_session_id(w)
+	}
+
+	if spa_request(r) {
+		// only refresh the global variables that the full page head would have set
+		w.Header()["Content-Type"] = []string{"text/html; charset=utf-8"}
+		fmt.Fprint(w, "<script>sid='", sessid, "';avg_fee_spb=", usif.GetAverageFee(),
+			";wallet_on=", common.Get(&common.WalletON),
+			";chain_in_sync=", common.BlockChainSynchronized.Load(),
+			";time_now=", time.Now().Unix(), ";spa_head_loaded()</script>\n")
+		return
 	}
 
 	s := load_template("page_head.html")
@@ -98,7 +114,11 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(s))
 }
 
-func write_html_tail(w http.ResponseWriter) {
+func write_html_tail(w http.ResponseWriter, r *http.Request) {
+	if spa_request(r) {
+		fmt.Fprint(w, "\n<script>spa_page_time('", time.Since(start_time).String(), "')</script>\n")
+		return
+	}
 	s := load_template("page_tail.html")
 	s = strings.Replace(s, "<!--LOAD_TIME-->", time.Since(start_time).String(), 1)
 	w.Write([]byte(s))
@@ -108,7 +128,7 @@ func p_wallet_is_off(w http.ResponseWriter, r *http.Request) {
 	s := load_template("wallet_off.html")
 	write_html_head(w, r)
 	w.Write([]byte(s))
-	write_html_tail(w)
+	write_html_tail(w, r)
 }
 
 func p_general(w http.ResponseWriter, r *http.Request) {
@@ -135,7 +155,7 @@ func p_general(w http.ResponseWriter, r *http.Request) {
 	if page == "textui" && !textui_allowed() {
 		write_html_head(w, r)
 		w.Write([]byte("<br><b>The virtual console is not available in the server mode.</b>"))
-		write_html_tail(w)
+		write_html_tail(w, r)
 		return
 	}
 	if dat, er := os.ReadFile("www/" + page + ".html"); er == nil {
@@ -144,7 +164,7 @@ func p_general(w http.ResponseWriter, r *http.Request) {
 		}
 		write_html_head(w, r)
 		w.Write(dat)
-		write_html_tail(w)
+		write_html_tail(w, r)
 
 	} else {
 		w.WriteHeader(http.StatusNotFound)

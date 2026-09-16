@@ -1,7 +1,7 @@
 <script>
 
-const avg_blocks_pr_day = 146.7 // average between #722125 and 822125
-const estimated_block_vsize = 999500
+var avg_blocks_pr_day = 146.7 // average between #722125 and 822125
+var estimated_block_vsize = 999500
 
 var last_block_height = 0
 
@@ -173,9 +173,9 @@ function refresh_mining_info() {
 
 // ------------- hash-rate distribution donut chart -------------
 
-const chart_colors = ["#4e79a7","#f28e2b","#e15759","#76b7b2","#59a14f",
+var chart_colors = ["#4e79a7","#f28e2b","#e15759","#76b7b2","#59a14f",
 	"#edc948","#b07aa1","#ff9da7","#9c755f","#86bcb6","#d37295","#a0cbe8"]
-const CHART_MIN_FRAC = 0.01  // group smaller pools into "Others"
+var CHART_MIN_FRAC = 0.01  // group smaller pools into "Others"
 
 var chart_slices = []
 var chart_hover = -1

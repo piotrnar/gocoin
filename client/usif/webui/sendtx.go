@@ -237,5 +237,5 @@ func generate_error_page(w http.ResponseWriter, r *http.Request, err string, got
 	s = strings.Replace(s, "<!--ERROR_MSG-->", err, 1)
 	s = strings.Replace(s, "<!--PREV_PAGE-->", gotopage, 1)
 	w.Write([]byte(s))
-	write_html_tail(w)
+	write_html_tail(w, r)
 }

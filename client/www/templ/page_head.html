@@ -44,6 +44,7 @@
 <link rel="stylesheet" href="static/gocoin.css" type="text/css" id="loaded_css">
 <link rel="shortcut icon" href="static/favicon.ico" type="image/x-icon">
 <script type="text/javascript" src="static/gocoin.js"></script>
+<script type="text/javascript" src="static/spa.js"></script>
 <script>
 /*_SESSION_ID_*/
 /*_AVERAGE_FEE_SPB_*/
@@ -128,7 +129,7 @@ function set_tblock_hash() {
 		if (hash!=null && hash.trim()!="") {
 			var aj = ajax()
 			aj.onload = function() {
-				location.reload()
+				spa_reload()
 			}
 			aj.open("GET","cfg?sid="+sid+"&trusthash="+hash.trim(), true)
 			aj.send(null)
@@ -170,13 +171,25 @@ apply_wallet_on()
 if (document.location.pathname=='/help') helpmenulink.classList.add('menuat')
 
 var time_now /*_TIME_NOW_*/
+var refreshblock_timer = null // null while the request is in flight
+
+// pages load their data on the first "lastblock" event - do not make them wait for the next one
+function refreshblock_now() {
+	if (refreshblock_timer) {
+		clearTimeout(refreshblock_timer)
+		refreshblock()
+	}
+}
+
 function refreshblock() {
-	var aj = ajax()
+	// not using ajax() and setTimeout() here, as those belong to the current page (see spa.js)
+	refreshblock_timer = null
+	var aj = new XMLHttpRequest()
 	aj.onerror=function() {
 		blno.innerText = BN_OFFLINE
 		blpill.classList.add('offline')
 		blpill.title = 'Node is not responding'
-		setTimeout(refreshblock, 10000)
+		refreshblock_timer = _spa_setTimeout(refreshblock, 10000)
 	}
 	aj.onload=function() {
 		var new_block = false
@@ -227,7 +240,7 @@ function refreshblock() {
 			blno.title = e
 			blno.innerText = "???"
 		}
-		setTimeout(refreshblock, new_block?1000:6000)
+		refreshblock_timer = _spa_setTimeout(refreshblock, new_block?1000:6000)
 	}
 	aj.open("GET","status.json",true)
 	aj.send(null)
