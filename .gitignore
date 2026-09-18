@@ -1,4 +1,4 @@
-*.exe
+*.exe*
 *.bin
 *.dat
 *.a
