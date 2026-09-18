@@ -30,7 +30,7 @@
 		<label class="chip"><input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()"><span>Transactions</span></label>
 		<label class="chip"><input type="radio" name="chart_type" id="chart_type_wgt" onchange="draw_chart()"><span>Weight</span></label>
 		<span class="sep">|</span>
-		<label class="chip" title="Moving average"><input type="checkbox" id="chart_type_avg" onchange="draw_chart()"><span><span id="avg_size">.</span>-block average</span></label>
+        <label class="chip" title="Moving average"><input type="checkbox" id="chart_type_avg" onchange="draw_chart()"><span id="avg_size">blocks average</span></label>
 		<label class="chip" title="See how much is used by Ordinal Inscriptions" id="ord_label"><input type="checkbox" id="chart_type_ord" onchange="draw_chart()"><span>Ordinals %</span></label>
 	</div>
 	<div id="chart" class="chartbox" style="height:220px"></div>
@@ -175,7 +175,7 @@ function restore_chart_setting() {
 	document.getElementById('chart_type_'+mod).checked = true
 	chart_type_avg.checked = localStorage.getItem("home_chart_avg") === 'true'
 	chart_type_ord.checked = localStorage.getItem("home_chart_ord") === 'true'
-	avg_size.innerText = blks_average
+	avg_size.innerText = blks_average + " blocks avg."
 }
 restore_chart_setting()
 var chart_type_ord_prev = chart_type_ord.checked
