@@ -201,9 +201,9 @@ func net_stats(par string) {
 
 func net_rd(par string) {
 	network.HammeringMutex.Lock()
-	srt := make([]string, len(network.RecentlyDisconencted))
+	srt := make([]string, len(network.RecentlyDisconnected))
 	var idx int
-	for ip, rd := range network.RecentlyDisconencted {
+	for ip, rd := range network.RecentlyDisconnected {
 		srt[idx] = fmt.Sprintf("%31d %16s %3d %16s - %s", rd.Time.UnixNano(),
 			fmt.Sprintf("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]), rd.Count,
 			time.Since(rd.Time).String(), rd.Why)

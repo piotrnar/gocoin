@@ -332,7 +332,7 @@ func tcp_server() {
 					//println("incomming connection from", ad.Ip(), tc.RemoteAddr().String())
 					// Hammering protection
 					HammeringMutex.Lock()
-					if rd := RecentlyDisconencted[ad.NetAddr.Ip4]; rd != nil {
+					if rd := RecentlyDisconnected[ad.NetAddr.Ip4]; rd != nil {
 						rd.Count++
 						terminate = rd.Count > HammeringMaxAllowedCount
 					}
@@ -632,9 +632,9 @@ func NetworkTick() {
 		next_clean_hammers = now.Add(HammeringExpirePeriod)
 	} else if now.After(next_clean_hammers) {
 		HammeringMutex.Lock()
-		for k, t := range RecentlyDisconencted {
+		for k, t := range RecentlyDisconnected {
 			if now.Sub(t.Time) >= HammeringMinReconnect {
-				delete(RecentlyDisconencted, k)
+				delete(RecentlyDisconnected, k)
 			}
 		}
 		HammeringMutex.Unlock()
@@ -1021,14 +1021,14 @@ func (c *OneConnection) Run() {
 			c.PeerAddr.Ban(c.ban_reason)
 			common.CountSafe("PeersBanned")
 		} else if c.X.Incomming && !c.MutexGetBool(&c.X.Authorized) {
-			var rd *RecentlyDisconenctedType
+			var rd *RecentlyDisconnectedType
 			HammeringMutex.Lock()
-			rd = RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4]
+			rd = RecentlyDisconnected[c.PeerAddr.NetAddr.Ip4]
 			if rd == nil {
-				rd = &RecentlyDisconenctedType{Time: time.Now(), Count: 1}
+				rd = &RecentlyDisconnectedType{Time: time.Now(), Count: 1}
 			}
 			rd.Why = c.why_disconnected
-			RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4] = rd
+			RecentlyDisconnected[c.PeerAddr.NetAddr.Ip4] = rd
 			HammeringMutex.Unlock()
 		}
 	}

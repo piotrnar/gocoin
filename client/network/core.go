@@ -69,10 +69,10 @@ var (
 
 	// Hammering protection (peers that keep re-connecting) map IPv4 => UnixTime
 	HammeringMutex       sync.Mutex
-	RecentlyDisconencted map[[4]byte]*RecentlyDisconenctedType = make(map[[4]byte]*RecentlyDisconenctedType)
+	RecentlyDisconnected map[[4]byte]*RecentlyDisconnectedType = make(map[[4]byte]*RecentlyDisconnectedType)
 )
 
-type RecentlyDisconenctedType struct {
+type RecentlyDisconnectedType struct {
 	time.Time
 	Why   string
 	Count uint

@@ -234,12 +234,12 @@ func UnbanPeer(par string) (s string) {
 		}
 		s += fmt.Sprintln("Unban", ad.Ip(), "...")
 		network.HammeringMutex.Lock()
-		delete(network.RecentlyDisconencted, ad.Ip4)
+		delete(network.RecentlyDisconnected, ad.Ip4)
 		network.HammeringMutex.Unlock()
 	} else {
 		s += fmt.Sprintln("Unban all peers ...")
 		network.HammeringMutex.Lock()
-		network.RecentlyDisconencted = make(map[[4]byte]*network.RecentlyDisconenctedType)
+		network.RecentlyDisconnected = make(map[[4]byte]*network.RecentlyDisconnectedType)
 		network.HammeringMutex.Unlock()
 	}
 
