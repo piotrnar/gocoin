@@ -15,7 +15,7 @@ wallet binary** the way a user would. Every test case:
 Because the whole path from command line parsing to the files written on
 disk is exercised, the suite catches regressions in any part of the tool.
 It runs in about 1-2 seconds and needs no network, no node and no user
-interaction.
+interaction (the wallet's prompts are answered by the suite itself).
 
 ## Running
 
@@ -35,6 +35,7 @@ Options specific to this suite:
 | `-update` | Regenerate the golden files in `testdata/golden/` from the current wallet output. Review the resulting `git diff` carefully: it is the change in behaviour you are accepting. |
 | `-keep` | Do not delete the temporary work directories. Their paths are printed with `-v`, so you can inspect the config, balance folder and output files of a failed case, or re-run the wallet there by hand. |
 | `GOCOIN_WALLET_BIN=/path/to/wallet` (environment) | Test the given prebuilt executable instead of building one from `../`. Useful for checking a release binary or a build with different flags. |
+| `GOCOIN_REGTEST_INTERACTIVE=1` (environment) | Run the interactive cases (`TestInteractive`) on systems where they are skipped by default - see below. |
 
 ## Groups of tests
 
@@ -50,6 +51,7 @@ Options specific to this suite:
 | `TestSend` | Building and signing transactions with `-send` and `-batch`: every input type (P2PKH, P2SH-P2WPKH, P2WPKH, P2TR), every output type, change selection, `-change`, `-f`, `-fee`, `-msg` (OP_RETURN), `-useallinputs`, `-locktime`, `-txver`, `-seq`, `-txfn`, `-a=false`, `-minsig`, updating of the `balance/` folder, and all the error paths (insufficient funds, bad addresses, wrong network, ...). |
 | `TestRawTx` | `-raw` (hex file, binary file and hex on the command line), missing keys / inputs, and `-d` decoding. |
 | `TestMultisig` | The full multisig flow: `-p2sh` (with and without `-input`), `-msign` by several parties in turn, signing with all wallet keys at once, de-duplication and ordering of signatures, `-xtramsigs`. |
+| `TestInteractive` | The wallet's prompts, answered through stdin: entering and re-entering the seed password, saving it to disk (`.secret` or `secret=` path), `-1`, `-p`, the BIP39 password (`-p39`), and the `-prompt` transaction confirmation (accepted and rejected). |
 | `TestEncrypt` | `-encrypt`/`-decrypt` round trips for type-3 and type-4 wallets, wrong password, wrong wallet type, malformed input. |
 | `TestErrors` | Command line and config validation errors (`-h`, unknown switches, unsupported wallet types, bad `hdpath`/`atype`/`fee`/`scrypt`, `-p` with `-stdin`, ...). |
 
@@ -146,9 +148,32 @@ A case that documents a bug not yet fixed can be kept in the tables with
 `KnownIssue: "description"`; it is then skipped (visibly, with `-v`) instead
 of failing. Clear the field when the wallet is fixed.
 
+## Interactive cases
+
+`TestInteractive` covers the wallet's prompts. The harness starts the wallet
+with a stdin pipe, watches its stdout, and each time a prompt appears (all
+prompts end with `: ` and no newline) writes the next answer from the case's
+`Prompts` list. Answers are written one at a time on purpose: the wallet
+reads the password with a single `Read()`, so several lines written at once
+would be swallowed together.
+
+Whether this works depends on how the wallet reads the password on the
+system:
+
+* **Linux, macOS**: the wallet reads the password from stdin whenever stdin is
+  not a terminal, so the cases run by default.
+* **Windows**: the wallet reads the password with `_getch()` from the console.
+  The stdin fallback (`lib/others/sys/hidepass_windows.go`: when stdin is not
+  a console, read it as a plain line) makes a redirected stdin work, but the
+  cases are skipped there by default until that has been confirmed; set
+  `GOCOIN_REGTEST_INTERACTIVE=1` to run them.
+
+Skipped cases show up as `SKIP` with `-v`, so a run never silently loses
+coverage.
+
 ## Requirements
 
 * Go (the suite builds the wallet with `go build ..`).
-* Nothing else: no network, no bitcoin node and no terminal interaction.
-  All the cases are non-interactive; the seed always comes from a file or
-  from `-stdin`.
+* Nothing else: no network, no bitcoin node and no terminal. The seed
+  comes from a file, from `-stdin`, or - in `TestInteractive` - from the
+  prompt answers fed by the suite.

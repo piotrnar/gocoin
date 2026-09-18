@@ -59,6 +59,13 @@ func enterpassext(b []byte) (n int) {
 }
 
 func init() {
+	// If stdin is not a console (redirected from a file or a pipe), _getch()
+	// would not read from it - so read the password from stdin instead.
+	var mode uint32
+	if syscall.GetConsoleMode(syscall.Handle(os.Stdin.Fd()), &mode) != nil {
+		return
+	}
+
 	er := _getch.Find()
 	if er != nil {
 		println(er.Error())

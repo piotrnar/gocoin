@@ -77,6 +77,7 @@
 * Wallet: Fixed "-is" command line switch having no effect (the "seed" config value was read before the switch was parsed)
 * Wallet: Fixed comment lines (starting with #) and empty lines not being accepted in the "-batch" file
 * Client/WebUI: One JS app - not requiring browser reloads for page switching
+* Wallet: On Windows, the seed password is read from stdin when stdin is redirected (a file or a pipe) instead of the console
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

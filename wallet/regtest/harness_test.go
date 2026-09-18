@@ -12,16 +12,24 @@
 //	go test ./wallet/regtest/ -update               regenerate the golden files
 //	go test ./wallet/regtest/ -keep                 keep the work directories (paths are logged)
 //	GOCOIN_WALLET_BIN=/path/to/wallet go test ./wallet/regtest/    test a prebuilt executable
+//	GOCOIN_REGTEST_INTERACTIVE=1 go test ./wallet/regtest/        run the interactive cases also on Windows
+//
+// Interactive cases (the ones answering the wallet's prompts through stdin)
+// run on Linux and macOS and are skipped on other systems unless
+// GOCOIN_REGTEST_INTERACTIVE is set.
 package regtest
 
 import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -70,18 +78,20 @@ type Case struct {
 	Name string
 
 	// Inputs
-	Cfg      string            // content of the config file ("" = do not create one)
-	CfgFile  string            // name of the config file (default "wallet.cfg")
-	Args     []string          // command line switches
-	Seed     string            // content of the seed file (default TestSeed)
-	NoSeed   bool              // do not create the seed file at all
-	SeedFile string            // name of the seed file (default ".secret")
-	Others   string            // content of the .others file ("" = do not create one)
-	Files    map[string]string // extra files to create: relative path -> content
-	Balance  []Utxo            // build the balance/ folder from these outputs
-	Stdin    string            // written to stdin, then stdin is closed
-	Env      map[string]string // extra environment variables
-	NoPar    bool              // do not run in parallel with other cases
+	Cfg         string            // content of the config file ("" = do not create one)
+	CfgFile     string            // name of the config file (default "wallet.cfg")
+	Args        []string          // command line switches
+	Seed        string            // content of the seed file (default TestSeed)
+	NoSeed      bool              // do not create the seed file at all
+	SeedFile    string            // name of the seed file (default ".secret")
+	Others      string            // content of the .others file ("" = do not create one)
+	Files       map[string]string // extra files to create: relative path -> content
+	Balance     []Utxo            // build the balance/ folder from these outputs
+	Stdin       string            // written to stdin, then stdin is closed
+	Prompts     []string          // written to stdin line by line, each one after the wallet prints a prompt (Interactive)
+	Env         map[string]string // extra environment variables
+	NoPar       bool              // do not run in parallel with other cases
+	Interactive bool              // answers wallet prompts (implied by Prompts) - see interactiveSupported()
 
 	// KnownIssue marks a case that documents the intended behaviour but is
 	// known to fail on the current code. It is skipped (visibly, with -v)
@@ -154,6 +164,9 @@ func Run(t *testing.T, cases []Case) {
 			if c.KnownIssue != "" {
 				t.Skip("known issue: " + c.KnownIssue)
 			}
+			if (c.Interactive || len(c.Prompts) > 0) && !interactiveSupported() {
+				t.Skipf("interactive cases are not run on %s (set GOCOIN_REGTEST_INTERACTIVE=1 to force)", runtime.GOOS)
+			}
 			if !c.NoPar {
 				t.Parallel()
 			}
@@ -161,6 +174,36 @@ func Run(t *testing.T, cases []Case) {
 			check(r)
 		})
 	}
+}
+
+// interactiveSupported tells whether the wallet's password prompts can be
+// answered through a stdin pipe on this system. On Linux and macOS the wallet
+// reads the password from stdin whenever it is not a terminal. On Windows it
+// needs the wallet to be built with the stdin fallback in hidepass_windows.go,
+// so the cases are opt-in there.
+func interactiveSupported() bool {
+	if os.Getenv("GOCOIN_REGTEST_INTERACTIVE") != "" {
+		return true
+	}
+	return runtime.GOOS == "linux" || runtime.GOOS == "darwin"
+}
+
+// syncBuf is a goroutine-safe bytes.Buffer (stdout is read while the wallet runs).
+type syncBuf struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *syncBuf) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+
+func (s *syncBuf) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
 }
 
 func write(t *testing.T, dir, name, content string) {
@@ -226,10 +269,19 @@ func runCase(t *testing.T, c *Case) *Result {
 	for k, v := range c.Env {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
-	var stdout, stderr bytes.Buffer
+	var stdout, stderr syncBuf
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	cmd.Stdin = strings.NewReader(c.Stdin)
+
+	var stdin io.WriteCloser
+	if len(c.Prompts) > 0 {
+		var err error
+		if stdin, err = cmd.StdinPipe(); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		cmd.Stdin = strings.NewReader(c.Stdin)
+	}
 
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("cannot start %s: %v", walletBin, err)
@@ -237,6 +289,10 @@ func runCase(t *testing.T, c *Case) *Result {
 
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
+
+	if stdin != nil {
+		go answerPrompts(stdin, &stdout, c.Prompts, done)
+	}
 
 	var exit int
 	select {
@@ -253,6 +309,33 @@ func runCase(t *testing.T, c *Case) *Result {
 	}
 
 	return &Result{T: t, Case: c, Dir: dir, Stdout: stdout.String(), Stderr: stderr.String(), Exit: exit}
+}
+
+// answerPrompts feeds the lines to the wallet's stdin one at a time, each
+// after the wallet has printed a new prompt. All the wallet's prompts end
+// with ": " and no newline, so a stdout that ends with ": " means the wallet
+// is waiting for input. Writing everything at once would not work: a single
+// Read() by the wallet could then swallow several lines.
+func answerPrompts(stdin io.WriteCloser, stdout *syncBuf, lines []string, done chan error) {
+	defer stdin.Close()
+	prompts := 0
+	for _, l := range lines {
+		deadline := time.Now().Add(10 * time.Second)
+		for {
+			out := stdout.String()
+			if n := strings.Count(out, ": "); n > prompts && strings.HasSuffix(out, ": ") {
+				prompts = n
+				break
+			}
+			if time.Now().After(deadline) || len(done) > 0 {
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		if _, err := io.WriteString(stdin, l+"\n"); err != nil {
+			return
+		}
+	}
 }
 
 func goldenPath(name string) string {
