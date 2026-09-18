@@ -19,14 +19,34 @@ interaction (the wallet's prompts are answered by the suite itself).
 
 ## Running
 
-The suite is a normal Go test package:
+The suite is a normal Go test package, but it must be run **from inside this
+folder and without any package arguments**:
 
 ```
-go test ./wallet/regtest/                      # everything (builds the wallet first)
-go test ./wallet/regtest/ -v                   # list every case
-go test ./wallet/regtest/ -run TestSend        # one group
-go test ./wallet/regtest/ -run TestSend/send_batch_file -v   # one case
+cd wallet/regtest
+go test                                        # everything (builds the wallet first)
+go test -v                                     # list every case
+go test -run TestSend                          # one group
+go test -run TestSend/send_batch_file -v       # one case
 ```
+
+Flags can be added freely; what matters is that no package is named on the
+command line - not `go test .` and not `go test ./...` from the root of the
+repository.
+
+The reason is Go's test result cache. The suite does not import the wallet
+code (the wallet is a `package main`) - it builds the wallet and runs it as a
+separate process, so the wallet's sources are not a part of what the test
+binary is built from and Go has no way of noticing that they have changed.
+Whenever a package is named on the command line, `go test` caches successful
+results, which means that after modifying the wallet you get a `(cached)` PASS
+replayed from the previous run, proving nothing. With no package arguments
+`go test` disables caching, so the tests are always really executed.
+
+If you do need to run the suite with a package argument anyway (from a script,
+a CI job, or an IDE - these usually pass one), append `-count=1`, which turns
+the result cache off explicitly. `go clean -testcache` discards whatever has
+been cached already.
 
 Options specific to this suite:
 
