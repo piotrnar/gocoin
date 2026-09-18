@@ -76,6 +76,7 @@
 * Wallet: Fixed infinite loop in sign_tx() when "minsig" was used together with "rfc6979" (deterministic signatures were re-signed forever) - minsig is now ignored with RFC6979, as documented in wallet.cfg
 * Wallet: Fixed "-is" command line switch having no effect (the "seed" config value was read before the switch was parsed)
 * Wallet: Fixed comment lines (starting with #) and empty lines not being accepted in the "-batch" file
+* Client/WebUI: One JS app - not requiring browser reloads for page switching
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

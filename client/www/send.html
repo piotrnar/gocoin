@@ -9,9 +9,9 @@
 <pre id="rawdiv"></pre>
 </div><div id="fade" class="black_overlay"></div>
 <script>
-const addrbook_lab = "Address Book"
+var addrbook_lab = "Address Book"
 
-const AvgOutputSize = 34
+var AvgOutputSize = 34
 
 var selected_value = 0
 var ets_inputs = 0
@@ -29,7 +29,7 @@ var auto_transalte_to_segwit = false
 var auto_transalte_to_segwit_p2sh = false
 var auto_transalte_to_segwit_tap = false
 
-const ADDR_LIST_SIZE = 15
+var ADDR_LIST_SIZE = 15
 
 function build_change_list() {
 	var virgincounter = 0
@@ -559,6 +559,7 @@ function add_new_output() {
 
 	// amount BTC
 	c = r.insertCell(-1)
+	c.setAttribute("align","right")
 	val = document.createElement('input')
 	val.type = 'text'
 	val.size = 13
@@ -577,6 +578,7 @@ function add_new_output() {
 
 	// amount mBTC
 	c = r.insertCell(-1)
+	c.setAttribute("align","right")
 	val = document.createElement('input')
 	val.type = 'text'
 	val.size = 13
@@ -773,7 +775,7 @@ if (typeof(localStorage.gocoinWallets)=="string") {
 var warning_set = false
 blno.addEventListener("lastblock", function(e) {
 	if (!e.block.WalletON) {
-		location.reload()
+		spa_reload()
 		return
 	}
 	if (!warning_set) {

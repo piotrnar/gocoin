@@ -25,7 +25,7 @@ function xval(xml,tag) {
 }
 
 function config(q) {
-	document.location = 'cfg?sid='+sid+'&'+q
+	spa_goto('cfg?sid='+sid+'&'+q)
 }
 
 function leftpad(v,c,n) {
@@ -100,11 +100,12 @@ function pushtx() {
 		form.appendChild(rtx)
 		document.body.appendChild(form)
 		form.submit()
+		form.remove()
 	})
 }
 
 function savecfg() {
-	document.location='/cfg?savecfg&sid='+sid
+	spa_goto('/cfg?savecfg&sid='+sid)
 }
 
 function bignum(n) {
@@ -552,6 +553,7 @@ function flot_tooltip(id, x, y, contents, cls) {
    --------------------------------------------------------------------------- */
 function flot_resize_box(box) {
 	if (typeof jQuery === 'undefined') return
+	if (!box.isConnected || !box.offsetWidth) return // removed from the page, or hidden
 	var plot = jQuery(box).data('plot')
 	if (plot) {
 		plot.resize()
@@ -566,12 +568,13 @@ if (window.ResizeObserver) {
 			flot_resize_box(entries[i].target)
 		}
 	})
-	document.addEventListener('DOMContentLoaded', function() {
+	function observe_chartboxes() {
 		var boxes = document.querySelectorAll('.chartbox')
 		for (var i=0; i<boxes.length; i++) {
 			flot_resize_observer.observe(boxes[i])
 		}
-	})
+	}
+	document.addEventListener('DOMContentLoaded', observe_chartboxes)
 } else {
 	// fallback for browsers without ResizeObserver
 	window.addEventListener('resize', function() {

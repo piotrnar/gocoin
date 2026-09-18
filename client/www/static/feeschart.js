@@ -1,4 +1,5 @@
-document.write(`
+// the popup is added to the page when needed (a page can be re-loaded without re-loading this script)
+var fees_popup_html = `
 <div id="light" class="white_content" style="height:auto">
 <div id="block_fee_stats">
 	<div class="popup-head">
@@ -30,7 +31,14 @@ document.write(`
 	</div>
 </div>
 </div><div id="fade" class="black_overlay"></div>
-`)
+`
+
+function fees_popup_create() {
+	if (document.getElementById("block_fee_stats")) return
+	var where = document.querySelector("main.page") || document.body
+	where.insertAdjacentHTML("beforeend", fees_popup_html)
+	fees_chart_restore_settings()
+}
 
 var last_height // used for showing block fees
 var fees_plot_data = [ { data : [] } ];
@@ -184,6 +192,7 @@ function show_fees_clicked(height) {
 }
 
 function show_block_fees(height,size,minedby) {
+	fees_popup_create()
 	last_height = height // for refreshing the chart
 	stat_height.innerText = height
 	stat_block_size.innerText = size
@@ -202,4 +211,4 @@ function fees_chart_restore_settings() {
 	if (val=="group")  block_fees_gru.checked=true
 	else  if (val=="sort")  block_fees_spb.checked=true
 }
-fees_chart_restore_settings()
+fees_popup_create()

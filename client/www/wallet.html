@@ -296,7 +296,7 @@ function move_wallet_left() {
 		names += '|' + qswal.options[i].text
 	}
 	localStorage.setItem("gocoinWallets", names.substr(1))
-	location.reload()
+	spa_reload()
 }
 
 function move_wallet_right() {
@@ -316,7 +316,7 @@ function move_wallet_right() {
 		names += '|' + qswal.options[i].text
 	}
 	localStorage.setItem("gocoinWallets", names.substr(1))
-	location.reload()
+	spa_reload()
 }
 
 function edit_wallet() {
@@ -403,7 +403,7 @@ function save_web_wallet() {
 	close_editor()
 
 	localStorage.setItem("gocoinWalletSelected", name)
-	location.reload()
+	spa_reload()
 }
 
 function delete_wallet() {
@@ -411,7 +411,7 @@ function delete_wallet() {
 	gc_confirm("Delete the wallet \"" + name + "\" from this browser? This cannot be undone.", {title:"Delete wallet", ok:"Delete", danger:true}).then(function(yes) {
 		if (!yes) return
 		localStorage.removeItem("gocoinWal_"+name)
-		location.reload()
+		spa_reload()
 	})
 }
 
@@ -475,6 +475,7 @@ function get_balance_zip() {
 
 	document.body.appendChild(form)
 	form.submit()
+	form.remove()
 }
 
 function p2sh_sw_mode_changed() {
@@ -607,7 +608,7 @@ function show_mempool_clicked() {
 var _lblo = 0
 blno.addEventListener("lastblock", function(e) {
 	if (!e.block.WalletON) {
-		location.reload()
+		spa_reload()
 		return
 	}
 	if (_lblo==0) {

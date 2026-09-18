@@ -50,7 +50,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 			usif.Exit_now.Set()
 			write_html_head(w, r)
 			w.Write([]byte(load_template("shutdown.html")))
-			write_html_tail(w)
+			write_html_tail(w, r)
 			return
 		}
 
@@ -59,7 +59,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 			usif.Exit_now.Set()
 			write_html_head(w, r)
 			w.Write([]byte(load_template("restarting.html")))
-			write_html_tail(w)
+			write_html_tail(w, r)
 			return
 		}
 

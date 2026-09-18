@@ -374,7 +374,7 @@ function net_drop(id) {
 		return
 	}
 	gc_confirm("Drop connection " + id + " and ban its IP address?", {title:"Drop connection", ok:"Drop & ban", danger:true}).then(function(yes) {
-		if (yes) document.location = 'cfg?drop='+id+'&sid='+sid
+		if (yes) spa_goto('cfg?drop='+id+'&sid='+sid)
 	})
 	return false
 }
