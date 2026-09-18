@@ -128,6 +128,7 @@ function show_fees_clicked(height) {
 
 				fees_plot_data = [ { data : [] } ];
 
+				console.log("fees_chart_points", block_fees_points.checked)
 				localStorage.setItem("fees_chart_points", block_fees_points.checked)
 				var plot_options = flot_theme({
 					xaxis: { position : "top", alignTicksWithAxis: 200 },
@@ -203,7 +204,7 @@ function show_block_fees(height,size,minedby) {
 
 
 function fees_chart_restore_settings() {
-	if (localStorage.getItem("fees_chart_points")) block_fees_points.checked = true
+	block_fees_points.checked = localStorage.getItem("fees_chart_points") === "true"
 	var val = localStorage.getItem("fees_chart_scale")
 	if (val==100) block_fees_full.checked=true
 	else if (val==5) block_fees_5.checked=true
