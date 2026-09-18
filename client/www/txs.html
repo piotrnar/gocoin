@@ -714,7 +714,6 @@ function add_txid_and_icon(td, txid, decode) {
 	// add copy icon
 	var img = document.createElement("img")
 	img["text2copy"] = txid
-	img.src = "static/copy.png"
 	img.className = "copyic"
 	img.title = "Copy TxID to clipboard"
 	img.addEventListener("click", copyonclick)

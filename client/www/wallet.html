@@ -12,7 +12,7 @@
 	<div class="qrbox"><div id="qrcode" style="width:300px;height:300px"></div></div>
 	<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px">
 		<input type="text" class="qr_addr_addr" id="qr_address" onclick="this.select()" readonly="readonly">
-		<img src="static/copy.png" title="Copy to clipboard" class="copyic" style="height:15px" onclick="copy_text(qr_address.value)">
+		<img title="Copy to clipboard" class="copyic" style="height:15px" onclick="copy_text(qr_address.value)">
 	</div>
 </div>
 </div><div id="fade" class="black_overlay"></div>
@@ -64,7 +64,6 @@ function add_address_and_icons(td, adr, lab) {
 	// add copy icon
 	var img = document.createElement("img")
 	img["text2copy"] = adr
-	img.src = "static/copy.png"
 	img.className = "copyic"
 	img.title = "Copy to clipboard"
 	img.addEventListener("click", copyonclick)
