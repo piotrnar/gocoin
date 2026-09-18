@@ -150,7 +150,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		uidx := txin.Input.UIdx()
 		delete(SpentOutputs, uidx)
 		// Mind that we do not want to check RejectedSpentOutputs and remove rejected txs
-		// ... refering to these iputs. We will do it only later, if this tx is mined.
+		// ... referring to these inputs. We will do it only later, if this tx is mined.
 	}
 
 	delete(TransactionsToSend, tx.Hash.BIdx())

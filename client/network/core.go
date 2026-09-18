@@ -112,7 +112,7 @@ type ConnectionStatus struct {
 
 	PingHistory    [PingHistoryLength]int
 	PingHistoryIdx int
-	InvsRecieved   uint64
+	InvsReceived   uint64
 
 	PingSentCnt   uint64
 	BlocksExpired uint64

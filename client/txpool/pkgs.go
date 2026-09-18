@@ -257,7 +257,7 @@ func emptyFeePackages() {
 	}
 }
 
-// builds FeePackages list, if neccessary
+// builds FeePackages list, if necessary
 func buildListAndPackages() {
 	defer sortFeePackages()
 	buildSortedList()

@@ -352,7 +352,7 @@ try_next_one:
 				}
 				cached_min_height++
 			}
-			lowest_cached_block_idx = len(lowest_cached_blocks) - 1 // start form the last one, which will make it quicker to delete it later
+			lowest_cached_block_idx = len(lowest_cached_blocks) - 1 // start from the last one, which will make it quicker to delete it later
 		}
 		newbl = lowest_cached_blocks[lowest_cached_block_idx]
 	}

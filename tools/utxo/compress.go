@@ -91,7 +91,7 @@ func do_compress(dir string, compress, decompress bool, ncpu int) {
 	}
 
 	if !compress && !decompress {
-		fmt.Println("No conversion requested or neccessary")
+		fmt.Println("No conversion requested or necessary")
 		db.Close()
 		return
 	}

@@ -25,7 +25,7 @@ var (
 	noverify  *bool = flag.Bool("q", false, "Do not double check keys while listing them (use with -l)")
 	verbose   *bool = flag.Bool("v", false, "Verbose version (print more info)")
 	ask4pass  *bool = flag.Bool("p", false, "Force the wallet to ask for seed password (ignore .secret file) and do not offer saving it")
-	nosseed   *bool = flag.Bool("is", false, "Ignore the seed paremeter from the config file")
+	nosseed   *bool = flag.Bool("is", false, "Ignore the seed parameter from the config file")
 	subfee    *bool = flag.Bool("f", false, "Substract fee from the first value")
 
 	dumppriv *string = flag.String("dump", "", "Export a private key of a given deposit address (use * for all)")

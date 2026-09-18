@@ -58,7 +58,7 @@ type oneBl struct {
 	fpos uint64 // where at the block is stored in blockchain.dat
 	ipos int64  // where at the record is stored in blockchain.idx (used to set flags) / -1 if not stored in the file (yet)
 	blen uint32 // how long the block is in blockchain.dat
-	olen uint32 // original length fo the block (before compression)
+	olen uint32 // original length of the block (before compression)
 
 	datfileidx uint32 // use different blockchain.dat (if not zero, the filename is: blockchain-%08x.dat)
 
@@ -510,7 +510,7 @@ func (db *BlockDB) BlockGetInternal(hash *btc.Uint256, do_not_cache bool) (cache
 	db.disk_access.Lock()
 
 	var f *os.File
-	// we will re-open the data file, to not spoil the writting pointer
+	// we will re-open the data file, to not spoil the writing pointer
 	f, e = os.Open(db.dat_fname(rec.datfileidx, false))
 	if f == nil || e != nil {
 		f, e = os.Open(db.dat_fname(rec.datfileidx, true))

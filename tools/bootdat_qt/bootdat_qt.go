@@ -114,7 +114,7 @@ func main() {
 		total_data += int64(nd.BlockSize)
 		nd = nd.Parent
 	}
-	fmt.Println("Writting bootstrap.dat, height", tail.Height, "  magic", hex.EncodeToString(magic))
+	fmt.Println("Writing bootstrap.dat, height", tail.Height, "  magic", hex.EncodeToString(magic))
 	f, _ := os.Create("bootstrap.dat")
 	f.Write(magic)
 	binary.Write(f, binary.LittleEndian, uint32(len(gen_bin)))

@@ -58,7 +58,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		return
 	}
 	c.Mutex.Lock()
-	c.X.InvsRecieved++
+	c.X.InvsReceived++
 	c.Mutex.Unlock()
 
 	cnt, of := btc.VLen(pl)

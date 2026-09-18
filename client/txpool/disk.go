@@ -84,7 +84,7 @@ func (txr *OneTxRejected) WriteBytes(wr io.Writer) {
 }
 
 func MempoolSave(force bool) {
-	TxMutex.Lock() // this should not be needed in our application, but just to have everything consistant
+	TxMutex.Lock() // this should not be needed in our application, but just to have everything consistent
 	defer TxMutex.Unlock()
 
 	if !force && !common.CFG.TXPool.SaveOnDisk {

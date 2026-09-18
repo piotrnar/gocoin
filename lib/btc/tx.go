@@ -77,7 +77,7 @@ func (t *Tx) AllocVerVars() {
 	if t.TxVerVars == nil {
 		t.TxVerVars = new(TxVerVars)
 	} else {
-		println("ERROR: AllocVerVars() not neccesary")
+		println("ERROR: AllocVerVars() not necessary")
 	}
 }
 

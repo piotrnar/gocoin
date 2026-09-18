@@ -426,7 +426,7 @@ func VerifyMempoolSort(txs []*OneTxToSend) bool {
 }
 
 // MempoolCheck verifies the Mempool for consistency.
-// Usefull for debuggning as normally there should be no consistencies.
+// Useful for debugging as normally there should be no consistencies.
 // Make sure to call it with TxMutex Locked.
 func MempoolCheck() bool {
 	var dupa int

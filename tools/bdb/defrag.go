@@ -17,7 +17,7 @@ var (
 )
 
 type one_tree_node struct {
-	off int // offset in teh idx file
+	off int // offset in the idx file
 	one_idx_rec
 	parent *one_tree_node
 	next   *one_tree_node

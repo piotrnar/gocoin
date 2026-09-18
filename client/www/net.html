@@ -269,7 +269,7 @@ function update_connection_info(ci) {
 
 		s += 'Total Received:' + ci.BytesReceived + ' / Sent:' + ci.BytesSent + '   Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
 
-		s += 'Invs:  Done=' + ci.InvsDone + '   Recieved=' + ci.InvsRecieved + '  Pending=' + ci.InvsToSend +  '\n'
+		s += 'Invs:  Done=' + ci.InvsDone + '   Received=' + ci.InvsReceived + '  Pending=' + ci.InvsToSend +  '\n'
 		s += 'Get Headers:' + '  InProgress=' + ci.GetHeadersInProgress + '  AllReceived=' + ci.AllHeadersReceived + '  LastEmpty=' + ci.LastHeadersEmpty + '\n'
 		s += 'Get Blocks:' + '  InProgress=' + ci.BlocksInProgress + '  GetDataNow=' + ci.GetBlocksDataNow + '\n'
 

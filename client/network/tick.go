@@ -371,7 +371,7 @@ func tcp_server() {
 					terminate = true
 				}
 
-				// had any error occured - close the TCP connection
+				// had any error occurred - close the TCP connection
 				if terminate {
 					tc.Close()
 				}

@@ -38,7 +38,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		}
 
 		if nxt.BlockSize == 0 {
-			println("ParseTillBlock: ", nxt.Height, nxt.BlockHash.String(), "- not yet commited")
+			println("ParseTillBlock: ", nxt.Height, nxt.BlockHash.String(), "- not yet committed")
 			break
 		}
 
@@ -176,7 +176,7 @@ func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) *BlockTreeNode {
 	}
 }
 
-// HasAllParents checks whether the given node has all its parent blocks already comitted.
+// HasAllParents checks whether the given node has all its parent blocks already committed.
 func (ch *Chain) HasAllParents(dst *BlockTreeNode) bool {
 	for {
 		dst = dst.Parent
