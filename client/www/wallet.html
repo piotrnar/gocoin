@@ -59,15 +59,15 @@ function add_address_and_icons(td, adr, lab) {
 	qrc["qr_label"] = lab
 	qrc.onclick = function(){showtheqr(this)}
 	td.appendChild(qrc)
-	td.appendChild(document.createTextNode('\u00A0' + adr + '\u00A0'))
 
-	// add copy icon
-	var img = document.createElement("img")
-	img["text2copy"] = adr
-	img.className = "copyic"
-	img.title = "Copy to clipboard"
-	img.addEventListener("click", copyonclick)
-	td.appendChild(img)
+	// add static text with btc address
+	var a = document.createElement("span")
+	a.className = 'hand'
+	a.title = "Copy to clipboard"
+	a["text2copy"] = adr
+	a.innerText = '\u00A0' + adr
+	a.addEventListener("click", copyonclick)
+	td.appendChild(a)
 }
 
 function fetch_wallet_balance(name) {
