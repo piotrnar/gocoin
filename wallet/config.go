@@ -50,8 +50,13 @@ func check_atype() {
 func parse_config() {
 	cfgfn := ""
 
-	// pre-parse command line: look for -cfg <fname> or -h
+	// pre-parse command line: look for -cfg <fname> and -is
 	for i := 1; i < len(os.Args); i++ {
+		switch os.Args[i] {
+		case "-is", "--is", "-is=true", "--is=true":
+			*nosseed = true // must be known before the config file (seed=...) is parsed
+			continue
+		}
 		if os.Args[i] == "-cfg" || os.Args[i] == "--cfg" {
 			if i+1 >= len(os.Args) {
 				println("Missing the file name for", os.Args[i], "argument")

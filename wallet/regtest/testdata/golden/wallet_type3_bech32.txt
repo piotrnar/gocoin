@@ -1,0 +1,5 @@
+# Deterministic Walet Type 3
+bc1qn3jrfkqpps733jahyf2932ynnd2k7n2fapsnhk TypC 1 (1FFvTPc4nWKrWTxrLa9wVqbqqTF3VHYR3H)
+bc1q4gcxqs3r3jgff05dw2eax4dg4gkrwth2r6dsaz TypC 2 (1GWspqSfoRd5MP2KHVzf5wrgjbG3NiSWN8)
+bc1qde8scycy6j8n26zrqjtc46c2z0e0rjwca3qz56 TypC 3 (1B4G2Ptg3QuhyWFsB5jSuNZSy1nEsbM1e6)
+bc1qxesvetzy0l03627m47kkznx7a2wuhqlks397ct TypC 4 (15xXT7AU8GPpqUGyVTK6YVXzbVC9zzf1Cg)

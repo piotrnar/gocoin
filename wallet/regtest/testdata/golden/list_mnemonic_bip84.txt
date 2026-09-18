@@ -1,0 +1,7 @@
+Using config file wallet.cfg
+The seed password is considered to be BIP39 mnemonic
+# Prnt: zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs
+# Leaf: zpub6u4KbU8TSgNuZSxzv7HaGq5Tk361gMHdZxnM4UYuwzg5CMLcNytzhobitV4Zq6vWtWHpG9QijsigkxAzXvQWyLRfLq1L7VxPP1tky1hPfD4
+bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu m/84'/0'/0'/0/0 (1JaUQDVNRdhfNsVncGkXedaPSM5Gc54Hso)
+bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g m/84'/0'/0'/0/1 (1FGr5rndZHDypjwMWqudNrKtnPHhugFXVg)
+You can find all the addresses in wallet.txt file

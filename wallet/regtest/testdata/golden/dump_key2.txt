@@ -1,0 +1,6 @@
+wallet.cfg not found - proceeding with the default config values.
+Public address: 1GWspqSfoRd5MP2KHVzf5wrgjbG3NiSWN8 TypC 2
+Public hexdump: 03955f2bc9ba14c70464a574b355a28fe0dd07792ade974bd2ef69f82f5fc929c2
+Public compressed: true
+Private encoded: KxyqnYZsfhmzZ5nwqADx54TXtEEWA2zEbSKn2sLbJX9WefGwuw8A
+Private hexdump: 348a430903bf43a6dde27823f9875648b267609516970b0efb642eab0cd39bdb

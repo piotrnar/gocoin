@@ -19,6 +19,9 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 	var multisig_done bool
 	all_signed = true
 
+	// RFC6979 signatures are deterministic - re-signing would loop forever
+	minsig := minsig && !btc.EcdsaSignWithRFC6979
+
 	if minsig {
 		too_big.SetBytes([]byte{
 			0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

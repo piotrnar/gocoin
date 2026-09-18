@@ -1,0 +1,2 @@
+# golden files are test vectors - re-include them despite wallet/.gitignore
+!testdata/golden/*.txt

@@ -1,0 +1,5 @@
+# Deterministic Walet Type 3
+1KMiiMqzH5xAYpfFsmMRNm7mVc1ueLQGQx TypC 1
+1BDRAdND3nsQzXNkxWNotEP1CfQ6Q4MKgQ TypC 2
+1KcTEtT3u4LfGmrAq1gE9cTdyYz1NfzP2o TypC 3
+1LGVjkVMPzqmcehvcA8Ki1BGXBfqSAjEWF TypC 4

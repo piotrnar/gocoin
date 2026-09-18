@@ -64,13 +64,14 @@ func parse_batch() {
 				break
 			}
 			lcnt++
-			tmp := strings.SplitN(strings.Trim(string(li), " "), "=", 2)
+			line := strings.Trim(string(li), " \t\r")
+			if len(line) == 0 || line[0] == '#' {
+				continue // Just a comment or an empty line
+			}
+			tmp := strings.SplitN(line, "=", 2)
 			if len(tmp) < 2 {
 				println("Error in the batch file line", lcnt)
 				cleanExit(1)
-			}
-			if tmp[0][0] == '#' {
-				continue // Just a comment-line
 			}
 
 			a, e := btc.NewAddrFromString(tmp[0])

@@ -1,0 +1,6 @@
+wallet.cfg not found - proceeding with the default config values.
+1FFvTPc4nWKrWTxrLa9wVqbqqTF3VHYR3H TypC 1
+1GWspqSfoRd5MP2KHVzf5wrgjbG3NiSWN8 TypC 2
+1B4G2Ptg3QuhyWFsB5jSuNZSy1nEsbM1e6 TypC 3
+15xXT7AU8GPpqUGyVTK6YVXzbVC9zzf1Cg TypC 4
+You can find all the addresses in wallet.txt file

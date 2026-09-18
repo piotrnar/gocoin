@@ -1,0 +1,25 @@
+Using config file wallet.cfg
+# Root: xpub661MyMwAqRbcGzTf1pbtwwFMHtfznRJBPx9Uao4eYq62r1gwmSeRnLRPUup1UYs34hSwuCWSrwzvGvEpJYTzfWyAA6azuYE4ha1DPomG1dZ
+# Prnt: xpub661MyMwAqRbcGzTf1pbtwwFMHtfznRJBPx9Uao4eYq62r1gwmSeRnLRPUup1UYs34hSwuCWSrwzvGvEpJYTzfWyAA6azuYE4ha1DPomG1dZ
+# Leaf: xpub68S4hvKvEafD8TqefXdycMKU4RdfSLNf4Zvfr7jJmEmAfrbb6d9F1SvHi7nE6yvrXMQAjJxf1VGWEexgmf9NLW6dXti4hkSByRXsSCA1Hbr
+1NW9pdhjnBgSdchuyR2Th34L3PpHbVzuSQ m/0/0
+1PvHiQQERDvHYhWjyCauTMkeFioTZwMefC m/0/1
+1LUCMabwPArXNeUSpsL69genizEbY4Ymgf m/0/2
+1KrEZsqq4h32oQ9u7C1jAFSeqSDx1sA1xf m/0/3
+14koANYMqfCsCEuGssSweozHi7YJ2BkP5o m/0/4
+1KTG86dWkMHnTkAUJWebKRvQc7ntyHi5sW m/0/5
+1FJeY5ZsGd8YkGUQRzPFHCuGWTS8dk2Vij m/0/6
+1FDxjg51MLL5hDzPvWCbuX4XNgRPKd33KC m/0/7
+1ZnENHEFtWVPJie1kge2zjFq6tVpGo4JE m/0/8
+1PErM6hS6877oxgJUvtoKffzQbkRv1N3Q5 m/0/9
+1N5HVzN67P7qFjUsZGHDnoTJiyF6yWZFN7 m/0/10
+1GtpQFk3yzkREUcP5sYoymuY3XDKtcQE6 m/0/11
+156RC9FRRFYGQKaAZojHBC2FxBua8FnLa6 m/0/12
+17jmijGJRDKBkaoQv6U7SXjXZQ54MbNrFj m/0/13
+1L1yfKi1GamFVJaSZGahV8t8ebvpXcGP4g m/0/14
+1EeaAwmgKodHD8KCDt1AThhAaHEdTFvFvW m/0/15
+19rbpFM3aJdwadpqZj5tGD8TC5hGvCe1Ze m/0/16
+16tsLj1XStyEvNknGuLZX8qMV9AEyuBzJe m/0/17
+1Jes3c39mozizqhSaMLZdu1Wmu5raRGki6 m/0/18
+13M4ypZeacDM2rZ62rqG8jZNg1LVRHhSGy m/0/19
+You can find all the addresses in wallet.txt file

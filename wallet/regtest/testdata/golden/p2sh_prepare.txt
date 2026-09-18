@@ -1,0 +1,5 @@
+wallet.cfg not found - proceeding with the default config values.
+The P2SH data points to address 3LaPFBMwPUg4zzsJJtsAkr8xfnXwWd58Ua
+Input number 0  - hash to sign: b59baf0791dad581972d2601784d17e29bfde6071aeda3fe25d01f3b79c7a1e5
+Input number 1  - hash to sign: fd774083adb04acf07e2866b72ddf3caa8163b32e305e7651dfd5e68404d5c5a
+Transaction with 2 inputs ready for multi-signing, stored in multi2sign.txt

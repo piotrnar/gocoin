@@ -1,0 +1,10 @@
+# Deterministic Walet Type 4
+# Based on 12 BIP39 words
+# Prnt: zpub6qhiNA7FmHbJr4ccUqpz15ChyCAkNUbibnTxmfBt4pEQvksMu41agBcjDNydcWRnEURaAeDV3RrKkSfF4fvdsU1P6qsLZsSBkwVtUHu6ZE7
+# Leaf: zpub6td9d4oo7s3WPiLyB1j67HXd3th7USkr6eTEqK9TEtiN1j1WbGHNzBkWs9oRwFBpgL9yaWXCs2NmQf7zcxVLnka4FyQCZeS2MnyixW1URwE
+bc1qvg4fqju8festpjxxj9nlggcrmnrzfdwt3lv90x m/84'/0'/0'/0/0 (19x4DB5fiU5s22dngkzr6og7Lmi1arWEKG)
+bc1q3mwqtd32xs6huvkzhk8qh9qn0exvsarvkqkvtx m/84'/0'/0'/0/1 (1E2NXfAoGdJeXauZDJ9A8LHVQx2ss5EVCb)
+bc1qv8wmzl0l9gap6r7czt2c44x506nhc66058vxnt m/84'/0'/0'/0/2 (19vU88YaoryRngF6Tbrdn4uFsuzQvYaWVz)
+bc1qrql4wmpvv549cafa22jglxq93ha2k976znstud m/84'/0'/0'/1/0 (13DD6ebFZVxE1EecScSCWQtijjQbaRy78f)
+bc1qt0f6a7sdg666hl5j49a89e75rua3nafce7493r m/84'/0'/0'/1/1 (19NY5V5sBaaUvHvb5mZiX5sF14u68rk2Bx)
+bc1qa280njw8pxucc697uefy9q4w8f3a7f6knmc6he m/84'/0'/0'/1/2 (1NPEQ1xgVitEZ586DFWjLRgT7dDJXTGfdU)

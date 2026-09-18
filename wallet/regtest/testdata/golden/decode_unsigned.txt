@@ -1,0 +1,18 @@
+wallet.cfg not found - proceeding with the default config values.
+ID: d1fcae8353a0c2fe681e34149c4185b8fa12a49bf17370e85b195f2ae7651896
+WTxID: d1fcae8353a0c2fe681e34149c4185b8fa12a49bf17370e85b195f2ae7651896
+Tx Version: 2
+Regular (non-SegWit) transaction 0
+TX IN cnt: 2
+   0) 13a032f477ffd09498a6e66f018d6122257b71b89621328f3f40ff3b076609f8-000 sl=0 seq=ffffffff
+     1.00000000 BTC from address 1FFvTPc4nWKrWTxrLa9wVqbqqTF3VHYR3H unconfirmed
+   1) 72f12c1b0bac473682ec64df26043147396cd78d695cc8679d19c17436ee9d96-000 sl=0 seq=ffffffff
+     0.20000000 BTC from address bc1qxesvetzy0l03627m47kkznx7a2wuhqlks397ct unconfirmed
+TX OUT cnt: 1
+   0)      1.19990000 BTC to address 1BitcoinEaterAddressDontSendf59kuE
+Lock Time: 0
+Transaction Size: 126    NoWitSize: 126    Weight: 504    VSize: 126
+Output volume: 1.19990000 BTC
+Input volume : 1.20000000 BTC
+Transact. fee: 0.00010000 BTC -> 79.365 SPB
+WARNING: 2 out of 2 inputs are not signed or signed only patially
