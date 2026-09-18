@@ -674,7 +674,7 @@ html[data-theme="dark"] img.free               { content: url("free-white.png");
 html[data-theme="dark"] img#auto_theme_switch_img { content: url("theme-switch-white.png"); }
 
 img.del:hover, img.info:hover, img.request:hover, img.refresh:hover, img.free:hover { opacity: .7; }
-img.copyic { height: 13px; cursor: pointer; vertical-align: -2px; opacity: .55; transition: opacity .12s; }
+img.copyic { content: url("copy-black.png"); height: 13px; cursor: pointer; vertical-align: -2px; opacity: .55; transition: opacity .12s; }
 img.copyic:hover { opacity: 1; }
 html[data-theme="dark"] img.copyic { content: url("copy-white.png"); }
 html[data-theme="dark"] img[src$="stats.png"], html[data-theme="dark"] img[src$="message.png"],
