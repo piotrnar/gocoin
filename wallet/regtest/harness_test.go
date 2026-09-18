@@ -73,6 +73,34 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+var trackOnce sync.Once
+
+// trackSources makes the result of this test package depend on the wallet's
+// sources. The wallet is run as a separate process, so its code is not a part
+// of the test binary and "go test" would otherwise happily replay a cached
+// PASS after the wallet was modified. Go records every file a test stats and
+// invalidates the cached result when one of them changes, so it is enough to
+// stat every .go file of the wallet and of all the packages it depends on.
+// Go only records the accesses made from within tests (not from TestMain),
+// hence this is called from Run().
+func trackSources() {
+	if os.Getenv("GOCOIN_WALLET_BIN") != "" {
+		os.Stat(walletBin) // a prebuilt binary: depend on the binary itself
+		return
+	}
+	out, err := exec.Command("go", "list", "-deps", "-f", "{{if not .Standard}}{{.Dir}}{{end}}", "..").Output()
+	if err != nil {
+		fmt.Println("go list failed - the test result cache will not notice wallet source changes:", err)
+		return
+	}
+	for _, dir := range strings.Fields(string(out)) {
+		files, _ := filepath.Glob(filepath.Join(dir, "*.go"))
+		for _, f := range files {
+			os.Stat(f)
+		}
+	}
+}
+
 // Case describes one execution of the wallet and the expectations about it.
 type Case struct {
 	Name string
@@ -158,6 +186,7 @@ func (r *Result) Lines(prefix string) (res []string) {
 
 // Run executes all the cases as sub-tests of t.
 func Run(t *testing.T, cases []Case) {
+	trackOnce.Do(trackSources)
 	for i := range cases {
 		c := &cases[i]
 		t.Run(c.Name, func(t *testing.T) {
