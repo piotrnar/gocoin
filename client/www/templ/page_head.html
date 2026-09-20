@@ -225,7 +225,7 @@ function refreshblock() {
 					void blpill.offsetWidth
 					blpill.classList.add('tick')
 				}
-				new_block = true
+				new_block = true // updating block number more ofthen during chain sync
 				blno.innerText = stat.Height
 				document.title = doc_title + ' @ ' + stat.Height
 			}
@@ -240,7 +240,7 @@ function refreshblock() {
 			blno.title = e
 			blno.innerText = "???"
 		}
-		refreshblock_timer = _spa_setTimeout(refreshblock, new_block?1000:6000)
+		refreshblock_timer = _spa_setTimeout(refreshblock, new_block?500:1000)
 	}
 	aj.open("GET","status.json",true)
 	aj.send(null)
