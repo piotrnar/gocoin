@@ -80,6 +80,7 @@
 * Wallet: On Windows, the seed password is read from stdin when stdin is redirected (a file or a pipe) instead of the console
 * Client/WebUI: fixed problem with applying the saved "Show points" state to the block fees charts
 * Client/Lib/Wallet/Tools: Fixed various typos in code comments and printed/logged messages, and renamed InvsRecieved to InvsReceived
+* Client/TextUI: New command "buildinfo" for showing go build informations
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
@@ -194,7 +195,6 @@
 * Tools/bdb - new command "-rendat" to rename old "blockchain-NNNNNNNN.dat" to new "blNNNNNNNN.dat"
 * Client: Added parallel updating of UTXO database by splitting it into 256 smaller hash-maps
 * Wallet: Default change address (if not specified) does not convert to P2KH anymore
- * Client/TextUI: New command "buildinfo" for showing go build informations
 
 1.9.9 - 2021-05-21
  * Client: Do not drop Authorized peers
