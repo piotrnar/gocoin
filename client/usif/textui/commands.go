@@ -672,8 +672,24 @@ func blocks_stop(par string) {
 	fmt.Println("StopBlockProcessing:", common.StopBlockProcessing)
 }
 
+func print_build_info(par string) {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		fmt.Println("no build info available")
+		return
+	}
+
+	fmt.Println("Go version:", info.GoVersion)
+	fmt.Println("Main module:", info.Main.Path, info.Main.Version)
+
+	for _, s := range info.Settings {
+		fmt.Printf("%s=%s\n", s.Key, s.Value)
+	}
+}
+
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
+	newUi("buildinfo bi", false, print_build_info, "Show go build informations")
 	newUi("cach", true, show_cached, "Show cached blocks [del2height]")
 	newUi("configload lc", false, load_config, "Re-load settings from the config file")
 	newUi("configsave sc", false, save_config, "Save current settings to the config file")
