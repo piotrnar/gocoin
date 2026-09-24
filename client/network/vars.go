@@ -206,11 +206,14 @@ func delBlockFromDiskCache(hash *btc.Uint256) {
 // fetched. Set invalid to true only if the block has actually failed verification -
 // see the comment at DiscardedBlocks. The tree nodes are left in place - see
 // DiscardBranch() if you also need them gone.
-// Make sure to call it with MutexRcv locked.
+// Make sure to call it with MutexRcv locked and BlockIndexAccess unlocked.
 func DiscardBlock(n *chain.BlockTreeNode, invalid bool) {
 	resetLastCommitedHeaderBelow(n)
+	nodes := common.BlockChain.BranchNodesLocked(n)
 	CachedBlocksMutex.Lock()
-	discardBlock(n, invalid)
+	for _, nd := range nodes {
+		discardBlock(nd, invalid)
+	}
 	CachedBlocksMutex.Unlock()
 }
 
@@ -226,11 +229,9 @@ func DiscardBranch(n *chain.BlockTreeNode) {
 	common.CountSafe("BlockBranchDiscrd")
 }
 
+// discardBlock does the bookkeeping for the given node only (not its children).
 // caller must hold both MutexRcv and CachedBlocksMutex
 func discardBlock(n *chain.BlockTreeNode, invalid bool) {
-	for _, c := range n.Childs {
-		discardBlock(c, invalid)
-	}
 	bidx := n.BlockHash.BIdx()
 	// never downgrade a block that we already know to be invalid
 	DiscardedBlocks[bidx] = invalid || DiscardedBlocks[bidx]

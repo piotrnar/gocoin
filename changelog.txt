@@ -81,6 +81,7 @@
 * Client/WebUI: fixed problem with applying the saved "Show points" state to the block fees charts
 * Client/Lib/Wallet/Tools: Fixed various typos in code comments and printed/logged messages, and renamed InvsRecieved to InvsReceived
 * Client/TextUI: New command "buildinfo" for showing go build informations
+* Lib/chain, Client: fixed data races on the block tree's child links (reading BlockTreeNode.Childs without BlockIndexAccess, while new headers or discarded branches were modifying it)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

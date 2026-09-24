@@ -32,7 +32,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		fmt.Println("Applying txs from block", last.Height, last.BlockHash.String(), "\n  to", end.Height, end.BlockHash.String())
 	}
 	for !AbortNow && last != end {
-		nxt := last.FindPathTo(end)
+		nxt := ch.FindPathToLocked(last, end)
 		if nxt == nil {
 			break
 		}
@@ -95,7 +95,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	}
 
 	if !AbortNow && last != end {
-		end, _ = ch.BlockTreeRoot.FindFarthestNode()
+		end = ch.FindFarthestNodeLocked(ch.BlockTreeRoot)
 		fmt.Println("ParseTillBlock failed - now go to", end.Height)
 		ch.MoveToBlock(end)
 	}
@@ -174,6 +174,40 @@ func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) *BlockTreeNode {
 		}
 		end = end.Parent
 	}
+}
+
+// FindPathToLocked calls from.FindPathTo(end) with BlockIndexAccess locked.
+// Do not call it with BlockIndexAccess already locked.
+func (ch *Chain) FindPathToLocked(from, end *BlockTreeNode) *BlockTreeNode {
+	ch.BlockIndexAccess.Lock()
+	defer ch.BlockIndexAccess.Unlock()
+	return from.FindPathTo(end)
+}
+
+// FindFarthestNodeLocked calls n.FindFarthestNode() with BlockIndexAccess locked.
+// Do not call it with BlockIndexAccess already locked.
+func (ch *Chain) FindFarthestNodeLocked(n *BlockTreeNode) *BlockTreeNode {
+	ch.BlockIndexAccess.Lock()
+	defer ch.BlockIndexAccess.Unlock()
+	res, _ := n.FindFarthestNode()
+	return res
+}
+
+// BranchNodesLocked returns n and all its descendants (children before parents),
+// collected with BlockIndexAccess locked.
+// Do not call it with BlockIndexAccess already locked.
+func (ch *Chain) BranchNodesLocked(n *BlockTreeNode) (res []*BlockTreeNode) {
+	ch.BlockIndexAccess.Lock()
+	res = n.appendBranchNodes(res)
+	ch.BlockIndexAccess.Unlock()
+	return
+}
+
+func (n *BlockTreeNode) appendBranchNodes(res []*BlockTreeNode) []*BlockTreeNode {
+	for _, c := range n.Childs {
+		res = c.appendBranchNodes(res)
+	}
+	return append(res, n)
 }
 
 // HasAllParents checks whether the given node has all its parent blocks already committed.

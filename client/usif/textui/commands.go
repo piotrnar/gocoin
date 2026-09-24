@@ -549,7 +549,7 @@ func redo_block(par string) {
 	}
 
 	sta := time.Now()
-	nxt := last.FindPathTo(end)
+	nxt := common.BlockChain.FindPathToLocked(last, end)
 	if nxt == nil {
 		println("FindPathTo failed")
 		return

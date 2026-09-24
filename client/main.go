@@ -528,7 +528,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 			time.Sleep(1e9)
 			continue
 		}
-		nxt := last.FindPathTo(end)
+		nxt := common.BlockChain.FindPathToLocked(last, end)
 		if nxt == nil {
 			break
 		}
