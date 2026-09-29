@@ -57,7 +57,7 @@ func getpo(prevout *btc.TxPrevOut) (po *btc.TxOut) {
 	txpool.TxMutex.Unlock()
 	if tx != nil {
 		if int(prevout.Vout) >= len(tx.TxOut) {
-			println("ERROR: Vout TOO BIG (%d/%d)!", int(prevout.Vout), len(tx.TxOut))
+			fmt.Printf("ERROR: Vout TOO BIG (%d/%d)!\n", int(prevout.Vout), len(tx.TxOut))
 		} else {
 			po = tx.TxOut[prevout.Vout]
 		}

@@ -20,7 +20,7 @@ func (t *OneTxToSend) isInMap() (yes bool) {
 	var tt *OneTxToSend
 	tt, yes = TransactionsToSend[t.Hash.BIdx()]
 	if yes && tt != t {
-		println("ERROR: t2x in the map does not point back to itself", t.Hash.String(), "\n  ", tt.Hash.String())
+		fmt.Println("ERROR: t2x in the map does not point back to itself", t.Hash.String(), "\n  ", tt.Hash.String())
 		yes = false
 	}
 	return
@@ -347,22 +347,22 @@ func checkFeeList() bool {
 
 	for _, pkg := range FeePackages {
 		if valid_pkgs[pkg] {
-			println("ERROR: pkg", pkg.String(), "is twice on the list")
+			fmt.Println("ERROR: pkg", pkg.String(), "is twice on the list")
 			return true
 		}
 		valid_pkgs[pkg] = true
 		if len(pkg.Txs) < 2 {
-			println("ERROR: package has only", len(pkg.Txs), "txs")
+			fmt.Println("ERROR: package has only", len(pkg.Txs), "txs")
 			return true
 		}
 		for idx, t := range pkg.Txs {
 			if !t.isInMap() {
-				println("ERROR: tx in pkg", pkg.String(), "does not point to a valid t2s", idx)
-				println("    ...", t.Hash.String())
+				fmt.Println("ERROR: tx in pkg", pkg.String(), "does not point to a valid t2s", idx)
+				fmt.Println("    ...", t.Hash.String())
 				return true
 			}
 			if !slices.Contains(t.inPackages, pkg) {
-				println("ERROR: tx", idx, t.Id(), "in pkg", pkg.String(), "does not point back to the package")
+				fmt.Println("ERROR: tx", idx, t.Id(), "in pkg", pkg.String(), "does not point back to the package")
 				return true
 			}
 		}
@@ -373,11 +373,11 @@ func checkFeeList() bool {
 		if t2s.inPackages != nil {
 			for _, pkg := range t2s.inPackages {
 				if !valid_pkgs[pkg] {
-					println("ERROR: pkg", pkg.String(), "from t2s", t2s.Id(), "is not on the pkg list")
+					fmt.Println("ERROR: pkg", pkg.String(), "from t2s", t2s.Id(), "is not on the pkg list")
 					return true
 				}
 				if !slices.Contains(pkg.Txs, t2s) {
-					println("ERROR: pkg", pkg.String(), "does not have the tx", t2s.Id)
+					fmt.Println("ERROR: pkg", pkg.String(), "does not have the tx", t2s.Id())
 					return true
 				}
 				found_pkgs[pkg] = true
@@ -386,7 +386,7 @@ func checkFeeList() bool {
 	}
 
 	if len(found_pkgs) != len(valid_pkgs) {
-		println("ERROR: did not find a reference to every pkg in the mempool", len(found_pkgs), (valid_pkgs))
+		fmt.Println("ERROR: did not find a reference to every pkg in the mempool", len(found_pkgs), len(valid_pkgs))
 		return true
 	}
 
@@ -397,7 +397,7 @@ func VerifyMempoolSort(txs []*OneTxToSend) bool {
 	idxs := make(map[btc.BIDX]int, len(txs))
 	for i, t2s := range txs {
 		if t2s == nil {
-			println("tx at idx", i, len(txs), len(TransactionsToSend), "is nil")
+			fmt.Println("tx at idx", i, len(txs), len(TransactionsToSend), "is nil")
 			return true
 		}
 		idxs[t2s.Hash.BIdx()] = i
@@ -405,13 +405,13 @@ func VerifyMempoolSort(txs []*OneTxToSend) bool {
 	var oks int
 	for i, t2s := range txs {
 		if t2s.Weight() == 0 {
-			println("ERROR: in mempool sorting:", i, "has weight 0", t2s.Hash.String())
+			fmt.Println("ERROR: in mempool sorting:", i, "has weight 0", t2s.Hash.String())
 			return true
 		}
 		for _, txin := range t2s.TxIn {
 			if idx, ok := idxs[btc.BIdx(txin.Input.Hash[:])]; ok {
 				if idx > i {
-					println("ERROR: in mempool sorting:", i, "points to", idx, "\n",
+					fmt.Println("ERROR: in mempool sorting:", i, "points to", idx, "\n",
 						"    ", i, t2s.Hash.String(), "\n",
 						" -> ", idx, btc.NewUint256(txin.Input.Hash[:]).String())
 					return true

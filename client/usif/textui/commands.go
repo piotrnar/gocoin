@@ -242,7 +242,7 @@ func show_mem(p string) {
 	if strings.HasSuffix(p, "MB") {
 		i, e := strconv.ParseUint(p[:len(p)-2], 10, 32)
 		if e != nil {
-			println(e.Error())
+			fmt.Println(e.Error())
 			return
 		}
 		fmt.Println("CFG.Memory.MemoryLimitMB =", i)
@@ -313,12 +313,12 @@ func show_mem(p string) {
 func dump_block(s string) {
 	h := btc.NewUint256FromString(s)
 	if h == nil {
-		println("Specify block's hash")
+		fmt.Println("Specify block's hash")
 		return
 	}
 	crec, _, er := common.BlockChain.Blocks.BlockGetExt(btc.NewUint256(h.Hash[:]))
 	if er != nil {
-		println("BlockGetExt:", er.Error())
+		fmt.Println("BlockGetExt:", er.Error())
 		return
 	}
 
@@ -372,7 +372,7 @@ func set_config(s string) {
 		new := common.CFG
 		e := json.Unmarshal([]byte("{"+s+"}"), &new)
 		if e != nil {
-			println(e.Error())
+			fmt.Println(e.Error())
 		} else {
 			common.CFG = new
 			common.Reset()
@@ -386,14 +386,14 @@ func set_config(s string) {
 func load_config(s string) {
 	d, e := os.ReadFile(common.ConfigFile)
 	if e != nil {
-		println(e.Error())
+		fmt.Println(e.Error())
 		return
 	}
 	common.LockCfg()
 	defer common.UnlockCfg()
 	e = json.Unmarshal(d, &common.CFG)
 	if e != nil {
-		println(e.Error())
+		fmt.Println(e.Error())
 		return
 	}
 	common.Reset()
@@ -411,17 +411,17 @@ func save_config(s string) {
 func send_inv(par string) {
 	cs := strings.Split(par, " ")
 	if len(cs) != 2 {
-		println("Specify hash and type")
+		fmt.Println("Specify hash and type")
 		return
 	}
 	ha := btc.NewUint256FromString(cs[1])
 	if ha == nil {
-		println("Incorrect hash")
+		fmt.Println("Incorrect hash")
 		return
 	}
 	v, e := strconv.ParseInt(cs[0], 10, 32)
 	if e != nil {
-		println("Incorrect type:", e.Error())
+		fmt.Println("Incorrect type:", e.Error())
 		return
 	}
 	network.NetRouteInv(uint32(v), ha, nil)
@@ -523,15 +523,15 @@ func purge_utxo(par string) {
 }
 
 func undo_block(par string) {
-	println("Undoing block...")
+	fmt.Println("Undoing block...")
 	if par == "slow" {
-		println("Slow mode ON")
+		fmt.Println("Slow mode ON")
 	} else {
 		txpool.BlockCommitInProgress(true)
 	}
 	common.BlockChain.UndoLastBlock()
 	txpool.BlockCommitInProgress(false)
-	println("Block un-DONE")
+	fmt.Println("Block un-DONE")
 	common.Last.Mutex.Lock()
 	common.Last.Block = common.BlockChain.LastBlock()
 	common.UpdateScriptFlags(0)
@@ -544,19 +544,19 @@ func redo_block(par string) {
 	network.MutexRcv.Unlock()
 	last := common.BlockChain.LastBlock()
 	if last == end {
-		println("You already are at the last known block - nothing to redo")
+		fmt.Println("You already are at the last known block - nothing to redo")
 		return
 	}
 
 	sta := time.Now()
 	nxt := common.BlockChain.FindPathToLocked(last, end)
 	if nxt == nil {
-		println("FindPathTo failed")
+		fmt.Println("FindPathTo failed")
 		return
 	}
 
 	if nxt.BlockSize == 0 {
-		println("BlockSize is zero - block not downloaded yet or corrupt database")
+		fmt.Println("BlockSize is zero - block not downloaded yet or corrupt database")
 		return
 	}
 
@@ -565,7 +565,7 @@ func redo_block(par string) {
 
 	bl, er := btc.NewBlock(crec.Data)
 	if er != nil {
-		println("btc.NewBlock() error - corrupt database")
+		fmt.Println("btc.NewBlock() error - corrupt database")
 		return
 	}
 	bl.Height = nxt.Height
@@ -575,7 +575,7 @@ func redo_block(par string) {
 
 	er = bl.BuildTxList()
 	if er != nil {
-		println("bl.BuildTxList() error - corrupt database")
+		fmt.Println("bl.BuildTxList() error - corrupt database")
 		return
 	}
 

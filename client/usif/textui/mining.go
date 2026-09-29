@@ -37,12 +37,12 @@ func do_miningstat(s string) {
 	for end.Timestamp() >= lim {
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
-			println(cnt, e.Error())
+			fmt.Println(cnt, e.Error())
 			return
 		}
 		block, e := btc.NewBlock(bl)
 		if e != nil {
-			println("btc.NewBlock failed", e.Error())
+			fmt.Println("btc.NewBlock failed", e.Error())
 			return
 		}
 
@@ -118,7 +118,7 @@ func do_minaddr(s string) {
 		if _, e := btc.NewAddrFromString(s); e == nil {
 			rpcapi.COINBASE_ADDRESS = s
 		} else {
-			println(e.Error())
+			fmt.Println(e.Error())
 		}
 	}
 	fmt.Println("COINBASE_ADDRESS:", rpcapi.COINBASE_ADDRESS)

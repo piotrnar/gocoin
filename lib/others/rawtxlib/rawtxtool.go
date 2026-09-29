@@ -28,7 +28,7 @@ func hex_dump(d []byte) (s string) {
 func dump_raw_sigscript(o io.Writer, d []byte) bool {
 	ss, er := btc.ScriptToText(d)
 	if er != nil {
-		println(er.Error())
+		fmt.Fprintln(o, er.Error())
 		return false
 	}
 
@@ -47,7 +47,7 @@ func dump_raw_sigscript(o io.Writer, d []byte) bool {
 			}
 			return len(ms.Signatures) >= int(ms.SigsNeeded)
 		} else {
-			println(er.Error())
+			fmt.Fprintln(o, er.Error())
 		}
 	}
 
@@ -58,7 +58,7 @@ func dump_raw_sigscript(o io.Writer, d []byte) bool {
 			d, _ = hex.DecodeString(ss[i])
 			s2, er := btc.ScriptToText(d)
 			if er != nil {
-				println(er.Error())
+				fmt.Fprintln(o, er.Error())
 				p2sh = false
 				fmt.Fprintln(o, "       ", ss[i])
 				continue

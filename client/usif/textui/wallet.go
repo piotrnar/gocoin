@@ -144,7 +144,7 @@ func all_addrs(par string) {
 		if ad = best[i].rec.BtcAddr(); ad != nil {
 			fmt.Println(i+1, ad.String(), btc.UintToBtc(best[i].rec.Value), "BTC in", best[i].rec.Count(), "inputs")
 		} else {
-			println("ERROR: could not extract the address")
+			fmt.Println("ERROR: could not extract the address")
 		}
 	}
 }
@@ -209,7 +209,7 @@ func list_unspent(addr string) {
 	if er != nil || len(pk) != 33 || pk[0] != 2 && pk[0] != 3 {
 		ad, e := btc.NewAddrFromString(addr)
 		if e != nil {
-			println(e.Error())
+			fmt.Println(e.Error())
 			return
 		}
 		list_unspent_addr(ad)
@@ -219,7 +219,7 @@ func list_unspent(addr string) {
 	// if here, pk contains a valid public key
 	ad := btc.NewAddrFromPubkey(pk, btc.AddrVerPubkey(common.Testnet))
 	if ad == nil {
-		println("Unexpected error returned by NewAddrFromPubkey()")
+		fmt.Println("Unexpected error returned by NewAddrFromPubkey()")
 		return
 	}
 	hrp := btc.GetSegwitHRP(common.Testnet)

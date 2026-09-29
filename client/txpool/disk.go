@@ -64,11 +64,11 @@ func (txr *OneTxRejected) WriteBytes(wr io.Writer) {
 	}
 	if txr.Tx != nil {
 		if txr.Size != uint32(len(txr.Tx.Raw)) {
-			println("ERROR: Rejected Tx Size mismatch. THIS SHOUDL NOT HAPPEN - PLEASE REPORT!")
-			println(txr.Id.String())
-			println(txr.Tx.Hash.String())
-			println(txr.Size, uint32(len(txr.Tx.Raw)))
-			println(hex.EncodeToString(txr.Tx.Raw))
+			fmt.Println("ERROR: Rejected Tx Size mismatch. THIS SHOUDL NOT HAPPEN - PLEASE REPORT!")
+			fmt.Println(txr.Id.String())
+			fmt.Println(txr.Tx.Hash.String())
+			fmt.Println(txr.Size, uint32(len(txr.Tx.Raw)))
+			fmt.Println(hex.EncodeToString(txr.Tx.Raw))
 			txr.Tx = nil
 		} else {
 			tmp32 |= HAS_TX_FLAG
@@ -94,7 +94,7 @@ func MempoolSave(force bool) {
 
 	f, er := os.Create(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
 	if er != nil {
-		println(er.Error())
+		fmt.Println(er.Error())
 		return
 	}
 

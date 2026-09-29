@@ -3,6 +3,7 @@ package common
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -52,7 +53,7 @@ func ReloadMiners() {
 		var MinerIdFile [][3]string
 		e := json.Unmarshal(d, &MinerIdFile)
 		if e != nil {
-			println("miners.json", e.Error())
+			fmt.Println("miners.json", e.Error())
 			return
 		}
 		MinerIds = nil
@@ -65,7 +66,7 @@ func ReloadMiners() {
 				if a, _ := btc.NewAddrFromString(r[2]); a != nil {
 					rec.Tag = a.OutScript()
 				} else {
-					println("Error in miners.json for", r[0])
+					fmt.Println("Error in miners.json for", r[0])
 					continue
 				}
 			}

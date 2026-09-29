@@ -30,9 +30,9 @@ func get_total_block_fees(txs []*txpool.OneTxToSend) (totfees uint64, totwgh, tc
 			inp := &txinp.Input
 			tout := common.BlockChain.Unspent.UnspentGet(inp)
 			if tout == nil && !already_in[inp.Hash] {
-				println(" *** block invalid - tx", tx.Hash.String(), "at offs", tcnt, "needs", btc.NewUint256(inp.Hash[:]).String())
+				fmt.Println(" *** block invalid - tx", tx.Hash.String(), "at offs", tcnt, "needs", btc.NewUint256(inp.Hash[:]).String())
 				/*
-					println("writing txs.txt")
+					fmt.Println("writing txs.txt")
 					if f, _ := os.Create("txs.txt"); f != nil {
 						for _, tt := range txs {
 							fmt.Fprintln(f, tt.Hash.String())
@@ -54,18 +54,18 @@ func new_block(par string) {
 
 	sta := time.Now()
 	txs := txpool.GetSortedMempool()
-	println(len(txs), "OLD tx_sort got in", time.Since(sta).String())
+	fmt.Println(len(txs), "OLD tx_sort got in", time.Since(sta).String())
 	txpool.VerifyMempoolSort(txs)
 
 	sta = time.Now()
 	cpfp := txpool.GetSortedMempoolRBF()
-	println(len(cpfp), "NEW tx_sort got in", time.Since(sta).String())
+	fmt.Println(len(cpfp), "NEW tx_sort got in", time.Since(sta).String())
 	txpool.VerifyMempoolSort(cpfp)
 
 	var totwgh, tcnt int
 	var totfees, totfees2 uint64
 	totfees, totwgh, tcnt = get_total_block_fees(txs)
-	println("Fees from OLD sorting:", btc.UintToBtc(totfees), totwgh, tcnt)
+	fmt.Println("Fees from OLD sorting:", btc.UintToBtc(totfees), totwgh, tcnt)
 
 	totfees2, totwgh, tcnt = get_total_block_fees(cpfp)
 	fmt.Println("Fees from NEW sorting:", btc.UintToBtc(totfees2), totwgh, tcnt)
@@ -83,37 +83,37 @@ func gettxchildren(par string) {
 
 	txid := btc.NewUint256FromString(par)
 	if txid == nil {
-		println("Specify valid txid")
+		fmt.Println("Specify valid txid")
 		return
 	}
 	bidx := txid.BIdx()
 	t2s := txpool.TransactionsToSend[bidx]
 	if t2s == nil {
-		println(txid.String(), "not im mempool")
+		fmt.Println(txid.String(), "not im mempool")
 		return
 	}
 	chlds := t2s.GetAllChildren()
-	println("has", len(chlds), "all children")
+	fmt.Println("has", len(chlds), "all children")
 	var tot_wg, tot_fee uint64
 	for _, tx := range chlds {
-		println(" -", tx.Hash.String(), len(tx.GetChildren()), tx.SPB(), "@", tx.Weight())
+		fmt.Println(" -", tx.Hash.String(), len(tx.GetChildren()), tx.SPB(), "@", tx.Weight())
 		tot_wg += uint64(tx.Weight())
 		tot_fee += tx.Fee
 		//gettxchildren(tx.Hash.String())
 	}
-	println("Groups SPB:", float64(tot_fee)/float64(tot_wg)*4.0)
+	fmt.Println("Groups SPB:", float64(tot_fee)/float64(tot_wg)*4.0)
 }
 
 func sort_test(par string) {
 	txpool.TxMutex.Lock()
 	defer txpool.TxMutex.Unlock()
 
-	println("Doing mempool check first")
+	fmt.Println("Doing mempool check first")
 	if txpool.MempoolCheck() {
-		println("Mempool check failed. Aborting.")
+		fmt.Println("Mempool check failed. Aborting.")
 		return
 	}
-	println("Mempool looks OK")
+	fmt.Println("Mempool looks OK")
 
 	sta := time.Now()
 	tx1 := txpool.GetSortedMempoolSlow()
@@ -127,52 +127,52 @@ func sort_test(par string) {
 	tx3 := txpool.GetSortedMempoolRBF()
 	tim3 := time.Since(sta)
 
-	println("Three sorted txs lists acquired.")
-	println("Execution times  1-Slow:", tim1.String(), "  2-Fast:", tim2.String(), "  3-RBF:", tim3.String())
+	fmt.Println("Three sorted txs lists acquired.")
+	fmt.Println("Execution times  1-Slow:", tim1.String(), "  2-Fast:", tim2.String(), "  3-RBF:", tim3.String())
 
 	if len(tx1) != len(tx2) || len(tx1) != len(tx3) {
-		println("Transaction count mismatch:", len(tx1), len(tx2), len(tx3))
+		fmt.Println("Transaction count mismatch:", len(tx1), len(tx2), len(tx3))
 		return
 	}
-	println("All lists have", len(tx1), "txs each")
+	fmt.Println("All lists have", len(tx1), "txs each")
 
 	v1 := txpool.VerifyMempoolSort(tx1)
 	v2 := txpool.VerifyMempoolSort(tx1)
 	v3 := txpool.VerifyMempoolSort(tx1)
 	if v1 || v2 || v3 {
-		println("1st list verify error:", v1)
-		println("2nd list verify error:", v2)
-		println("3rd list verify error:", v3)
+		fmt.Println("1st list verify error:", v1)
+		fmt.Println("2nd list verify error:", v2)
+		fmt.Println("3rd list verify error:", v3)
 		return
 	} else {
-		println("All lists verified OK")
+		fmt.Println("All lists verified OK")
 	}
 
 	for i := range tx1 {
 		if tx1[i] != tx2[i] {
-			println("The first two lists become different at index", i, "(but that is normal)")
+			fmt.Println("The first two lists become different at index", i, "(but that is normal)")
 			return
 		}
 	}
-	println("The first two lists are identical (confirms sort index OK)")
+	fmt.Println("The first two lists are identical (confirms sort index OK)")
 }
 
 func show_tdepends(s string) {
 	d, er := hex.DecodeString(s)
 	if er != nil || len(d) != utxo.UtxoIdxLen {
-		println("Specify BIDX encoded as", 2*utxo.UtxoIdxLen, "hex digits")
+		fmt.Println("Specify BIDX encoded as", 2*utxo.UtxoIdxLen, "hex digits")
 		return
 	}
 	var bidx btc.BIDX
 	for i := range bidx[:] {
 		bidx[i] = d[7-i]
 	}
-	println("Looking for tx at BIDX", btc.BIdxString(bidx))
+	fmt.Println("Looking for tx at BIDX", btc.BIdxString(bidx))
 
 	txpool.TxMutex.Lock()
 	defer txpool.TxMutex.Unlock()
 	if t2s, ok := txpool.TransactionsToSend[bidx]; ok {
-		println("TxID:", t2s.Hash.String(), "   MemInCnt:", t2s.MemInputCnt)
+		fmt.Println("TxID:", t2s.Hash.String(), "   MemInCnt:", t2s.MemInputCnt)
 		for i, yes := range t2s.MemInputs {
 			if yes {
 				//uidx := t2s.TxIn[i].Input.UIdx()
@@ -181,7 +181,7 @@ func show_tdepends(s string) {
 			}
 		}
 	} else {
-		println("tx not found in mempool")
+		fmt.Println("tx not found in mempool")
 	}
 }
 
@@ -199,9 +199,9 @@ func DumpTxList(label, fn string, txs []*txpool.OneTxToSend) {
 			}
 		}
 		f.Close()
-		println(fn, "saved")
+		fmt.Println(fn, "saved")
 	} else {
-		println(er.Error())
+		fmt.Println(er.Error())
 	}
 }
 

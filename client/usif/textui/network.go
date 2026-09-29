@@ -34,7 +34,7 @@ func (sk SortedKeys) Swap(a, b int) {
 func net_drop(par string) {
 	conid, e := strconv.ParseUint(par, 10, 32)
 	if e != nil {
-		println(e.Error())
+		fmt.Println(e.Error())
 		return
 	}
 	network.DropPeer(uint32(conid))
@@ -328,7 +328,7 @@ func sync_stats(par string) {
 	print_fetch_counters()
 	if strings.Contains(par, "r") {
 		common.CountSafeStore("BlocksUnderflowCount", 0)
-		println("Error counter set to 0")
+		fmt.Println("Error counter set to 0")
 	}
 }
 

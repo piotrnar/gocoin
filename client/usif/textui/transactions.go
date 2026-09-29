@@ -28,7 +28,7 @@ func load_tx(par string) {
 	}
 	f, e := os.Open(par)
 	if e != nil {
-		println(e.Error())
+		fmt.Println(e.Error())
 		return
 	}
 	n, _ := f.Seek(0, io.SeekStart)
@@ -267,7 +267,7 @@ func txr_list(par string) {
 	var reason byte
 	if par != "" {
 		if val, er := strconv.ParseUint(par, 10, 64); er != nil || val < 1 || val > 255 {
-			println("Rejection reason must be a value between 1 and 255")
+			fmt.Println("Rejection reason must be a value between 1 and 255")
 			return
 		} else {
 			reason = byte(val)
@@ -670,15 +670,15 @@ func fetch_mempool(par string) {
 							fmt.Println("not needed anymore")
 						}
 					} else {
-						println("tx decode error")
+						fmt.Println("tx decode error")
 					}
 				}
 			}
 		} else {
-			println("getMempoolTxs() http.Get StatusCode=", r.StatusCode)
+			fmt.Println("getMempoolTxs() http.Get StatusCode=", r.StatusCode)
 		}
 	} else {
-		println("getMempoolTxs() http.Get error", er.Error())
+		fmt.Println("getMempoolTxs() http.Get error", er.Error())
 	}
 }
 

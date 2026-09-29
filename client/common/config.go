@@ -447,11 +447,11 @@ func Reset() {
 		if oaa != nil {
 			WebUIAllowed = append(WebUIAllowed, *oaa)
 		} else {
-			println("ERROR: Incorrect AllowedIP:", ips[i])
+			fmt.Println("ERROR: Incorrect AllowedIP:", ips[i])
 		}
 	}
 	if len(WebUIAllowed) == 0 {
-		println("WARNING: No IP is currently allowed at WebUI")
+		fmt.Println("WARNING: No IP is currently allowed at WebUI")
 	}
 	ListenTCP = CFG.Net.ListenTCP
 
