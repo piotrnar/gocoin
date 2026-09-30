@@ -44,7 +44,7 @@ func (b *OneAllAddrBal) Save(key OneAddrIndex, of *bufio.Writer) {
 			of.Write(k[:])
 		}
 	} else {
-		println("ERROR: OneAllAddrBal.Save() - this should not happen")
+		fmt.Println("ERROR: OneAllAddrBal.Save() - this should not happen")
 	}
 }
 
@@ -60,7 +60,7 @@ func newAddrBal(rd *bufio.Reader) (res *OneAllAddrBal) {
 		return
 	}
 	if le == 0 {
-		println("ERROR: newAddrBal - this should not happen")
+		fmt.Println("ERROR: newAddrBal - this should not happen")
 		return
 	}
 	if int(le) >= useMapCnt {

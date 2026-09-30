@@ -148,7 +148,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 			continue
 		}
 		if rec, ok = allBalances[idx][uidx]; !ok {
-			println("ERROR: balance rec not found for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String(),
+			fmt.Println("ERROR: balance rec not found for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String(),
 				btc.NewUint256(tx.TxID[:]).String(), vout, btc.UintToBtc(out.Value))
 			continue
 		}
@@ -157,7 +157,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 
 		if rec.unspMap != nil {
 			if _, ok := rec.unspMap[nr]; !ok {
-				println("ERROR: unspent rec not in map for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String())
+				fmt.Println("ERROR: unspent rec not in map for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String())
 				continue
 			}
 			delete(rec.unspMap, nr)
@@ -170,7 +170,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 		}
 
 		if i = slices.Index(rec.unsp, nr); i < 0 {
-			println("ERROR: unspent rec not in list for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String())
+			fmt.Println("ERROR: unspent rec not in list for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String())
 			continue
 		}
 		if len(rec.unsp) == 1 {

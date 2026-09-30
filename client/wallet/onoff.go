@@ -3,6 +3,7 @@ package wallet
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"os"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -101,7 +102,7 @@ func UpdateMapSizes() {
 func LoadMapSizes() {
 	d, er := os.ReadFile(common.GocoinHomeDir + MAPSIZ_FILE_NAME)
 	if er != nil {
-		println("LoadMapSizes:", er.Error())
+		fmt.Println("LoadMapSizes:", er.Error())
 		return
 	}
 
@@ -109,6 +110,6 @@ func LoadMapSizes() {
 
 	er = gob.NewDecoder(buf).Decode(&WalletAddrsCount)
 	if er != nil {
-		println("LoadMapSizes:", er.Error())
+		fmt.Println("LoadMapSizes:", er.Error())
 	}
 }
