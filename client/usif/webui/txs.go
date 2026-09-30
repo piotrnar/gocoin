@@ -632,6 +632,6 @@ func json_mpfees(w http.ResponseWriter, r *http.Request) {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)
 	} else {
-		println(er.Error())
+		fmt.Println(er.Error())
 	}
 }

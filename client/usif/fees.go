@@ -3,6 +3,7 @@ package usif
 import (
 	"bufio"
 	"encoding/gob"
+	"fmt"
 	"os"
 	"sync"
 
@@ -80,7 +81,7 @@ func ExpireBlockFees() {
 func SaveBlockFees() {
 	f, er := os.Create(common.GocoinHomeDir + BLKFES_FILE_NAME)
 	if er != nil {
-		println("SaveBlockFees:", er.Error())
+		fmt.Println("SaveBlockFees:", er.Error())
 		return
 	}
 
@@ -89,7 +90,7 @@ func SaveBlockFees() {
 	er = gob.NewEncoder(buf).Encode(BlockFees)
 
 	if er != nil {
-		println("SaveBlockFees:", er.Error())
+		fmt.Println("SaveBlockFees:", er.Error())
 	}
 
 	buf.Flush()
@@ -100,14 +101,14 @@ func SaveBlockFees() {
 func LoadBlockFees() {
 	f, er := os.Open(common.GocoinHomeDir + BLKFES_FILE_NAME)
 	if er != nil {
-		println("LoadBlockFees:", er.Error())
+		fmt.Println("LoadBlockFees:", er.Error())
 		return
 	}
 
 	buf := bufio.NewReader(f)
 	er = gob.NewDecoder(buf).Decode(&BlockFees)
 	if er != nil {
-		println("LoadBlockFees:", er.Error())
+		fmt.Println("LoadBlockFees:", er.Error())
 	}
 
 	f.Close()

@@ -284,7 +284,7 @@ func (cr *certReloader) reload() error {
 	cr.cert.Store(&cert)
 	cr.modTime = fi.ModTime()
 	cr.lastErr = ""
-	println("SSL certificate loaded, expires:", cert.Leaf.NotAfter.String())
+	fmt.Println("SSL certificate loaded, expires:", cert.Leaf.NotAfter.String())
 	return nil
 }
 
@@ -295,7 +295,7 @@ func (cr *certReloader) GetCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate
 		cr.mu.Lock()
 		if err.Error() != cr.lastErr {
 			cr.lastErr = err.Error()
-			println("cert reload failed:", cr.lastErr)
+			fmt.Println("cert reload failed:", cr.lastErr)
 		}
 		cr.mu.Unlock()
 	}
@@ -306,7 +306,7 @@ func start_ssl_server() {
 	// try to start SSL server...
 	dat, err := os.ReadFile("ssl_cert/ca.crt")
 	if err != nil {
-		println("ssl_cert/ca.crt not found")
+		fmt.Println("ssl_cert/ca.crt not found")
 		// no "ca.crt" file - do not start SSL server
 		return
 	}
@@ -327,7 +327,7 @@ func start_ssl_server() {
 
 	cr, err := newCertReloader("ssl_cert/server.crt", "ssl_cert/server.key")
 	if err != nil {
-		println("cert load error:", err.Error())
+		fmt.Println("cert load error:", err.Error())
 		return
 	}
 
@@ -346,13 +346,13 @@ func start_ssl_server() {
 	server.TLSConfig.ClientCAs = x509.NewCertPool()
 	ok := server.TLSConfig.ClientCAs.AppendCertsFromPEM(dat)
 	if !ok {
-		println("AppendCertsFromPEM error")
+		fmt.Println("AppendCertsFromPEM error")
 		return
 	}
 
-	println("Starting SSL server at", ssl_serv_addr, "...")
+	fmt.Println("Starting SSL server at", ssl_serv_addr, "...")
 	err = server.ListenAndServeTLS("", "")
 	if err != nil {
-		println(err.Error())
+		fmt.Println(err.Error())
 	}
 }

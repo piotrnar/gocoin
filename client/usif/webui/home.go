@@ -2,6 +2,7 @@ package webui
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -61,7 +62,7 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)
 	} else {
-		println(er.Error())
+		fmt.Println(er.Error())
 	}
 }
 
@@ -138,6 +139,6 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)
 	} else {
-		println(er.Error())
+		fmt.Println(er.Error())
 	}
 }

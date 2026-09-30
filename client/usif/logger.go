@@ -35,7 +35,7 @@ func IPChecker(r *http.Request) bool {
 		}
 	}
 	common.UnlockCfg()
-	println("ipchecker:", r.RemoteAddr, "is blocked")
+	fmt.Println("ipchecker:", r.RemoteAddr, "is blocked")
 	return false
 }
 

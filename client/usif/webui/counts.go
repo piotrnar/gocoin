@@ -2,6 +2,7 @@ package webui
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 
@@ -68,6 +69,6 @@ func json_counts(w http.ResponseWriter, r *http.Request) {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)
 	} else {
-		println(er.Error())
+		fmt.Println(er.Error())
 	}
 }

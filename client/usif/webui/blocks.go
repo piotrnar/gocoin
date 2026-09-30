@@ -2,6 +2,7 @@ package webui
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -137,7 +138,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)
 	} else {
-		println(er.Error())
+		fmt.Println(er.Error())
 	}
 }
 
@@ -167,6 +168,6 @@ func json_blfees(w http.ResponseWriter, r *http.Request) {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)
 	} else {
-		println(er.Error())
+		fmt.Println(er.Error())
 	}
 }

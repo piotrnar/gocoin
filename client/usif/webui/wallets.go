@@ -62,14 +62,14 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 
 	inp, er := ioutil.ReadAll(r.Body)
 	if er != nil {
-		println(er.Error())
+		fmt.Println(er.Error())
 		return
 	}
 
 	var addrs []string
 	er = json.Unmarshal(inp, &addrs)
 	if er != nil {
-		println(er.Error())
+		fmt.Println(er.Error())
 		return
 	}
 
@@ -340,7 +340,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)
 	} else {
-		println(er.Error())
+		fmt.Println(er.Error())
 	}
 }
 
@@ -357,7 +357,7 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 	var labels []string
 
 	if len(r.Form["addrcnt"]) != 1 {
-		println("no addrcnt")
+		fmt.Println("no addrcnt")
 		return
 	}
 	addrcnt, _ := strconv.ParseUint(r.Form["addrcnt"][0], 10, 32)
@@ -454,7 +454,7 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 		if dat, er := common.GetRawTx(thisbal[i].MinedAt, txid); er == nil {
 			fz.Write(dat)
 		} else {
-			println(er.Error())
+			fmt.Println(er.Error())
 		}
 	}
 
@@ -486,6 +486,6 @@ func json_wallet_status(w http.ResponseWriter, r *http.Request) {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)
 	} else {
-		println(er.Error())
+		fmt.Println(er.Error())
 	}
 }

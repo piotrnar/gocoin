@@ -200,7 +200,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 			if dat, er := common.GetRawTx(thisbal[i].MinedAt, txid); er == nil {
 				fz.Write(dat)
 			} else {
-				println(er.Error())
+				fmt.Println(er.Error())
 			}
 		}
 

@@ -46,7 +46,7 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)
 	} else {
-		println(er.Error())
+		fmt.Println(er.Error())
 	}
 
 }
@@ -69,7 +69,7 @@ func json_peerst(w http.ResponseWriter, r *http.Request) {
 			w.Header()["Content-Type"] = []string{"application/json"}
 			w.Write(bx)
 		} else {
-			println(er.Error())
+			fmt.Println(er.Error())
 		}
 	}
 }
@@ -132,7 +132,7 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)
 	} else {
-		println(er.Error())
+		fmt.Println(er.Error())
 	}
 }
 
@@ -167,6 +167,6 @@ func json_bwchar(w http.ResponseWriter, r *http.Request) {
 		w.Header()["Content-Type"] = []string{"application/json"}
 		w.Write(bx)
 	} else {
-		println(er.Error())
+		fmt.Println(er.Error())
 	}
 }
