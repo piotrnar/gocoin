@@ -2,6 +2,7 @@ package ltc
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/utils"
@@ -52,7 +53,7 @@ func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	if er == nil {
 		return
 	}
-	println("GetUnspentFromBlockchair:", er.Error())
+	fmt.Println("GetUnspentFromBlockchair:", er.Error())
 
 	return
 }
@@ -72,7 +73,7 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	if raw != nil && verify_txid(txid, raw) {
 		return
 	}
-	println("GetTxFromBlockchair failed", len(raw), txid.String())
+	fmt.Println("GetTxFromBlockchair failed", len(raw), txid.String())
 
 	return
 }

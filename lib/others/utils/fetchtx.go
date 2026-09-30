@@ -24,7 +24,7 @@ func GetTxFromBlockchair(txid *btc.Uint256, currency string) (rawtx []byte) {
 		}
 		if (r.StatusCode == 402 || r.StatusCode == 429) && try_cnt < 5 {
 			try_cnt++
-			println("Retry blockchair.com in", try_cnt, "seconds...")
+			fmt.Println("Retry blockchair.com in", try_cnt, "seconds...")
 			time.Sleep(time.Duration(try_cnt) * time.Second)
 			continue
 		}
@@ -87,34 +87,34 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromBlockstream(txid, "https://mempool.space/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
 		if Verbose {
-			println("GetTxFromMempoolSpace - OK")
+			fmt.Println("GetTxFromMempoolSpace - OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetTxFromMempoolSpace error")
+		fmt.Println("GetTxFromMempoolSpace error")
 	}
 
 	raw = GetTxFromBlockstream(txid, "https://blockstream.info/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
 		if Verbose {
-			println("GetTxFromBlockstream - OK")
+			fmt.Println("GetTxFromBlockstream - OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetTxFromBlockstream error")
+		fmt.Println("GetTxFromBlockstream error")
 	}
 
 	raw = GetTxFromBlockchair(txid, "bitcoin")
 	if raw != nil && verify_txid(txid, raw) {
 		if Verbose {
-			println("GetTxFromBlockchair - OK")
+			fmt.Println("GetTxFromBlockchair - OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetTxFromBlockchair error")
+		fmt.Println("GetTxFromBlockchair error")
 	}
 
 	return
@@ -125,23 +125,23 @@ func GetTestnetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromBlockstream(txid, "https://blockstream.info/testnet/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
 		if Verbose {
-			println("Testnet GetTxFromBlockstream - OK")
+			fmt.Println("Testnet GetTxFromBlockstream - OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetTxFromBlockstream error")
+		fmt.Println("GetTxFromBlockstream error")
 	}
 
 	raw = GetTxFromBlockstream(txid, "https://mempool.space/testnet/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
 		if Verbose {
-			println("GetTxFromMempoolSpace - OK")
+			fmt.Println("GetTxFromMempoolSpace - OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetTxFromMempoolSpace error")
+		fmt.Println("GetTxFromMempoolSpace error")
 	}
 
 	return
@@ -152,23 +152,23 @@ func GetTestnet4TxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromBlockstream(txid, "https://mempool.space/testnet4/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
 		if Verbose {
-			println("GetTxFromMempoolSpace - OK")
+			fmt.Println("GetTxFromMempoolSpace - OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetTxFromMempoolSpace error")
+		fmt.Println("GetTxFromMempoolSpace error")
 	}
 
 	raw = GetTxFromBlockstream(txid, "https://blockstream.info/testnet4/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
 		if Verbose {
-			println("Testnet GetTxFromBlockstream - OK")
+			fmt.Println("Testnet GetTxFromBlockstream - OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetTxFromBlockstream error")
+		fmt.Println("GetTxFromBlockstream error")
 	}
 
 	return

@@ -52,23 +52,23 @@ func GetBlockFromWeb(hash *btc.Uint256) (bl *btc.Block) {
 	raw = GetBlockFromBlockstream(hash, "https://blockstream.info/api/block/")
 	if bl = IsBlockOK(raw, hash); bl != nil {
 		if Verbose {
-			println("GetTxFromBlockstream - OK")
+			fmt.Println("GetTxFromBlockstream - OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetTxFromBlockstream error")
+		fmt.Println("GetTxFromBlockstream error")
 	}
 
 	raw = GetBlockFromBlockstream(hash, "https://mempool.space/api/block/")
 	if bl = IsBlockOK(raw, hash); bl != nil {
 		if Verbose {
-			println("GetBlockFromMempoolSpace - OK")
+			fmt.Println("GetBlockFromMempoolSpace - OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetBlockFromMempoolSpace error")
+		fmt.Println("GetBlockFromMempoolSpace error")
 	}
 
 	return

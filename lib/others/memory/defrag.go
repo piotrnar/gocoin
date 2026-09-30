@@ -81,7 +81,7 @@ func (a *Allocator) defragClass(class int, relocate func(oldslice, newslice *[]b
 	}
 
 	if len(pages) == 0 {
-		println("ERROR: Unexpected empty pageMap for class", class)
+		fmt.Println("ERROR: Unexpected empty pageMap for class", class)
 		return
 	}
 

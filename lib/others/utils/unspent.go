@@ -26,7 +26,7 @@ func GetUnspentFromBlockchair(addr *btc.BtcAddr, currency string) (res utxo.AllU
 		}
 		if (r.StatusCode == 402 || r.StatusCode == 429) && try_cnt < 5 {
 			try_cnt++
-			println("Retry blockchair.com in", try_cnt, "seconds...")
+			fmt.Println("Retry blockchair.com in", try_cnt, "seconds...")
 			time.Sleep(time.Duration(try_cnt) * time.Second)
 			continue
 		}
@@ -134,34 +134,34 @@ func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	res, er = GetUnspentFromBlockstream(addr, "https://blockstream.info/api/address/")
 	if er == nil {
 		if Verbose {
-			println("GetUnspentFromBlockstream OK")
+			fmt.Println("GetUnspentFromBlockstream OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetUnspentFromBlockstream:", er.Error())
+		fmt.Println("GetUnspentFromBlockstream:", er.Error())
 	}
 
 	res, er = GetUnspentFromBlockstream(addr, "https://mempool.space/api/address/")
 	if er == nil {
 		if Verbose {
-			println("GetUnspentFromMempoolSpace OK")
+			fmt.Println("GetUnspentFromMempoolSpace OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetUnspentFromMempoolSpace:", er.Error())
+		fmt.Println("GetUnspentFromMempoolSpace:", er.Error())
 	}
 
 	res, er = GetUnspentFromBlockchair(addr, "bitcoin")
 	if er == nil {
 		if Verbose {
-			println("GetUnspentFromBlockchair OK")
+			fmt.Println("GetUnspentFromBlockchair OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetUnspentFromBlockchair:", er.Error())
+		fmt.Println("GetUnspentFromBlockchair:", er.Error())
 	}
 
 	return
@@ -173,23 +173,23 @@ func GetUnspentTestnet(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	res, er = GetUnspentFromBlockstream(addr, "https://blockstream.info/testnet/api/address/")
 	if er == nil {
 		if Verbose {
-			println("GetUnspentFromBlockstream OK")
+			fmt.Println("GetUnspentFromBlockstream OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetUnspentFromBlockstream:", er.Error())
+		fmt.Println("GetUnspentFromBlockstream:", er.Error())
 	}
 
 	res, er = GetUnspentFromBlockstream(addr, "https://mempool.space/testnet/api/address/")
 	if er == nil {
 		if Verbose {
-			println("GetUnspentFromMempoolSpace OK")
+			fmt.Println("GetUnspentFromMempoolSpace OK")
 		}
 		return
 	}
 	if Verbose {
-		println("GetUnspentFromMempoolSpace:", er.Error())
+		fmt.Println("GetUnspentFromMempoolSpace:", er.Error())
 	}
 
 	return

@@ -47,7 +47,7 @@ func (db *DB) loadrec(idx *oneIdx) {
 			fn := db.seq2fn(idx.DataSeq)
 			f, _ = os.Open(fn)
 			if f == nil {
-				println("file", fn, "not found")
+				fmt.Println("file", fn, "not found")
 				os.Exit(1)
 			}
 			db.DatFiles[idx.DataSeq] = f
@@ -79,7 +79,7 @@ func (db *DB) cleanupold(used map[uint32]bool) {
 			v, er := strconv.ParseUint(fn[:8], 16, 32)
 			if er == nil && uint32(v) != db.DataSeq {
 				if _, ok := used[uint32(v)]; !ok {
-					//println("deleting", v, path)
+					//fmt.Println("deleting", v, path)
 					if f, _ := db.DatFiles[uint32(v)]; f != nil {
 						f.Close()
 						delete(db.DatFiles, uint32(v))

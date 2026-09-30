@@ -161,7 +161,7 @@ func (db *DB) Browse(walk QdbWalkFunction) {
 		v.freerec()
 		return (res & BR_ABORT) == 0
 	})
-	//println("br", db.Dir, "done")
+	//fmt.Println("br", db.Dir, "done")
 	db.Mutex.Unlock()
 }
 
@@ -175,7 +175,7 @@ func (db *DB) BrowseAll(walk QdbWalkFunction) {
 		v.freerec()
 		return (res & BR_ABORT) == 0
 	})
-	//println("br", db.Dir, "done")
+	//fmt.Println("br", db.Dir, "done")
 	db.Mutex.Unlock()
 }
 
@@ -246,7 +246,7 @@ func (db *DB) PutExt(key KeyType, value []byte, flags uint32) {
 
 // Removes record with a given key.
 func (db *DB) Del(key KeyType) {
-	//println("del", hex.EncodeToString(key[:]))
+	//fmt.Println("del", hex.EncodeToString(key[:]))
 	db.Mutex.Lock()
 	db.Idx.memdel(key)
 	if db.VolatileMode {

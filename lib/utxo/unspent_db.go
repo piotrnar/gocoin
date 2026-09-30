@@ -258,7 +258,7 @@ fatal_error:
 		of.Close()
 	}
 
-	println(er.Error())
+	fmt.Println(er.Error())
 	if fname != "UTXO.old" {
 		fname = "UTXO.old"
 		goto redo
@@ -305,7 +305,7 @@ func (db *UnspentDB) save() {
 	go func(fname string) {
 		of_, er := os.Create(fname)
 		if er != nil {
-			println("Create file:", er.Error())
+			fmt.Println("Create file:", er.Error())
 			return
 		}
 
@@ -403,7 +403,7 @@ finito:
 
 	if !abort {
 		db.DirtyDB.Clr()
-		//println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
+		//fmt.Println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
 		atomic.StoreUint32(&db.CurrentHeightOnDisk, db.LastBlockHeight)
 	}
 	db.WritingInProgress.Clr()
@@ -792,7 +792,7 @@ func (db *UnspentDB) UTXOStats() string {
 				sta_cbs  = NewUtxoOutAllocCbs{
 					OutsList: func(cnt int) (res []*UtxoTxOut) {
 						if len(rec_outs) < cnt {
-							println("utxo.MAX_OUTS_SEEN", len(rec_outs), "->", cnt)
+							fmt.Println("utxo.MAX_OUTS_SEEN", len(rec_outs), "->", cnt)
 							rec_outs = make([]*UtxoTxOut, cnt)
 							rec_pool = make([]UtxoTxOut, cnt)
 						}

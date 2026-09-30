@@ -1,6 +1,8 @@
 package utxo
 
 import (
+	"fmt"
+
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -55,7 +57,7 @@ var (
 	sta_cbs  = NewUtxoOutAllocCbs{
 		OutsList: func(cnt int) (res []*UtxoTxOut) {
 			if len(rec_outs) < cnt {
-				println("utxo.MAX_OUTS_SEEN", len(rec_outs), "->", cnt)
+				fmt.Println("utxo.MAX_OUTS_SEEN", len(rec_outs), "->", cnt)
 				rec_outs = make([]*UtxoTxOut, cnt)
 				rec_pool = make([]UtxoTxOut, cnt)
 			}
@@ -75,8 +77,8 @@ var (
 )
 
 var (
-	NewUtxoRecOwn func([]byte, *UtxoRec, *NewUtxoOutAllocCbs)     = NewUtxoRecOwnU
-	OneUtxoRec    func(dat []byte, vout uint32) *btc.TxOut        = OneUtxoRecU
+	NewUtxoRecOwn func([]byte, *UtxoRec, *NewUtxoOutAllocCbs)      = NewUtxoRecOwnU
+	OneUtxoRec    func(dat []byte, vout uint32) *btc.TxOut         = OneUtxoRecU
 	Serialize     func(rec *UtxoRec, use_buf []byte) (buf *[]byte) = SerializeU
 )
 

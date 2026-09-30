@@ -26,29 +26,29 @@ func read_and_check_file(fn string) (seq uint32, data []byte) {
 	f.Close()
 
 	if d == nil {
-		println(fn, "could not read file")
+		fmt.Println(fn, "could not read file")
 		return
 	}
 
 	le = len(d)
 	if le < 16 {
-		println(fn, "len", le)
+		fmt.Println(fn, "len", le)
 		return
 	}
 
 	if string(d[le-4:le]) != "FINI" {
-		println(fn, "no FINI")
+		fmt.Println(fn, "no FINI")
 		return
 	}
 
 	if binary.LittleEndian.Uint32(d[le-12:le-8]) != 0xFFFFFFFF {
-		println(fn, "no FFFFFFFF")
+		fmt.Println(fn, "no FFFFFFFF")
 		return
 	}
 
 	seq = binary.LittleEndian.Uint32(d[0:4])
 	if seq != binary.LittleEndian.Uint32(d[le-8:le-4]) {
-		println(fn, "seq mismatch", seq, binary.LittleEndian.Uint32(d[le-8:le-4]))
+		fmt.Println(fn, "seq mismatch", seq, binary.LittleEndian.Uint32(d[le-8:le-4]))
 		return
 	}
 
@@ -61,7 +61,7 @@ func (idx *QdbIndex) loadneweridx() []byte {
 	s1, d1 := read_and_check_file(idx.IdxFilePath + "1")
 
 	if d0 == nil && d1 == nil {
-		//println(idx.IdxFilePath, "- no valid file")
+		//fmt.Println(idx.IdxFilePath, "- no valid file")
 		return nil
 	}
 
@@ -117,7 +117,7 @@ func (idx *QdbIndex) loadlog(used map[uint32]bool) {
 	var iseq uint32
 	binary.Read(idx.file, binary.LittleEndian, &iseq)
 	if iseq != idx.VersionSequence {
-		println("incorrect seq in the log file", iseq, idx.VersionSequence)
+		fmt.Println("incorrect seq in the log file", iseq, idx.VersionSequence)
 		idx.file.Close()
 		idx.file = nil
 		os.Remove(idx.IdxFilePath + "log")
@@ -131,7 +131,7 @@ func (idx *QdbIndex) loadlog(used map[uint32]bool) {
 		pos += 12
 		if fpos != 0 {
 			if pos+12 > len(d) {
-				println("Unexpected END of file")
+				fmt.Println("Unexpected END of file")
 				break
 			}
 			flen := binary.LittleEndian.Uint32(d[pos : pos+4])

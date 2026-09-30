@@ -63,7 +63,7 @@ func (d *Dutex) Unlock() {
 	d.mutint.Lock()
 	ts := time.Since(d.ltime)
 	if ts > time.Second {
-		println(" >>> mutex locked from", d.file, "line", d.line, "took", ts.String(), "to unlock")
+		fmt.Println(" >>> mutex locked from", d.file, "line", d.line, "took", ts.String(), "to unlock")
 	}
 	d.lttot += ts
 	d.locked = false
