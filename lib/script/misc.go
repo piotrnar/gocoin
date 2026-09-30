@@ -43,7 +43,7 @@ func IsP2PK(scr []byte) (bool, []byte) {
 		if pk.ParsePubkey(scr[1:66]) && pk.IsValid() {
 			return true, scr[1:66]
 		}
-		//println("invalid uncompressed pubkey")
+		//fmt.Println("invalid uncompressed pubkey")
 	}
 	return false, nil
 }
