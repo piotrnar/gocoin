@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"fmt"
 	"os"
 	"runtime/debug"
 	"sync"
@@ -68,7 +69,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	}
 
 	if CheckForErrors() && t2s.inPackages != nil {
-		println("ERROR: Add to mempool called for tx that already has InPackages", len(t2s.inPackages))
+		fmt.Println("ERROR: Add to mempool called for tx that already has InPackages", len(t2s.inPackages))
 		FeePackagesDirty = true
 		return
 	}
@@ -79,7 +80,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		parents := t2s.getAllTopParents()
 		for _, parent := range parents {
 			if parent.MemInputCnt != 0 {
-				println("ERROR: parent.MemInputCnt!=0 must not happen here")
+				fmt.Println("ERROR: parent.MemInputCnt!=0 must not happen here")
 				continue
 			}
 			parent.addToPackages(t2s)
@@ -112,7 +113,7 @@ func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
 						do_one_parent(parent)
 					}
 				} else {
-					println("ERROR: getAllTopParents t2s being added has mem input which does not exist")
+					fmt.Println("ERROR: getAllTopParents t2s being added has mem input which does not exist")
 				}
 			}
 		}
@@ -128,7 +129,7 @@ func (tx *OneTxToSend) getAllTopParents() (result []*OneTxToSend) {
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	if CheckForErrors() {
 		if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
-			println("ERROR: Trying to delete already deleted tx", tx.Hash.String())
+			fmt.Println("ERROR: Trying to delete already deleted tx", tx.Hash.String())
 			debug.PrintStack()
 			os.Exit(1)
 		}
@@ -213,7 +214,7 @@ func txChecker(tx *btc.Tx) bool {
 	if ok {
 		ok = tx.WTxID().Equal(rec.WTxID())
 		if !ok {
-			//println("wTXID mismatch at", tx.Hash.String(), tx.WTxID().String(), rec.WTxID().String())
+			//fmt.Println("wTXID mismatch at", tx.Hash.String(), tx.WTxID().String(), rec.WTxID().String())
 			common.CountSafe("TxScrSWErr")
 		}
 	}

@@ -151,7 +151,7 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 			pos[i] = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
 				if ntx.Unmined {
-					println("ERROR: No UTXO for unmined tx", tx.TxIn[i].Input.String(), txinmem, ok)
+					fmt.Println("ERROR: No UTXO for unmined tx", tx.TxIn[i].Input.String(), txinmem, ok)
 					return TX_REJECTED_NO_TXOU, nil
 				}
 
@@ -285,7 +285,7 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 			}
 		}
 		if ctx == nil {
-			println("ERROR: rbf_tx_list not empty, but cannot find a tx with no children")
+			fmt.Println("ERROR: rbf_tx_list not empty, but cannot find a tx with no children")
 			break
 		}
 

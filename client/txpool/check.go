@@ -421,7 +421,7 @@ func VerifyMempoolSort(txs []*OneTxToSend) bool {
 			}
 		}
 	}
-	//println("mempool sorting OK", oks, len(txs))
+	//fmt.Println("mempool sorting OK", oks, len(txs))
 	return false
 }
 
@@ -466,7 +466,7 @@ func dumpPkgList(fn string) {
 	f, _ := os.Create(fn)
 	dumpPkgListHere(f)
 	f.Close()
-	println("pkg list stored in", fn)
+	fmt.Println("pkg list stored in", fn)
 }
 
 func dumpPkgListHere(f io.Writer) {
@@ -489,21 +489,21 @@ func cfl(label string) {
 	}
 	//common.CountSafe("TxPkgs_CLF")
 	if checkFeeList() {
-		println("*** fee packages list first noticed broken in", label, "\a")
+		fmt.Println("*** fee packages list first noticed broken in", label, "\a")
 		dumpPkgList("packages_broken.txt")
 		debug.PrintStack()
 		donot = true
 
 		if rdbg != nil {
-			println(rdbg.String())
+			fmt.Println(rdbg.String())
 		}
 		if rd1 != nil {
 			os.WriteFile("packages_before1.txt", rd1.Bytes(), 0600)
-			println("packages_before1.txt created")
+			fmt.Println("packages_before1.txt created")
 		}
 		if rd2 != nil {
 			os.WriteFile("packages_before2.txt", rd2.Bytes(), 0600)
-			println("packages_before2.txt created")
+			fmt.Println("packages_before2.txt created")
 		}
 		os.Exit(1)
 	}
@@ -513,17 +513,17 @@ func cfl(label string) {
 func checkSortedOK(from string) {
 	cfl(from)
 	if VerifyMempoolSort(GetSortedMempoolRBF()) {
-		println("Sorting fucked in", from)
-		println("before it:\n", rdbg.String())
+		fmt.Println("Sorting fucked in", from)
+		fmt.Println("before it:\n", rdbg.String())
 		dumpPkgList("pkglist_broken.txt")
 		rdbg = new(bytes.Buffer)
-		println("Now retry sort again, this time with FeePackagesDirty")
+		fmt.Println("Now retry sort again, this time with FeePackagesDirty")
 		FeePackagesDirty = true
 		if VerifyMempoolSort(GetSortedMempoolRBF()) {
-			println("*** again fucked ***")
+			fmt.Println("*** again fucked ***")
 		} else {
-			println(rdbg.String())
-			println("Fixed")
+			fmt.Println(rdbg.String())
+			fmt.Println("Fixed")
 			dumpPkgList("pkglist_fixed.txt")
 		}
 		os.Exit(1)

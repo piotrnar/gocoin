@@ -70,7 +70,7 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 			feePackagesReSort = true
 			common.CountSafe("TxPkgsAddNew")
 		} else {
-			println("ERROR: in addToPackages parent's GetItWithAllChildren returned only", len(pandch), "txs")
+			fmt.Println("ERROR: in addToPackages parent's GetItWithAllChildren returned only", len(pandch), "txs")
 		}
 	} else {
 		// here we go through all the packages and append the new_child at their ends
@@ -107,7 +107,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 
 	for _, pkg := range t2s.inPackages {
 		if CheckForErrors() && len(pkg.Txs) < 2 {
-			println("ERROR: delFromPackages called on t2s that has pkg with less than txs", pkg)
+			fmt.Println("ERROR: delFromPackages called on t2s that has pkg with less than txs", pkg)
 			FeePackagesDirty = true
 			return
 		}
@@ -143,7 +143,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 				pkg.Fee = 0
 				for _, t := range pandch {
 					if CheckForErrors() && t == t2s {
-						println("ERROR: delFromPackages -> GetItWithAllChildren returned us " + pkg.Txs[0].Hash.String())
+						fmt.Println("ERROR: delFromPackages -> GetItWithAllChildren returned us " + pkg.Txs[0].Hash.String())
 						FeePackagesDirty = true
 						return
 					}
@@ -179,19 +179,19 @@ func (t2s *OneTxToSend) delFromPackages() {
 // removes a reference to a given package from the t2s
 func (t2s *OneTxToSend) removePkg(pkg *OneTxsPackage) {
 	if CheckForErrors() && len(t2s.inPackages) == 0 {
-		println("ERROR: removePkg called on txs with no InPackages", t2s.Hash.String())
+		fmt.Println("ERROR: removePkg called on txs with no InPackages", t2s.Hash.String())
 		return
 	}
 	if len(t2s.inPackages) == 1 {
 		if CheckForErrors() && t2s.inPackages[0] != pkg {
-			println("ERROR: removePkg called on txs with one pkg, bot not the one")
+			fmt.Println("ERROR: removePkg called on txs with one pkg, bot not the one")
 		}
 		t2s.inPackagesSet(nil)
 	} else {
 		if idx := slices.Index(t2s.inPackages, pkg); idx >= 0 {
 			t2s.inPackagesSet(slices.Delete(t2s.inPackages, idx, idx+1))
 		} else {
-			println("ERROR: removePkg cannot find the given pkg in t2s.InPackages", len(t2s.inPackages))
+			fmt.Println("ERROR: removePkg cannot find the given pkg in t2s.InPackages", len(t2s.inPackages))
 			return
 		}
 	}

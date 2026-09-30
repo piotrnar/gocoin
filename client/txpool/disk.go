@@ -250,7 +250,7 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 		}
 		txr.SetHash(raw) // this will update the sizes and wtxid
 	} else if txr.Waiting4 != nil {
-		println("WARNING: RejectedTx", txr.Id.String(), "was waiting for inputs, but has no data")
+		fmt.Println("WARNING: RejectedTx", txr.Id.String(), "was waiting for inputs, but has no data")
 		txr.Waiting4 = nil
 	}
 	txr.Footprint = uint32(txr.SysSize())
@@ -306,7 +306,7 @@ func MempoolLoad() bool {
 		goto fatal_error
 	}
 
-	//println("TransactionsToSend cnt:", totcnt)
+	//fmt.Println("TransactionsToSend cnt:", totcnt)
 
 	TransactionsToSend = make(map[btc.BIDX]*OneTxToSend, int(totcnt))
 	for ; totcnt > 0; totcnt-- {
@@ -323,7 +323,7 @@ func MempoolLoad() bool {
 		if totcnt, er = btc.ReadVLen(rd); er != nil {
 			goto fatal_error
 		}
-		println("SpentOutputs cnt:", totcnt, "- discarding")
+		fmt.Println("SpentOutputs cnt:", totcnt, "- discarding")
 		for ; totcnt > 0; totcnt-- {
 			if er = binary.Read(rd, binary.LittleEndian, &le); er != nil {
 				goto fatal_error
@@ -360,8 +360,8 @@ func MempoolLoad() bool {
 
 	if !bytes.Equal(tmp[:len(END_MARKER)], END_MARKER) {
 		er = errors.New(MEMPOOL_FILE_NAME + " has marker missing")
-		println("marker error", string(tmp[:len(END_MARKER)]))
-		println(hex.EncodeToString(tmp[:len(END_MARKER)]))
+		fmt.Println("marker error", string(tmp[:len(END_MARKER)]))
+		fmt.Println(hex.EncodeToString(tmp[:len(END_MARKER)]))
 		goto fatal_error
 	}
 
@@ -377,7 +377,7 @@ func MempoolLoad() bool {
 				}
 			}
 			if t2s.MemInputCnt == 0 {
-				println("ERROR: MemInputs not nil but nothing found")
+				fmt.Println("ERROR: MemInputs not nil but nothing found")
 				t2s.memInputsSet(nil)
 			}
 		}
@@ -394,7 +394,7 @@ func MempoolLoad() bool {
 
 	if CheckForErrors() {
 		if MempoolCheck() {
-			println("ERROR: TXPool not OK after loading. Start the client with -mp0 to recover.")
+			fmt.Println("ERROR: TXPool not OK after loading. Start the client with -mp0 to recover.")
 			os.Exit(1)
 		}
 		fmt.Println("Mempool OK so far. CheckErrors is on - will be checking for errors")

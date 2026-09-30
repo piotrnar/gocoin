@@ -108,7 +108,7 @@ func (txr *OneTxRejected) Add() {
 	bidx := txr.Id.BIdx()
 	if CheckForErrors() {
 		if _, ok := TransactionsRejected[bidx]; ok {
-			println("ERROR: AddRejectedTx: TxR", txr.Id.String(), "is already on the list")
+			fmt.Println("ERROR: AddRejectedTx: TxR", txr.Id.String(), "is already on the list")
 			return
 		}
 	}
@@ -121,7 +121,7 @@ func (txr *OneTxRejected) Add() {
 		if !TRIdIsZeroArrayRec(TRIdxTail) { // remove the oldest record
 			if txr, ok := TransactionsRejected[TRIdxArray[TRIdxTail]]; ok {
 				if int(txr.ArrIndex) != TRIdxTail {
-					println("ERROR: txr.ArrIndex != TRIdxTail", int(txr.ArrIndex), TRIdxTail)
+					fmt.Println("ERROR: txr.ArrIndex != TRIdxTail", int(txr.ArrIndex), TRIdxTail)
 				}
 				common.CountSafe("TxRLimNumberCount")
 				common.CountSafeAdd("TxRLimNumberBytes", uint64(txr.Footprint))
@@ -209,7 +209,7 @@ func (tr *OneTxRejected) cleanup() {
 					common.CountSafe("TxUsedUTXOrem")
 				}
 			} else {
-				println("ERROR: TxR", tr.Id.String(), "was in RejectedSpentOutputs, but not on the list. PLEASE REPORT!")
+				fmt.Println("ERROR: TxR", tr.Id.String(), "was in RejectedSpentOutputs, but not on the list. PLEASE REPORT!")
 			}
 		}
 	}
@@ -220,7 +220,7 @@ func (tr *OneTxRejected) cleanup() {
 		if w4i := WaitingForInputs[w4idx]; w4i != nil {
 			if len(w4i.Ids) == 1 {
 				if w4i.Ids[0] != bidx {
-					println("ERROR: WaitingForInputs record does not have us at the only txr\n  txr:", tr.Waiting4.String(), tr.Id.String())
+					fmt.Println("ERROR: WaitingForInputs record does not have us at the only txr\n  txr:", tr.Waiting4.String(), tr.Id.String())
 				} else {
 					delete(WaitingForInputs, w4idx)
 					w4i.Ids = nil
@@ -228,13 +228,13 @@ func (tr *OneTxRejected) cleanup() {
 			} else {
 				idx := slices.Index(w4i.Ids, bidx)
 				if idx < 0 {
-					println("ERROR: WaitingForInputs record len", len(w4i.Ids), "does nnot have us\n  ", tr.Waiting4.String(), tr.Id.String())
+					fmt.Println("ERROR: WaitingForInputs record len", len(w4i.Ids), "does nnot have us\n  ", tr.Waiting4.String(), tr.Id.String())
 				} else {
 					w4i.Ids = slices.Delete(w4i.Ids, idx, idx+1)
 				}
 			}
 		} else {
-			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String(), "from txr", tr.Id.String())
+			fmt.Println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String(), "from txr", tr.Id.String())
 		}
 		WaitingForInputsSize -= uint64(tr.Footprint)
 		tr.Waiting4 = nil
@@ -293,10 +293,10 @@ func txAccepted(bidx btc.BIDX) {
 
 		if CheckForErrors() {
 			if txr == nil {
-				println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(wtg.Ids[0]), "/", len(wtg.Ids))
+				fmt.Println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(wtg.Ids[0]), "/", len(wtg.Ids))
 				panic("This should not happen")
 			} else if txr.Tx == nil || txr.Reason != TX_REJECTED_NO_TXOU {
-				println("ERROR: WaitingForInput found in rejected, but bad data or reason:", txr.Id.String(), txr.Tx, txr.Reason)
+				fmt.Println("ERROR: WaitingForInput found in rejected, but bad data or reason:", txr.Id.String(), txr.Tx, txr.Reason)
 				panic("This should not happen")
 			}
 		}
@@ -312,7 +312,7 @@ func txAccepted(bidx btc.BIDX) {
 				txrr := txr.Hash.BIdx()
 				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
 					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
-						println("w4txr", btc.BIdxString(txrr), "removed and then put back with", res, "at idx", idx, "of len", len(wtg.Ids))
+						fmt.Println("w4txr", btc.BIdxString(txrr), "removed and then put back with", res, "at idx", idx, "of len", len(wtg.Ids))
 						panic("This should not happen")
 						//common.CountSafe("Tx*Weird")
 					}
@@ -443,7 +443,7 @@ func resizeTransactionsRejectedCount(newcnt int) {
 			if txr, ok := TransactionsRejected[TRIdxArray[TRIdxTail]]; ok {
 				old_txrs = append(old_txrs, txr)
 			} else {
-				println("ERROR: TRIdxArray cointains bad pointer on non-zero record", TRIdxTail)
+				fmt.Println("ERROR: TRIdxArray cointains bad pointer on non-zero record", TRIdxTail)
 			}
 		}
 		if TRIdxTail == TRIdxHead {

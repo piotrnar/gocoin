@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -78,7 +79,7 @@ func (t2s *OneTxToSend) AddToSort() {
 	}()
 	if WorstT2S == nil || BestT2S == nil {
 		if CheckForErrors() && (WorstT2S != nil || BestT2S != nil) {
-			println("ERROR: if WorstT2S is nil BestT2S should be nil too", WorstT2S, BestT2S)
+			fmt.Println("ERROR: if WorstT2S is nil BestT2S should be nil too", WorstT2S, BestT2S)
 			WorstT2S, BestT2S = nil, nil
 		}
 		t2s.SortRank = SORT_START_INDEX
@@ -144,11 +145,11 @@ func (t2s *OneTxToSend) DelFromSort() {
 	}
 	if CheckForErrors() {
 		if t2s.worse == nil {
-			println("ERROR: t2s.Worse is nil but t2s was not WorstT2S", WorstT2S, BestT2S, t2s.worse)
+			fmt.Println("ERROR: t2s.Worse is nil but t2s was not WorstT2S", WorstT2S, BestT2S, t2s.worse)
 			panic("This should not happen")
 		}
 		if t2s.worse.better != t2s {
-			println("ERROR: t2s.Worse.Better is not pointing to t2s", WorstT2S, BestT2S, t2s, t2s.worse, t2s.worse.better)
+			fmt.Println("ERROR: t2s.Worse.Better is not pointing to t2s", WorstT2S, BestT2S, t2s, t2s.worse, t2s.worse.better)
 			panic("This should not happen")
 		}
 	}
@@ -156,11 +157,11 @@ func (t2s *OneTxToSend) DelFromSort() {
 
 	if CheckForErrors() {
 		if t2s.better == nil {
-			println("ERROR: t2s.Better is nil but t2s was not BestT2S", WorstT2S, BestT2S, t2s.better)
+			fmt.Println("ERROR: t2s.Better is nil but t2s was not BestT2S", WorstT2S, BestT2S, t2s.better)
 			panic("This should not happen")
 		}
 		if t2s.better.worse != t2s {
-			println("ERROR: t2s.Better.Worse is not pointing to t2s", WorstT2S, BestT2S, t2s, t2s.better, t2s.better.worse)
+			fmt.Println("ERROR: t2s.Better.Worse is not pointing to t2s", WorstT2S, BestT2S, t2s, t2s.better, t2s.better.worse)
 			panic("This should not happen")
 		}
 	}
@@ -173,7 +174,7 @@ func (t2s *OneTxToSend) findWorstParent() (wpr *OneTxToSend) {
 			parent_bidx := btc.BIdx(t2s.Tx.TxIn[i].Input.Hash[:])
 			parent := TransactionsToSend[parent_bidx]
 			if CheckForErrors() && parent == nil {
-				println("ERROR: not existing parent", btc.BIdxString(parent_bidx), "for", t2s.Hash.String())
+				fmt.Println("ERROR: not existing parent", btc.BIdxString(parent_bidx), "for", t2s.Hash.String())
 				return
 			}
 			if wpr == nil || parent.SortRank > wpr.SortRank {
@@ -460,7 +461,7 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 	}
 
 	if CheckForErrors() && (len(result) != cap(result) || len(result) != len(already_in) || len(parent_of) != 0) {
-		println("ERROR: Get sorted mempool cap:", cap(result), " result:", len(result), " alreadyin:", len(already_in), " parents:", len(parent_of))
+		fmt.Println("ERROR: Get sorted mempool cap:", cap(result), " result:", len(result), " alreadyin:", len(already_in), " parents:", len(parent_of))
 		panic("This should not happen")
 	}
 

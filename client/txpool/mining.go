@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -25,19 +26,19 @@ func (tx *OneTxToSend) mined() {
 			if rec, ok := TransactionsToSend[val]; ok {
 				if CheckForErrors() && rec.MemInputs == nil {
 					common.CountSafe("TxMinedMeminER1")
-					println("ERROR: out just mined in", rec.Hash.String(), "- not marked as mem")
+					fmt.Println("ERROR: out just mined in", rec.Hash.String(), "- not marked as mem")
 					continue
 				}
 				idx := rec.IIdx(uidx)
 				if CheckForErrors() {
 					if idx < 0 {
 						common.CountSafe("TxMinedMeminER2")
-						println("ERROR: out just mined. Was in SpentOutputs & mempool, but DUPA")
+						fmt.Println("ERROR: out just mined. Was in SpentOutputs & mempool, but DUPA")
 						continue
 					}
 					if !rec.MemInputs[idx] {
-						println("ERROR: ", rec.Hash.String(), "meminp", idx, "is already false")
-						println("  ", rec.MemInputCnt, rec.MemInputs, rec.Footprint, rec.SysSize())
+						fmt.Println("ERROR: ", rec.Hash.String(), "meminp", idx, "is already false")
+						fmt.Println("  ", rec.MemInputCnt, rec.MemInputs, rec.Footprint, rec.SysSize())
 					}
 				}
 				rec.MemInputs[idx] = false
@@ -50,7 +51,7 @@ func (tx *OneTxToSend) mined() {
 				SortListDirty = true // will need to resort after
 			} else {
 				common.CountSafe("TxMinedMeminERR")
-				println("ERROR: out in SpentOutputs, but not in mempool")
+				fmt.Println("ERROR: out in SpentOutputs, but not in mempool")
 			}
 		}
 	}
@@ -68,7 +69,7 @@ func (tx *OneTxToSend) unmined() {
 				}
 				idx := rec.IIdx(uidx)
 				if rec.MemInputs[idx] {
-					println("ERROR: out", btc.NewUint256(tx.Hash.Hash[:]).String(), "-", idx, "already marked as MI")
+					fmt.Println("ERROR: out", btc.NewUint256(tx.Hash.Hash[:]).String(), "-", idx, "already marked as MI")
 				} else {
 					rec.MemInputs[idx] = true
 					rec.MemInputCnt++
@@ -76,10 +77,10 @@ func (tx *OneTxToSend) unmined() {
 					common.CountSafe("TxPutBackMemIn")
 				}
 				if CheckForErrors() && rec.Footprint != uint32(rec.SysSize()) {
-					println("ERROR: MarkChildrenForMem footprint mismatch", rec.Footprint, uint32(rec.SysSize()))
+					fmt.Println("ERROR: MarkChildrenForMem footprint mismatch", rec.Footprint, uint32(rec.SysSize()))
 				}
 			} else {
-				println("ERROR: MarkChildrenForMem: in SpentOutputs, but not in mempool")
+				fmt.Println("ERROR: MarkChildrenForMem: in SpentOutputs, but not in mempool")
 				common.CountSafe("TxPutBackMeminERR")
 			}
 		}
@@ -115,11 +116,11 @@ func txMined(tx *btc.Tx) {
 					rec.Delete(true, 0) // NOTE: this does not remove relevant RejectedSpentOutputs record(s)
 					if CheckForErrors() {
 						if _, ok := SpentOutputs[idx]; ok {
-							println("ERROR: SpentOutput was supposed to be deleted, but still here\n  ", inp.Input.String())
+							fmt.Println("ERROR: SpentOutput was supposed to be deleted, but still here\n  ", inp.Input.String())
 						}
 					}
 				} else {
-					println("ERROR: Input SpentOutputs, but tx not in mempool\n  ", inp.Input.String())
+					fmt.Println("ERROR: Input SpentOutputs, but tx not in mempool\n  ", inp.Input.String())
 					delete(SpentOutputs, idx)
 				}
 			}
@@ -147,7 +148,7 @@ func txMined(tx *btc.Tx) {
 						}
 					}
 				} else {
-					println("ERROR: UTXO present in RejectedSpentOutputs, not in TransactionsRejected\n  ", inp.Input.String())
+					fmt.Println("ERROR: UTXO present in RejectedSpentOutputs, not in TransactionsRejected\n  ", inp.Input.String())
 				}
 			}
 			delete(RejectedSpentOutputs, idx) // this record will not be needed anymore
@@ -210,7 +211,7 @@ func BlockUndone(bl *btc.Block) {
 			t2s.unmined()
 			common.CountSafe("TxUnmineOK")
 		} else {
-			println("ERROR: TxUnmineFail:", ntx.Hash.String(), res)
+			fmt.Println("ERROR: TxUnmineFail:", ntx.Hash.String(), res)
 			common.CountSafePar("TxUnmineFail-", res)
 			os.Exit(1)
 		}
