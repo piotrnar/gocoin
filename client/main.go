@@ -236,7 +236,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 					delay_sec := seconds_ahead - (7200 - SAFETY_MARGIN)
 					time.Sleep(time.Duration(delay_sec) * time.Second)
 					network.NetRouteInv(network.MSG_BLOCK, h, con)
-					//println("Invs for", bl.Height, bl.Hash.String(), "delayed by", delay_sec, "seconds")
+					//fmt.Println("Invs for", bl.Height, bl.Hash.String(), "delayed by", delay_sec, "seconds")
 					common.CountSafe("BlockInvHeld")
 				}(bl.Hash, newbl.Conn)
 			} else {
@@ -289,7 +289,7 @@ func get_block_from_disk_cache(hash *btc.Uint256) (bl *btc.Block) {
 	hashes, e := os.ReadFile(tmpfn + ".hashes")
 	os.Remove(tmpfn + ".hashes")
 	if e != nil {
-		println("Error reading block data", e.Error())
+		fmt.Println("Error reading block data", e.Error())
 		// hashes not stored - calculate them in BuildTxList()
 		if e = bl.BuildTxList(); e != nil {
 			panic(e.Error())
@@ -377,7 +377,7 @@ not_found:
 	}
 
 	if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
-		//println("Cached", newbl.BlockTreeNode.Height, cached_min_height, newbl.BlockTreeNode.BlockHash.String(), "has no parent. Try next one.")
+		//fmt.Println("Cached", newbl.BlockTreeNode.Height, cached_min_height, newbl.BlockTreeNode.BlockHash.String(), "has no parent. Try next one.")
 		goto try_next_one
 	}
 
@@ -661,7 +661,7 @@ func main() {
 		if cl, er := setupLogging(common.FLAG.LogFile); er == nil {
 			clean_function = cl
 		} else {
-			println("ERROR:", er.Error())
+			fmt.Println("ERROR:", er.Error())
 		}
 	}
 
