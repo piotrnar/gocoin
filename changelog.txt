@@ -82,7 +82,7 @@
 * Client/Lib/Wallet/Tools: Fixed various typos in code comments and printed/logged messages, and renamed InvsRecieved to InvsReceived
 * Client/TextUI: New command "buildinfo" for showing go build informations
 * Lib/chain, Client: fixed data races on the block tree's child links (reading BlockTreeNode.Childs without BlockIndexAccess, while new headers or discarded branches were modifying it)
-* Client/TextUI: all the console output goes to stdout now (builtin print/println wrote to stderr, bypassing the WebUI virtual console)
+* Client: all the console output goes to stdout now (builtin print/println wrote to stderr, bypassing the WebUI virtual console)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
