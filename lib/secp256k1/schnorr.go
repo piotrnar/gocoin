@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding"
 	"encoding/hex"
+	"fmt"
 	"hash"
 )
 
@@ -62,7 +63,7 @@ func SchnorrSign(m, sk, a []byte) []byte {
 
 	n.SetBytes(sk) // d
 	if n.is_zero() || !n.is_below(&TheCurve.Order) {
-		println("SchnorrSign: d out of range")
+		fmt.Println("SchnorrSign: d out of range")
 		return nil
 	}
 	ECmultGen(&xyz, &n)
@@ -92,7 +93,7 @@ func SchnorrSign(m, sk, a []byte) []byte {
 	n.SetBytes(k0)
 	n.mod(&TheCurve.Order)
 	if n.is_zero() {
-		println("SchnorrSign: k' is zero")
+		fmt.Println("SchnorrSign: k' is zero")
 		return nil
 	}
 	ECmultGen(&xyz, &n)
@@ -130,7 +131,7 @@ func SchnorrSign(m, sk, a []byte) []byte {
 
 	copy(res[32:], n.get_bin(32))
 	if !SchnorrVerify(t, res, m) {
-		println("SchnorrSign: verify error", hex.EncodeToString(res))
+		fmt.Println("SchnorrSign: verify error", hex.EncodeToString(res))
 		return nil
 	}
 	return res
