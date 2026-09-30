@@ -2,13 +2,15 @@ package chain
 
 import (
 	"errors"
+	"fmt"
+
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 func nextBlock(ch *Chain, hash, header []byte, height, blen, txs uint32) {
 	bh := btc.NewUint256(hash[:])
 	if _, ok := ch.BlockIndex[bh.BIdx()]; ok {
-		println("nextBlock:", bh.String(), "- already in")
+		fmt.Println("nextBlock:", bh.String(), "- already in")
 		return
 	}
 	v := new(BlockTreeNode)
@@ -30,7 +32,7 @@ func (ch *Chain) loadBlockIndex() {
 
 	ch.Blocks.LoadBlockIndex(ch, nextBlock)
 	tlb := ch.Unspent.LastBlockHash
-	//println("Building tree from", len(ch.BlockIndex), "nodes")
+	//fmt.Println("Building tree from", len(ch.BlockIndex), "nodes")
 	for k, v := range ch.BlockIndex {
 		if AbortNow {
 			return
@@ -42,8 +44,8 @@ func (ch *Chain) loadBlockIndex() {
 
 		par, ok := ch.BlockIndex[btc.NewUint256(v.BlockHeader[4:36]).BIdx()]
 		if !ok {
-			println("ERROR: Block", v.Height, v.BlockHash.String(), "has no Parent")
-			println("...", btc.NewUint256(v.BlockHeader[4:36]).String(), "- removing it from blocksDB")
+			fmt.Println("ERROR: Block", v.Height, v.BlockHash.String(), "has no Parent")
+			fmt.Println("...", btc.NewUint256(v.BlockHeader[4:36]).String(), "- removing it from blocksDB")
 			delete(ch.BlockIndex, k)
 			continue
 		}
@@ -51,11 +53,11 @@ func (ch *Chain) loadBlockIndex() {
 		v.Parent.addChild(v)
 	}
 	if tlb == nil {
-		//println("No last block - full rescan will be needed")
+		//fmt.Println("No last block - full rescan will be needed")
 		ch.SetLast(ch.BlockTreeRoot)
 		return
 	} else {
-		//println("Last Block Hash:", btc.NewUint256(tlb).String())
+		//fmt.Println("Last Block Hash:", btc.NewUint256(tlb).String())
 		last, ok := ch.BlockIndex[btc.NewUint256(tlb).BIdx()]
 		if !ok {
 			panic("Last Block Hash not found")
@@ -69,7 +71,7 @@ func (ch *Chain) GetRawTx(BlockHeight uint32, txid *btc.Uint256) (data []byte, e
 	ch.BlockIndexAccess.Lock()
 	n := ch.LastBlock()
 	if n.Height < BlockHeight {
-		println(n.Height, BlockHeight)
+		fmt.Println(n.Height, BlockHeight)
 		ch.BlockIndexAccess.Unlock()
 		er = errors.New("GetRawTx: block height too big")
 		return

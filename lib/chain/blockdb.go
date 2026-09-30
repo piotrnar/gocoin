@@ -203,9 +203,9 @@ func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 		db.blocksToWrite <- oneB2W{idx: idx, h: bl.Hash.Hash, data: bl.Raw, height: height, txcount: uint32(bl.TxCount)}
 		flush = len(db.blocksToWrite) >= MAX_BLOCKS_TO_WRITE || db.datToWrite >= MAX_DATA_WRITE
 	} else {
-		//println("Block", bl.Hash.String(), "already in", rec.trusted, bl.Trusted)
+		//fmt.Println("Block", bl.Hash.String(), "already in", rec.trusted, bl.Trusted)
 		if !rec.trusted && bl.Trusted.Get() {
-			//println(" ... but now it's getting trusted")
+			//fmt.Println(" ... but now it's getting trusted")
 			if rec.ipos == -1 {
 				// It's not saved yet - just change the flag
 				rec.trusted = true
@@ -217,16 +217,16 @@ func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 	db.mutex.Unlock()
 
 	if trust_it {
-		//println(" ... in the slow mode")
+		//fmt.Println(" ... in the slow mode")
 		db.BlockTrusted(bl.Hash.Hash[:])
 	}
 
 	if flush {
-		//println("Too many blocksToWrite - flush the data...")
+		//fmt.Println("Too many blocksToWrite - flush the data...")
 		if !db.writeAll() {
 			panic("many to write but nothing stored")
 		}
-		//println("flush done")
+		//fmt.Println("flush done")
 	}
 
 	return
@@ -240,7 +240,7 @@ func (db *BlockDB) writeAll() (sync bool) {
 	if sync {
 		db.blockdata.Sync()
 		db.blockindx.Sync()
-		//println("Block(s) saved in", time.Now().Sub(sta).String())
+		//fmt.Println("Block(s) saved in", time.Now().Sub(sta).String())
 	}
 	return
 }
@@ -258,15 +258,15 @@ func (db *BlockDB) removeDatFile(idx uint32) {
 					if _, er := io.Copy(bf, df); er == nil {
 						remove = true
 					} else {
-						println("blockdb.RDF-A:", er.Error())
+						fmt.Println("blockdb.RDF-A:", er.Error())
 					}
 					bf.Close()
 				} else {
-					println("blockdb.RDF-B:", er.Error())
+					fmt.Println("blockdb.RDF-B:", er.Error())
 				}
 				df.Close()
 			} else {
-				println("blockdb.RDF-C:", er.Error())
+				fmt.Println("blockdb.RDF-C:", er.Error())
 			}
 		}
 	} else {
@@ -280,10 +280,10 @@ func (db *BlockDB) removeDatFile(idx uint32) {
 				// Rename it, wait one second and try again...
 				time.Sleep(1e9)
 				if er := os.Remove(dat_file + ".tmp"); er != nil {
-					println("failed to remove", dat_file+".tmp", "because", er.Error())
+					fmt.Println("failed to remove", dat_file+".tmp", "because", er.Error())
 				}
 			} else {
-				println("failed to remove", dat_file, "because", er.Error())
+				fmt.Println("failed to remove", dat_file, "because", er.Error())
 			}
 		}
 	}
@@ -310,7 +310,7 @@ func (db *BlockDB) writeOne() (written bool) {
 	db.mutex.Unlock()
 
 	if rec == nil || rec.ipos != -1 {
-		println("Block not in the index anymore - discard")
+		fmt.Println("Block not in the index anymore - discard")
 		written = true
 		return
 	}
@@ -340,7 +340,7 @@ func (db *BlockDB) writeOne() (written bool) {
 			}
 			db.maxdatfileidx++
 		} else {
-			println("Cannot create", db.dat_fname(db.maxdatfileidx, false))
+			fmt.Println("Cannot create", db.dat_fname(db.maxdatfileidx, false))
 		}
 	}
 
@@ -407,18 +407,18 @@ func (db *BlockDB) BlockInvalid(hash []byte) {
 		db.issue_73_cnt++
 		db.mutex.Unlock()
 		if cnt < 10 {
-			println("BlockInvalid: no such block", btc.NewUint256(hash).String())
+			fmt.Println("BlockInvalid: no such block", btc.NewUint256(hash).String())
 		} else if cnt == 10 {
-			println(string(debug.Stack()))
+			fmt.Println(string(debug.Stack()))
 		}
 		return
 	}
 	if cur.trusted {
-		println("Looks like your UTXO database is corrupt")
-		println("To rebuild it, remove folder: " + db.dirname + "unspent4")
+		fmt.Println("Looks like your UTXO database is corrupt")
+		fmt.Println("To rebuild it, remove folder: " + db.dirname + "unspent4")
 		panic("Trusted block cannot be invalid")
 	}
-	//println("mark", btc.NewUint256(hash).String(), "as invalid")
+	//fmt.Println("mark", btc.NewUint256(hash).String(), "as invalid")
 	if cur.ipos == -1 {
 		// if not written yet, then never write it
 		delete(db.cache, idx)
@@ -436,7 +436,7 @@ func (db *BlockDB) BlockTrusted(hash []byte) {
 	cur, ok := db.blockIndex[idx]
 	if !ok {
 		db.mutex.Unlock()
-		println("BlockTrusted: no such block")
+		fmt.Println("BlockTrusted: no such block")
 		return
 	}
 	if !cur.trusted {
@@ -462,13 +462,13 @@ func (db *BlockDB) setBlockFlag(cur *oneBl, fl byte) {
 
 func (db *BlockDB) Idle() {
 	if db.writeAll() {
-		//println(" * block(s) stored from idle")
+		//fmt.Println(" * block(s) stored from idle")
 	}
 }
 
 func (db *BlockDB) Close() {
 	if db.writeAll() {
-		//println(" * block(s) stored from close")
+		//fmt.Println(" * block(s) stored from close")
 	}
 	db.data_files_done.Wait()
 	db.blockdata.Close()
@@ -688,7 +688,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 			fn := db.dat_fname(idx, false)
 			if fi, er := os.Stat(fn); er == nil && fi.Mode().IsRegular() {
 				db.data_files_done.Add(1)
-				//println("getting rid of", fn, "...")
+				//fmt.Println("getting rid of", fn, "...")
 				db.removeDatFile(idx) // we're not using backgroud process here
 			} else {
 				os.Remove(fn + ".tmp")

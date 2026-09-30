@@ -205,8 +205,8 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 				if len(o.Pk_script) >= 38 && bytes.Equal(o.Pk_script[:6], []byte{0x6a, 0x24, 0xaa, 0x21, 0xa9, 0xed}) {
 					if len(bl.Txs[0].SegWit) != 1 || len(bl.Txs[0].SegWit[0]) != 1 || len(bl.Txs[0].SegWit[0][0]) != 32 {
 						er = errors.New("CheckBlock() : invalid witness nonce size - RPC_Result:bad-witness-nonce-size")
-						println(er.Error())
-						println(bl.Hash.String(), len(bl.Txs[0].SegWit))
+						fmt.Println(er.Error())
+						fmt.Println(bl.Hash.String(), len(bl.Txs[0].SegWit))
 						return
 					}
 

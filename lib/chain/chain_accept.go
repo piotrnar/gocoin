@@ -68,7 +68,7 @@ func (ch *Chain) CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 		changes, sigopscost, e = ch.ProcessBlockTransactions(bl, cur.Height, bl.LastKnownHeight)
 		if e != nil {
 			// ProcessBlockTransactions failed, so trash the block.
-			//println("ProcessBlockTransactionsA", cur.BlockHash.String(), cur.Height, e.Error())
+			//fmt.Println("ProcessBlockTransactionsA", cur.BlockHash.String(), cur.Height, e.Error())
 			ch.BlockIndexAccess.Lock()
 			cur.Parent.delChild(cur)
 			delete(ch.BlockIndex, cur.BlockHash.BIdx())
@@ -100,7 +100,7 @@ func (ch *Chain) CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 			}
 		} else {
 			if !ch.testnet() {
-				println("Orphaned block", bl.Hash.String(), cur.Height)
+				fmt.Println("Orphaned block", bl.Hash.String(), cur.Height)
 			}
 		}
 	}
@@ -156,13 +156,13 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 				spent_map, was_spent := changes.DeledTxs[inp.Hash]
 				if was_spent {
 					if int(inp.Vout) >= len(spent_map) {
-						println("txin", inp.String(), "did not have vout", inp.Vout)
+						fmt.Println("txin", inp.String(), "did not have vout", inp.Vout)
 						e = errors.New("tx VOut too big")
 						return
 					}
 
 					if spent_map[inp.Vout] {
-						println("txin", inp.String(), "already spent in this block")
+						fmt.Println("txin", inp.String(), "already spent in this block")
 						e = errors.New("double spend inside the block")
 						return
 					}
@@ -176,13 +176,13 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 					}
 
 					if inp.Vout >= uint32(len(t)) {
-						println("Vout too big", len(t), inp.String())
+						fmt.Println("Vout too big", len(t), inp.String())
 						e = errors.New("vout too big")
 						return
 					}
 
 					if t[inp.Vout] == nil {
-						println("Vout already spent", inp.String())
+						fmt.Println("Vout already spent", inp.String())
 						e = errors.New("vout already spent")
 						return
 					}
@@ -316,7 +316,7 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 		wait4compl = false
 		wg.Wait()
 		if ver_err_cnt > 0 {
-			println("VerifyScript failed", ver_err_cnt, "time (s)")
+			fmt.Println("VerifyScript failed", ver_err_cnt, "time (s)")
 			e = errors.New(fmt.Sprint("VerifyScripts failed ", ver_err_cnt, "time (s)"))
 			return
 		}
