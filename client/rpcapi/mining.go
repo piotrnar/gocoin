@@ -176,7 +176,7 @@ func GetWork(r *RpcGetWorkResp) {
 	bl.Txs[0] = make_coinbase_tx(height)
 
 	cpfp := txpool.GetSortedMempoolRBF()
-	//println(len(cpfp), "transactions")
+	//fmt.Println(len(cpfp), "transactions")
 	bl.Txs[0].SetHash(bl.Txs[0].SerializeNew()) // this will not be the final hash, but to get a propoer weight in the next line
 	cur_tx_weight := bl.Txs[0].Weight()
 
@@ -188,12 +188,12 @@ func GetWork(r *RpcGetWorkResp) {
 
 		w := tx.Weight()
 		if cur_tx_weight+w > 4e6 {
-			//println("Too many txs - max weight reached")
+			//fmt.Println("Too many txs - max weight reached")
 			break
 		}
 
 		if sigops+v.SigopsCost > btc.MAX_BLOCK_SIGOPS_COST {
-			//println("Too many sigops - limit to 999000 bytes")
+			//fmt.Println("Too many sigops - limit to 999000 bytes")
 			return
 		}
 
@@ -245,7 +245,7 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 	if r.Curtime < r.Mintime {
 		r.Curtime = r.Mintime
 	}
-	println("getblocktemplate timestamp:", time.Unix(int64(r.Curtime), 0).Format("15:04:05"))
+	fmt.Println("getblocktemplate timestamp:", time.Unix(int64(r.Curtime), 0).Format("15:04:05"))
 	height := common.Last.Block.Height + 1
 	bits := common.BlockChain.GetNextWorkRequired(common.Last.Block, uint32(r.Curtime))
 	r.PreviousBlockHash = common.Last.Block.BlockHash.String()
@@ -309,13 +309,13 @@ func get_next_tranche_of_txs(height, timestamp uint32) (res sortedTxList) {
 		}
 
 		if totlen+len(v.Raw) > 1e6 {
-			//println("Too many txs - limit to 999000 bytes")
+			//fmt.Println("Too many txs - limit to 999000 bytes")
 			return
 		}
 		totlen += len(v.Raw)
 
 		if sigops+v.SigopsCost > btc.MAX_BLOCK_SIGOPS_COST {
-			//println("Too many sigops - limit to 999000 bytes")
+			//fmt.Println("Too many sigops - limit to 999000 bytes")
 			return
 		}
 		sigops += v.SigopsCost
@@ -354,13 +354,13 @@ func GetTransactions(height, timestamp uint32) (res []OneTransaction, totfees ui
 	txs_so_far = make(map[[32]byte]uint)
 	totlen = 0
 	sigops = 0
-	//println("\ngetting txs from the pool of", len(txpool.TransactionsToSend), "...")
+	//fmt.Println("\ngetting txs from the pool of", len(txpool.TransactionsToSend), "...")
 	for {
 		new_piece := get_next_tranche_of_txs(height, timestamp)
 		if new_piece.Len() == 0 {
 			break
 		}
-		//println("adding another", len(new_piece))
+		//fmt.Println("adding another", len(new_piece))
 		sort.Sort(new_piece)
 
 		for i := 0; i < len(new_piece); i++ {
@@ -370,7 +370,7 @@ func GetTransactions(height, timestamp uint32) (res []OneTransaction, totfees ui
 		sorted = append(sorted, new_piece...)
 	}
 	/*if len(txs_so_far)!=len(txpool.TransactionsToSend) {
-		println("ERROR: txs_so_far len", len(txs_so_far), " - please report!")
+		fmt.Println("ERROR: txs_so_far len", len(txs_so_far), " - please report!")
 	}*/
 	txs_so_far = nil // leave it for the garbage collector
 
@@ -383,9 +383,9 @@ func GetTransactions(height, timestamp uint32) (res []OneTransaction, totfees ui
 		res[cnt].Sigops = v.SigopsCost
 		res[cnt].Depends = v.depends
 		totfees += v.Fee
-		//println("", cnt+1, v.Tx.Hash.String(), "  turn:", v.startat, "  spb:", int(v.Fee)/len(v.Data), "  depend:", fmt.Sprint(v.depends))
+		//fmt.Println("", cnt+1, v.Tx.Hash.String(), "  turn:", v.startat, "  spb:", int(v.Fee)/len(v.Data), "  depend:", fmt.Sprint(v.depends))
 	}
 
-	//println("returning transacitons:", totlen, len(res))
+	//fmt.Println("returning transacitons:", totlen, len(res))
 	return
 }

@@ -3,6 +3,7 @@ package rpcapi
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -40,7 +41,6 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 							["@450529_000000000000000000cf208f521de0424677f7a87f2f278a1042f38d159565f5.bin"] }' \
 						-H 'content-type: text/plain;' http://127.0.0.1:8332/
 			*/
-			//println("jade z koksem", str[1:])
 			bd, er = os.ReadFile(str[1:])
 		} else {
 			bd, er = hex.DecodeString(str)
@@ -66,12 +66,12 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 
 func SubmitWork(bl *btc.Block) {
 	if bl == nil {
-		println("ERROR: No work pending")
+		fmt.Println("ERROR: No work pending")
 		return
 	}
 
 	bl.Hash = btc.NewSha2Hash(bl.Raw[:80])
-	println("NewBlock by SubmitWork:", bl.Hash.String())
+	fmt.Println("NewBlock by SubmitWork:", bl.Hash.String())
 	wr := bytes.NewBuffer(bl.Raw[:80])
 	btc.WriteVlen(wr, uint64(len(bl.Txs)))
 	for _, tx := range bl.Txs {
@@ -83,7 +83,7 @@ func SubmitWork(bl *btc.Block) {
 
 func submitBlockInt(bl *btc.Block) (result string) {
 	if DO_NOT_SUBMIT {
-		println("*** Do not submit blocks for now - just simulation ***")
+		fmt.Println("*** Do not submit blocks for now - just simulation ***")
 		return
 	}
 
@@ -95,7 +95,7 @@ func submitBlockInt(bl *btc.Block) (result string) {
 	network.ReceivedBlocks[bs.Block.Hash.BIdx()] = &network.OneReceivedBlock{TmStart: time.Now()}
 	network.MutexRcv.Unlock()
 
-	println("###### new block", bs.Block.Hash.String(), "len", len(bl.Raw), "######")
+	fmt.Println("###### new block", bs.Block.Hash.String(), "len", len(bl.Raw), "######")
 	bs.Done.Add(1)
 	RpcBlocks <- bs
 	bs.Done.Wait()
@@ -107,17 +107,17 @@ func submitBlockInt(bl *btc.Block) (result string) {
 		} else {
 			result = bs.Error[idx+13:]
 		}
-		println("submiting block error:", bs.Error)
-		println("submiting block result:", result)
+		fmt.Println("submiting block error:", bs.Error)
+		fmt.Println("submiting block result:", result)
 
-		print("time_now:", time.Now().Unix())
-		print("  cur_block_ts:", bs.Block.BlockTime())
-		print("  last_given_now:", last_given_time)
-		print("  last_given_min:", last_given_mintime)
+		fmt.Print("time_now:", time.Now().Unix())
+		fmt.Print("  cur_block_ts:", bs.Block.BlockTime())
+		fmt.Print("  last_given_now:", last_given_time)
+		fmt.Print("  last_given_min:", last_given_mintime)
 		common.Last.Mutex.Lock()
-		print("  prev_block_ts:", common.Last.Block.Timestamp())
+		fmt.Print("  prev_block_ts:", common.Last.Block.Timestamp())
 		common.Last.Mutex.Unlock()
-		println()
+		fmt.Println()
 
 		return
 	}

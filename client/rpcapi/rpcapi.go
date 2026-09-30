@@ -44,21 +44,21 @@ func process_rpc(b []byte) (out []byte) {
 func my_handler(w http.ResponseWriter, r *http.Request) {
 	u, p, ok := r.BasicAuth()
 	if !ok {
-		println("No HTTP Authentication data")
+		fmt.Println("No HTTP Authentication data")
 		return
 	}
 	if u != common.CFG.RPC.Username {
-		println("HTTP Authentication: bad username")
+		fmt.Println("HTTP Authentication: bad username")
 		return
 	}
 	if p != common.CFG.RPC.Password {
-		println("HTTP Authentication: bad password")
+		fmt.Println("HTTP Authentication: bad password")
 		return
 	}
 	//fmt.Println("========================handler", r.Method, r.URL.String(), u, p, ok, "=================")
 	b, e := io.ReadAll(r.Body)
 	if e != nil {
-		println(e.Error())
+		fmt.Println(e.Error())
 		return
 	}
 
@@ -67,12 +67,12 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 	jd.UseNumber()
 	e = jd.Decode(&RpcCmd)
 	if e != nil {
-		println(e.Error())
+		fmt.Println(e.Error())
 	}
 
 	var resp RpcResponse
 	resp.Id = RpcCmd.Id
-	//println("------------------------------ RPC command:", RpcCmd.Method, "---------------------------------------------")
+	//fmt.Println("------------------------------ RPC command:", RpcCmd.Method, "---------------------------------------------")
 	switch RpcCmd.Method {
 	case "getblocktemplate":
 		var resp_my RpcGetBlockTemplateResp
@@ -90,18 +90,18 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 			jd.Decode(&resp_ok)
 
 			if resp_my.Result.PreviousBlockHash != resp_ok.Result.PreviousBlockHash {
-				println("satoshi @", resp_ok.Result.PreviousBlockHash, resp_ok.Result.Height)
-				println("gocoin  @", resp_my.Result.PreviousBlockHash, resp_my.Result.Height)
+				fmt.Println("satoshi @", resp_ok.Result.PreviousBlockHash, resp_ok.Result.Height)
+				fmt.Println("gocoin  @", resp_my.Result.PreviousBlockHash, resp_my.Result.Height)
 			} else {
-				println(".", len(resp_my.Result.Transactions), resp_my.Result.Coinbasevalue)
+				fmt.Println(".", len(resp_my.Result.Transactions), resp_my.Result.Coinbasevalue)
 				if resp_my.Result.Mintime != resp_ok.Result.Mintime {
-					println("\007Mintime:", resp_my.Result.Mintime, resp_ok.Result.Mintime)
+					fmt.Println("\007Mintime:", resp_my.Result.Mintime, resp_ok.Result.Mintime)
 				}
 				if resp_my.Result.Bits != resp_ok.Result.Bits {
-					println("\007Bits:", resp_my.Result.Bits, resp_ok.Result.Bits)
+					fmt.Println("\007Bits:", resp_my.Result.Bits, resp_ok.Result.Bits)
 				}
 				if resp_my.Result.Target != resp_ok.Result.Target {
-					println("\007Target:", resp_my.Result.Target, resp_ok.Result.Target)
+					fmt.Println("\007Target:", resp_my.Result.Target, resp_ok.Result.Target)
 				}
 			}
 		}
@@ -109,22 +109,22 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 		b, _ = json.Marshal(&resp_my)
 		//os.WriteFile("json/"+RpcCmd.Method+"_resp_my.json", b, 0777)
 		w.Write(append(b, 0x0a))
-		//println(" ... ", string(b))
+		//fmt.Println(" ... ", string(b))
 		return
 
 	case "getwork":
 		var resp_my RpcGetWorkResp
-		//println("geting work...", DO_SEGWIT, WAIT_FOR_SECONDS, DO_NOT_SUBMIT)
+		//fmt.Println("geting work...", DO_SEGWIT, WAIT_FOR_SECONDS, DO_NOT_SUBMIT)
 		switch uu := RpcCmd.Params.(type) {
 		case []interface{}:
 			if len(uu) >= 1 {
 				if currently_worked_block == nil {
-					println("work submited, but no work in progress")
+					fmt.Println("work submited, but no work in progress")
 					return
 				}
 				d, err := hex.DecodeString(uu[0].(string))
 				if err != nil {
-					println(err.Error())
+					fmt.Println(err.Error())
 					return
 				}
 				swap32(d)
@@ -135,21 +135,21 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 				goto send_response
 			}
 		default:
-			println("***something else")
+			fmt.Println("***something else")
 		}
 		GetWork(&resp_my)
 		b, _ = json.Marshal(&resp_my)
 		w.Write(append(b, 0x0a))
-		//println(" ... ", string(b))
+		//fmt.Println(" ... ", string(b))
 		return
 
 	case "getmininginfo":
-		//println("getmininginfo...")
+		//fmt.Println("getmininginfo...")
 		var rm RpcGetMiningInfoResp
 		rm.Result = mining_info
 		b, _ = json.Marshal(&rm)
 		w.Write(append(b, 0x0a))
-		//println(" ... ", string(b))
+		//fmt.Println(" ... ", string(b))
 		return
 
 	case "validateaddress":
@@ -159,11 +159,11 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 				resp.Result = ValidateAddress(uu[0].(string))
 			}
 		default:
-			println("unexpected type", uu)
+			fmt.Println("unexpected type", uu)
 		}
 
 	case "submitblock":
-		println("_________________________SH__________________________________")
+		fmt.Println("_________________________SH__________________________________")
 		//os.WriteFile("submitblock.json", b, 0777)
 		SubmitBlock(&RpcCmd, &resp, b)
 
@@ -176,7 +176,7 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 send_response:
 	b, e = json.Marshal(&resp)
 	if e != nil {
-		println("json.Marshal(&resp):", e.Error())
+		fmt.Println("json.Marshal(&resp):", e.Error())
 	}
 
 	//ioutil.WriteFile(RpcCmd.Method+"_resp.json", b, 0777)
