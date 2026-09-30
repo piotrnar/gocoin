@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -246,7 +247,7 @@ func (bl *Block) GetMerkle() (res []byte, mutated bool) {
 	mtr := make([][32]byte, len(bl.Txs), 3*len(bl.Txs)) // make the buffer 3 times longer as we use append() inside CalcMerkle
 	for i, tx := range bl.Txs {
 		if tx == nil {
-			println("GetMerkle(): tx missing", i)
+			fmt.Println("GetMerkle(): tx missing", i)
 			mutated = true
 			return
 		}

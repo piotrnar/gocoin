@@ -26,11 +26,11 @@ func NewUint256(h []byte) (res *Uint256) {
 func NewUint256FromString(s string) (res *Uint256) {
 	d, e := hex.DecodeString(s)
 	if e != nil {
-		//println("NewUint256FromString", s, e.Error())
+		//fmt.Println("NewUint256FromString", s, e.Error())
 		return
 	}
 	if len(d) != 32 {
-		//println("NewUint256FromString", s, "not 32 bytes long")
+		//fmt.Println("NewUint256FromString", s, "not 32 bytes long")
 		return
 	}
 	res = new(Uint256)

@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -225,7 +224,7 @@ func ReadVLen(b io.Reader) (res uint64, e error) {
 	var buf [8]byte
 
 	if _, e = io.ReadFull(b, buf[:1]); e != nil {
-		//println("ReadVLen1 error:", e.Error())
+		//fmt.Println("ReadVLen1 error:", e.Error())
 		return
 	}
 
@@ -237,7 +236,7 @@ func ReadVLen(b io.Reader) (res uint64, e error) {
 	c := 2 << (2 - (0xff - buf[0]))
 
 	if _, e = io.ReadFull(b, buf[:c]); e != nil {
-		println("ReadVLen1 error:", e.Error())
+		fmt.Println("ReadVLen1 error:", e.Error())
 		return
 	}
 	for i := 0; i < c; i++ {
@@ -342,12 +341,12 @@ func StringToSatoshis(s string) (val uint64, er error) {
 		return
 	}
 	if len(ss) != 2 {
-		println("Incorrect amount", s)
-		os.Exit(1)
+		er = errors.New("multiple decimal points")
+		return
 	}
 
 	if len(ss[1]) > 8 {
-		er = errors.New("too many decimal points")
+		er = errors.New("too many digits past decimal point")
 		return
 	}
 	if len(ss[1]) < 8 {

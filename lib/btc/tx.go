@@ -77,7 +77,7 @@ func (t *Tx) AllocVerVars() {
 	if t.TxVerVars == nil {
 		t.TxVerVars = new(TxVerVars)
 	} else {
-		println("ERROR: AllocVerVars() not necessary")
+		fmt.Println("ERROR: AllocVerVars() not necessary")
 	}
 }
 
@@ -477,7 +477,7 @@ func NewTxIn(b []byte) (txin *TxIn, offs int) {
 func NewTx(b []byte) (tx *Tx, offs int) {
 	defer func() { // In case if the buffer was too short, to recover from a panic
 		if r := recover(); r != nil {
-			println("NewTx failed")
+			fmt.Println("NewTx failed")
 			tx = nil
 			offs = 0
 		}
@@ -592,7 +592,7 @@ func TxOutSize(b []byte) int {
 func TxSize(b []byte) (offs int) {
 	defer func() { // In case if the buffer was too short, to recover from a panic
 		if r := recover(); r != nil {
-			println("NewSize failed")
+			fmt.Println("NewSize failed")
 			offs = 0
 		}
 	}()
