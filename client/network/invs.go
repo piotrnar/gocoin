@@ -5,6 +5,7 @@ import (
 	//"time"
 	"bytes"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/txpool"
@@ -53,7 +54,7 @@ func (c *OneConnection) InvStore(typ uint32, hash []byte) {
 
 func (c *OneConnection) ProcessInv(pl []byte) {
 	if len(pl) < 37 {
-		//println(c.PeerAddr.Ip(), "inv payload too short", len(pl))
+		//fmt.Println(c.PeerAddr.Ip(), "inv payload too short", len(pl))
 		c.DoS("InvEmpty")
 		return
 	}
@@ -63,7 +64,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 
 	cnt, of := btc.VLen(pl)
 	if of == 0 || len(pl) != of+36*cnt {
-		println("inv payload length mismatch", len(pl), of, cnt)
+		fmt.Println("inv payload length mismatch", len(pl), of, cnt)
 		c.DoS("InvErr")
 		return
 	}
@@ -87,13 +88,13 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 							c.Node.Height = b2g.Block.Height
 						}
 						common.CountSafe("InvBlockFresh")
-						//println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", b2g.Block.Height, bhash.String())
+						//fmt.Println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", b2g.Block.Height, bhash.String())
 						b2g.addFetchSource(c) // he has it, so we are allowed to fetch it from him
 						c.MutexSetBool(&c.X.GetBlocksDataNow, true)
 					} else {
 						common.CountSafe("InvBlockNew")
 						c.ReceiveHeadersNow()
-						//println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
+						//fmt.Println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
 					}
 					MutexRcv.Unlock()
 				} else {
@@ -120,7 +121,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint32 {
 		if tx, ok := txpool.TransactionsToSend[h.BIdx()]; ok {
 			fee_spkb = (4000 * tx.Fee) / uint64(tx.Weight())
 		} else {
-			println("NetRouteInv: txid", h.String(), "not in mempool")
+			fmt.Println("NetRouteInv: txid", h.String(), "not in mempool")
 		}
 		txpool.TxMutex.Unlock()
 	}
@@ -191,7 +192,7 @@ func (c *OneConnection) GetBlocks(pl []byte) {
 	h2get, hashstop, e := parseLocatorsPayload(pl)
 
 	if e != nil || len(h2get) < 1 || hashstop == nil {
-		println("GetBlocks: error parsing payload from", c.PeerAddr.Ip())
+		fmt.Println("GetBlocks: error parsing payload from", c.PeerAddr.Ip())
 		c.DoS("BadGetBlks")
 		return
 	}

@@ -1,6 +1,7 @@
 package network
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -102,7 +103,7 @@ func check_cache() {
 			lowest_h = h
 		}
 		if h < CachedMinHeight {
-			println(h, CachedMinHeight)
+			fmt.Println(h, CachedMinHeight)
 			panic("h < CachedMinHeight")
 		}
 		for _, bl := range idxs {
@@ -112,7 +113,7 @@ func check_cache() {
 		}
 	}
 	if lowest_h != CachedMinHeight {
-		println(lowest_h, CachedMinHeight)
+		fmt.Println(lowest_h, CachedMinHeight)
 		panic("lowest_h != CachedMinHeight")
 	}
 }
@@ -140,7 +141,7 @@ func CachedBlocksAdd(newbl *BlockRcvd) {
 		CachedBlocksIdx[height] = []*BlockRcvd{newbl}
 	} else {
 		CachedBlocksIdx[height] = append(idxrec, newbl)
-		//println(len(idxrec)+1, "blocks at height", height)
+		//fmt.Println(len(idxrec)+1, "blocks at height", height)
 	}
 	CachedBlocksBytes.Add(newbl.Size)
 	if CachedBlocksBytes.Get() > MaxCachedBlocksSize.Get() {
@@ -268,7 +269,7 @@ func AddB2G(b2g *OneBlockToGet) {
 func DelB2G(idx btc.BIDX) {
 	b2g := BlocksToGet[idx]
 	if b2g == nil {
-		println("DelB2G - not found")
+		fmt.Println("DelB2G - not found")
 		return
 	}
 
@@ -282,12 +283,12 @@ func DelB2G(idx btc.BIDX) {
 			}
 		}
 		if len(n)+1 != len(iii) {
-			println("DelB2G - index not found")
+			fmt.Println("DelB2G - index not found")
 		}
 		IndexToBlocksToGet[bh] = n
 	} else {
 		if iii[0] != idx {
-			println("DelB2G - index not matching")
+			fmt.Println("DelB2G - index not matching")
 		}
 		delete(IndexToBlocksToGet, bh)
 		if bh == LowestIndexToBlocksToGet.Load() {

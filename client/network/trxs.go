@@ -15,7 +15,7 @@ import (
 
 func (c *OneConnection) SendGetMP() error {
 	if len(c.GetMP) == 0 {
-		println("ERROR: SendGetMP() called with no GetMP lock")
+		fmt.Println("ERROR: SendGetMP() called with no GetMP lock")
 		return nil
 	}
 	b := new(bytes.Buffer)
@@ -162,7 +162,7 @@ func (c *OneConnection) ParseTxNet(cmd *BCmsg) {
 	tx, le := btc.NewTx(cmd.pl)
 	if tx == nil {
 		c.DoS("TxRejectedBroken")
-		println(hex.EncodeToString(cmd.pl))
+		fmt.Println(hex.EncodeToString(cmd.pl))
 		return
 	}
 	if le != len(cmd.pl) {
@@ -186,7 +186,7 @@ func (c *OneConnection) ParseTxNet(cmd *BCmsg) {
 			}
 		default:
 			common.CountSafe("TxChannelFULL")
-			//println("NetTxsFULL")
+			//fmt.Println("NetTxsFULL")
 		}
 	})
 }
@@ -196,7 +196,7 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 
 	cnt, er := btc.ReadVLen(br)
 	if er != nil {
-		println("getmp message does not have the length field")
+		fmt.Println("getmp message does not have the length field")
 		c.DoS("GetMPError1")
 		return
 	}
@@ -205,7 +205,7 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 	for i := 0; i < int(cnt); i++ {
 		var idx btc.BIDX
 		if n, _ := br.Read(idx[:]); n != len(idx) {
-			println("getmp message too short")
+			fmt.Println("getmp message too short")
 			c.DoS("GetMPError2")
 			return
 		}

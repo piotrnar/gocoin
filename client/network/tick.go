@@ -42,7 +42,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 
 	c.Mutex.Lock()
 	/*if c.X.Debug {
-		println(c.ConnID, "- ExpireHeadersAndGetData", curr_ping_cnt, c.X.GetHeadersSentAtPingCnt, c.X.GetHeadersInProgress, len(c.GetBlockInProgress))
+		fmt.Println(c.ConnID, "- ExpireHeadersAndGetData", curr_ping_cnt, c.X.GetHeadersSentAtPingCnt, c.X.GetHeadersInProgress, len(c.GetBlockInProgress))
 	}*/
 
 	if c.X.GetHeadersInProgress {
@@ -229,7 +229,7 @@ func (c *OneConnection) Tick(now time.Time) {
 	c.Mutex.Unlock()
 
 	if drop && bip == 0 {
-		//println(c.ConnID, "- dropping")
+		//fmt.Println(c.ConnID, "- dropping")
 		c.Disconnect(true, "PeerDropped")
 		return
 	}
@@ -301,14 +301,14 @@ func tcp_server() {
 	var ad net.TCPAddr
 	ad.IP = net.ParseIP(common.CFG.Net.BindToIF)
 	if ad.IP == nil {
-		println("Check config value of Net.BindToIF - binding to any...")
+		fmt.Println("Check config value of Net.BindToIF - binding to any...")
 		ad.IP = net.IPv4(0, 0, 0, 0)
 	}
 	ad.Port = int(common.ConfiguredTcpPort())
 
 	lis, e := net.ListenTCP("tcp4", &ad)
 	if e != nil {
-		println("ListenTCP", e.Error())
+		fmt.Println("ListenTCP", e.Error())
 		return
 	}
 	defer lis.Close()
@@ -329,7 +329,7 @@ func tcp_server() {
 				// set port to default, for incomming connections
 				ad, e := peersdb.NewIncommingConnection(tc.RemoteAddr().String(), true)
 				if e == nil {
-					//println("incomming connection from", ad.Ip(), tc.RemoteAddr().String())
+					//fmt.Println("incomming connection from", ad.Ip(), tc.RemoteAddr().String())
 					// Hammering protection
 					HammeringMutex.Lock()
 					if rd := RecentlyDisconnected[ad.NetAddr.Ip4]; rd != nil {
@@ -429,7 +429,7 @@ func ConnectFriends() {
 					pks := ls[0][1:]
 					if friends_pubkey_cache != nil {
 						pk = friends_pubkey_cache[pks]
-						//println(" - from cache:", len(pk))
+						//fmt.Println(" - from cache:", len(pk))
 					}
 					if pk == nil {
 						pk = btc.Decodeb58(pks)
@@ -437,9 +437,9 @@ func ConnectFriends() {
 					if len(pk) == 33 {
 						new_pubkey_cache[pks] = pk
 						auth_pubkeys = append(auth_pubkeys, pk)
-						//println("Using Auth Key:", hex.EncodeToString(pk))
+						//fmt.Println("Using Auth Key:", hex.EncodeToString(pk))
 					} else {
-						println(pks, "is not a valid Auth Key. Check your friends.txt file")
+						fmt.Println(pks, "is not a valid Auth Key. Check your friends.txt file")
 					}
 
 				case '+':
@@ -461,7 +461,7 @@ func ConnectFriends() {
 			}
 			ad, _ := peersdb.NewAddrFromString(ls[0], false)
 			if ad != nil {
-				//println(" Trying to connect", ad.Ip())
+				//fmt.Println(" Trying to connect", ad.Ip())
 				addrs_to_connect = append(addrs_to_connect, ad)
 				continue
 			}
@@ -557,7 +557,7 @@ func NetworkTick() {
 				// peer announces its header again, we will fetch it again - and we will
 				// not ban anybody for announcing it.
 				common.CountSafe("BlockDlGivenUp")
-				/*println(time.Now().Format("15:04:05"), "Give up on block", v.Height,
+				/*fmt.Println(time.Now().Format("15:04:05"), "Give up on block", v.Height,
 				v.BlockHash.String(), "announced", age.String(), "ago, while @",
 				common.Last.BlockHeight())*/
 				DelB2G(idx)
@@ -595,11 +595,11 @@ func NetworkTick() {
 	if cnt_headers_in_progress == 0 {
 		if _v != nil {
 			common.CountSafe("GetHeadersPush")
-			/*println("No headers_in_progress, so take it from", _v.ConnID,
+			/*fmt.Println("No headers_in_progress, so take it from", _v.ConnID,
 			_v.X.TotalNewHeadersCount, _v.X.LastHeadersEmpty)*/
 			_v.Mutex.Lock()
 			if _v.X.Debug {
-				println(_v.ConnID, "- GetHeadersPush")
+				fmt.Println(_v.ConnID, "- GetHeadersPush")
 			}
 			_v.X.AllHeadersReceived = false
 			_v.Mutex.Unlock()
@@ -673,7 +673,7 @@ func NetworkTick() {
 		// ... giving us 20% chance of selecting a never tried one.
 		if len(adrs) != 0 {
 			ad := adrs[rand.Int31n(int32(len(adrs)))]
-			//print("chosen ", ad.String(), "\n> ")
+			//fmt.Print("chosen ", ad.String(), "\n> ")
 			DoNetwork(ad)
 		}
 	}
@@ -700,7 +700,7 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 		if len(pl) < 1 {
 			<-c.GetMP
 		} else {
-			println("PEER", c.ConnID, "MISBEHAVE: Sent getmpdone but ticket", GetMPInProgressConnID.Get(), "held elsewere")
+			fmt.Println("PEER", c.ConnID, "MISBEHAVE: Sent getmpdone but ticket", GetMPInProgressConnID.Get(), "held elsewere")
 		}
 		return
 	}
@@ -716,7 +716,7 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 
 	if len(txpool.GetMPInProgressTicket) == 0 {
 		// TODO: remove it at some point (should not be happening)
-		println("ERROR: GetMPDone() exiting without a ticket (will hang)")
+		fmt.Println("ERROR: GetMPDone() exiting without a ticket (will hang)")
 	}
 	<-txpool.GetMPInProgressTicket
 }
@@ -787,7 +787,7 @@ func (c *OneConnection) Run() {
 			if c.unfinished_getdata != nil && !c.SendingPaused() {
 				common.CountSafe("GetDataRestored")
 				tmp := c.unfinished_getdata.Bytes()
-				//println(c.ConnID, "restoring getdata for", len(tmp)/36, "invs")
+				//fmt.Println(c.ConnID, "restoring getdata for", len(tmp)/36, "invs")
 				c.unfinished_getdata = nil
 				c.processGetData(bytes.NewReader(tmp))
 			}
@@ -805,17 +805,17 @@ func (c *OneConnection) Run() {
 
 		if cmd.cmd == "version" {
 			if c.X.VersionReceived {
-				//println("VersionAgain from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent)
+				//fmt.Println("VersionAgain from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent)
 				c.Misbehave("VersionAgain", 1000/10)
 				continue
 			}
 			if c.X.Incomming {
-				//println(c.PeerAddr.Ip(), "sending our own version...")
+				//fmt.Println(c.PeerAddr.Ip(), "sending our own version...")
 				c.SendVersion()
 			}
 			er := c.HandleVersion(cmd.pl)
 			if er != nil {
-				//println("version msg error:", er.Error())
+				//fmt.Println("version msg error:", er.Error())
 				c.DoS("Ver" + er.Error())
 				break
 			}
@@ -861,7 +861,7 @@ func (c *OneConnection) Run() {
 			}
 			continue
 		} else if !c.X.VersionReceived {
-			//println(c.PeerAddr.Ip(), "version not received but", cmd.cmd)
+			//fmt.Println(c.PeerAddr.Ip(), "version not received but", cmd.cmd)
 			c.Misbehave("NoVer"+cmd.cmd, 1000/10)
 			continue
 		}
@@ -928,7 +928,7 @@ func (c *OneConnection) Run() {
 		case "feefilter":
 			if len(cmd.pl) >= 8 {
 				c.X.MinFeeSPKB = int64(binary.LittleEndian.Uint64(cmd.pl[:8]))
-				//println(c.PeerAddr.Ip(), c.Node.Agent, "feefilter", c.X.MinFeeSPKB)
+				//fmt.Println(c.PeerAddr.Ip(), c.Node.Agent, "feefilter", c.X.MinFeeSPKB)
 			}
 
 		case "sendcmpct":
@@ -936,7 +936,7 @@ func (c *OneConnection) Run() {
 				version := binary.LittleEndian.Uint64(cmd.pl[1:9])
 				c.Mutex.Lock()
 				if version > c.Node.SendCmpctVer {
-					//println(c.ConnID, "sendcmpct", cmd.pl[0])
+					//fmt.Println(c.ConnID, "sendcmpct", cmd.pl[0])
 					c.Node.SendCmpctVer = version
 					c.Node.HighBandwidth = cmd.pl[0] == 1
 				} else {
@@ -946,7 +946,7 @@ func (c *OneConnection) Run() {
 			} else {
 				common.CountSafe("SendCmpctErr")
 				if len(cmd.pl) != 5 {
-					println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "sendcmpct", hex.EncodeToString(cmd.pl))
+					fmt.Println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "sendcmpct", hex.EncodeToString(cmd.pl))
 				}
 			}
 
@@ -957,11 +957,11 @@ func (c *OneConnection) Run() {
 
 		case "getblocktxn":
 			c.ProcessGetBlockTxn(cmd.pl)
-			//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "getblocktxn", hex.EncodeToString(cmd.pl))
+			//fmt.Println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "getblocktxn", hex.EncodeToString(cmd.pl))
 
 		case "blocktxn":
 			c.ProcessBlockTxn(cmd)
-			//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
+			//fmt.Println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
 
 		case "getmp":
 			if c.X.Authorized {
@@ -973,7 +973,7 @@ func (c *OneConnection) Run() {
 
 		case "authack":
 			if !cmd.trusted {
-				println(c.PeerAddr.Ip(), "sent us unsigned authack")
+				fmt.Println(c.PeerAddr.Ip(), "sent us unsigned authack")
 				return
 			}
 			c.Mutex.Lock()

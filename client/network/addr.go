@@ -222,7 +222,7 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 		// delete all the new records that came from this ip
 		delcnt := peersdb.DeleteFromIP(c.PeerAddr.Ip4[:])
 		common.CountSafeAdd("AddrBanUndone", uint64(delcnt))
-		//println("Address flood from", c.PeerAddr.Ip(), c.Node.Agent, c.X.Incomming, c.X.AddrMsgsRcvd, time.Now().Sub(c.X.ConnectedAt).String(), delcnt)
+		//fmt.Println("Address flood from", c.PeerAddr.Ip(), c.Node.Agent, c.X.Incomming, c.X.AddrMsgsRcvd, time.Now().Sub(c.X.ConnectedAt).String(), delcnt)
 		c.DoS("AddrFlood")
 	}
 }

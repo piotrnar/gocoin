@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"slices"
@@ -16,22 +17,22 @@ import (
 )
 
 func (c *OneConnection) ProcessGetData(pl []byte) {
-	//println(c.PeerAddr.Ip(), "getdata")
+	//fmt.Println(c.PeerAddr.Ip(), "getdata")
 	b := bytes.NewReader(pl)
 	cnt, e := btc.ReadVLen(b)
 	if e != nil {
-		println("ProcessGetData:", e.Error(), c.PeerAddr.Ip())
+		fmt.Println("ProcessGetData:", e.Error(), c.PeerAddr.Ip())
 		return
 	}
 
 	if b.Len() != int(cnt)*36 {
-		println(c.ConnID, "Inconsistent getdata message:", b.Len(), "!=", cnt*36)
+		fmt.Println(c.ConnID, "Inconsistent getdata message:", b.Len(), "!=", cnt*36)
 		c.DoS("GetDataLenERR")
 		return
 	}
 
 	if c.unfinished_getdata != nil {
-		//println(c.ConnID, "appending pending getdata with", cnt, "more invs")
+		//fmt.Println(c.ConnID, "appending pending getdata with", cnt, "more invs")
 		if c.unfinished_getdata.Len()+b.Len() > 36*50000 {
 			c.DoS("GetDataTooBigA")
 		} else {
@@ -50,7 +51,7 @@ func (c *OneConnection) processGetData(b *bytes.Reader) {
 		if c.SendingPaused() {
 			// note that this function should not be called when c.unfinished_getdata is not nil
 			c.unfinished_getdata = new(bytes.Buffer)
-			//println(c.ConnID, "postpone getdata for", b.Len()/36, "invs")
+			//fmt.Println(c.ConnID, "postpone getdata for", b.Len()/36, "invs")
 			io.Copy(c.unfinished_getdata, b)
 			common.CountSafe("GetDataPaused")
 			break
@@ -90,7 +91,7 @@ func (c *OneConnection) processGetData(b *bytes.Reader) {
 		} else if typ == MSG_CMPCT_BLOCK {
 			common.CountSafe("GetdataCmpctBlk")
 			if !c.SendCmpctBlk(btc.NewUint256(h[4:])) {
-				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "asked for CmpctBlk we don't have", btc.NewUint256(h[4:]).String())
+				fmt.Println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "asked for CmpctBlk we don't have", btc.NewUint256(h[4:]).String())
 				if c.Misbehave("GetCmpctBlk", 100) {
 					break
 				}
@@ -111,7 +112,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 
 	hash := btc.NewSha2Hash(b[:80])
 	idx := hash.BIdx()
-	//println("got block data", hash.String())
+	//fmt.Println("got block data", hash.String())
 
 	MutexRcv.Lock()
 
@@ -130,13 +131,13 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 	// remove from BlocksToGet:
 	b2g := BlocksToGet[idx]
 	if b2g == nil {
-		//println("Block", hash.String(), " from", conn.PeerAddr.Ip(), conn.Node.Agent, " was not expected")
+		//fmt.Println("Block", hash.String(), " from", conn.PeerAddr.Ip(), conn.Node.Agent, " was not expected")
 
 		var sta int
 		sta, b2g = c.ProcessNewHeader(b[:80])
 		if b2g == nil {
 			if sta == PH_STATUS_FATAL {
-				println("Unrequested Block: FAIL - Ban", c.PeerAddr.Ip(), c.Node.Agent)
+				fmt.Println("Unrequested Block: FAIL - Ban", c.PeerAddr.Ip(), c.Node.Agent)
 				c.DoS("BadUnreqBlock")
 			} else {
 				common.CountSafe("ErrUnreqBlock")
@@ -148,11 +149,11 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 		if sta == PH_STATUS_NEW {
 			b2g.SendInvs = true
 		}
-		//println(c.ConnID, " - taking this new block")
+		//fmt.Println(c.ConnID, " - taking this new block")
 		common.CountSafe("UnxpectedBlockNEW")
 	}
 
-	//println("block", b2g.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), b2g.InProgress)
+	//fmt.Println("block", b2g.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), b2g.InProgress)
 
 	prev_block_raw := b2g.Block.Raw // in case if it's a corrupt one
 	b2g.Block.Raw = b
@@ -163,8 +164,8 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er != nil {
-		println("Corrupt block", hash.String(), b2g.BlockTreeNode.Height)
-		println(" ... received from", c.PeerAddr.Ip(), er.Error())
+		fmt.Println("Corrupt block", hash.String(), b2g.BlockTreeNode.Height)
+		fmt.Println(" ... received from", c.PeerAddr.Ip(), er.Error())
 		//ioutil.WriteFile(hash.String()+"-"+conn.PeerAddr.Ip()+".bin", b, 0700)
 		c.DoS("BadBlock")
 
@@ -172,10 +173,10 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 		// ... decreasing of b2g.InProgress will also be done then.
 
 		if b2g.Block.MerkleRootMatch() && !strings.Contains(er.Error(), "RPC_Result:bad-witness-nonce-size") {
-			println(" <- It was a wrongly mined one - give it up")
+			fmt.Println(" <- It was a wrongly mined one - give it up")
 			DiscardBranch(b2g.BlockTreeNode)
 		} else {
-			println(" <- Merkle Root not matching - discard the data:", len(b2g.Block.Txs), b2g.Block.TxCount,
+			fmt.Println(" <- Merkle Root not matching - discard the data:", len(b2g.Block.Txs), b2g.Block.TxCount,
 				b2g.Block.TxOffset, b2g.Block.BlockWeight, b2g.TotalInputs)
 			// We just recived a corrupt copy from the peer. We will ask another peer for it.
 			// But discard the data we extracted from this one, so it won't confuse us later.
@@ -195,7 +196,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 	c.Mutex.Lock()
 	bip := c.GetBlockInProgress[idx]
 	if bip == nil {
-		//println(conn.ConnID, "received unrequested block", hash.String())
+		//fmt.Println(conn.ConnID, "received unrequested block", hash.String())
 		common.CountSafe("UnreqBlockRcvd")
 		c.cntInc("NewBlock!")
 		orb.TxMissing = -2
@@ -233,7 +234,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 			*bei = b2g.Block.BlockExtraInfo
 			b2g.Block = nil
 		} else {
-			println("write tmp block data:", e.Error())
+			fmt.Println("write tmp block data:", e.Error())
 		}
 	}
 
@@ -271,14 +272,14 @@ func parseLocatorsPayload(pl []byte) (h2get []*btc.Uint256, hashstop *btc.Uint25
 		return
 	}
 	if cnt > MAX_LOCATOR_SZ {
-		println("parseLocatorsPayload: limit allocator size form", cnt, "to", MAX_LOCATOR_SZ)
+		fmt.Println("parseLocatorsPayload: limit allocator size form", cnt, "to", MAX_LOCATOR_SZ)
 		cnt = MAX_LOCATOR_SZ
 	}
 
 	// block locator hashes
 	if cnt > 0 {
 		if b.Len() < int(cnt)*32 {
-			println("parseLocatorsPayload: message too short", b.Len(), int(cnt)*32)
+			fmt.Println("parseLocatorsPayload: message too short", b.Len(), int(cnt)*32)
 			er = errors.New("parseLocatorsPayload: message too short")
 			return
 		}
@@ -478,7 +479,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	Fetc.B2G = uint64(cnt)
 
 	if cnt == 0 {
-		//println(c.ConnID, "fetch nothing", cbip, block_data_in_progress, max_height-common.Last.BlockHeight(), cnt_in_progress)
+		//fmt.Println(c.ConnID, "fetch nothing", cbip, block_data_in_progress, max_height-common.Last.BlockHeight(), cnt_in_progress)
 		Fetch.Nothing++
 		// wake up in a few seconds, maybe it will be different next time
 		c.nextGetData = time.Now().Add(5 * time.Second)
@@ -488,7 +489,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	bu := new(bytes.Buffer)
 	btc.WriteVlen(bu, uint64(cnt))
 	pl := append(bu.Bytes(), invs.Bytes()...)
-	//println(c.ConnID, "fetching", cnt, "new blocks ->", cbip)
+	//fmt.Println(c.ConnID, "fetching", cnt, "new blocks ->", cbip)
 	c.SendRawMsg("getdata", pl, false)
 	yes = true
 

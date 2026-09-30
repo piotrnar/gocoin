@@ -68,7 +68,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	if dos, _, er := common.BlockChain.PreCheckBlock(bl); er != nil {
 		common.CountSafe("PreCheckBlockFail")
 		if c.X.Authorized {
-			println("Error from PreCheckBlock", bl.Height, bl.Hash.String(), "\n  ", er.Error(), "  dos:", dos, "  ts:", bl.BlockTime(), "/", time.Now().Unix())
+			fmt.Println("Error from PreCheckBlock", bl.Height, bl.Hash.String(), "\n  ", er.Error(), "  dos:", dos, "  ts:", bl.BlockTime(), "/", time.Now().Unix())
 		}
 		if dos {
 			return PH_STATUS_FATAL, nil
@@ -92,9 +92,9 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 			fmt.Println("All headers fetched up to", node.Height, "after", time.Since(common.StartTime).String(),
 				"- block chain at", common.Last.BlockHeight())
 		}
-		//println("LastCommitedHeader:", LastCommitedHeader.Height, "-change to", LastCommitedHeader.BlockHash.String())
+		//fmt.Println("LastCommitedHeader:", LastCommitedHeader.Height, "-change to", LastCommitedHeader.BlockHash.String())
 	} else {
-		//println("LastCommitedHeader:", LastCommitedHeader.Height, "new:", node.Height, "-keep!")
+		//fmt.Println("LastCommitedHeader:", LastCommitedHeader.Height, "new:", node.Height, "-keep!")
 	}
 
 	if common.LastTrustedBlockMatch(node.BlockHash) {
@@ -134,12 +134,12 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 	b := bytes.NewReader(pl)
 	cnt, e := btc.ReadVLen(b)
 	if e != nil {
-		println("HandleHeaders:", e.Error(), c.PeerAddr.Ip())
+		fmt.Println("HandleHeaders:", e.Error(), c.PeerAddr.Ip())
 		return
 	}
 
 	if cnt > 2000 {
-		println("HandleHeaders: too many headers", cnt, c.PeerAddr.Ip(), c.Node.Agent)
+		fmt.Println("HandleHeaders: too many headers", cnt, c.PeerAddr.Ip(), c.Node.Agent)
 		c.DoS("HdrErrX")
 		return
 	}
@@ -154,13 +154,13 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 			hdr := make([]byte, 80)
 
 			if n, _ := b.Read(hdr); n != 80 {
-				println("HandleHeaders: pl too short 1", c.PeerAddr.Ip(), c.Node.Agent)
+				fmt.Println("HandleHeaders: pl too short 1", c.PeerAddr.Ip(), c.Node.Agent)
 				c.DoS("HdrErr1")
 				return
 			}
 
 			if _, e = btc.ReadVLen(b); e != nil {
-				println("HandleHeaders: pl too short 2", c.PeerAddr.Ip(), c.Node.Agent)
+				fmt.Println("HandleHeaders: pl too short 2", c.PeerAddr.Ip(), c.Node.Agent)
 				c.DoS("HdrErr2")
 				return
 			}
@@ -169,11 +169,11 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 			if b2g == nil {
 				switch sta {
 				case PH_STATUS_FATAL:
-					//println("c.DoS(BadHeader)")
+					//fmt.Println("c.DoS(BadHeader)")
 					c.DoS("BadHeader")
 					return
 				case PH_STATUS_ERROR:
-					//println("c.Misbehave(BadHeader)")
+					//fmt.Println("c.Misbehave(BadHeader)")
 					c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
 				}
 			} else {
@@ -216,7 +216,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 func (c *OneConnection) ReceiveHeadersNow() {
 	c.Mutex.Lock()
 	if c.X.Debug {
-		println(c.ConnID, "- ReceiveHeadersNow()")
+		fmt.Println(c.ConnID, "- ReceiveHeadersNow()")
 	}
 	c.X.AllHeadersReceived = false
 	c.Mutex.Unlock()
@@ -228,13 +228,13 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	h2get, hashstop, e := parseLocatorsPayload(pl)
 
 	if e != nil {
-		//println(time.Now().Format("2006-01-02 15:04:05"), c.ConnID, "GetHeaders: error parsing payload from", c.PeerAddr.Ip(), c.Node.Agent, e.Error())
+		//fmt.Println(time.Now().Format("2006-01-02 15:04:05"), c.ConnID, "GetHeaders: error parsing payload from", c.PeerAddr.Ip(), c.Node.Agent, e.Error())
 		c.DoS("BadGetHdrsA")
 		return
 	}
 
 	if len(h2get) > 101 || hashstop == nil {
-		//println("GetHeaders: too many locators", len(h2get), "or missing hashstop", hashstop, "from", c.PeerAddr.Ip(), c.Node.Agent, e.Error())
+		//fmt.Println("GetHeaders: too many locators", len(h2get), "or missing hashstop", hashstop, "from", c.PeerAddr.Ip(), c.Node.Agent, e.Error())
 		c.DoS("BadGetHdrsB")
 		return
 	}
@@ -249,12 +249,12 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 
 	common.BlockChain.BlockIndexAccess.Lock()
 
-	//println("GetHeaders", len(h2get), hashstop.String())
+	//fmt.Println("GetHeaders", len(h2get), hashstop.String())
 	if len(h2get) > 0 {
 		for i := range h2get {
 			if bl, ok := common.BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
 				if best_block == nil || bl.Height > best_block.Height {
-					//println(" ... bbl", i, bl.Height, bl.BlockHash.String())
+					//fmt.Println(" ... bbl", i, bl.Height, bl.BlockHash.String())
 					best_block = bl
 				}
 			}
@@ -317,7 +317,7 @@ func (c *OneConnection) sendGetHeaders() {
 	for cnt < 50 /*it should never get that far, but just in case...*/ {
 		hashes = append(hashes, lb.BlockHash.Hash[:]...)
 		cnt++
-		//println(" geth", cnt, "height", lb.Height, lb.BlockHash.String())
+		//fmt.Println(" geth", cnt, "height", lb.Height, lb.BlockHash.String())
 		if int(lb.Height) <= min_height {
 			break
 		}
@@ -345,6 +345,6 @@ func (c *OneConnection) sendGetHeaders() {
 	c.X.GetHeadersSentAtPingCnt = c.X.PingSentCnt
 
 	/*if c.X.Debug {
-		println(c.ConnID, "- GetHeadersSentAtPingCnt", c.X.GetHeadersSentAtPingCnt)
+		fmt.Println(c.ConnID, "- GetHeadersSentAtPingCnt", c.X.GetHeadersSentAtPingCnt)
 	}*/
 }

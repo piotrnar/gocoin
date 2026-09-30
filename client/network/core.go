@@ -304,7 +304,7 @@ func (c *OneConnection) Encrypt(plain []byte) (res []byte, er error) {
 	rand.Read(nonce)
 	x := c.aesData.AEAD.Seal(nonce, nonce, plain, nil)
 	if &x[0] != &nonce[0] {
-		println("pipa encrypt")
+		panic("c.aesData.AEAD.Seal should not had changed the address")
 	}
 	return x, nil
 }
@@ -390,7 +390,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte, encrypt bool) (e error
 		// we never allow the buffer to be totally full because then producer would be equal consumer
 		if bytes_left := SendBufSize - c.BytesToSent(); bytes_left <= len(pl)+24 {
 			c.Mutex.Unlock()
-			println(c.PeerAddr.Ip(), c.Node.Version, c.Node.Agent, "Peer Send Buffer Overflow @",
+			fmt.Println(c.PeerAddr.Ip(), c.Node.Version, c.Node.Agent, "Peer Send Buffer Overflow @",
 				cmd, bytes_left, len(pl)+24, c.SendBufProd, c.SendBufCons, c.BytesToSent())
 			c.DoS("SendBufferOverflow")
 			common.CountSafe("PeerSendOverflow")
@@ -417,7 +417,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte, encrypt bool) (e error
 		if encrypt {
 			var er error
 			if pl, er = c.Encrypt(pl); er != nil {
-				println("Encryption failed:", er.Error())
+				fmt.Println("Encryption failed:", er.Error())
 				return
 			}
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl))|0x80000000)
@@ -458,8 +458,8 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 func (c *OneConnection) Disconnect(dead bool, why string) {
 	c.Mutex.Lock()
 	if c.X.Debug {
-		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because -" + why + "-\n> ")
-		//println("LastCmdSent:", c.X.LastCmdSent, c.X.LastBtsSent, "   LastCmdRcvd:", c.X.LastCmdRcvd, c.X.LastBtsRcvd)
+		fmt.Print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because -" + why + "-\n> ")
+		//fmt.Println("LastCmdSent:", c.X.LastCmdSent, c.X.LastBtsSent, "   LastCmdRcvd:", c.X.LastCmdRcvd, c.X.LastBtsRcvd)
 	}
 	c.dead = dead
 	c.broken = true
@@ -478,7 +478,7 @@ func (c *OneConnection) DoS(why string) {
 	common.CountSafe("Ban" + why)
 	c.Mutex.Lock()
 	if c.X.Debug || c.X.Authorized {
-		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
+		fmt.Print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.banit = true
 	c.ban_reason = why
@@ -501,7 +501,7 @@ func (c *OneConnection) expire_misbehave(now int64) {
 			}
 			if idx+1 == len(c.misbehave_history) {
 				if c.X.Debug {
-					println("Un-misbehave "+c.PeerAddr.Ip(), "from", c.misbehave, "to zero")
+					fmt.Println("Un-misbehave "+c.PeerAddr.Ip(), "from", c.misbehave, "to zero")
 				}
 				c.misbehave = 0
 				c.misbehave_history = nil
@@ -514,7 +514,7 @@ func (c *OneConnection) expire_misbehave(now int64) {
 			c.misbehave -= sub
 			c.misbehave_history = c.misbehave_history[idx:]
 			if c.X.Debug {
-				println("Un-misbehave "+c.PeerAddr.Ip(), "by", sub, "to", c.misbehave, "-", len(c.misbehave_history), "left")
+				fmt.Println("Un-misbehave "+c.PeerAddr.Ip(), "by", sub, "to", c.misbehave, "-", len(c.misbehave_history), "left")
 			}
 		}
 	}
@@ -523,7 +523,7 @@ func (c *OneConnection) expire_misbehave(now int64) {
 func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 	c.Mutex.Lock()
 	if c.X.Debug || c.X.Authorized {
-		print("Misbehave ", c.PeerAddr.Ip(), " (", c.Node.Agent, ") because ", why, " - add ", how_much, " to ", c.misbehave, "\n> ")
+		fmt.Print("Misbehave ", c.PeerAddr.Ip(), " (", c.Node.Agent, ") because ", why, " - add ", how_much, " to ", c.misbehave, "\n> ")
 	}
 	if !c.banit {
 		counter := "Bad" + why
@@ -537,7 +537,7 @@ func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 			c.banit = true
 			c.ban_reason = "Bad" + why
 			c.broken = true
-			//print("Ban " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
+			//fmt.Print("Ban " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 		}
 	} else {
 		common.CountSafe("Misb" + why)
@@ -643,7 +643,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 				c.recv.datlen += uint(n)
 				c.Mutex.Unlock()
 				if c.recv.datlen > c.recv.pl_len {
-					println(c.PeerAddr.Ip(), "is sending more of", c.recv.cmd, "then it should have", c.recv.datlen, c.recv.pl_len)
+					fmt.Println(c.PeerAddr.Ip(), "is sending more of", c.recv.cmd, "then it should have", c.recv.datlen, c.recv.pl_len)
 					c.DoS("MsgSizeMismatch")
 					return
 				}
@@ -660,23 +660,23 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 
 	if c.recv.decrypt {
 		if c.aesData == nil {
-			println(c.PeerAddr.Ip(), "- got encrypted msg", c.recv.cmd, "but have no key")
+			fmt.Println(c.PeerAddr.Ip(), "- got encrypted msg", c.recv.cmd, "but have no key")
 			c.DoS("MsgNoKey")
 			return
 		}
 		plain, er := c.Decrypt(c.recv.dat)
 		if er != nil {
-			println(c.PeerAddr.Ip(), "- decryption error:", er.Error())
+			fmt.Println(c.PeerAddr.Ip(), "- decryption error:", er.Error())
 			c.DoS("MsgAuthError")
 			return
 		}
 		c.recv.dat = plain
-		//println(c.PeerAddr.Ip(), "- got encrypted", c.recv.cmd)
+		//fmt.Println(c.PeerAddr.Ip(), "- got encrypted", c.recv.cmd)
 	} else if !c.X.VersionReceived {
 		// only verify the checksum on the first message, as it is pretty pointless task
 		sh := btc.Sha2Sum(c.recv.dat)
 		if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {
-			//println(c.PeerAddr.Ip(), "Msg checksum error")
+			//fmt.Println(c.PeerAddr.Ip(), "Msg checksum error")
 			c.DoS("MsgBadChksum")
 			return
 		}
@@ -815,7 +815,7 @@ func maxmsgsize(cmd string) uint {
 
 func NetCloseAll() {
 	sta := time.Now()
-	println("Closing network")
+	fmt.Println("Closing network")
 	common.NetworkClosed.Set()
 	common.Set(&common.ListenTCP, false)
 	Mutex_net.Lock()

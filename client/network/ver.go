@@ -188,7 +188,7 @@ func (c *OneConnection) SendAuth() {
 	copy(rnd, c.Node.Nonce[:])
 	r, s, er := btc.EcdsaSign(common.SecretKey, rnd)
 	if er != nil {
-		println(er.Error())
+		fmt.Println(er.Error())
 		return
 	}
 	var sig secp256k1.Signature
@@ -228,14 +228,14 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 		var aeskey [32]byte
 		btc.ShaHash(shared_secret[:], aeskey[:])
 		if dat.Block, er = aes.NewCipher(aeskey[:]); er != nil {
-			println("aes.NewCipher:", er.Error())
+			fmt.Println("aes.NewCipher:", er.Error())
 		} else {
 			if dat.AEAD, er = cipher.NewGCM(dat.Block); er != nil {
-				println("cipher.NewGCM:", er.Error())
+				fmt.Println("cipher.NewGCM:", er.Error())
 			} else {
 				dat.nonceSize = dat.AEAD.NonceSize()
 				c.aesData = &dat
-				//println(c.PeerAddr.Ip(), "- secure context established")
+				//fmt.Println(c.PeerAddr.Ip(), "- secure context established")
 			}
 		}
 	}

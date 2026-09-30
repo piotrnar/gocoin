@@ -28,7 +28,7 @@ func (c *OneConnection) HandlePong(pl []byte) {
 	}
 	ms := time.Since(c.LastPingSent) / time.Millisecond
 	if ms == 0 {
-		//println(c.ConnID, "Ping returned after 0ms")
+		//fmt.Println(c.ConnID, "Ping returned after 0ms")
 		ms = 1
 	}
 	c.Mutex.Lock()
@@ -204,7 +204,7 @@ func drop_worst_peer() (dropped bool) {
 		v.Conn.drop = true // we want it to disconnect after all equested blocks are received
 		v.Conn.Mutex.Unlock()
 		dropped = true
-		//println(v.Conn.ConnID, v.Conn.PeerAddr.Ip(), "with ping", v.Ping, "ms and", v.BlockCount, "blocks should drop")
+		//fmt.Println(v.Conn.ConnID, v.Conn.PeerAddr.Ip(), "with ping", v.Ping, "ms and", v.BlockCount, "blocks should drop")
 	}
 	return
 }
@@ -245,7 +245,7 @@ func (c *OneConnection) TryPing(now time.Time) bool {
 	rand.Read(c.PingInProgress[:])
 	c.SendRawMsg("ping", c.PingInProgress, false)
 	c.LastPingSent = time.Now()
-	//println(c.PeerAddr.Ip(), "ping...")
+	//fmt.Println(c.PeerAddr.Ip(), "ping...")
 	return true
 }
 
