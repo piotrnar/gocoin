@@ -309,7 +309,7 @@ func ExpirePeers() {
 			return 0
 		})
 		if cap(recs) != len(recs) {
-			println("ERROR: PeersDB shrunk since we checked its size. Please report!", cap(recs), len(recs))
+			fmt.Println("ERROR: PeersDB shrunk since we checked its size. Please report!", cap(recs), len(recs))
 		}
 		sort.Sort(recs)
 		for i := len(recs) - 1; i >= 0; i-- {
@@ -527,7 +527,7 @@ func initSeeds(seeds []string, port uint16) {
 	for i := range seeds {
 		ad, er := net.LookupHost(seeds[i])
 		if er == nil {
-			//println(len(ad), "addrs from", seeds[i])
+			//fmt.Println(len(ad), "addrs from", seeds[i])
 			for j := range ad {
 				ip := net.ParseIP(ad[j])
 				if len(ip) == net.IPv6len {
@@ -548,7 +548,7 @@ func initSeeds(seeds []string, port uint16) {
 				}
 			}
 		} else {
-			println("initSeeds LookupHost", seeds[i], "-", er.Error())
+			fmt.Println("initSeeds LookupHost", seeds[i], "-", er.Error())
 		}
 	}
 }
@@ -569,14 +569,14 @@ func InitPeers(dir string) {
 		}
 		oa, e := net.ResolveTCPAddr("tcp4", ConnectOnly)
 		if e != nil {
-			println(e.Error(), ConnectOnly)
+			fmt.Println(e.Error(), ConnectOnly)
 			os.Exit(1)
 		}
 		if len(oa.IP) == net.IPv6len {
 			oa.IP = oa.IP.To4()
 		}
 		if len(oa.IP) != net.IPv4len {
-			println("ERROR: Could not resolve IPv4 address of", ConnectOnly)
+			fmt.Println("ERROR: Could not resolve IPv4 address of", ConnectOnly)
 			os.Exit(1)
 		}
 		proxyPeer = NewPeer(nil) // this sets Ip6 field to 00000000000000000000ffff
