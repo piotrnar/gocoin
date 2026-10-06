@@ -254,32 +254,42 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 	OutConsActive++
 	Mutex_net.Unlock()
 	go func() {
-		var con net.Conn
-		var e error
-		con_done := make(chan bool, 1)
+		type dialResult struct {
+			con net.Conn
+			e   error
+		}
+		con_done := make(chan dialResult, 1)
 
 		go func(addr string) {
 			// we do net.Dial() in paralell routine, so we can abort quickly upon request
-			con, e = net.DialTimeout("tcp4", addr, TCPDialTimeout)
-			con_done <- true
+			c, e := net.DialTimeout("tcp4", addr, TCPDialTimeout)
+			con_done <- dialResult{c, e}
 		}(fmt.Sprintf("%d.%d.%d.%d:%d", ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3], ad.Port))
 
 		for {
 			select {
-			case <-con_done:
-				if e == nil {
+			case r := <-con_done:
+				if r.e == nil {
 					Mutex_net.Lock()
-					conn.Conn = con
+					conn.Conn = r.con
 					conn.X.ConnectedAt = time.Now()
 					Mutex_net.Unlock()
 					conn.Run()
 				} else {
+					conn.Mutex.Lock()
 					conn.dead = true
+					conn.Mutex.Unlock()
 				}
 			case <-time.After(10 * time.Millisecond):
 				if !conn.IsBroken() {
 					continue
 				}
+				// aborted while still dialing - close the socket if the dial succeeds later
+				go func() {
+					if r := <-con_done; r.con != nil {
+						r.con.Close()
+					}
+				}()
 			}
 			break
 		}
@@ -288,7 +298,11 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 		conn.delFromList()
 		OutConsActive--
 		Mutex_net.Unlock()
-		if conn.dead {
+
+		conn.Mutex.Lock()
+		dead := conn.dead
+		conn.Mutex.Unlock()
+		if dead {
 			ad.Dead()
 		} else {
 			ad.Save()
