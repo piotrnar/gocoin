@@ -197,15 +197,17 @@ func (c *OneConnection) GetBlocks(pl []byte) {
 		return
 	}
 
+	// Never lock Last.Mutex while holding BlockIndexAccess (main thread locks them in the opposite order)
+	common.Last.Mutex.Lock()
+	last := common.Last.Block
+	common.Last.Mutex.Unlock()
+
 	invs := make(map[[32]byte]bool, 500)
 	for i := range h2get {
 		common.BlockChain.BlockIndexAccess.Lock()
 		if bl, ok := common.BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
 			// make sure that this block is in our main chain
-			common.Last.Mutex.Lock()
-			end := common.Last.Block
-			common.Last.Mutex.Unlock()
-			for ; end != nil && end.Height >= bl.Height; end = end.Parent {
+			for end := last; end != nil && end.Height >= bl.Height; end = end.Parent {
 				if end == bl {
 					addInvBlockBranch(invs, bl, hashstop) // Yes - this is the main chain
 					if len(invs) > 0 {

@@ -245,11 +245,11 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 	if r.Curtime < r.Mintime {
 		r.Curtime = r.Mintime
 	}
-	fmt.Println("getblocktemplate timestamp:", time.Unix(int64(r.Curtime), 0).Format("15:04:05"))
 	height := common.Last.Block.Height + 1
 	bits := common.BlockChain.GetNextWorkRequired(common.Last.Block, uint32(r.Curtime))
 	r.PreviousBlockHash = common.Last.Block.BlockHash.String()
 	common.Last.Mutex.Unlock()
+	fmt.Println("getblocktemplate timestamp:", time.Unix(int64(r.Curtime), 0).Format("15:04:05"))
 
 	target := btc.SetCompact(bits).Bytes()
 

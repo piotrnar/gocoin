@@ -115,9 +115,9 @@ func submitBlockInt(bl *btc.Block) (result string) {
 		fmt.Print("  last_given_now:", last_given_time)
 		fmt.Print("  last_given_min:", last_given_mintime)
 		common.Last.Mutex.Lock()
-		fmt.Print("  prev_block_ts:", common.Last.Block.Timestamp())
+		prev_ts := common.Last.Block.Timestamp()
 		common.Last.Mutex.Unlock()
-		fmt.Println()
+		fmt.Println("  prev_block_ts:", prev_ts)
 
 		return
 	}

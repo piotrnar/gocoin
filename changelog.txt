@@ -84,6 +84,10 @@
 * Lib/chain, Client: fixed data races on the block tree's child links (reading BlockTreeNode.Childs without BlockIndexAccess, while new headers or discarded branches were modifying it)
 * Client: all the console output goes to stdout now (builtin print/println wrote to stderr, bypassing the WebUI virtual console)
 * Client: fixed data race on OneConnection.dead in DoNetwork() (accessed without the mutex while NetCloseAll() was disconnecting peers) and a socket leak when an outgoing connection was aborted while still dialing
+* Client: fixed a deadlock (main thread hanging on Last.Mutex) - "getblocks" handler locked Last.Mutex inside BlockIndexAccess, while the main thread locked them in the opposite order
+* Client: LastCommitedHeader is read under MutexRcv (instead of BlockIndexAccess) in the main thread's block commit routine
+* Client: fixed a self-deadlock when the "-exitat <height>" was reached - exit_now() was called with Last.Mutex already locked
+* Client/RPC/TextUI: no longer printing to the console while holding Last.Mutex (a stalled stdout could block the main thread)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

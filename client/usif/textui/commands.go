@@ -160,12 +160,13 @@ func show_info(par string) {
 	network.MutexRcv.Unlock()
 
 	common.Last.Mutex.Lock()
-	fmt.Println("LastBlock:", common.Last.Block.BlockHash.String(), "@", common.Last.Block.Height)
-	fmt.Printf("  %s (~%s),  Diff: %.0f,  %s ago\n",
-		time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"),
-		time.Unix(int64(common.Last.Block.GetMedianTimePast()), 0).Format("15:04:05"),
-		btc.GetDifficulty(common.Last.Block.Bits()), time.Since(common.Last.Time).String())
+	lb, lt := common.Last.Block, common.Last.Time
 	common.Last.Mutex.Unlock()
+	fmt.Println("LastBlock:", lb.BlockHash.String(), "@", lb.Height)
+	fmt.Printf("  %s (~%s),  Diff: %.0f,  %s ago\n",
+		time.Unix(int64(lb.Timestamp()), 0).Format("2006/01/02 15:04:05"),
+		time.Unix(int64(lb.GetMedianTimePast()), 0).Format("15:04:05"),
+		btc.GetDifficulty(lb.Bits()), time.Since(lt).String())
 
 	network.Mutex_net.Lock()
 	fmt.Printf("Blocks Queued: %d,  Cached: %d,  Discarded: %d,  To Get: %d/%d,  UTXO.db on disk: %d\n",

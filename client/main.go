@@ -203,9 +203,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			fmt.Println("Initial parsing finished in", time.Since(newbl.TmStart).String())
 			common.Last.ParseTill = nil
 		}
-		common.BlockChain.BlockIndexAccess.Lock()
+		network.MutexRcv.Lock()
 		lch := network.LastCommitedHeader
-		common.BlockChain.BlockIndexAccess.Unlock()
+		network.MutexRcv.Unlock()
 		if !syncDoneAnnounced && common.Last.ParseTill == nil && !common.BlockChainSynchronized.Load() {
 			if (common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height ||
 				common.Last.Block.Height == 930e3 || common.Last.Block.Height == 940e3 { // <-- TODO: remove this after testing
@@ -219,11 +219,13 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 				}
 			}
 		}
-		if *exitat != 0 && int(common.Last.Block.Height) == *exitat {
-			exit_now()
-		}
+		do_exit := *exitat != 0 && int(common.Last.Block.Height) == *exitat
 		new_top := common.Last.Block == newbl.BlockTreeNode
 		common.Last.Mutex.Unlock()
+
+		if do_exit {
+			exit_now()
+		}
 
 		if newbl.DoInvs && new_top {
 			// we will end up here for new blosks with minimal POW (testnet)
