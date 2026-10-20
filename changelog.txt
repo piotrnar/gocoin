@@ -89,6 +89,7 @@
 * Client: fixed a self-deadlock when the "-exitat <height>" was reached - exit_now() was called with Last.Mutex already locked
 * Client/RPC/TextUI: no longer printing to the console while holding Last.Mutex (a stalled stdout could block the main thread)
 * Client/WebUI: Fixed the "danger" confirmation dialogs (e.g. "Shut down node") turning semi-transparent on mouse hover
+* Client/WebUI: Hitting Enter inside the "Load transaction" dialog's text area now executes the Load button (Shift+Enter for a new line)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

@@ -88,7 +88,7 @@ function tim2str(tim, timeonly) {
 
 function pushtx() {
 	gc_prompt("Paste the raw transaction data (hex) to load it into the mempool.", "",
-		{title:"Load transaction", multiline:true, ok:"Load", placeholder:"0200000001..."}).then(function(rawtx) {
+		{title:"Load transaction", multiline:true, enter_ok:true, ok:"Load", placeholder:"0200000001..."}).then(function(rawtx) {
 		if (rawtx==null || rawtx.trim()=="") return
 		var form = document.createElement("form")
 		form.setAttribute("method", "post")
@@ -383,7 +383,8 @@ function copyonclick(e) {
    gc_prompt(msg, def, opts) -> Promise<string|null>
    gc_confirm(msg, opts)     -> Promise<bool>
    gc_alert(msg, opts)       -> Promise<void>
-   opts: {title, ok, cancel, danger, multiline, placeholder, mono}
+   opts: {title, ok, cancel, danger, multiline, enter_ok, placeholder, mono}
+   (multiline: Ctrl+Enter submits; with enter_ok also plain Enter, Shift+Enter for a new line)
    --------------------------------------------------------------------------- */
 function gc_dialog(kind, msg, def, opts) {
 	opts = opts || {}
@@ -461,7 +462,7 @@ function gc_dialog(kind, msg, def, opts) {
 		}
 		function onkey(ev) {
 			if (ev.key=='Escape') { ev.preventDefault(); ev.stopPropagation(); no() }
-			else if (ev.key=='Enter' && !(opts.multiline && !ev.ctrlKey && !ev.metaKey)) {
+			else if (ev.key=='Enter' && !(opts.multiline && (opts.enter_ok ? ev.shiftKey : !ev.ctrlKey && !ev.metaKey))) {
 				if (kind!='prompt' || document.activeElement==input || document.activeElement==okb || document.activeElement==box) {
 					ev.preventDefault(); ev.stopPropagation(); ok()
 				}
