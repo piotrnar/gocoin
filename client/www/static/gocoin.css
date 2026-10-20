@@ -568,6 +568,14 @@ input[type=button]:disabled, input[type=submit]:disabled, button.btn:disabled {
 .danger { color: var(--neg); border-color: var(--neg); }
 .danger:hover { background: var(--tint-neg); border-color: var(--neg); }
 .btn-sm, input.btn-sm { padding: 3px 9px; font-size: 12px; }
+
+/* wallet page: make the buttons in panel heads stand out from the panel */
+.walhead input[type=button] { padding: 5px 12px; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.walhead input[type=button]:not(.primary):not(.danger) { background: var(--surface-2); border-color: var(--line-2); }
+.walhead input[type=button]:not(.primary):not(.danger):hover:enabled { background: var(--tint-accent); border-color: var(--accent); }
+.walhead input[type=button].primary:hover:enabled { background: var(--accent-2); border-color: var(--accent-2); }
+.walhead input[type=button].danger { background: var(--tint-neg); }
+.walhead input[type=button].danger:hover:enabled { background: var(--neg); color: #fff; }
 .btn-block { width: 100%; }
 
 /* chips: radio/checkbox groups rendered as segmented pills */
