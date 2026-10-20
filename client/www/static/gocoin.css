@@ -234,7 +234,7 @@ a.topmenu {
 	height: 54px;
 	padding: 0 11px;
 	color: var(--text-2);
-	font-size: 16px;
+	font-size: 15px;
 	font-weight: 500;
 	white-space: nowrap;
 	border-radius: 0;
@@ -610,13 +610,13 @@ input[type=button]:disabled, input[type=submit]:disabled, button.btn:disabled {
 	display: inline-flex;
 	align-items: center;
 	gap: 5px;
-	font-size: 12px;
+	font-size: 13px;
 	font-weight: 500;
 	color: var(--text-2);
 	background: var(--surface-2);
 	border: 1px solid var(--line);
 	border-radius: 999px;
-	padding: 3px 10px;
+	padding: 5px 12px;
 	line-height: 1.3;
 	white-space: nowrap;
 	transition: background .12s, color .12s, border-color .12s;
@@ -626,7 +626,7 @@ input[type=button]:disabled, input[type=submit]:disabled, button.btn:disabled {
 html[data-theme="dark"] .chip input:checked + span { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .chip input:focus-visible + span { box-shadow: var(--focus); }
 .chip input:disabled + span { opacity: .45; cursor: not-allowed; }
-.chip img { height: 14px; }
+.chip img { height: 16px; }
 
 /* toggle switch bound to a real checkbox */
 .tgl { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13px; color: var(--text-2); user-select: none; }
