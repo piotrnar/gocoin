@@ -92,7 +92,7 @@
 * Client/WebUI: Hitting Enter inside the "Load transaction" dialog's text area now executes the Load button (Shift+Enter for a new line)
 * Client/WebUI: Made the buttons in the panel heads of the Wallet page more distinguished (they used to blend into the panel)
 * Client/WebUI: Mempool page - removed the Status/Switches headers; Rejected/Waiting/Own buttons no longer wrap; the left panel grows at the expense of the right one
-* Client/WebUI: Spend page - added a Cancel button for editing the address book (discards the changes)
+* Client/WebUI: Spend page - added a Cancel button for editing the address book (discards the changes); restyled the address book buttons
 * Client/WebUI: Home page - "Last block" panel compacted: hash and receive time moved into the panel head, the remaining values fit in one row
 
 1.11.0 - 2025-11-13:
