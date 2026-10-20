@@ -639,15 +639,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function edit_address_book() {
 	addrr_book_div.style.display='block'
+	addrbook_cancel.style.display='inline-block'
 	addrbook_button.value = "Save Address Book"
 	addrbook_button.onclick = function() {save_address_book()}
 }
 
-function save_address_book() {
-	localStorage.setItem("gocoinAddressBook", address_book.value)
+function close_address_book() {
 	addrr_book_div.style.display='none'
+	addrbook_cancel.style.display='none'
 	addrbook_button.value = "Edit Address Book"
 	addrbook_button.onclick = function() {edit_address_book()}
+}
+
+function save_address_book() {
+	localStorage.setItem("gocoinAddressBook", address_book.value)
+	close_address_book()
+}
+
+function cancel_address_book() {
+	address_book.value = localStorage.getItem("gocoinAddressBook") || ""
+	close_address_book()
 }
 
 </script>
@@ -665,13 +676,14 @@ select.abook option { padding: 3px 6px; }
 <input type="hidden" id="outcnt_val" name="outcnt" value="">
 
 <div class="panel">
-<div class="panel-head">
+<div class="panel-head walhead">
 	<h2>Payment details</h2>
 	<div class="stat-row">
 		<span>selected <b id="selval">0.00000000</b> BTC</span>
 		<span>in <b id="selcnt">0</b> outputs</span>
 	</div>
 	<div class="panel-tools">
+		<input id="addrbook_cancel" type="button" value="Cancel" onclick="cancel_address_book()" class="btn-sm" style="display:none">
 		<input id="addrbook_button" type="button" value="Edit address book" onclick="edit_address_book()" class="btn-sm">
 	</div>
 </div>
