@@ -97,6 +97,7 @@
 * Client/WebUI: Network, Console & Mempool pages - restyled the Edit friends / Unban / Connect peer, Clear and Rejected / Waiting / Own TXs buttons (to match the other panel buttons)
 * Client/WebUI: Replaced the loading.gif icon (white background, looking bad in dark theme) with a theme aware CSS spinner
 * Client/WebUI: Made the checkbox/radio "chip" buttons a bit bigger
+* Client/WebUI: Text with the "mono" class no longer uses a fixed smaller font size, but the size of its surroundings
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

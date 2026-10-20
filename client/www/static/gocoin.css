@@ -133,7 +133,6 @@ hr {
 
 b { font-weight: 600; }
 code, .cod, .mono { font-family: var(--mono); }
-.mono { font-size: 12px; }
 .bold { font-weight: 600; }
 .r { text-align: right; }
 .i { font-style: italic; }
@@ -523,7 +522,7 @@ textarea { font-family: var(--mono); font-size: 12px; line-height: 1.5; resize: 
 input[type=text]:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: var(--focus); }
 input[type=text]:read-only { background: var(--surface-2); color: var(--text-2); }
 input[type=text].err { border-color: var(--neg); background: var(--tint-neg); }
-input[type=text].mono, input.mono { font-family: var(--mono); font-size: 12.5px; }
+input[type=text].mono, input.mono { font-family: var(--mono); font-size: 13px; }
 input::placeholder { color: var(--text-3); }
 select { cursor: pointer; padding-right: 26px; appearance: auto; }
 select[size] { padding: 4px; font-family: var(--mono); font-size: 12px; }
