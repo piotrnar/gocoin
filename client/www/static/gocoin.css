@@ -426,11 +426,9 @@ html[data-theme="dark"] .iconbtn .moon { display: none; }
 .kv .v b { font-weight: 600; }
 .kv .kv-full { grid-column: 1 / -1; }
 .sep { color: var(--text-3); padding: 0 6px; }
-.kv-wide { grid-template-columns: max-content 1fr max-content 1fr max-content 1fr; }
-.kv-wide .kv-span { grid-column: 2 / span 5; }
+.kv-wide4 { grid-template-columns: repeat(4, max-content 1fr); }
 @media (max-width: 900px) {
-	.kv-wide { grid-template-columns: max-content 1fr; }
-	.kv-wide .kv-span { grid-column: 2; }
+	.kv-wide4 { grid-template-columns: max-content 1fr; }
 }
 
 .stat-row {
