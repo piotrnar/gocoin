@@ -786,7 +786,7 @@ textarea#txhexdump {
 .dlg textarea { min-height: 120px; }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .dlg-actions .btn { min-width: 80px; }
-.dlg.danger .dlg-title { color: var(--neg); }
+.dlg.dlg-danger .dlg-title { color: var(--neg); }
 
 .toast {
 	position: fixed;

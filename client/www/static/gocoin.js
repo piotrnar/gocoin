@@ -391,7 +391,7 @@ function gc_dialog(kind, msg, def, opts) {
 		var ov = document.createElement('div')
 		ov.className = 'dlg-overlay'
 		var box = document.createElement('div')
-		box.className = 'dlg' + (opts.danger ? ' danger' : '') + (opts.multiline ? ' wide' : '')
+		box.className = 'dlg' + (opts.danger ? ' dlg-danger' : '') + (opts.multiline ? ' wide' : '')
 		box.setAttribute('role', kind=='alert' ? 'alertdialog' : 'dialog')
 		box.setAttribute('aria-modal', 'true')
 
