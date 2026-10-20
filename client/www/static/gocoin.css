@@ -577,6 +577,29 @@ input[type=button]:disabled, input[type=submit]:disabled, button.btn:disabled {
 .walhead input[type=button].primary:hover:enabled, input[type=button].btn-strong.primary:hover:enabled { background: var(--accent-2); border-color: var(--accent-2); }
 .walhead input[type=button].danger, input[type=button].btn-strong.danger { background: var(--tint-neg); }
 .walhead input[type=button].danger:hover:enabled, input[type=button].btn-strong.danger:hover:enabled { background: var(--neg); color: #fff; }
+/* loading indicator (replaces loading.gif, which has a white background) */
+.spinner {
+	display: inline-block;
+	width: 14px; height: 14px;
+	border: 2px solid var(--line-2);
+	border-top-color: var(--accent);
+	border-radius: 50%;
+	animation: spin .8s linear infinite;
+	vertical-align: middle;
+}
+/* wallet page: the name of the currently loaded wallet */
+.walname {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 2px 10px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--text);
+	background: var(--tint-accent);
+	border: 1px solid var(--accent);
+	border-radius: var(--radius-s);
+	vertical-align: 1px;
+}
 .btn-block { width: 100%; }
 
 /* chips: radio/checkbox groups rendered as segmented pills */

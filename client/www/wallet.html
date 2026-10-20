@@ -251,7 +251,7 @@ function fetch_wallet_balance(name) {
 		}
 	}
 
-	loading_icon.style.display = 'inline'
+	loading_icon.style.display = 'inline-block'
 	fetching_balance_in_progress = aj
 	aj.open("POST", "balance.json?summary" + (mempool ? "&mempool" : ""), true)
 	aj.send(JSON.stringify(wallet_addr))
@@ -524,8 +524,8 @@ function at_click() {
 
 <div id="showwal" class="panel">
 <div class="panel-head walhead">
-	<h2>Wallet <span id="cur_wallet_name" class="cod" style="font-size:14px"></span></h2>
-	<img title="Loading balance" id="loading_icon" src="static/loading.gif" style="display:none" alt="">
+	<h2>Wallet <span id="cur_wallet_name" class="walname"></span></h2>
+	<span title="Loading balance" id="loading_icon" class="spinner" style="display:none"></span>
 	<div class="panel-tools">
 		<label class="tgl"><input type="checkbox" id="show_mempol" onchange="show_mempool_clicked()"><i></i> Show unconfirmed</label>
 		<input type="button" value="Edit" onclick="edit_wallet()" class="btn-sm">

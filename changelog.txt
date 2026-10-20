@@ -95,6 +95,7 @@
 * Client/WebUI: Spend page - added a Cancel button for editing the address book (discards the changes); restyled the address book buttons
 * Client/WebUI: Home page - "Last block" panel compacted: hash and receive time moved into the panel head, the remaining values fit in one row
 * Client/WebUI: Network, Console & Mempool pages - restyled the Edit friends / Unban / Connect peer, Clear and Rejected / Waiting / Own TXs buttons (to match the other panel buttons)
+* Client/WebUI: Replaced the loading.gif icon (white background, looking bad in dark theme) with a theme aware CSS spinner
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
