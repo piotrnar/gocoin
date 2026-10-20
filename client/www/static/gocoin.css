@@ -407,9 +407,10 @@ html[data-theme="dark"] .iconbtn .moon { display: none; }
 	font-size: 12.5px;
 }
 
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; margin-bottom: 16px; }
 .grid2 > .panel { margin-bottom: 0; }
-.grid-side { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; align-items: start; }
+.grid2.grow-left { grid-template-columns: auto minmax(0,1fr); } /* left panel takes what it needs, right one gets the rest */
+.grid-side { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; align-items: start; margin-bottom: 16px; }
 .grid-side > .panel { margin-bottom: 0; }
 .stack > * + * { margin-top: 16px; }
 
@@ -423,6 +424,7 @@ html[data-theme="dark"] .iconbtn .moon { display: none; }
 .kv .k { color: var(--text-2); white-space: nowrap; }
 .kv .v { min-width: 0; }
 .kv .v b { font-weight: 600; }
+.kv .kv-full { grid-column: 1 / -1; }
 .sep { color: var(--text-3); padding: 0 6px; }
 .kv-wide { grid-template-columns: max-content 1fr max-content 1fr max-content 1fr; }
 .kv-wide .kv-span { grid-column: 2 / span 5; }
@@ -1005,7 +1007,7 @@ div.conhint { font-family: var(--mono); font-size: 11.5px; color: var(--text-2);
    Responsive
    -------------------------------------------------------------------------- */
 @media (max-width: 900px) {
-	.grid2, .grid-side { grid-template-columns: 1fr; }
+	.grid2, .grid2.grow-left, .grid-side { grid-template-columns: 1fr; }
 	.topbar-in { padding: 0 14px; gap: 8px; }
 	.page { padding: 14px 12px 30px; }
 }

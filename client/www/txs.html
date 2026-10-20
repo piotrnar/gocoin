@@ -34,9 +34,8 @@
 </div>
 </div>
 
-<div class="grid2">
+<div class="grid2 grow-left">
 <div class="panel">
-<div class="panel-head"><h2>Status</h2></div>
 <div class="panel-body">
 	<div class="kv">
 		<span class="k">RAM used</span>
@@ -50,8 +49,7 @@
 			<span class="sep">·</span><span class="muted"><b id="min_spb"></b> / <b id="cur_fee_spkb" title="Current fee SPKB"></b> SPKB</span></span>
 		<span class="k">Fees in 1st block</span>
 		<span class="v"><b id="fees_from_first_block">...</b> BTC</span>
-		<span class="k">Rejected</span>
-		<span class="v" style="display:flex;gap:6px;flex-wrap:wrap">
+		<span class="kv-full" style="display:flex;gap:6px;flex-wrap:nowrap;white-space:nowrap">
 			<input type="button" id="butre" value="…" onclick="show_txsre()" class="btn-sm" title="Show rejected transactions">
 			<input title="Transactions waiting for their inputs" type="button" id="butw4i" value="…" onclick="show_txw4i()" class="btn-sm">
 			<input type="button" onclick="show_txs2s('&ownonly=1')" value="Own TXs" class="btn-sm" title="Show your own transactions">
@@ -61,7 +59,6 @@
 </div>
 
 <div class="panel">
-<div class="panel-head"><h2>Switches</h2></div>
 <div class="panel-body">
 	<div class="kv" style="align-items:center">
 		<span class="k">Memory pool</span>
@@ -71,14 +68,14 @@
 	</div>
 	<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
 		<b>Upload a transaction file</b>
-		<form id="theform" method="post" enctype="multipart/form-data" onchange="theform.submit()" style="margin:8px 0">
-			<input name="txfile" type="file">
-		</form>
-		<span class="muted small">… or push it via
+		<span class="muted small">or push it via
 		<a href="https://www.blockchain.com/btc/pushtx" target="_blank">blockchain.com</a>,
 		<a href="https://blockstream.info/tx/push" target="_blank">blockstream</a>,
 		<a href="https://coinb.in/send-raw-transaction.html" target="_blank">coinb.in</a>
-		or <a href="https://en.bitcoin.it/wiki/Transaction_broadcasting" target="_blank">others</a>.</span>
+		or <a href="https://en.bitcoin.it/wiki/Transaction_broadcasting" target="_blank">others</a></span>
+		<form id="theform" method="post" enctype="multipart/form-data" onchange="theform.submit()" style="margin:8px 0 0">
+			<input name="txfile" type="file">
+		</form>
 	</div>
 </div>
 </div>
