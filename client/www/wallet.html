@@ -266,6 +266,11 @@ function switch_to_webwallet(name) {
 			break
 		}
 	}
+	// move the highlight to the button of the selected wallet
+	var buts = browser_wallets.getElementsByClassName("walbtn")
+	for (var i=0; i<buts.length; i++) {
+		buts[i].classList.toggle("primary", buts[i].value==name)
+	}
 	fetch_wallet_balance(name)
 }
 

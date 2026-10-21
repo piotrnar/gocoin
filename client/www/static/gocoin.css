@@ -531,13 +531,13 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); cursor: p
 
 input[type=button], input[type=submit], button.btn, a.btn {
 	font-family: inherit;
-	font-size: 12.5px;
+	font-size: 13px;
 	font-weight: 600;
 	color: var(--text);
 	background: var(--surface);
 	border: 1px solid var(--line-2);
 	border-radius: var(--radius-s);
-	padding: 6px 12px;
+	padding: 7px 14px;
 	line-height: 1.2;
 	cursor: pointer;
 	box-shadow: 0 1px 1px rgba(0,0,0,.04);
@@ -566,11 +566,11 @@ input[type=button]:disabled, input[type=submit]:disabled, button.btn:disabled {
 .primary:hover, input[type=submit].primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
 .danger { color: var(--neg); border-color: var(--neg); }
 .danger:hover { background: var(--tint-neg); border-color: var(--neg); }
-.btn-sm, input.btn-sm { padding: 3px 9px; font-size: 12px; }
+.btn-sm, input.btn-sm { padding: 4px 11px; font-size: 13px; }
 
 /* wallet & spend pages: make the buttons in panel heads stand out from the panel */
 /* (or anywhere else, by giving a button the btn-strong class) */
-.walhead input[type=button], input[type=button].btn-strong { padding: 5px 12px; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.walhead input[type=button], input[type=button].btn-strong { padding: 6px 14px; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
 .walhead input[type=button]:not(.primary):not(.danger), input[type=button].btn-strong:not(.primary):not(.danger) { background: var(--surface-2); border-color: var(--line-2); }
 .walhead input[type=button]:not(.primary):not(.danger):hover:enabled, input[type=button].btn-strong:not(.primary):not(.danger):hover:enabled { background: var(--tint-accent); border-color: var(--accent); }
 .walhead input[type=button].primary:hover:enabled, input[type=button].btn-strong.primary:hover:enabled { background: var(--accent-2); border-color: var(--accent-2); }
@@ -615,7 +615,7 @@ input[type=button]:disabled, input[type=submit]:disabled, button.btn:disabled {
 	background: var(--surface-2);
 	border: 1px solid var(--line);
 	border-radius: 999px;
-	padding: 5px 12px;
+	padding: 4px 11px;
 	line-height: 1.3;
 	white-space: nowrap;
 	transition: background .12s, color .12s, border-color .12s;
