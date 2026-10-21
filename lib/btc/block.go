@@ -30,9 +30,9 @@ type BlockUserInfo struct {
 	NoWitnessSize int
 	PaidTxsWeight uint
 
-	OrbTxCnt    uint
-	OrbTxSize   uint
-	OrbTxWeight uint
+	NMonTxCnt    uint
+	NMonTxSize   uint
+	NMonTxWeight uint
 }
 
 type BlockExtraInfo struct {
@@ -216,10 +216,10 @@ func (bl *Block) GetUserInfo() (res *BlockUserInfo) {
 		if !coinbase {
 			weight := uint64(3*tx.NoWitSize + tx.Size)
 			res.PaidTxsWeight += uint(weight)
-			if yes, _ := tx.ContainsOrdFile(true); yes {
-				res.OrbTxCnt++
-				res.OrbTxSize += uint(tx.Size)
-				res.OrbTxWeight += uint(weight)
+			if tx.IsNonMonetary() {
+				res.NMonTxCnt++
+				res.NMonTxSize += uint(tx.Size)
+				res.NMonTxWeight += uint(weight)
 			}
 		}
 	}

@@ -908,3 +908,20 @@ func (tx *Tx) ContainsOrdFile(quick bool) (yes bool, res [][]byte) {
 	}
 	return
 }
+
+func (tx *Tx) ContainsRune() bool {
+	for _, to := range tx.TxOut {
+		if bytes.HasPrefix(to.Pk_script, []byte{OP_RETURN, OP_13}) {
+			return true
+		}
+	}
+	return false
+}
+
+func (tx *Tx) IsNonMonetary() (yes bool) {
+	if tx.ContainsRune() {
+		return true
+	}
+	yes, _ = tx.ContainsOrdFile(true)
+	return
+}

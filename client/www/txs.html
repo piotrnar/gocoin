@@ -762,8 +762,8 @@ function handlehover(event, pos, item) {
 				str += '' + (rec.Weight_so_far/1e6).toFixed(2) + ' MW'
 				str += ' &#8594; ' + (rec.Weight_so_far/4e6).toFixed(2) + ' Blocks<br>'
 				str += ' Fees: ' + val2str(rec.Fees_so_far) + ' BTC<br>'
-				str += ' Ord: ' + (100*rec.Ord_weight_so_far/rec.Weight_so_far).toFixed(0) + '% weight<br>'
-				str += ' &nbsp;&nbsp;&nbsp;' + val2str(rec.Ord_fees_so_far) + ' BTC<br>'
+				str += ' Non-Monetary ' + (100*rec.NM_weight_so_far/rec.Weight_so_far).toFixed(0) + '% weight<br>'
+				str += ' &nbsp;&hellip;&nbsp;' + val2str(rec.NM_fees_so_far) + ' BTC in fees<br>'
 			}
 			showTooltip(item.pageX, item.pageY, str)
 		}

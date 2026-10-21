@@ -570,20 +570,20 @@ func json_mpfees(w http.ResponseWriter, r *http.Request) {
 				Current_tx_spb    float64
 				Time_received     uint
 				Fees_so_far       uint64
-				Ord_weight_so_far uint
-				Ord_fees_so_far   uint64
+				NM_weight_so_far  uint
+				NM_fees_so_far    uint64
 			}
 			var mempool_stats []one_stat_row
 
-			var totweight, totfee, ordweight, ordfees uint64
+			var totweight, totfee, nmweight, nmfees uint64
 			var txcntsofar int
 			for cnt, v := range sorted {
 				newtotweight := totweight + uint64(v.Weight)
 				totfee += v.Fee
 				for _, tx := range v.Txs {
-					if yes, _ := tx.ContainsOrdFile(true); yes {
-						ordweight += uint64(tx.Weight())
-						ordfees += v.Fee
+					if tx.IsNonMonetary() {
+						nmweight += uint64(tx.Weight())
+						nmfees += v.Fee
 					}
 				}
 
@@ -598,8 +598,8 @@ func json_mpfees(w http.ResponseWriter, r *http.Request) {
 						Current_tx_id:     v.Txs[0].Hash.String(),
 						Fees_so_far:       totfee,
 						Time_received:     uint(v.Txs[0].Firstseen.Unix()),
-						Ord_weight_so_far: uint(ordweight),
-						Ord_fees_so_far:   ordfees,
+						NM_weight_so_far:  uint(nmweight),
+						NM_fees_so_far:    nmfees,
 					})
 				}
 				txcntsofar += len(v.Txs)

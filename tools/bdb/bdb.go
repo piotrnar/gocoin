@@ -1270,14 +1270,14 @@ func main() {
 				tot_siz += uint(len(bl.Raw))
 				tot_wht += bl.BlockWeight
 				info := bl.GetUserInfo()
-				tot_otxs += info.OrbTxCnt
-				tot_osiz += info.OrbTxSize
-				tot_owht += info.OrbTxWeight
+				tot_otxs += info.NMonTxCnt
+				tot_osiz += info.NMonTxSize
+				tot_owht += info.NMonTxWeight
 
 				if !fl_ox {
 					fmt.Printf("In block #%d ordinals took %2d%% of txs (%4d), %2d%% of Size (%7d) and %2d%% of Weight (%7d)\n",
-						sl.Height(), 100*info.OrbTxCnt/uint(bl.TxCount), bl.TxCount, 100*info.OrbTxSize/uint(len(bl.Raw)), len(bl.Raw),
-						100*info.OrbTxWeight/bl.BlockWeight, bl.BlockWeight)
+						sl.Height(), 100*info.NMonTxCnt/uint(bl.TxCount), bl.TxCount, 100*info.NMonTxSize/uint(len(bl.Raw)), len(bl.Raw),
+						100*info.NMonTxWeight/bl.BlockWeight, bl.BlockWeight)
 					continue
 				}
 

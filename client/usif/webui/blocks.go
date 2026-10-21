@@ -26,11 +26,11 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		Reward       uint64
 		Sigops       int
 		MissedCnt    int
-		OrdCnt       uint
+		NMonCnt      uint
 		TimePre      int
 		TxCnt        int
-		OrdWeight    uint
-		OrdSize      uint
+		NMonWeight   uint
+		NMonSize     uint
 		TimeDl       int
 		TimeVer      int
 		TimeQue      int
@@ -78,9 +78,9 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.Weight = block.BlockWeight
 		b.Version = block.Version()
 
-		b.OrdCnt = rb.OrbTxCnt
-		b.OrdSize = rb.OrbTxSize
-		b.OrdWeight = rb.OrbTxWeight
+		b.NMonCnt = rb.NMonTxCnt
+		b.NMonSize = rb.NMonTxSize
+		b.NMonWeight = rb.NMonTxWeight
 
 		for o := range cbasetx.TxOut {
 			b.Reward += cbasetx.TxOut[o].Value
