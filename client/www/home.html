@@ -39,17 +39,13 @@
 
 <div class="panel">
 <div class="panel-head" style="align-items:baseline">
-	<h2>Last block hash</h2>
+	<h2>Last block</h2>
 	<span style="flex:1"></span>
-	<span class="hash" style="min-width:0;font-size:13px"><b id="last_block_hash"></b></span>
+	<span style="min-width:0"><span class="muted" style="margin-right:14px">Hash</span><span class="hash" style="font-size:14px"><b id="last_block_hash"></b></span></span>
 	<span style="flex:1"></span>
-	<div class="panel-tools" style="margin-left:0">
-		<span class="muted">Received</span> <b id="last_block_received" style="color:var(--text);font-weight:700"></b>
-	</div>
+	<span class="nw"><span class="muted" style="margin-right:14px">Received</span><b id="last_block_received"></b></span>
 	<span style="flex:1"></span>
-	<div class="panel-tools" style="margin-left:0">
-		<span class="muted">Last header</span> <b title="Last known header" id="si_last_hdr_height" style="color:var(--text);font-weight:700"></b>
-	</div>
+	<span class="nw"><span class="muted" style="margin-right:14px">Last header</span><b title="Last known header" id="si_last_hdr_height"></b></span>
 </div>
 <div class="panel-body">
 	<div class="kv kv-wide4">
@@ -86,7 +82,7 @@
 <div class="panel-head">
 	<h2>Node</h2>
 	<div class="panel-tools">
-		<span class="muted">PID</span> <b id="process_pid">???</b>
+		<span class="muted">PID</span> <b id="process_pid" style="color:var(--text);font-weight:700">???</b>
 		<img id="el_free_mem" class="free hand" style="display:none" onclick="freemem()" title="Free all possible memory">
 	</div>
 </div>
