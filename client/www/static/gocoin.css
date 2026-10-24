@@ -665,49 +665,35 @@ img.pngswitch:hover { transform: scale(1.04); }
    Icons (theme-aware raster icons from /static)
    -------------------------------------------------------------------------- */
 img { display: inline-block; } /* src-less <img> with CSS content:url() must be a replaced box for height to apply */
-img.export_icon        { content: url("export-black.png"); height: 16px; vertical-align: -3px; }
-img.import_icon        { content: url("import-black.png"); height: 16px; vertical-align: -3px; }
-img.music_icon         { content: url("music-black.png"); height: 16px; vertical-align: -3px; }
-img.incoming           { content: url("in-black.png"); height: 15px; vertical-align: -3px; }
-img.outgoing           { content: url("out-black.png"); height: 15px; vertical-align: -3px; }
-img.info               { content: url("info-black.png"); height: 16px; cursor: pointer; vertical-align: -3px; }
-img.del                { content: url("del-black.png"); height: 16px; cursor: pointer; vertical-align: -3px; }
-img.request            { content: url("request-black.png"); height: 16px; cursor: pointer; vertical-align: -3px; }
-img#tcp_server_running { content: url("server-black.png"); height: 16px; vertical-align: -3px; }
-img.refresh            { content: url("refresh-black.png"); height: 16px; cursor: pointer; vertical-align: -3px; }
-img.qrcode             { content: url("qrcode-black.png"); height: 15px; vertical-align: -3px; }
-img.warning            { content: url("warning-black.png"); height: 18px; vertical-align: -4px; }
-img.sort_icon          { content: url("sort-black.png"); height: 16px; }
-img.nosort_icon        { content: url("nosort-black.png"); height: 16px; }
-img.pkgsort-off        { content: url("pkgsort-off-black.png"); height: 16px; }
-img.pkgsort-on         { content: url("pkgsort-on-black.png"); height: 16px; }
-img.free               { content: url("free-black.png"); height: 16px; }
+img.export_icon        { content: url("export.png"); height: 16px; vertical-align: -3px; }
+img.import_icon        { content: url("import.png"); height: 16px; vertical-align: -3px; }
+img.music_icon         { content: url("music.png"); height: 16px; vertical-align: -3px; }
+img.incoming           { content: url("in.png"); height: 15px; vertical-align: -3px; }
+img.outgoing           { content: url("out.png"); height: 15px; vertical-align: -3px; }
+img.info               { content: url("info.png"); height: 16px; cursor: pointer; vertical-align: -3px; }
+img.del                { content: url("del.png"); height: 16px; cursor: pointer; vertical-align: -3px; }
+img.request            { content: url("request.png"); height: 16px; cursor: pointer; vertical-align: -3px; }
+img#tcp_server_running { content: url("server.png"); height: 16px; vertical-align: -3px; }
+img.refresh            { content: url("refresh.png"); height: 16px; cursor: pointer; vertical-align: -3px; }
+img.qrcode             { content: url("qrcode.png"); height: 15px; vertical-align: -3px; }
+img.warning            { content: url("warning.png"); height: 18px; vertical-align: -4px; }
+img.sort_icon          { content: url("sort.png"); height: 16px; }
+img.nosort_icon        { content: url("nosort.png"); height: 16px; }
+img.pkgsort-off        { content: url("pkgsort-off.png"); height: 16px; }
+img.pkgsort-on         { content: url("pkgsort-on.png"); height: 16px; }
+img.free               { content: url("free.png"); height: 16px; }
 img.empty_icon         { content: url("empty.png"); height: 16px; }
-img#auto_theme_switch_img { content: url("theme-switch-black.png"); height: 18px; vertical-align: -4px; }
+img#auto_theme_switch_img { content: url("theme-switch.png"); height: 18px; vertical-align: -4px; }
 
-html[data-theme="dark"] img.export_icon        { content: url("export-white.png"); }
-html[data-theme="dark"] img.import_icon        { content: url("import-white.png"); }
-html[data-theme="dark"] img.music_icon         { content: url("music-white.png"); }
-html[data-theme="dark"] img.incoming           { content: url("in-white.png"); }
-html[data-theme="dark"] img.outgoing           { content: url("out-white.png"); }
-html[data-theme="dark"] img.info               { content: url("info-white.png"); }
-html[data-theme="dark"] img.del                { content: url("del-white.png"); }
-html[data-theme="dark"] img.request            { content: url("request-white.png"); }
-html[data-theme="dark"] img#tcp_server_running { content: url("server-white.png"); }
-html[data-theme="dark"] img.refresh            { content: url("refresh-white.png"); }
-html[data-theme="dark"] img.qrcode             { content: url("qrcode-white.png"); }
-html[data-theme="dark"] img.warning            { content: url("warning-white.png"); }
-html[data-theme="dark"] img.sort_icon          { content: url("sort-white.png"); }
-html[data-theme="dark"] img.nosort_icon        { content: url("nosort-white.png"); }
-html[data-theme="dark"] img.pkgsort-off        { content: url("pkgsort-off-white.png"); }
-html[data-theme="dark"] img.pkgsort-on         { content: url("pkgsort-on-white.png"); }
-html[data-theme="dark"] img.free               { content: url("free-white.png"); }
-html[data-theme="dark"] img#auto_theme_switch_img { content: url("theme-switch-white.png"); }
+/* icons are black glyphs; in dark mode invert them to white */
+html[data-theme="dark"] :is(img.export_icon, img.import_icon, img.music_icon, img.incoming, img.outgoing,
+  img.info, img.del, img.request, img#tcp_server_running, img.refresh, img.qrcode, img.warning,
+  img.sort_icon, img.nosort_icon, img.pkgsort-off, img.pkgsort-on, img.free, img#auto_theme_switch_img,
+  img.copyic) { filter: invert(1); }
 
 img.del:hover, img.info:hover, img.request:hover, img.refresh:hover, img.free:hover { opacity: .7; }
-img.copyic { content: url("copy-black.png"); height: 15px; cursor: pointer; vertical-align: -2px; opacity: .55; transition: opacity .12s; }
+img.copyic { content: url("copy.png"); height: 15px; cursor: pointer; vertical-align: -2px; opacity: .55; transition: opacity .12s; }
 img.copyic:hover { opacity: 1; }
-html[data-theme="dark"] img.copyic { content: url("copy-white.png"); }
 html[data-theme="dark"] img[src$="stats.png"], html[data-theme="dark"] img[src$="message.png"],
 html[data-theme="dark"] img[src$="send.png"], html[data-theme="dark"] img[src$="send_once.png"] { filter: invert(.85) hue-rotate(180deg); }
 
