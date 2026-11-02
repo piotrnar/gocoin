@@ -170,6 +170,11 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.RecalcAverageBlockSize()
 
 		common.Busy()
+		network.MutexRcv.Lock()
+		lch := network.LastCommitedHeader
+		network.MutexRcv.Unlock()
+
+		common.Busy()
 		common.Last.Mutex.Lock()
 		if new_last := common.BlockChain.LastBlock(); new_last != common.Last.Block {
 			common.Last.Block = new_last
@@ -203,9 +208,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			fmt.Println("Initial parsing finished in", time.Since(newbl.TmStart).String())
 			common.Last.ParseTill = nil
 		}
-		network.MutexRcv.Lock()
-		lch := network.LastCommitedHeader
-		network.MutexRcv.Unlock()
 		if !syncDoneAnnounced && common.Last.ParseTill == nil && !common.BlockChainSynchronized.Load() {
 			if (common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == lch.Height ||
 				common.Last.Block.Height == 930e3 || common.Last.Block.Height == 940e3 { // <-- TODO: remove this after testing
