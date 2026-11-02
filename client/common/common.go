@@ -99,13 +99,18 @@ type TheLastBlock struct {
 	ParseTill   *chain.BlockTreeNode
 	sync.Mutex  // use it for writing and reading from non-chain thread
 	ScriptFlags uint32
+	height      uint32 // copy of Block.Height, for lock-free reads
 }
 
-func (b *TheLastBlock) BlockHeight() (res uint32) {
-	b.Mutex.Lock()
-	res = b.Block.Height
-	b.Mutex.Unlock()
-	return
+// SetBlock must be called with b.Mutex locked (or before other threads start).
+func (b *TheLastBlock) SetBlock(n *chain.BlockTreeNode) {
+	b.Block = n
+	atomic.StoreUint32(&b.height, n.Height)
+}
+
+// BlockHeight does not take b.Mutex, so it is safe to call while holding any other lock.
+func (b *TheLastBlock) BlockHeight() uint32 {
+	return atomic.LoadUint32(&b.height)
 }
 
 func CountSafePar[T bool | byte | uint32 | int](k string, par T) {

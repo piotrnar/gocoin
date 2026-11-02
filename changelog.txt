@@ -91,6 +91,7 @@
 * Client/WebUI: Improved the look & feel of the UI (layouts, fonts, buttons, spinner, dialogs; Cancel for the address book editor, Enter to load a TX)
 * Client/WebUI: The concept of Ordinals space usage extended to a bigger set of a Non-Monetary txs (now counts Ordinals and Runes)
 * Client/WebUI: Dropped the "-white" icon variants - dark theme now inverts the black icons via CSS
+* Client: fixed lock-order inversions (Last.Mutex vs MutexRcv, BlockIndexAccess, peer's Mutex) that could deadlock the main thread after long uptime
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

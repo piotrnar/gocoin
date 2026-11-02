@@ -534,7 +534,7 @@ func undo_block(par string) {
 	txpool.BlockCommitInProgress(false)
 	fmt.Println("Block un-DONE")
 	common.Last.Mutex.Lock()
-	common.Last.Block = common.BlockChain.LastBlock()
+	common.Last.SetBlock(common.BlockChain.LastBlock())
 	common.UpdateScriptFlags(0)
 	common.Last.Mutex.Unlock()
 }

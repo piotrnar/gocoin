@@ -106,7 +106,7 @@ func host_init() {
 		common.Last.ParseTill = lb
 	}
 
-	common.Last.Block = common.BlockChain.LastBlock()
+	common.Last.SetBlock(common.BlockChain.LastBlock())
 	common.Last.Time = time.Unix(int64(common.Last.Block.Timestamp()), 0)
 	if common.Last.Time.After(time.Now()) {
 		common.Last.Time = time.Now()

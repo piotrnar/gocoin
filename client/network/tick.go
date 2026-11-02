@@ -1016,17 +1016,17 @@ func (c *OneConnection) Run() {
 	c.Conn.SetWriteDeadline(time.Now()) // this should cause c.Conn.Write() to terminate
 	c.writing_thread_done.Wait()
 
-	c.Mutex.Lock()
+	// never lock MutexRcv within c.Mutex (see ExpireHeadersAndGetData)
 	MutexRcv.Lock()
+	c.Mutex.Lock()
 	for k := range c.GetBlockInProgress {
 		if rec, ok := BlocksToGet[k]; ok {
 			rec.InProgress--
 		}
 	}
-	MutexRcv.Unlock()
-
 	ban := c.banit
 	c.Mutex.Unlock()
+	MutexRcv.Unlock()
 
 	if c.PeerAddr.Friend || c.X.Authorized {
 		common.CountSafePar("FDisconnect-", ban)

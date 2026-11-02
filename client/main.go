@@ -169,7 +169,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 
 		common.RecalcAverageBlockSize()
 
-		common.Busy()
+		// Lock order: MutexRcv must never be taken while holding Last.Mutex
 		network.MutexRcv.Lock()
 		lch := network.LastCommitedHeader
 		network.MutexRcv.Unlock()
@@ -177,7 +177,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.Busy()
 		common.Last.Mutex.Lock()
 		if new_last := common.BlockChain.LastBlock(); new_last != common.Last.Block {
-			common.Last.Block = new_last
+			common.Last.SetBlock(new_last)
 			common.Last.Time = time.Now()
 		}
 		common.UpdateScriptFlags(bl.VerifyFlags)
@@ -252,7 +252,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		//fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 		new_end := common.BlockChain.LastBlock()
 		common.Last.Mutex.Lock()
-		common.Last.Block = new_end
+		common.Last.SetBlock(new_end)
 		common.UpdateScriptFlags(bl.VerifyFlags)
 		common.Last.Mutex.Unlock()
 		// update network.LastCommitedHeader
@@ -505,7 +505,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 
 	common.Last.Mutex.Lock()
 	common.Last.Time = time.Now()
-	common.Last.Block = common.BlockChain.LastBlock()
+	common.Last.SetBlock(common.BlockChain.LastBlock())
 	common.UpdateScriptFlags(msg.VerifyFlags)
 	last_block := common.Last.Block
 	common.Last.Mutex.Unlock()
