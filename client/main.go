@@ -882,7 +882,12 @@ func main() {
 						break
 					}
 					if common.WalletPendingTick() {
-						wallet.OnOff <- true
+						// This thread is the only reader of wallet.OnOff, so never block here.
+						// If the channel is full, there is a user's on/off request pending anyway.
+						select {
+						case wallet.OnOff <- true:
+						default:
+						}
 					}
 					break // BlockChainSynchronized so never mind checking it
 				}

@@ -324,8 +324,9 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 				txpool.TxMutex.Lock()
 				if ptx, ok := txpool.TransactionsToSend[tid.BIdx()]; ok {
 					txpool.TxMutex.Unlock()
-					usif.SendInvToRandomPeer(1, tid)
-					atomic.AddUint32(&ptx.Invsentcnt, 1)
+					if usif.SendInvToRandomPeer(1, tid) {
+						atomic.AddUint32(&ptx.Invsentcnt, 1)
+					}
 				} else {
 					txpool.TxMutex.Unlock()
 				}

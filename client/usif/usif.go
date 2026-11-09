@@ -134,7 +134,8 @@ func LoadRawTx(buf []byte) (s string) {
 	return
 }
 
-func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
+// SendInvToRandomPeer returns false if there was no peer to send the inv to.
+func SendInvToRandomPeer(typ uint32, h *btc.Uint256) (sent bool) {
 	common.CountSafePar("NetSendOneInv-", typ)
 
 	// Prepare the inv
@@ -144,6 +145,10 @@ func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
 
 	// Append it to PendingInvs in a random connection
 	network.Mutex_net.Lock()
+	defer network.Mutex_net.Unlock()
+	if len(network.OpenCons) == 0 {
+		return // rand.Intn(0) would panic, leaving Mutex_net locked
+	}
 	idx := rand.Intn(len(network.OpenCons))
 	var cnt int
 	for _, v := range network.OpenCons {
@@ -151,11 +156,12 @@ func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
 			v.Mutex.Lock()
 			v.PendingInvs = append(v.PendingInvs, inv)
 			v.Mutex.Unlock()
+			sent = true
 			break
 		}
 		cnt++
 	}
-	network.Mutex_net.Unlock()
+	return
 }
 
 func GetNetworkHashRateNum() float64 {

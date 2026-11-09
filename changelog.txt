@@ -92,6 +92,10 @@
 * Client/WebUI: The concept of Ordinals space usage extended to a bigger set of a Non-Monetary txs (now counts Ordinals and Runes)
 * Client/WebUI: Dropped the "-white" icon variants - dark theme now inverts the black icons via CSS
 * Client: fixed lock-order inversions (Last.Mutex vs MutexRcv, BlockIndexAccess, peer's Mutex) that could deadlock the main thread after long uptime
+* Client/Net: fixed TxMutex staying locked forever (freezing the node) when the "cmpctblock" handler aborted on two mempool txs having the same short ID - a peer could provoke it by choosing the message's nonce
+* Client/Net: fixed a lock-order inversion between the config mutex and BlockIndexAccess - processing a new header while a friend node authenticated (or the config / trusted block was being changed from UI) could deadlock the entire node
+* Client/UI: fixed Mutex_net staying locked forever (WebUI) or a crash (TextUI) when sending a tx to a random peer with no peers connected
+* Client: fixed a possible self-deadlock of the main thread when the wallet's auto-enable timer expired with a WebUI wallet on/off request pending
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

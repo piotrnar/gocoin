@@ -62,10 +62,27 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	common.CountSafe("HeaderNew")
 	//fmt.Println("", i, bl.Hash.String(), " - NEW!")
 
-	common.BlockChain.BlockIndexAccess.Lock()
-	defer common.BlockChain.BlockIndexAccess.Unlock()
+	// Lock order: never take the config mutex (common.Get/Set, LastTrustedBlockMatch)
+	// while holding BlockIndexAccess, as common.ApplyLTB() locks them the other way
+	// around. So hold BlockIndexAccess only for the part that needs the block index.
+	var node *chain.BlockTreeNode
+	var dos bool
+	var er error
+	func() {
+		common.BlockChain.BlockIndexAccess.Lock()
+		defer common.BlockChain.BlockIndexAccess.Unlock()
+		if dos, _, er = common.BlockChain.PreCheckBlock(bl); er != nil {
+			return
+		}
+		// The node may still be in the tree - e.g. when we are reviving a block that we
+		// had previously given up on. AcceptHeader() would add a duplicate in such case.
+		var have_node bool
+		if node, have_node = common.BlockChain.BlockIndex[bidx]; !have_node {
+			node = common.BlockChain.AcceptHeader(bl)
+		}
+	}()
 
-	if dos, _, er := common.BlockChain.PreCheckBlock(bl); er != nil {
+	if er != nil {
 		common.CountSafe("PreCheckBlockFail")
 		if c.X.Authorized {
 			fmt.Println("Error from PreCheckBlock", bl.Height, bl.Hash.String(), "\n  ", er.Error(), "  dos:", dos, "  ts:", bl.BlockTime(), "/", time.Now().Unix())
@@ -77,13 +94,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 		}
 	}
 
-	// The node may still be in the tree - e.g. when we are reviving a block that we
-	// had previously given up on. AcceptHeader() would add a duplicate in such case.
-	node, have_node := common.BlockChain.BlockIndex[bidx]
-	if !have_node {
-		node = common.BlockChain.AcceptHeader(bl)
-	}
-	b2g = &OneBlockToGet{Started: c.LastMsgTime, Block: bl, BlockTreeNode: node, InProgress: 0}
+	b2g =&OneBlockToGet{Started: c.LastMsgTime, Block: bl, BlockTreeNode: node, InProgress: 0}
 	AddB2G(b2g)
 	if node.Height > LastCommitedHeader.Height {
 		LastCommitedHeader = node

@@ -68,10 +68,13 @@ func send1_tx(par string) {
 	txpool.TxMutex.Lock()
 	if ptx, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
 		txpool.TxMutex.Unlock()
-		usif.SendInvToRandomPeer(1, txid)
-		atomic.AddUint32(&ptx.Invsentcnt, 1)
-		fmt.Println("INV for TxID", txid.String(), "sent to a random node")
-		fmt.Println("If it does not appear in the chain, you may want to redo it.")
+		if usif.SendInvToRandomPeer(1, txid) {
+			atomic.AddUint32(&ptx.Invsentcnt, 1)
+			fmt.Println("INV for TxID", txid.String(), "sent to a random node")
+			fmt.Println("If it does not appear in the chain, you may want to redo it.")
+		} else {
+			fmt.Println("No peers connected - INV for TxID", txid.String(), "not sent")
+		}
 	} else {
 		txpool.TxMutex.Unlock()
 		fmt.Println("No such transaction ID in the memory pool.")

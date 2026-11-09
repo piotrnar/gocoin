@@ -309,7 +309,15 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 
 	var cnt_found int
 
+	// TxMutex must get released on every way out of this function, including
+	// the early returns and the panic below (which Run() recovers from).
 	txpool.TxMutex.Lock()
+	tx_mutex_locked := true
+	defer func() {
+		if tx_mutex_locked {
+			txpool.TxMutex.Unlock()
+		}
+	}()
 
 	for _, v := range txpool.TransactionsToSend {
 		var hash2take *btc.Uint256
@@ -388,6 +396,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 			shortidx_idx += 6
 		}
 	}
+	tx_mutex_locked = false
 	txpool.TxMutex.Unlock()
 
 	if missing == 0 {
