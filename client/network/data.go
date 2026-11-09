@@ -111,10 +111,49 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 	}
 
 	hash := btc.NewSha2Hash(b[:80])
-	idx := hash.BIdx()
 	//fmt.Println("got block data", hash.String())
 
+	b2g, orb, store_on_disk := c.netBlockCheckIn(cmd, hash)
+	if b2g == nil {
+		return
+	}
+
+	var bei *btc.BlockExtraInfo
+
+	size := len(b2g.Block.Raw)
+	if store_on_disk {
+		fname := common.TempBlocksDir() + hash.String()
+		if e := os.WriteFile(fname, b2g.Block.Raw, 0600); e == nil {
+			buf := make([]byte, 0, 64*len(b2g.Block.Txs))
+			for _, tx := range b2g.Block.Txs {
+				buf = append(buf, tx.WTxID().Hash[:]...)
+				if tx.SegWit != nil { // if segwit was nil, the previous append already did this hash
+					buf = append(buf, tx.Hash.Hash[:]...)
+				}
+			}
+			os.WriteFile(fname+".hashes", buf, 0600)
+			bei = new(btc.BlockExtraInfo)
+			*bei = b2g.Block.BlockExtraInfo
+			b2g.Block = nil
+		} else {
+			fmt.Println("write tmp block data:", e.Error())
+		}
+	}
+
+	queueNewBlock(&BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode,
+		OneReceivedBlock: orb, BlockExtraInfo: bei, Size: size})
+}
+
+// netBlockCheckIn does the part of netBlockReceived that needs MutexRcv.
+// It returns nil b2g, if the block is not to be queued.
+// MutexRcv is released with defer, because the block's data comes from the peer and
+// Run() recovers from panics - MutexRcv left locked would hang the entire node.
+func (c *OneConnection) netBlockCheckIn(cmd *BCmsg, hash *btc.Uint256) (b2g *OneBlockToGet, orb *OneReceivedBlock, store_on_disk bool) {
+	b := cmd.pl
+	idx := hash.BIdx()
+
 	MutexRcv.Lock()
+	defer MutexRcv.Unlock()
 
 	// the blocks seems to be fine
 	if rb, got := ReceivedBlocks[idx]; got {
@@ -124,12 +163,11 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 		c.Mutex.Lock()
 		delete(c.GetBlockInProgress, idx)
 		c.Mutex.Unlock()
-		MutexRcv.Unlock()
 		return
 	}
 
 	// remove from BlocksToGet:
-	b2g := BlocksToGet[idx]
+	b2g = BlocksToGet[idx]
 	if b2g == nil {
 		//fmt.Println("Block", hash.String(), " from", conn.PeerAddr.Ip(), conn.Node.Agent, " was not expected")
 
@@ -143,8 +181,7 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 				common.CountSafe("ErrUnreqBlock")
 			}
 			//conn.Disconnect()
-			MutexRcv.Unlock()
-			return
+			return // b2g is nil here
 		}
 		if sta == PH_STATUS_NEW {
 			b2g.SendInvs = true
@@ -186,11 +223,10 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 			b2g.Block.Txs = nil
 		}
 
-		MutexRcv.Unlock()
-		return
+		return nil, nil, false
 	}
 
-	orb := &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: b2g.TmPreproc,
+	orb = &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: b2g.TmPreproc,
 		TmDownload: c.LastMsgTime, FromConID: c.ConnID, DoInvs: b2g.SendInvs}
 
 	c.Mutex.Lock()
@@ -212,34 +248,9 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 	ReceivedBlocks[idx] = orb
 	DelB2G(idx) //remove it from BlocksToGet if no more pending downloads
 
-	store_on_disk := len(BlocksToGet) > 10 && common.Get(&common.CFG.Memory.CacheOnDisk) &&
+	store_on_disk = len(BlocksToGet) > 10 && common.Get(&common.CFG.Memory.CacheOnDisk) &&
 		len(b2g.Block.Raw) > 16*1024 && LastCommitedHeader.Height-b2g.BlockTreeNode.Height > 10
-	MutexRcv.Unlock()
-
-	var bei *btc.BlockExtraInfo
-
-	size := len(b2g.Block.Raw)
-	if store_on_disk {
-		fname := common.TempBlocksDir() + hash.String()
-		if e := os.WriteFile(fname, b2g.Block.Raw, 0600); e == nil {
-			buf := make([]byte, 0, 64*len(b2g.Block.Txs))
-			for _, tx := range b2g.Block.Txs {
-				buf = append(buf, tx.WTxID().Hash[:]...)
-				if tx.SegWit != nil { // if segwit was nil, the previous append already did this hash
-					buf = append(buf, tx.Hash.Hash[:]...)
-				}
-			}
-			os.WriteFile(fname+".hashes", buf, 0600)
-			bei = new(btc.BlockExtraInfo)
-			*bei = b2g.Block.BlockExtraInfo
-			b2g.Block = nil
-		} else {
-			fmt.Println("write tmp block data:", e.Error())
-		}
-	}
-
-	queueNewBlock(&BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode,
-		OneReceivedBlock: orb, BlockExtraInfo: bei, Size: size})
+	return
 }
 
 func queueNewBlock(newbl *BlockRcvd) {

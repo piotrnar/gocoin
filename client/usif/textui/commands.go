@@ -585,12 +585,26 @@ func redo_block(par string) {
 	tdl := time.Now()
 	rb := &network.OneReceivedBlock{TmStart: sta, TmPreproc: pre, TmDownload: tdl}
 	network.MutexRcv.Lock()
+	prev_rb, had_rb := network.ReceivedBlocks[bl.Hash.BIdx()]
 	network.ReceivedBlocks[bl.Hash.BIdx()] = rb
 	network.MutexRcv.Unlock()
 
 	fmt.Println("Putting block", bl.Height, "into net queue...")
-	network.NetBlocks <- &network.BlockRcvd{Conn: nil, Block: bl, BlockTreeNode: nxt,
-		OneReceivedBlock: rb, BlockExtraInfo: nil}
+	// This command is executed by the main thread, which is the only reader
+	// of NetBlocks, so a blocking send would hang it if the channel was full.
+	select {
+	case network.NetBlocks <- &network.BlockRcvd{Conn: nil, Block: bl, BlockTreeNode: nxt,
+		OneReceivedBlock: rb, BlockExtraInfo: nil}:
+	default:
+		network.MutexRcv.Lock()
+		if had_rb {
+			network.ReceivedBlocks[bl.Hash.BIdx()] = prev_rb
+		} else {
+			delete(network.ReceivedBlocks, bl.Hash.BIdx())
+		}
+		network.MutexRcv.Unlock()
+		fmt.Println("The net queue is full - try again later")
+	}
 }
 
 func kill_node(par string) {

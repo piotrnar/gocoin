@@ -417,8 +417,9 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte, encrypt bool) (e error
 		if encrypt {
 			var er error
 			if pl, er = c.Encrypt(pl); er != nil {
+				c.Mutex.Unlock()
 				fmt.Println("Encryption failed:", er.Error())
-				return
+				return er
 			}
 			binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl))|0x80000000)
 		} else { // if the node sent us xauth, it will not check the cehcksum, so save time

@@ -105,11 +105,21 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 
 	out := make(map[string]*OneOuts)
 
+	// The main thread is blocked from here until unlock_main_thread() gets called.
+	// It is also deferred, as the http server recovers from panics and the main
+	// thread would then stay blocked forever.
 	lck := new(usif.OneLock)
 	lck.In.Add(1)
 	lck.Out.Add(1)
 	usif.LocksChan <- lck
 	lck.In.Wait()
+	unlock_main_thread := func() {
+		if lck != nil {
+			lck.Out.Done()
+			lck = nil
+		}
+	}
+	defer unlock_main_thread()
 
 	var addr_map map[string]string
 
@@ -154,19 +164,11 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 					newrec.SpendingCnt++
 				}
 				if !summary {
-					txid := btc.NewUint256(u.TxPrevOut.Hash[:])
-					var rawtx string
-					if getrawtx {
-						dat, er := common.GetRawTx(uint32(u.MinedAt), txid)
-						if er == nil {
-							rawtx = hex.EncodeToString(dat)
-						}
-					}
 					newrec.Outs = append(newrec.Outs, OneOut{
 						TxId: btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout: u.Vout,
 						Value: u.Value, Height: u.MinedAt, Coinbase: u.Coinbase,
 						Message: html.EscapeString(string(u.Message)), Addr: as, Spending: spending,
-						RawTx: rawtx, AddrType: getaddrtype(aa)})
+						AddrType: getaddrtype(aa)})
 				}
 			}
 		}
@@ -201,18 +203,11 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 					}
 					if !summary {
 						txid := btc.NewUint256(u.TxPrevOut.Hash[:])
-						var rawtx string
-						if getrawtx {
-							dat, er := common.GetRawTx(uint32(u.MinedAt), txid)
-							if er == nil {
-								rawtx = hex.EncodeToString(dat)
-							}
-						}
 						newrec.Outs = append(newrec.Outs, OneOut{
 							TxId: txid.String(), Vout: u.Vout,
 							Value: u.Value, Height: u.MinedAt, Coinbase: u.Coinbase,
 							Message: html.EscapeString(string(u.Message)), Addr: as,
-							Spending: spending, RawTx: rawtx, AddrType: AT_P2SH_P2WPKH})
+							Spending: spending, AddrType: AT_P2SH_P2WPKH})
 					}
 				}
 			}
@@ -239,18 +234,11 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 					}
 					if !summary {
 						txid := btc.NewUint256(u.TxPrevOut.Hash[:])
-						var rawtx string
-						if getrawtx {
-							dat, er := common.GetRawTx(uint32(u.MinedAt), txid)
-							if er == nil {
-								rawtx = hex.EncodeToString(dat)
-							}
-						}
 						newrec.Outs = append(newrec.Outs, OneOut{
 							TxId: txid.String(), Vout: u.Vout,
 							Value: u.Value, Height: u.MinedAt, Coinbase: u.Coinbase,
 							Message: html.EscapeString(string(u.Message)), Addr: as,
-							Spending: spending, RawTx: rawtx, AddrType: AT_P2WPKH})
+							Spending: spending, AddrType: AT_P2WPKH})
 					}
 				}
 			}
@@ -281,18 +269,11 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 						}
 						if !summary {
 							txid := btc.NewUint256(u.TxPrevOut.Hash[:])
-							var rawtx string
-							if getrawtx {
-								dat, er := common.GetRawTx(uint32(u.MinedAt), txid)
-								if er == nil {
-									rawtx = hex.EncodeToString(dat)
-								}
-							}
 							newrec.Outs = append(newrec.Outs, OneOut{
 								TxId: txid.String(), Vout: u.Vout,
 								Value: u.Value, Height: u.MinedAt, Coinbase: u.Coinbase,
 								Message: html.EscapeString(string(u.Message)), Addr: as,
-								Spending: spending, RawTx: rawtx, AddrType: AT_P2TAP})
+								Spending: spending, AddrType: AT_P2TAP})
 						}
 					}
 				}
@@ -333,7 +314,21 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		txpool.TxMutex.Unlock()
 	}
 
-	lck.Out.Done()
+	unlock_main_thread()
+
+	if getrawtx && !summary {
+		// Do it with the main thread unlocked, as it may need to download txs from the web
+		for _, rec := range out {
+			for i := range rec.Outs {
+				o := &rec.Outs[i]
+				if txid := btc.NewUint256FromString(o.TxId); txid != nil {
+					if dat, er := common.GetRawTx(o.Height, txid); er == nil {
+						o.RawTx = hex.EncodeToString(dat)
+					}
+				}
+			}
+		}
+	}
 
 	bx, er := json.Marshal(out)
 	if er == nil {
@@ -381,6 +376,14 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 	lck.Out.Add(1)
 	usif.LocksChan <- lck
 	lck.In.Wait()
+	// deferred, so a panic recovered by the http server will not leave the main thread blocked
+	unlock_main_thread := func() {
+		if lck != nil {
+			lck.Out.Done()
+			lck = nil
+		}
+	}
+	defer unlock_main_thread()
 
 	for idx, a := range addrs {
 		var pubkey []byte
@@ -437,7 +440,7 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	lck.Out.Done()
+	unlock_main_thread()
 
 	buf := new(bytes.Buffer)
 	zi := zip.NewWriter(buf)

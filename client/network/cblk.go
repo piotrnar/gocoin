@@ -190,8 +190,16 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 		return
 	}
 
+	// Never do the (possibly blocking) send to NetBlocks while holding MutexRcv,
+	// as the main thread, which is the only reader of this channel, needs MutexRcv.
+	var newbl *BlockRcvd
 	MutexRcv.Lock()
-	defer MutexRcv.Unlock()
+	defer func() {
+		MutexRcv.Unlock()
+		if newbl != nil {
+			queueNewBlock(newbl)
+		}
+	}()
 
 	sta, b2g := c.ProcessNewHeader(pl[:80])
 
@@ -429,7 +437,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 			b2g.Block.Trusted.Set()
 			common.CountSafe("TrustedMsg-CmpctBlock")
 		}
-		queueNewBlock(&BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode, OneReceivedBlock: orb})
+		newbl = &BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode, OneReceivedBlock: orb}
 	} else {
 		if b2g.TmPreproc.IsZero() { // do not overwrite TmPreproc if already set
 			b2g.TmPreproc = time.Now()
@@ -457,8 +465,15 @@ func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
 		c.DoS("BlkTxnErrCnt")
 		return
 	}
+	// Never send to NetBlocks while holding MutexRcv (see ProcessCmpctBlock)
+	var newbl *BlockRcvd
 	MutexRcv.Lock()
-	defer MutexRcv.Unlock()
+	defer func() {
+		MutexRcv.Unlock()
+		if newbl != nil {
+			queueNewBlock(newbl)
+		}
+	}()
 
 	idx := hash.BIdx()
 
@@ -557,5 +572,5 @@ func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
 		b2g.Block.Trusted.Set()
 		common.CountSafe("TrustedMsg-BlockTxn")
 	}
-	queueNewBlock(&BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode, OneReceivedBlock: orb})
+	newbl = &BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode, OneReceivedBlock: orb}
 }

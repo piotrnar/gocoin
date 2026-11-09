@@ -68,6 +68,9 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		var cbasetx *btc.Tx
 
 		rb, cbasetx := usif.GetReceivedBlockX(block)
+		if rb == nil {
+			break
+		}
 
 		b := new(one_block)
 		b.Height = end.Height

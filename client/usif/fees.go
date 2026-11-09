@@ -159,6 +159,9 @@ func GetAverageFee() float64 {
 		}
 
 		rb, cbasetx := GetReceivedBlockX(block)
+		if rb == nil {
+			return 0
+		}
 		var fees_from_this_block int64
 		for o := range cbasetx.TxOut {
 			fees_from_this_block += int64(cbasetx.TxOut[o].Value)

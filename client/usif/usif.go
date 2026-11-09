@@ -271,16 +271,24 @@ func UnbanPeer(par string) (s string) {
 	return
 }
 
+// GetReceivedBlockX returns nil, nil if the block is not known or cannot be parsed.
 func GetReceivedBlockX(block *btc.Block) (rb *network.OneReceivedBlock, cbasetx *btc.Tx) {
+	// Use defer, as the callers (e.g. http handlers) recover from panics
+	// and MutexRcv left locked would hang the entire node.
 	network.MutexRcv.Lock()
-	rb = network.ReceivedBlocks[block.Hash.BIdx()]
+	defer network.MutexRcv.Unlock()
+	r := network.ReceivedBlocks[block.Hash.BIdx()]
+	if r == nil {
+		return
+	}
 	if len(block.Txs) == 0 {
 		block.BuildTxListExt(false) // we will not need txId's here
+		if len(block.Txs) == 0 {
+			return
+		}
 	}
-	if rb.BlockUserInfo == nil {
-		rb.BlockUserInfo = block.GetUserInfo()
+	if r.BlockUserInfo == nil {
+		r.BlockUserInfo = block.GetUserInfo()
 	}
-	cbasetx = block.Txs[0]
-	network.MutexRcv.Unlock()
-	return
+	return r, block.Txs[0]
 }

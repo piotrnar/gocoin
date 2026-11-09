@@ -156,18 +156,14 @@ func (c *OneConnection) Tick(now time.Time) {
 
 		if len(c.GetMP) > 0 && !doingChainSync() {
 			// See if to send "getmp" command
-			select {
-			case txpool.GetMPInProgressTicket <- true:
+			if c.takeGetMPTicket() {
 				// ticket received - check for the request...
-				GetMPInProgressConnID.Store(int(c.ConnID))
 				if c.SendGetMP() != nil {
 					// SendGetMP() failed - clear the global flag/channel
-					<-txpool.GetMPInProgressTicket
-					<-c.GetMP
+					c.releaseGetMPTicket()
+					c.clearGetMPRequest()
 				}
-			default:
-				// failed to get the ticket - just do nothing
-			}
+			} // else: failed to get the ticket - just do nothing
 		}
 
 		c.expire_misbehave(tck)
@@ -700,43 +696,92 @@ func (c *OneConnection) SendFeeFilter() {
 	c.SendRawMsg("feefilter", pl[:], false)
 }
 
+// getMPTicketMutex makes taking/releasing of txpool.GetMPInProgressTicket atomic
+// with updating GetMPInProgressConnID, so the ticket's owner is always known.
+// GetMPInProgressConnID is zero when nobody holds the ticket (ConnIDs start from 1).
+var getMPTicketMutex sync.Mutex
+
+// takeGetMPTicket returns true if the ticket has been acquired for this connection.
+func (c *OneConnection) takeGetMPTicket() (ok bool) {
+	getMPTicketMutex.Lock()
+	select {
+	case txpool.GetMPInProgressTicket <- true:
+		GetMPInProgressConnID.Store(int(c.ConnID))
+		ok = true
+	default:
+	}
+	getMPTicketMutex.Unlock()
+	return
+}
+
+// holdsGetMPTicket returns the ID of the ticket's holder (zero if none) and whether it is us.
+func (c *OneConnection) holdsGetMPTicket() (holder int, ours bool) {
+	getMPTicketMutex.Lock()
+	if len(txpool.GetMPInProgressTicket) != 0 {
+		holder = GetMPInProgressConnID.Get()
+		ours = holder == int(c.ConnID)
+	}
+	getMPTicketMutex.Unlock()
+	return
+}
+
+// releaseGetMPTicket gives the ticket back, but only if it is held by this connection.
+// It never blocks.
+func (c *OneConnection) releaseGetMPTicket() {
+	getMPTicketMutex.Lock()
+	if GetMPInProgressConnID.Get() == int(c.ConnID) {
+		GetMPInProgressConnID.Store(0)
+		select {
+		case <-txpool.GetMPInProgressTicket:
+		default:
+		}
+	}
+	getMPTicketMutex.Unlock()
+}
+
+// clearGetMPRequest removes the pending request from c.GetMP (never blocks).
+func (c *OneConnection) clearGetMPRequest() {
+	select {
+	case <-c.GetMP:
+	default:
+	}
+}
+
 // GetMPDone should be called upon receiving "getmpdone" message or when the peer disconnects.
 func (c *OneConnection) GetMPDone(pl []byte) {
 	if len(c.GetMP) == 0 {
 		return
 	}
-	if len(txpool.GetMPInProgressTicket) == 0 {
+
+	holder, ours := c.holdsGetMPTicket()
+	if holder == 0 {
 		// This will happen when our chain is not yet synchronized and we are disconnecting a peer which have sent "authack"
 		return
 	}
 
-	if GetMPInProgressConnID.Get() != int(c.ConnID) {
+	if !ours {
 		if len(pl) < 1 {
-			<-c.GetMP
+			c.clearGetMPRequest()
 		} else {
-			fmt.Println("PEER", c.ConnID, "MISBEHAVE: Sent getmpdone but ticket", GetMPInProgressConnID.Get(), "held elsewere")
+			fmt.Println("PEER", c.ConnID, "MISBEHAVE: Sent getmpdone but ticket", holder, "held elsewere")
 		}
 		return
 	}
 
 	// the ticket is ours
-	if len(pl) < 1 || pl[0] == 0 {
-		<-c.GetMP
-	} else if c.SendGetMP() != nil {
-		<-c.GetMP
-	} else {
-		return
+	if len(pl) >= 1 && pl[0] != 0 && c.SendGetMP() == nil {
+		return // "getmp" sent again - keep the ticket
 	}
-
-	if len(txpool.GetMPInProgressTicket) == 0 {
-		// TODO: remove it at some point (should not be happening)
-		fmt.Println("ERROR: GetMPDone() exiting without a ticket (will hang)")
-	}
-	<-txpool.GetMPInProgressTicket
+	c.clearGetMPRequest()
+	c.releaseGetMPTicket()
 }
 
 // Run starts a process that handles communication with a single peer.
 func (c *OneConnection) Run() {
+	// Always clean up, no matter how we leave this function. Note that this one
+	// is executed after the function below (the one that recovers from a panic).
+	defer c.runCleanup()
+
 	defer func() {
 		if r := recover(); r != nil {
 			err, ok := r.(error)
@@ -756,6 +801,7 @@ func (c *OneConnection) Run() {
 			fmt.Println()
 			fmt.Println("The node will likely malfunction now - it is advised to restart it.")
 			fmt.Println("************************ END OF REPORT ****************************")
+			c.Disconnect(false, "Panic") // so the writing thread exits too
 		}
 	}()
 
@@ -987,8 +1033,9 @@ func (c *OneConnection) Run() {
 
 		case "authack":
 			if !cmd.trusted {
-				fmt.Println(c.PeerAddr.Ip(), "sent us unsigned authack")
-				return
+				// Do not return from here, as it would skip the cleanup. Any peer can send it.
+				c.Disconnect(false, "UnsignedAuthAck")
+				break
 			}
 			c.Mutex.Lock()
 			c.X.AuthAckGot = true
@@ -1010,8 +1057,12 @@ func (c *OneConnection) Run() {
 		default:
 		}
 	}
+}
 
-	c.GetMPDone(nil) // release the ticket, if kept
+// runCleanup releases everything that Run() was holding, after the connection is over.
+func (c *OneConnection) runCleanup() {
+	c.GetMPDone(nil)       // release the ticket, if kept
+	c.releaseGetMPTicket() // ... and make sure it is released, whatever the state
 
 	c.Conn.SetWriteDeadline(time.Now()) // this should cause c.Conn.Write() to terminate
 	c.writing_thread_done.Wait()

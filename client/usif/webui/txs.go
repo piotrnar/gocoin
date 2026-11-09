@@ -184,26 +184,35 @@ func output_utxo_tx_xml(w io.Writer, minedid, minedat string) {
 
 	var buf bytes.Buffer
 
-	lck := new(usif.OneLock)
-	lck.In.Add(1)
-	lck.Out.Add(1)
-	usif.LocksChan <- lck
-	lck.In.Wait()
+	// Fetch the tx before taking the main thread's lock - it may need to
+	// download it from the web, which would stall the node for a long time.
+	var tx *btc.Tx
+	dat, er := common.GetRawTx(uint32(block_number), txid)
+	if er == nil {
+		tx, _ = btc.NewTx(dat)
+	}
 
 	buf.WriteString("<tx>")
 	fmt.Fprint(&buf, "<id>", minedid, "</id>")
-	if dat, er := common.GetRawTx(uint32(block_number), txid); er == nil {
+	if tx != nil {
 		buf.WriteString("<status>OK</status>")
 		buf.WriteString(fmt.Sprint("<size>", len(dat), "</size>"))
-		tx, _ := btc.NewTx(dat)
-		output_tx_xml(&buf, tx)
+		func() {
+			// The main thread is blocked inside here, so never write to the socket.
+			// Unlock it with defer, as the http server recovers from panics
+			// and the main thread would then stay blocked forever.
+			lck := new(usif.OneLock)
+			lck.In.Add(1)
+			lck.Out.Add(1)
+			usif.LocksChan <- lck
+			lck.In.Wait()
+			defer lck.Out.Done()
+			output_tx_xml(&buf, tx)
+		}()
 	} else {
 		buf.WriteString("<status>Not found</status>")
 	}
 	buf.WriteString("</tx>")
-
-	// the main thread is blocked until here, so never write to the socket above
-	lck.Out.Done()
 
 	w.Write(buf.Bytes())
 }
