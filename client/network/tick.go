@@ -78,6 +78,8 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		}
 		c.X.BlocksExpired++
 		delete(c.GetBlockInProgress, k)
+		// runCleanup() will not see this record anymore, so release the block here
+		blockDlAborted(k)
 		if now == nil {
 			disconnect = "BlockDlPongExp"
 		} else {
@@ -1071,9 +1073,7 @@ func (c *OneConnection) runCleanup() {
 	MutexRcv.Lock()
 	c.Mutex.Lock()
 	for k := range c.GetBlockInProgress {
-		if rec, ok := BlocksToGet[k]; ok {
-			rec.InProgress--
-		}
+		blockDlAborted(k)
 	}
 	ban := c.banit
 	c.Mutex.Unlock()

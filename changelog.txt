@@ -99,6 +99,7 @@
 * Client/Net: fixed a remote DoS - any peer sending an unsigned "authack" made the connection's thread exit without cleaning up, leaking a socket, a goroutine and the 16MB send buffer each time; the cleanup is now always executed, also after a recovered panic
 * Client/Net: removed several potential deadlocks - GetMP ticket taken/released atomically with recording its owner, blocks not queued to the main thread while holding MutexRcv, MutexRcv released with defer in the "block" handler, SendRawMsg() not returning with the peer's mutex locked when the encryption fails
 * Client/UI: removed potential hangs of the main thread - WebUI handlers release its lock with defer and fetch raw txs (possibly from the web) without holding it, TextUI's "redo" command does not block when the net blocks queue is full
+* Client/Net: fixed the node getting permanently stuck behind the chain tip (e.g. on an orphaned block, after testnet's block storm) while dropping and banning its peers for "BadHeader" - a block that we had given up on downloading could never be fetched again, as its re-announced header was rejected as a duplicate; also a block download that timed out (or a failed "blocktxn") was never released, so after MaxBlockAtOnce of them nobody was asked for that block anymore, which was leading to giving up on it
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

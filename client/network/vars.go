@@ -256,6 +256,19 @@ func discardBlock(n *chain.BlockTreeNode, invalid bool) {
 	}
 }
 
+// blockDlAborted must be called whenever a peer stops downloading a block without
+// completing it (i.e. when its record gets removed from c.GetBlockInProgress, while
+// the block stays in BlocksToGet). Otherwise the block's InProgress counter leaks and
+// after MaxBlockAtOnce of such events nobody is ever asked for this block again.
+// Make sure to call it with MutexRcv locked.
+func blockDlAborted(idx btc.BIDX) {
+	// The record may be a new one (re-created after we had given up on the block),
+	// so make sure to never go below zero.
+	if b2g := BlocksToGet[idx]; b2g != nil && b2g.InProgress > 0 {
+		b2g.InProgress--
+	}
+}
+
 func AddB2G(b2g *OneBlockToGet) {
 	bidx := b2g.Block.Hash.BIdx()
 	BlocksToGet[bidx] = b2g

@@ -514,7 +514,9 @@ func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
 		common.CountSafe("BlkTxnNoB2G")
 		return
 	}
-	//b2g.InProgress--
+	// This peer's record is gone from c.GetBlockInProgress, so if we return below
+	// without completing the block, it must be free to be fetched from the others.
+	blockDlAborted(idx)
 
 	//fmt.Println(c.ConnID, "BlockTxn size", len(pl), "-", le, "new txs for block #", b2g.Block.Height)
 

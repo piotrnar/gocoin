@@ -71,15 +71,25 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	func() {
 		common.BlockChain.BlockIndexAccess.Lock()
 		defer common.BlockChain.BlockIndexAccess.Unlock()
+		// The node may still be in the tree - when we are reviving a block that we had
+		// previously given up on (DiscardBlock() leaves the tree nodes in place).
+		// Such a node has only the header (BlockSize is zero) and we got here because
+		// the block is neither received nor being fetched. Its header has passed
+		// PreCheckBlock() already, when we were creating the node. Do not call it
+		// again, as it rejects (as a duplicate) any block that is present in the tree,
+		// which would make us unable to ever fetch this block (nor any of its
+		// descendants), while punishing each peer that announces it.
+		if n, have_node := common.BlockChain.BlockIndex[bidx]; have_node && n.BlockSize == 0 && n.Parent != nil {
+			node = n
+			bl.Height = n.Height
+			bl.MedianPastTime = n.Parent.GetMedianTimePast()
+			common.CountSafe("HeaderRevived")
+			return
+		}
 		if dos, _, er = common.BlockChain.PreCheckBlock(bl); er != nil {
 			return
 		}
-		// The node may still be in the tree - e.g. when we are reviving a block that we
-		// had previously given up on. AcceptHeader() would add a duplicate in such case.
-		var have_node bool
-		if node, have_node = common.BlockChain.BlockIndex[bidx]; !have_node {
-			node = common.BlockChain.AcceptHeader(bl)
-		}
+		node = common.BlockChain.AcceptHeader(bl)
 	}()
 
 	if er != nil {
