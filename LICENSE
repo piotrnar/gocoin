@@ -1,64 +1,21 @@
+MIT License
+
 Copyright (c) 2013-2026 Piotr Narewski
------------------------
 
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-NON-COMMERCIAL USE
------------------------
-Author of this software grants permission to use it in either
-original or modified form, free of charge, with no need for an
-explicit permission, but only for non-commercial purposes and
-only to physical people, not to any kind of legal entities.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-A non-profit community projects can also use this software for
-free, without a need for an explicit permission.
-
-
-COMMERCIAL USE
------------------------
-Commercial companies (businesses) are allowed to use, develop
-and distribute this software for research purposes, without an
-explicit permission.
-
-However, selling any software that originates from this code
-base or products based on the infrastructure that such a
-software would be a part of, is forbidden before acquiring an
-explicit written license.
-
------------------------
-piotr@gocoin.pl
-
------BEGIN PGP PUBLIC KEY BLOCK-----
-Version: GnuPG v2.0.22 (MingW32)
-
-mQENBE9sejYBCADOvsyvIo6kAcI/h4g6Sa6wYJmEVGUqRcO0C5SMn1OLvZ9towro
-HsbC4m9hLu/Jqz1fOo7FHIBghNmaTc7omi+Dd6IWPDhBcbg2SXzmyUiupS/eEalV
-kU1iz2IxeQrUBkcWB4a2tMboqoNhNX/a59+1bUZRlsaSqGzKEhEH54n7a/V8k9qI
-UhALMOnpPvAZAr3IXioaNB/H3qSpD5N7xmbe9zIKzMibPvTCUtfgOzf1XlvucdJl
-9V1eoTEzLjiay43t3eUF4L9MzjwoH4cLwywaaWFWZmyQ1aYDDoPH31MUlZOBHt4Q
-u0hDHrCVrzm9CkpFPSDqe76fcUGAxnlPoVqdABEBAAG0LVBpb3RyIE5hcmV3c2tp
-IChiaXRjb2luKSA8cGlvdHJuYXJAZ21haWwuY29tPokBOwQTAQIAJQIbDwYLCQgH
-AwIGFQgCCQoLBBYCAwECHgECF4AFAlNxN+gCGQEACgkQG+e1Rc3z/Q53YQgAuE1n
-rGnP9VqXYUIFo70gV5PeCEtWdugV8R4XBFpaLRTUfUNPuFjS6wqqn1i96rtPSkSm
-m24Dviim2YaUJpbvJ6BohtT2CDM1cP4oVZLiElYu5aHxrujtIVO58Q7DUt4osW2R
-ANJbIiWQT0GOtYWkmTGhR9GAcfBLcs3RIr/sfIJTQIy+VvphGr2LiA8gQuh4iSU8
-tEgZNCAdQQkHLkZVowC5BC0D9Mx4mypm3d4KmG3Qbxw7kN4n8DMPP9Ek1VFbBFta
-4q1jFE2qqbPTfRahYeGwvkCr3hx4gEIRU/4l8OLxTFfrtFPCFcQOD8tquSK0bK3d
-IiDJY2nM4admGNvL6rQgUGlvdHIgTi4gPHRvbmlrdEBhc3NldHMtb3RjLmNvbT6J
-ATkEEwECACMFAlNxOeUCGw8HCwkIBwMCAQYVCAIJCgsEFgIDAQIeAQIXgAAKCRAb
-57VFzfP9DrjXB/48qvOGXCZ/J6N19XZAtlwAyWl+X3tpSQYXuQfV7J5cJ04PFx6Q
-lWxF2NwJo65FPSzz2BPbGIMpUjE+BfUZr/m8XWNhWsvC4Qgx89oFwu2yXU89sXH1
-VpLo1cyDTQFPid0s2wA+jLZ9mxgx5OOg1Mktq1T80ZEZVxut3/7twjdb4b7Lbhws
-/A59+rkuhApxeACXmg1vwKEka9xL4hYnPNVsF7ifuEChzhBHc/pNL5JvZOTja0+Y
-irS19G9Qqi7GHGmO/gDWY0xf57+HtcU1pl7i45U60GUBKs4pV8mjYRndUj9SnumK
-o6TK3mkAM/X+nSswVl+C2k7hE/O6XJ7VG3vZtHxCVEMgc3RlYWx0aCBhZGRyZXNz
-ICh2Sm14QjdlZ2Q3cjYydWJiNDVKM0J6cWtNZW1RdjVIMmRucEtUQzczNWlRdXV4
-WVhGTUE3Q3Jlb3VvdTdxWkRwZjc0b3BneGZZaFhTcm03YlA1NDlDaUd6UEZRbmpN
-YWFoc3VWdXcpiQE5BBMBAgAjBQJTcToKAhsPBwsJCAcDAgEGFQgCCQoLBBYCAwEC
-HgECF4AACgkQG+e1Rc3z/Q5CWQf+Pe5EXTLIUR7nMuFRyjY68+RT86tXSVc83arL
-F3WnO3iNoLyZ4hLD3If/6K7RXiyWFO1ezaZ5ZmYuFkZvmfdpOSjO1DDJkIpFKfRj
-QcpBbgbSCIFe7lJErGJvNd8+y/TBtZDdGCTXrjyfiHDDvZ3/3NCg+UOHUoXzerFp
-oXErVdt/JocVotxGokOLLn5HCd/K8iatkh4F+D8ELVzo/7SfNQWWCq+qvCXw8qYQ
-xPRp7bvF/Fvwefhl8k9naBw1FkkN07JnQ8gGAvAYkzoeuw9axGvBi1AFWyGoAMce
-vO0TqyrkDDDG0J0UmqcK8TpeUK7HcMbBNycRFsCn9B35KeHmQw==
-=JjWK
------END PGP PUBLIC KEY BLOCK-----
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
