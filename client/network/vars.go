@@ -269,6 +269,18 @@ func blockDlAborted(idx btc.BIDX) {
 	}
 }
 
+// dropBlockData must be called when the block's data that we have just received (or
+// assembled from a compact block) turned out to be corrupt, while the block stays in
+// BlocksToGet. It puts back the previous raw data and removes everything extracted
+// from the corrupt copy. Otherwise PostCheckBlock() would use the left-over tx list
+// for verifying the next copy we receive - failing it and getting its sender banned.
+func (b2g *OneBlockToGet) dropBlockData(prev_raw []byte) {
+	b2g.Block.Raw = prev_raw
+	b2g.Block.BlockWeight, b2g.TotalInputs = 0, 0
+	b2g.Block.TxCount, b2g.Block.TxOffset = 0, 0
+	b2g.Block.Txs = nil
+}
+
 func AddB2G(b2g *OneBlockToGet) {
 	bidx := b2g.Block.Hash.BIdx()
 	BlocksToGet[bidx] = b2g

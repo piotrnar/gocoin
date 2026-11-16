@@ -143,7 +143,7 @@ type ConnectionStatus struct {
 	Authorized           bool
 	AuthMsgGot           bool
 	AuthAckGot           bool
-	ChainSynchronized    bool // Initiated by "auth" or "autack" message (gocoin specific commmands)
+	ChainSynchronized    bool // Set by "authack" message (gocoin specific commmand)
 }
 
 type ConnInfo struct {
@@ -195,6 +195,8 @@ type OneConnection struct {
 	blocksreceived []time.Time
 	PendingInvs    []*[36]byte // List of pending INV to send and the mutex protecting access to it
 	PingInProgress []byte
+	authChallenge  []byte // the random data we sent in our "xauth", to be returned in "authack"
+	authPubkey     []byte // public key from the peer's "xauth", if it is one of our friends
 
 	InvDone struct {
 		Map     map[uint64]uint32
@@ -616,6 +618,13 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 		}
 	}
 
+	// Check it before anything below needs the key (any peer can set the "encrypted" bit).
+	if c.recv.decrypt && c.aesData == nil {
+		fmt.Println(c.PeerAddr.Ip(), "- got encrypted msg", c.recv.cmd, "but have no key")
+		c.DoS("MsgNoKey")
+		return
+	}
+
 	if c.recv.pl_len > 0 {
 		if c.recv.dat == nil {
 			msi := maxmsgsize(c.recv.cmd)
@@ -660,11 +669,6 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	}
 
 	if c.recv.decrypt {
-		if c.aesData == nil {
-			fmt.Println(c.PeerAddr.Ip(), "- got encrypted msg", c.recv.cmd, "but have no key")
-			c.DoS("MsgNoKey")
-			return
-		}
 		plain, er := c.Decrypt(c.recv.dat)
 		if er != nil {
 			fmt.Println(c.PeerAddr.Ip(), "- decryption error:", er.Error())

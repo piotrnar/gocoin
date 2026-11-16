@@ -63,7 +63,8 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 	c.Mutex.Unlock()
 
 	cnt, of := btc.VLen(pl)
-	if of == 0 || len(pl) != of+36*cnt {
+	// Limit cnt first, as a huge value would overflow the multiplication below
+	if of == 0 || cnt > 50000 || len(pl) != of+36*cnt {
 		fmt.Println("inv payload length mismatch", len(pl), of, cnt)
 		c.DoS("InvErr")
 		return

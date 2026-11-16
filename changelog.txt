@@ -114,6 +114,9 @@
 * Client/TXPool: scripts of the txs from the network are now verified without holding the mempool lock, and inserting a tx into the sorted list no longer walks it from the top - both make the node more responsive with a big mempool
 * Client/TXPool: fixed "last sent" time of never sent txs showing a bogus date after a restart, TxPurgedSizCnt counter counting each tx twice, a possible crash when re-indexing the sorted list, and the mempool consistency check (TextUI) reporting wrong things or modifying the data it was checking
 * Lib/chain: added CheckTxFinalAtTip() for checking the lock-times of a tx against the next block (used by the mempool)
+* Client/Net: the way friend nodes authorize each other ("xauth" and "authack" messages) has changed and is not compatible with the previous versions - all your nodes need this update to keep authorizing each other. Before, a peer could get authorized by re-sending a signature obtained from one of your friends, and then set the last trusted block, below which the scripts are not verified
+* Client/Net: fixed a compact block that failed to verify leaving its data in the pending block, which made the node reject the valid block received afterwards and ban the peer that sent it. Also a peer repeating the same "cmpctblock" can no longer take all the download slots of a block, delaying its download from the others
+* Client/Net: fixed three messages from a peer causing a panic report on the console: a message marked as encrypted before any key was set, "blocktxn" not having all the requested txs, and "inv" with a huge number of entries. Also fixed a (very unlikely) crash caused by updating a peer's counters without a lock
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

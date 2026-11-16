@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -182,31 +183,25 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 	return nil
 }
 
-// SendAuth sends auth messages (only used by other gocoin nodes).
-func (c *OneConnection) SendAuth() {
-	rnd := make([]byte, 32)
-	copy(rnd, c.Node.Nonce[:])
-	r, s, er := btc.EcdsaSign(common.SecretKey, rnd)
-	if er != nil {
-		fmt.Println(er.Error())
-		return
-	}
-	var sig secp256k1.Signature
-	sig.R.Set(r)
-	sig.S.Set(s)
+const (
+	authChallengeLen = 32
+	authAckLen       = authChallengeLen + 33 + 1 + 32 + 4
+)
 
+// SendAuth sends our public key and a random challenge (only used by other gocoin nodes).
+// The peer proves its identity by sending the challenge back inside "authack", which
+// is encrypted with the key that only the owners of both private keys can calculate.
+func (c *OneConnection) SendAuth() {
+	c.authChallenge = make([]byte, authChallengeLen)
+	rand.Read(c.authChallenge)
 	msg := new(bytes.Buffer)
 	msg.Write(common.PublicKeyBin)
-	msg.Write(sig.Bytes())
-	// add last block hash and last block height
-	common.Last.Mutex.Lock()
-	msg.Write(common.Last.Block.BlockHash.Hash[:])
-	binary.Write(msg, binary.LittleEndian, uint32(common.Last.Block.Height))
-	common.Last.Mutex.Unlock()
+	msg.Write(c.authChallenge)
 	c.SendRawMsg("xauth", msg.Bytes(), false)
 }
 
-// AuthRvcd processes auth messages (from other gocoin nodes).
+// AuthRvcd processes "xauth" message (from other gocoin nodes).
+// Note that it does not authorize the peer yet - see AuthAckRcvd() for that.
 func (c *OneConnection) AuthRvcd(pl []byte) {
 	if c.X.AuthMsgGot {
 		c.DoS("XAuthMsgCnt") // Only allow one auth message per connection (DoS prevention)
@@ -214,77 +209,101 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 	}
 	c.X.AuthMsgGot = true
 
-	c.X.Authorized = false
-
-	if len(pl) < 33 {
-		c.DoS("XAuthMsgShort") // Only allow one auth message per connection (DoS prevention)
+	if len(pl) < 33+authChallengeLen {
+		c.DoS("XAuthMsgShort")
 		return
 	}
 
 	var shared_secret [33]byte
-	if secp256k1.Multiply(pl[:33], common.SecretKey, shared_secret[:]) {
-		var er error
-		var dat aesData
-		var aeskey [32]byte
-		btc.ShaHash(shared_secret[:], aeskey[:])
-		if dat.Block, er = aes.NewCipher(aeskey[:]); er != nil {
-			fmt.Println("aes.NewCipher:", er.Error())
-		} else {
-			if dat.AEAD, er = cipher.NewGCM(dat.Block); er != nil {
-				fmt.Println("cipher.NewGCM:", er.Error())
-			} else {
-				dat.nonceSize = dat.AEAD.NonceSize()
-				c.aesData = &dat
-				//fmt.Println(c.PeerAddr.Ip(), "- secure context established")
-			}
-		}
-	}
-
-	var sig secp256k1.Signature
-	var pkey secp256k1.XY
-	var m secp256k1.Number
-	var b32 [32]byte
-
-	sig_len := sig.ParseBytes(pl[33:])
-	if sig_len < 0 {
+	if !secp256k1.Multiply(pl[:33], common.SecretKey, shared_secret[:]) {
 		return
 	}
-	sig_len += 33
-
-	copy(b32[:8], nonce[:]) // the remaining bytes shall be zero'ed
-	m.SetBytes(b32[:])
+	var er error
+	var dat aesData
+	var aeskey [32]byte
+	btc.ShaHash(shared_secret[:], aeskey[:])
+	if dat.Block, er = aes.NewCipher(aeskey[:]); er != nil {
+		fmt.Println("aes.NewCipher:", er.Error())
+		return
+	}
+	if dat.AEAD, er = cipher.NewGCM(dat.Block); er != nil {
+		fmt.Println("cipher.NewGCM:", er.Error())
+		return
+	}
+	dat.nonceSize = dat.AEAD.NonceSize()
+	c.aesData = &dat
+	//fmt.Println(c.PeerAddr.Ip(), "- secure context established")
 
 	FriendsAccess.Lock()
 	for _, pub := range AuthPubkeys {
-		if bytes.Equal(pub, pl[:33]) && pkey.ParsePubkey(pub) && sig.Verify(&pkey, &m) {
-			c.X.Authorized = true
+		if bytes.Equal(pub, pl[:33]) {
+			c.authPubkey = pub
 			break
 		}
 	}
 	FriendsAccess.Unlock()
-	if !c.X.Authorized {
+	if c.authPubkey == nil {
+		return // not one of our friends
+	}
+
+	// Answer the challenge. Our public key is included, so the message cannot be
+	// reflected back to us, pretending to be the peer's answer to our own challenge.
+	msg := bytes.NewBuffer(make([]byte, 0, authAckLen))
+	msg.Write(pl[33 : 33+authChallengeLen])
+	msg.Write(common.PublicKeyBin)
+	if common.BlockChainSynchronized.Load() {
+		msg.WriteByte(1) // whether (we think that) we are synchronized
+	} else {
+		msg.WriteByte(0)
+	}
+	// add last block hash and last block height
+	common.Last.Mutex.Lock()
+	msg.Write(common.Last.Block.BlockHash.Hash[:])
+	binary.Write(msg, binary.LittleEndian, uint32(common.Last.Block.Height))
+	common.Last.Mutex.Unlock()
+	c.SendRawMsg("authack", msg.Bytes(), true)
+}
+
+// AuthAckRcvd processes "authack" message, which is the peer's answer to our "xauth".
+// The peer gets authorized only here: the message must be encrypted (so the sender
+// knows the private key of the public key it sent us in its "xauth"), come from one
+// of our friends and carry the challenge that we made for this very connection.
+func (c *OneConnection) AuthAckRcvd(cmd *BCmsg) {
+	pl := cmd.pl
+	if !cmd.crypted || c.authPubkey == nil || c.authChallenge == nil || c.X.AuthAckGot {
+		// Do not ban for it, as any peer can send it.
+		c.Disconnect(false, "UnsignedAuthAck")
 		return
 	}
-
-	// Authorized node - check for last block data fields
-	if len(pl) >= sig_len+32+4 {
-		bl_height := binary.LittleEndian.Uint32(pl[sig_len+32 : sig_len+36])
-		common.Last.Mutex.Lock()
-		c.X.ChainSynchronized = bl_height >= uint32(common.Last.Block.Height)
-		common.Last.Mutex.Unlock()
-
-		if c.X.ChainSynchronized {
-			copy(b32[:], pl[sig_len:sig_len+32])
-			common.LockCfg()
-			common.ApplyLTB(btc.NewUint256(b32[:]), bl_height)
-			common.UnlockCfg()
-		}
+	if len(pl) < authAckLen || !bytes.Equal(pl[:authChallengeLen], c.authChallenge) ||
+		!bytes.Equal(pl[authChallengeLen:authChallengeLen+33], c.authPubkey) {
+		common.CountSafe("AuthAckInvalid")
+		c.Disconnect(false, "InvalidAuthAck")
+		return
 	}
-	var repl [1]byte // return whether (we think that) we are synchronized
-	if common.BlockChainSynchronized.Load() {
-		repl[0] = 1
+	of := authChallengeLen + 33
+	synchronized := pl[of] != 0
+	bl_hash := btc.NewUint256(pl[of+1 : of+33])
+	bl_height := binary.LittleEndian.Uint32(pl[of+33 : of+37])
+
+	c.Mutex.Lock()
+	c.X.Authorized = true
+	c.X.AuthAckGot = true
+	c.X.ChainSynchronized = synchronized
+	c.Mutex.Unlock()
+
+	common.Last.Mutex.Lock()
+	not_behind := bl_height >= uint32(common.Last.Block.Height)
+	common.Last.Mutex.Unlock()
+	if not_behind {
+		common.LockCfg()
+		common.ApplyLTB(bl_hash, bl_height)
+		common.UnlockCfg()
 	}
-	c.SendRawMsg("authack", repl[:], true)
+
+	if synchronized {
+		c.GetMPNow() // No point in asking non-synched nodes for their mempool
+	}
 }
 
 func (c *OneConnection) HasNetworkService() bool {

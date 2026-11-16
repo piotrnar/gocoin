@@ -217,10 +217,7 @@ func (c *OneConnection) netBlockCheckIn(cmd *BCmsg, hash *btc.Uint256) (b2g *One
 				b2g.Block.TxOffset, b2g.Block.BlockWeight, b2g.TotalInputs)
 			// We just recived a corrupt copy from the peer. We will ask another peer for it.
 			// But discard the data we extracted from this one, so it won't confuse us later.
-			b2g.Block.Raw = prev_block_raw
-			b2g.Block.BlockWeight, b2g.TotalInputs = 0, 0
-			b2g.Block.TxCount, b2g.Block.TxOffset = 0, 0
-			b2g.Block.Txs = nil
+			b2g.dropBlockData(prev_block_raw)
 		}
 
 		return nil, nil, false

@@ -93,7 +93,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		common.CountSafe(disconnect)
 		if c.X.IsSpecial {
 			common.CountSafe(disconnect + "Spec")
-			c.cntInc(disconnect)
+			c.cntLockInc(disconnect)
 		} else {
 			c.Disconnect(true, disconnect)
 		}
@@ -1034,21 +1034,7 @@ func (c *OneConnection) Run() {
 			c.AuthRvcd(cmd.pl)
 
 		case "authack":
-			if !cmd.trusted {
-				// Do not return from here, as it would skip the cleanup. Any peer can send it.
-				c.Disconnect(false, "UnsignedAuthAck")
-				break
-			}
-			c.Mutex.Lock()
-			c.X.AuthAckGot = true
-			c.Mutex.Unlock()
-			if len(cmd.pl) > 0 {
-				// if there is payload, the first byte says if the node is synchronized
-				c.X.ChainSynchronized = cmd.pl[0] != 0
-			}
-			if c.X.ChainSynchronized {
-				c.GetMPNow() // No point in asking non-synched nodes for their mempool
-			}
+			c.AuthAckRcvd(cmd)
 
 		case "getmpdone":
 			c.GetMPDone(cmd.pl)

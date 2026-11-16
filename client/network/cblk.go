@@ -231,6 +231,18 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 		c.Mutex.Unlock()
 	}
 
+	// If this peer is already delivering us this block (we either asked him for the
+	// full block or his previous cmpctblock is waiting for blocktxn), ignore this one.
+	// Otherwise we would count the same download in b2g.InProgress more than once,
+	// letting a single peer take all the block's download slots.
+	c.Mutex.Lock()
+	_, already := c.GetBlockInProgress[b2g.Block.Hash.BIdx()]
+	c.Mutex.Unlock()
+	if already {
+		common.CountSafe("CmpctBlockSameInProg")
+		return
+	}
+
 	if b2g.InProgress >= common.CFG.Net.MaxBlockAtOnce {
 		common.CountSafe("CmpctBlockMaxInProg")
 		//fmt.Println(c.ConnID, " - too many in progress")
@@ -409,6 +421,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 
 	if missing == 0 {
 		//sta := time.Now()
+		prev_block_raw := b2g.Block.Raw // in case if we assemble a corrupt one
 		b2g.Block.UpdateContent(col.Assemble())
 		//sto := time.Now()
 		bidx := b2g.Block.Hash.BIdx()
@@ -420,6 +433,9 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 			if b2g.Block.MerkleRootMatch() {
 				fmt.Println("It was a wrongly mined one - clean it up")
 				DiscardBranch(b2g.BlockTreeNode)
+			} else {
+				// We will fetch the block again, so do not leave the corrupt data in it
+				b2g.dropBlockData(prev_block_raw)
 			}
 
 			//c.DoS("BadCmpctBlockA")
@@ -483,7 +499,7 @@ func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
 		//fmt.Println(time.Now().Format("2006-01-02 15:04:05"), c.ConnID, "BlkTxnNoBIP:", c.PeerAddr.Ip(), c.Node.Agent, hash.String())
 		c.Mutex.Unlock()
 		common.CountSafe("UnxpBlockTxnA")
-		c.cntInc("BlkTxnNoBIP")
+		c.cntLockInc("BlkTxnNoBIP")
 		c.Misbehave("BlkTxnErrBip", 100)
 		return
 	}
@@ -492,7 +508,7 @@ func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
 		c.Mutex.Unlock()
 		fmt.Println("BlkTxnNoCOL:", c.PeerAddr.Ip(), c.Node.Agent, hash.String())
 		common.CountSafe("UnxpBlockTxnB")
-		c.cntInc("BlkTxnNoCOL")
+		c.cntLockInc("BlkTxnNoCOL")
 		c.Misbehave("BlkTxnNoCOL", 100)
 		return
 	}
@@ -545,7 +561,18 @@ func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
 
 	//fmt.Println(c.ConnID, "Received the rest of compact block version", c.Node.SendCmpctVer)
 
+	// The peer must have sent us all the txs we asked for. Check it before assembling
+	// the block, as Assemble() panics if any of the txs is still missing.
+	for _, txd := range col.Txs {
+		if _, ok := txd.([]byte); !ok {
+			fmt.Println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn does not have all the txs")
+			c.DoS("BlkTxnErrMissing")
+			return
+		}
+	}
+
 	//sta := time.Now()
+	prev_block_raw := b2g.Block.Raw // in case if we assemble a corrupt one
 	b2g.Block.UpdateContent(col.Assemble())
 	//sto := time.Now()
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
@@ -557,6 +584,9 @@ func (c *OneConnection) ProcessBlockTxn(cmd *BCmsg) {
 		if b2g.Block.MerkleRootMatch() {
 			fmt.Println("It was a wrongly mined one - clean it up")
 			DiscardBranch(b2g.BlockTreeNode)
+		} else {
+			// We will fetch the block again, so do not leave the corrupt data in it
+			b2g.dropBlockData(prev_block_raw)
 		}
 
 		return
