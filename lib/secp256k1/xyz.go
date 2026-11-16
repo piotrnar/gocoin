@@ -2,7 +2,8 @@ package secp256k1
 
 import (
 	"fmt"
-//	"encoding/hex"
+	"math/big"
+	"math/bits"
 )
 
 
@@ -56,6 +57,19 @@ func (a *XYZ) get_x(r *Field) {
 	a.X.Mul(r, &zi2)
 }
 
+// eq_x returns true if the affine X coordinate of a (which must not be infinity) equals x.
+// It compares x*Z^2 with the jacobian X, so no field inversion is needed.
+// The magnitude of x must not exceed 8 (a normalized value is always fine).
+func (a *XYZ) eq_x(x *Field) bool {
+	var r, ax Field
+	a.Z.Sqr(&r)
+	r.Mul(&r, x)
+	r.Normalize()
+	ax = a.X
+	ax.Normalize()
+	return r.Equals(&ax)
+}
+
 func (a *XYZ) Normalize() {
 	a.X.Normalize()
 	a.Y.Normalize()
@@ -85,30 +99,54 @@ func (a *XYZ) precomp(w int) (pre []XYZ) {
 }
 
 
-func ecmult_wnaf(wnaf []int, a *Number, w uint) (ret int) {
-	var zeroes uint
-	var X Number
-	X.Set(&a.Int)
+// nat_bits returns cnt bits (cnt must be smaller than the word size)
+// of the absolute value x, starting from the bit number pos.
+func nat_bits(x []big.Word, pos, cnt uint) (res uint) {
+	i := pos / bits.UintSize
+	if i >= uint(len(x)) {
+		return 0
+	}
+	off := pos % bits.UintSize
+	res = uint(x[i]) >> off
+	if off+cnt > bits.UintSize && i+1 < uint(len(x)) {
+		res |= uint(x[i+1]) << (bits.UintSize - off)
+	}
+	return res & ((1 << cnt) - 1)
+}
 
-	for X.Sign()!=0 {
-		for X.Bit(0)==0 {
-			zeroes++
-			X.rsh(1)
+// ecmult_wnaf converts a into its wNAF representation, so that:
+//
+//	a = sum(wnaf[i] * 2^i), for i from 0 to ret-1
+//
+// Each non-zero wnaf[i] is odd and its absolute value is below 2^(w-1).
+// The slice must be able to hold one element more than the bit length of a.
+// A negative number gives the digits of its absolute value, with the opposite signs.
+// It reads the bits directly from a, without modifying or copying it (no memory allocations).
+func ecmult_wnaf(wnaf []int, a *Number, w uint) (ret int) {
+	words := a.Int.Bits()
+	nbits := uint(a.Int.BitLen())
+	sign := 1
+	if a.Int.Sign() < 0 {
+		sign = -1
+	}
+
+	var bit, carry uint
+	for bit < nbits || carry != 0 {
+		if nat_bits(words, bit, 1) == carry {
+			bit++
+			continue
 		}
-		word := X.rsh_x(w)
-		for zeroes > 0 {
+		// the lowest bit differs from the carry, so the word is always odd
+		word := int(nat_bits(words, bit, w) + carry)
+		carry = uint(word>>(w-1)) & 1
+		word -= int(carry << w)
+		for ret < int(bit) {
 			wnaf[ret] = 0
 			ret++
-			zeroes--
 		}
-		if (word & (1 << (w-1))) != 0 {
-			X.inc()
-			wnaf[ret] = (word - (1 << w))
-		} else {
-			wnaf[ret] = word
-		}
-		zeroes = w-1
+		wnaf[ret] = sign * word
 		ret++
+		bit += w
 	}
 	return
 }

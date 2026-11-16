@@ -101,6 +101,8 @@
 * Client/UI: removed potential hangs of the main thread - WebUI handlers release its lock with defer and fetch raw txs (possibly from the web) without holding it, TextUI's "redo" command does not block when the net blocks queue is full
 * Client/Net: fixed the node getting permanently stuck behind the chain tip (e.g. on an orphaned block, after testnet's block storm) while dropping and banning its peers for "BadHeader" - a block that we had given up on downloading could never be fetched again, as its re-announced header was rejected as a duplicate; also a block download that timed out (or a failed "blocktxn") was never released, so after MaxBlockAtOnce of them nobody was asked for that block anymore, which was leading to giving up on it
 * License: changed to MIT - the software can now be used, modified and distributed also commercially (before it was free for non-commercial use only); the third-party packages (lib/others, lib/secp256k1) keep their own licenses
+* Lib/secp256k1: faster signature verification (the native Go one, used when no DLL/cgo speedup is active) - ECDSA by about 5-15% and Schnorr by about 10%, with much less memory allocated per signature; ECDSA verify no longer does a field inversion to compare R with the result and the wNAF conversion of the scalars works directly on their bits
+* Lib/secp256k1: fixed the native Go EC code on 32-bit platforms (e.g. 386, arm), where splitting a scalar assumed 64-bit words, so EC multiplication was returning wrong points - valid ECDSA and Schnorr signatures were rejected, public key recovery gave wrong keys and BIP340 signing failed
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

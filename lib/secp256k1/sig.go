@@ -35,14 +35,14 @@ func (r *Signature) ParseBytes(sig []byte) int {
 	return 6 + lenr + lens
 }
 
-func (r *Signature) Verify(pubkey *XY, message *Number) (ret bool) {
-	var r2 Number
-	ret = r.recompute(&r2, pubkey, message) && r.R.Cmp(&r2.Int) == 0
-	return
-}
-
-func (sig *Signature) recompute(r2 *Number, pubkey *XY, message *Number) (ret bool) {
+// Verify checks if sig.R equals (mod N) to the X coordinate of the point: (message/S)*G + (R/S)*pubkey
+func (sig *Signature) Verify(pubkey *XY, message *Number) bool {
 	var sn, u1, u2 Number
+
+	// The X coordinate gets reduced mod N, so R outside of the range <0, N) can never match it
+	if sig.R.Sign() < 0 || sig.R.Cmp(&TheCurve.Order.Int) >= 0 {
+		return false
+	}
 
 	sn.mod_inv(&sig.S, &TheCurve.Order)
 	u1.mod_mul(&sn, message, &TheCurve.Order)
@@ -52,18 +52,28 @@ func (sig *Signature) recompute(r2 *Number, pubkey *XY, message *Number) (ret bo
 	pubkeyj.SetXY(pubkey)
 
 	pubkeyj.ECmult(&pr, &u2, &u1)
-	if !pr.IsInfinity() {
-		var xr Field
-		pr.get_x(&xr)
-		xr.Normalize()
-		var xrb [32]byte
-		xr.GetB32(xrb[:])
-		r2.SetBytes(xrb[:])
-		r2.Mod(&r2.Int, &TheCurve.Order.Int)
-		ret = true
+	if pr.IsInfinity() {
+		return false
 	}
 
-	return
+	// Instead of converting the point to affine coordinates (which needs a costly field inversion)
+	// and comparing its X (mod N) with R, check which X values would match R and compare them
+	// with the point's jacobian X. As X is below P, the only candidates are R and (if below P) R+N.
+	var xrb [32]byte
+	var xr Field
+	sig.R.FillBytes(xrb[:])
+	xr.SetB32(xrb[:])
+	if pr.eq_x(&xr) {
+		return true
+	}
+	if sig.R.Cmp(&TheCurve.p_minus_n.Int) < 0 {
+		var rn Number
+		rn.Add(&sig.R.Int, &TheCurve.Order.Int)
+		rn.FillBytes(xrb[:])
+		xr.SetB32(xrb[:])
+		return pr.eq_x(&xr)
+	}
+	return false
 }
 
 func (sig *Signature) recover(pubkey *XY, m *Number, recid int) (ret bool) {

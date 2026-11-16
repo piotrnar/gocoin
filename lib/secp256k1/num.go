@@ -4,7 +4,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"math/bits"
 )
+
+// the size of big.Word (32 or 64 bits, depending on the platform)
+const word_bits = bits.UintSize
 
 var (
 	BigInt1 *big.Int = new(big.Int).SetInt64(1)
@@ -43,8 +47,9 @@ func (num *Number) mask_bits(bits uint) {
 	if len(words) == 0 {
 		return
 	}
-	fullWords := bits / 64
-	remBits := bits % 64
+	// big.Word is 64 bits long only on the 64-bit platforms
+	fullWords := bits / word_bits
+	remBits := bits % word_bits
 	// zero out words beyond the mask
 	for i := int(fullWords) + 1; i < len(words); i++ {
 		words[i] = 0
