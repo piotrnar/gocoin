@@ -1,4 +1,6 @@
-1.11.1:
+1.12.0:
+* License: changed to MIT - the software can now be used, modified and distributed also commercially (before it was free for non-commercial use only); the third-party packages (lib/others, lib/secp256k1) keep their own licenses
+* Codebase: The fist version developed with AI
 * Lib/Script: Fixed delSig() (used by OP_CHECKSIG/OP_CHECKMULTISIG's FindAndDelete) using CompactSize/VarInt encoding instead of a script push-opcode encoding to rebuild the signature-push template, causing it to fail to locate/strip stack items of 76+ bytes from scriptCode (unlike Bitcoin Core)
 * Wallet: new command line switch "p39" to aks for the BIP39 password (for the 12/18/24 words mnemonic)
 * Wallet: Improved the way how BIP39 mnemonic is printed (when -words command line switch used)
@@ -100,7 +102,6 @@
 * Client/Net: removed several potential deadlocks - GetMP ticket taken/released atomically with recording its owner, blocks not queued to the main thread while holding MutexRcv, MutexRcv released with defer in the "block" handler, SendRawMsg() not returning with the peer's mutex locked when the encryption fails
 * Client/UI: removed potential hangs of the main thread - WebUI handlers release its lock with defer and fetch raw txs (possibly from the web) without holding it, TextUI's "redo" command does not block when the net blocks queue is full
 * Client/Net: fixed the node getting permanently stuck behind the chain tip (e.g. on an orphaned block, after testnet's block storm) while dropping and banning its peers for "BadHeader" - a block that we had given up on downloading could never be fetched again, as its re-announced header was rejected as a duplicate; also a block download that timed out (or a failed "blocktxn") was never released, so after MaxBlockAtOnce of them nobody was asked for that block anymore, which was leading to giving up on it
-* License: changed to MIT - the software can now be used, modified and distributed also commercially (before it was free for non-commercial use only); the third-party packages (lib/others, lib/secp256k1) keep their own licenses
 * Lib/secp256k1: faster signature verification (the native Go one, used when no DLL/cgo speedup is active) - ECDSA by about 5-15% and Schnorr by about 10%, with much less memory allocated per signature; ECDSA verify no longer does a field inversion to compare R with the result and the wNAF conversion of the scalars works directly on their bits
 * Lib/secp256k1: fixed the native Go EC code on 32-bit platforms (e.g. 386, arm), where splitting a scalar assumed 64-bit words, so EC multiplication was returning wrong points - valid ECDSA and Schnorr signatures were rejected, public key recovery gave wrong keys and BIP340 signing failed
 * Client/TextUI: stdin is now read only while the TextUI waits for a command, so text typed in the OS terminal while the node is shutting down (e.g. "bs" after "quit") is no longer swallowed by the WebUI console mirroring and reaches the shell again
