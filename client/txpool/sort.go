@@ -2,6 +2,7 @@ package txpool
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -21,6 +22,12 @@ var (
 	sortIndexStep     uint64 // this is dynamically calculated in adjustSortIndexStep()
 	SortingDisabled   bool
 	LastSortingDone   time.Time
+
+	// Fingers are pointers to every n-th tx (counting only those with no unconfirmed inputs) of the sorted list.
+	// As such txs are always ordered by their fee rate, we can use a binary search to find the place from where
+	// to start looking for the new tx's position, instead of walking through the list from its very top.
+	sortFingers       []*OneTxToSend
+	sortFingerSpacing int = 128
 
 	// statistics of how far the SortRank values have moved around the uint64 space:
 	SortRankRangeValid       bool
@@ -85,23 +92,69 @@ func (t2s *OneTxToSend) AddToSort() {
 		t2s.SortRank = SORT_START_INDEX
 		WorstT2S, BestT2S = t2s, t2s
 		t2s.better, t2s.worse = nil, nil
+		resetSortFingers()
 		return
 	}
 
-	if wpr := t2s.findWorstParent(); wpr == nil {
-		t2s.insertDownFromHere(BestT2S)
-	} else {
-		t2s.insertDownFromHere(wpr.worse)
+	// the tx must be placed below all its parents
+	start := BestT2S
+	wpr := t2s.findWorstParent()
+	if wpr != nil {
+		start = wpr.worse
+	}
+
+	// Find the lowest finger that is not worse than the tx - it lets us skip everything above it,
+	// as there cannot be anything worse than the tx up there.
+	fidx := sort.Search(len(sortFingers), func(i int) bool {
+		return isFirstTxBetter(t2s, sortFingers[i])
+	})
+	if fidx > 0 {
+		if finger := sortFingers[fidx-1]; wpr == nil || finger.SortRank > wpr.SortRank {
+			start = finger.worse
+		}
+	}
+
+	if steps := t2s.insertDownFromHere(start); steps > 2*sortFingerSpacing && wpr == nil && t2s.MemInputCnt == 0 {
+		// it was a long walk, so make this tx a new finger (it is located between fidx-1 and fidx)
+		t2s.sortFinger = true
+		sortFingers = slices.Insert(sortFingers, fidx, t2s)
 	}
 }
 
-func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
+func resetSortFingers() {
+	for i := range sortFingers {
+		sortFingers[i].sortFinger = false
+		sortFingers[i] = nil // do not keep the txs in memory
+	}
+	sortFingers = sortFingers[:0]
+}
+
+// call it after the sorted list has been built from scratch
+func buildSortFingers() {
+	var cnt int
+	resetSortFingers()
+	for t2s := BestT2S; t2s != nil; t2s = t2s.worse {
+		t2s.sortFinger = false
+		if t2s.MemInputCnt == 0 {
+			if cnt++; cnt >= sortFingerSpacing {
+				cnt = 0
+				t2s.sortFinger = true
+				sortFingers = append(sortFingers, t2s)
+			}
+		}
+	}
+}
+
+// inserts the tx above the first tx that is worse, starting from the given one
+// returns the number of the txs it had to go through
+func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) (steps int) {
 	for wpr != nil { // we have to do it from top-down
 		if isFirstTxBetter(t2s, wpr) {
 			t2s.insertBefore(wpr)
 			return
 		}
 		wpr = wpr.worse
+		steps++
 	}
 	// we reached the worst element - append it at the end
 	WorstT2S.worse = t2s
@@ -109,6 +162,7 @@ func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 	t2s.worse = nil
 	t2s.SortRank = WorstT2S.SortRank + sortIndexStep
 	WorstT2S = t2s
+	return
 }
 
 // removes given tx from the sorted list
@@ -125,6 +179,12 @@ func (t2s *OneTxToSend) DelFromSort() {
 		ResortingSinceLastRedoTime += time.Since(sta)
 		ResortingSinceLastRedoCount++
 	}()
+	if t2s.sortFinger {
+		t2s.sortFinger = false
+		if idx := slices.Index(sortFingers, t2s); idx >= 0 {
+			sortFingers = slices.Delete(sortFingers, idx, idx+1)
+		}
+	}
 	if t2s == BestT2S {
 		if t2s == WorstT2S {
 			BestT2S, WorstT2S = nil, nil
@@ -227,8 +287,8 @@ func (t2s *OneTxToSend) fixIndex() {
 		if t2s.SortRank == t2s.worse.SortRank {
 			common.CountSafe("TxSortHNoLot-A3")
 			reindexEverything()
-			return
 		}
+		return
 	}
 
 	better_idx := t2s.better.SortRank
@@ -327,6 +387,7 @@ func buildSortedList() {
 	ts := GetSortedMempoolSlow()
 	if len(ts) == 0 {
 		BestT2S, WorstT2S = nil, nil
+		resetSortFingers()
 		//fmt.Println("BuildSortedList: Mempool empty")
 		return
 	}
@@ -345,6 +406,7 @@ func buildSortedList() {
 		WorstT2S = t2s
 	}
 	WorstT2S.worse = nil
+	buildSortFingers()
 	updateSortWidthStats()
 }
 

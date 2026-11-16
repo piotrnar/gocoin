@@ -157,6 +157,20 @@ func txPoolCB(ntx *txpool.TxRcvd, t2s *txpool.OneTxToSend) {
 	}
 }
 
+// routeAcceptedOrphan announces a tx that had been waiting for its inputs and has just been accepted.
+// We do not know which peer it came from anymore.
+func routeAcceptedOrphan(t2s *txpool.OneTxToSend) {
+	if yes, spkb := isRoutable(t2s); yes {
+		if cnt := NetRouteInvExt(MSG_TX, &t2s.Hash, nil, spkb); cnt > 0 {
+			atomic.AddUint32(&t2s.Invsentcnt, 1)
+		}
+	}
+}
+
+func init() {
+	txpool.OrphanAcceptedCB = routeAcceptedOrphan
+}
+
 // ParseTxNet handles incoming "tx" messages.
 func (c *OneConnection) ParseTxNet(cmd *BCmsg) {
 	tx, le := btc.NewTx(cmd.pl)

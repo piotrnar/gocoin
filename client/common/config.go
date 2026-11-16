@@ -84,6 +84,7 @@ var (
 			MaxRejectMB    float64
 			MaxNoUtxoMB    float64
 			RejectRecCnt   uint16
+			MaxClusterTxs  uint32 // max number of unconfirmed txs connected with each other (0 for no limit)
 			SaveOnDisk     bool
 			NotFullRBF     bool
 			//CheckForErrors bool
@@ -193,6 +194,7 @@ func InitConfig() {
 	CFG.TXPool.MaxRejectMB = 25.0
 	CFG.TXPool.MaxNoUtxoMB = 5.0
 	CFG.TXPool.RejectRecCnt = 20000
+	CFG.TXPool.MaxClusterTxs = 64
 	CFG.TXPool.SaveOnDisk = true
 
 	CFG.TXRoute.Enabled = true

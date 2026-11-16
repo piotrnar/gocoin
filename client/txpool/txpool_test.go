@@ -27,9 +27,16 @@ func testSetup() *utxo.UnspentDB {
 }
 
 // testAddUtxo adds a confirmed tx with a single output of the given value to the UTXO db.
-func testAddUtxo(db *utxo.UnspentDB, id byte, value uint64) (txid [32]byte) {
-	txid[0], txid[31] = id, 0xaa
-	rec := &utxo.UtxoRec{TxID: txid, InBlock: 100, Outs: []*utxo.UtxoTxOut{{PKScr: []byte{0x51}, Value: value}}}
+func testAddUtxo(db *utxo.UnspentDB, id int, value uint64) (txid [32]byte) {
+	return testAddUtxoExt(db, id, value, 100, []byte{0x51})
+}
+
+// testAddUtxoExt is testAddUtxo with the block height and the output script (0x51 is OP_TRUE) to choose.
+func testAddUtxoExt(db *utxo.UnspentDB, id int, value uint64, height uint32, pkscr []byte) (txid [32]byte) {
+	// the id goes to both ends, as the mempool indexes txs by the first bytes and outputs by the last ones
+	txid[0], txid[1], txid[2], txid[31] = byte(id), byte(id>>8), byte(id>>16), 0xaa
+	txid[24], txid[25], txid[26] = byte(id), byte(id>>8), byte(id>>16)
+	rec := &utxo.UtxoRec{TxID: txid, InBlock: height, Outs: []*utxo.UtxoTxOut{{PKScr: pkscr, Value: value}}}
 	var k utxo.UtxoKeyType
 	copy(k[:], txid[:])
 	db.HashMap[k[0]][k] = utxo.Serialize(rec, nil)
@@ -38,9 +45,14 @@ func testAddUtxo(db *utxo.UnspentDB, id byte, value uint64) (txid [32]byte) {
 
 // testTx makes a tx spending the given inputs, with nouts outputs of outval each.
 func testTx(outval uint64, nouts int, ins ...btc.TxPrevOut) *btc.Tx {
-	t := &btc.Tx{Version: 2}
+	return testTxExt(outval, nouts, 0xfffffffd, 0, ins...)
+}
+
+// testTxExt is testTx with the inputs' sequence and the tx's lock time to choose.
+func testTxExt(outval uint64, nouts int, sequence, locktime uint32, ins ...btc.TxPrevOut) *btc.Tx {
+	t := &btc.Tx{Version: 2, Lock_time: locktime}
 	for _, in := range ins {
-		t.TxIn = append(t.TxIn, &btc.TxIn{Input: in, Sequence: 0xfffffffd})
+		t.TxIn = append(t.TxIn, &btc.TxIn{Input: in, Sequence: sequence})
 	}
 	for i := 0; i < nouts; i++ {
 		t.TxOut = append(t.TxOut, &btc.TxOut{Value: outval, Pk_script: []byte{0x51}})
@@ -128,8 +140,24 @@ func TestOrphansAcceptedWithParent(t *testing.T) {
 			t.Fatal("orphan: expected NO_TXOU, got", ReasonToString(res))
 		}
 	}
+
+	// the orphans that get accepted must be reported, so they can be announced to the peers
+	reported := make(map[btc.BIDX]bool)
+	OrphanAcceptedCB = func(t2s *OneTxToSend) {
+		if !TxMutex.TryLock() {
+			t.Error("OrphanAcceptedCB called with TxMutex locked")
+			return
+		}
+		TxMutex.Unlock()
+		reported[t2s.Hash.BIdx()] = true
+	}
+	defer func() { OrphanAcceptedCB = nil }()
+
 	if res := testSubmit(p); res != 0 {
 		t.Fatal("parent rejected:", ReasonToString(res))
+	}
+	if len(reported) != 3 || !reported[c1.Hash.BIdx()] || !reported[c2.Hash.BIdx()] || !reported[g.Hash.BIdx()] {
+		t.Fatal("accepted orphans not reported:", len(reported))
 	}
 	for _, x := range []*btc.Tx{p, c1, c2, g} {
 		if !testInPool(x) {

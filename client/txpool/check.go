@@ -44,7 +44,7 @@ func checkFootprints() (dupa int) {
 		ts := txr.SysSize()
 		if ts != int(txr.Footprint) {
 			dupa++
-			fmt.Println(dupa, "ERROR: TxR", txr.Hash.String(), "mismatch footprint:", txr.Footprint, ts)
+			fmt.Println(dupa, "ERROR: TxR", txr.Id.String(), "mismatch footprint:", txr.Footprint, ts)
 		}
 		txr_size += ts
 		if txr.Waiting4 != nil {
@@ -167,12 +167,12 @@ func checkRejectedTxs() (dupa int) {
 			}
 			if tr.Reason < 200 {
 				dupa++
-				fmt.Println(dupa, "TxR", tr.Id.String(), "reason", ReasonToString(tr.Reason), "but no data")
+				fmt.Println(dupa, "TxR", tr.Id.String(), "has data, reason", ReasonToString(tr.Reason))
 			}
 		} else {
 			if tr.Reason >= 200 {
 				dupa++
-				fmt.Println(dupa, "TxR", tr.Id.String(), "has data, reason", ReasonToString(tr.Reason))
+				fmt.Println(dupa, "TxR", tr.Id.String(), "reason", ReasonToString(tr.Reason), "but no data")
 			}
 		}
 
@@ -248,9 +248,9 @@ func checkTRSortIndex() (dupa int) {
 	for idx := TRIdxTail; ; idx = TRIdxNext(idx) {
 		bidx := TRIdxArray[idx]
 		if txr := TransactionsRejected[bidx]; txr != nil {
-			if idx, ok := seen[bidx]; ok {
+			if prev_idx, ok := seen[bidx]; ok {
 				dupa++
-				fmt.Println(dupa, "TxR", txr.Id.String(), ReasonToString(txr.Reason), "from idx", idx,
+				fmt.Println(dupa, "TxR", txr.Id.String(), ReasonToString(txr.Reason), "from idx", prev_idx,
 					"present again in TRIdxArray at", idx, TRIdxHead, TRIdxTail)
 			} else {
 				seen[bidx] = idx
@@ -278,16 +278,16 @@ func checkRejectedSpentOutputs() (dupa int) {
 			if txr, ok := TransactionsRejected[bidx]; ok && txr.Tx != nil {
 				var found bool
 				for _, inp := range txr.TxIn {
-					if _, ok := RejectedSpentOutputs[inp.Input.UIdx()]; ok {
+					if inp.Input.UIdx() == utxoidx {
 						found = true
 						break
 					}
-					if !found {
-						dupa++
-						fmt.Println(dupa, "Tx", txr.Id.String(), "in RejectedSpentOutputs but without back reference to RejectedSpentOutputs")
-					}
 				}
-
+				if !found {
+					dupa++
+					fmt.Println(dupa, "Tx", txr.Id.String(), "in RejectedSpentOutputs", fmt.Sprintf("%016x", utxoidx),
+						"but it does not spend this output")
+				}
 			} else {
 				dupa++
 				fmt.Println(dupa, "btc.BIDX", btc.BIdxString(bidx), "present in RejectedSpentOutputs",
@@ -331,7 +331,6 @@ func checkRejectedSpentOutputs() (dupa int) {
 				} else {
 					fmt.Println(" - Missing record", inp.Input.String(), "\n  for", txr.Id.String())
 				}
-				RejectedSpentOutputs[uidx] = append(RejectedSpentOutputs[uidx], txr.Id.BIdx())
 			}
 		}
 	}

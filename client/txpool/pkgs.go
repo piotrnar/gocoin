@@ -57,8 +57,38 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 	}
 
 	common.CountSafe("TxPkgsAdd")
-	if len(parent.inPackages) == 0 {
-		// we create a new package, like in lookForPackages()
+	// Here we go through all the packages that the parent is in and append the new_child at their ends.
+	// Mind that rebuild() modifies parent.inPackages, so we need to work on a copy of it.
+	var has_own_pkg bool
+	for _, pkg := range slices.Clone(parent.inPackages) {
+		if pkg.Txs[0] == parent {
+			has_own_pkg = true
+		}
+		if slices.Contains(pkg.Txs, new_child) {
+			// this can happen when a new child uses more than one vout from the parent
+			// ... or when the package has just been rebuilt for another parent of this child
+			common.CountSafe("TxPkgsAddDupTx")
+			continue
+		}
+		if pkg.hasAllTheParentsFor(new_child) {
+			pkg.Txs = append(pkg.Txs, new_child)
+			pkg.Weight += new_child.Weight()
+			pkg.Fee += new_child.Fee
+			new_child.inPackagesSet(append(new_child.inPackages, pkg))
+			common.CountSafe("TxPkgsAddAppend")
+		} else {
+			// The child has also other unconfirmed parents, that are not in this package yet.
+			// They need to be placed before the child, so build the package again.
+			pkg.rebuild()
+			common.CountSafe("TxPkgsAddRebuild")
+		}
+		feePackagesReSort = true
+	}
+
+	// The parent's own package is the one that starts with it. Mind that it may not have one yet, even if
+	// it is in some packages already - when it got pulled into them as another parent of somebody's child.
+	if !has_own_pkg {
+		// we create a new package, like in buildListAndPackages()
 		if pandch := parent.GetItWithAllChildren(); len(pandch) > 1 {
 			pkg := &OneTxsPackage{Txs: pandch}
 			for _, t := range pandch {
@@ -72,25 +102,21 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 		} else {
 			fmt.Println("ERROR: in addToPackages parent's GetItWithAllChildren returned only", len(pandch), "txs")
 		}
-	} else {
-		// here we go through all the packages and append the new_child at their ends
-		for _, pkg := range parent.inPackages {
-			if !pkg.hasAllTheParentsFor(new_child) {
-				// this is not our package
-				continue
-			}
-			if slices.Contains(pkg.Txs, new_child) {
-				// this can happen when a new child uses more than one vout from the parent
-				common.CountSafe("TxPkgsAddDupTx")
-				continue
-			}
-			pkg.Txs = append(pkg.Txs, new_child)
-			pkg.Weight += new_child.Weight()
-			pkg.Fee += new_child.Fee
-			new_child.inPackagesSet(append(new_child.inPackages, pkg))
-			feePackagesReSort = true
-			common.CountSafe("TxPkgsAddAppend")
-		}
+	}
+}
+
+// rebuild makes the package again, starting from its first tx - like buildListAndPackages() would do it.
+func (pkg *OneTxsPackage) rebuild() {
+	for _, t := range pkg.Txs {
+		t.removePkg(pkg)
+	}
+	pkg.Txs = pkg.Txs[0].GetItWithAllChildren()
+	pkg.Weight = 0
+	pkg.Fee = 0
+	for _, t := range pkg.Txs {
+		pkg.Weight += t.Weight()
+		pkg.Fee += t.Fee
+		t.inPackagesSet(append(t.inPackages, pkg))
 	}
 }
 
@@ -165,13 +191,10 @@ func (t2s *OneTxToSend) delFromPackages() {
 	if records2remove > 0 {
 		common.CountSafe("TxPkgsDelGrCnt")
 		common.CountSafeAdd("TxPkgsDelGroup", uint64(records2remove))
-		new_pkgs_list := make([]*OneTxsPackage, 0, cap(FeePackages))
-		for _, pkg := range FeePackages {
-			if pkg.Txs != nil {
-				new_pkgs_list = append(new_pkgs_list, pkg)
-			}
-		}
-		FeePackages = new_pkgs_list
+		// remove them in place (this also clears the pointers left at the end of the buffer)
+		FeePackages = slices.DeleteFunc(FeePackages, func(pkg *OneTxsPackage) bool {
+			return pkg.Txs == nil
+		})
 		feePackagesReSort = true
 	}
 }
@@ -197,14 +220,16 @@ func (t2s *OneTxToSend) removePkg(pkg *OneTxsPackage) {
 	}
 }
 
+// hasAllTheParentsFor returns true if all the unconfirmed parents of the child are in the package.
+// The inputs that are already mined do not matter here.
 func (pk *OneTxsPackage) hasAllTheParentsFor(child *OneTxToSend) bool {
 	if len(pk.Txs)*len(child.TxIn) > 10 {
 		m := make(map[btc.BIDX]bool, len(pk.Txs))
 		for _, t := range pk.Txs {
 			m[t.Hash.BIdx()] = true
 		}
-		for _, in := range child.TxIn {
-			if !m[btc.BIdx(in.Input.Hash[:])] {
+		for i, in := range child.TxIn {
+			if i < len(child.MemInputs) && child.MemInputs[i] && !m[btc.BIdx(in.Input.Hash[:])] {
 				return false
 			}
 		}
@@ -217,8 +242,8 @@ func (pk *OneTxsPackage) hasAllTheParentsFor(child *OneTxToSend) bool {
 			}
 			return false
 		}
-		for _, in := range child.TxIn {
-			if !has_parent_for(in.Input.Hash[:]) {
+		for i, in := range child.TxIn {
+			if i < len(child.MemInputs) && child.MemInputs[i] && !has_parent_for(in.Input.Hash[:]) {
 				return false
 			}
 		}
@@ -249,6 +274,9 @@ func sortFeePackages() {
 
 func emptyFeePackages() {
 	if len(FeePackages) > 0 {
+		for i := range FeePackages {
+			FeePackages[i] = nil // otherwise the old packages (and their txs) would stay in memory
+		}
 		FeePackages = FeePackages[:0] // to avoid unneeded memory allocation, just reuse the old buffer
 		for _, t2s := range TransactionsToSend {
 			t2s.inPackagesSet(nil) // we have to do this first run only to reset InPackages field
@@ -292,6 +320,13 @@ func buildListAndPackages() {
 
 // GetSortedMempoolRBF is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.
 func GetSortedMempoolRBF() (result []*OneTxToSend) {
+	result, _ = getSortedMempoolRBF()
+	return
+}
+
+// getSortedMempoolRBF does GetSortedMempoolRBF(), additionally returning the fee rate (in satoshis per
+// 1000 virtual bytes) of the worst tx or package that still fits in the mempool's size limit.
+func getSortedMempoolRBF() (result []*OneTxToSend, worst_spkb uint64) {
 	var pks_idx int
 	var worst_fee, worst_weight, cursize uint64
 	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
@@ -330,7 +365,7 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 		}
 	}
 	if worst_weight > 0 {
-		CurrentFeeAdjustedSPKB = 4000 * worst_fee / worst_weight
+		worst_spkb = 4000 * worst_fee / worst_weight
 	}
 	return
 }

@@ -187,7 +187,9 @@ func BlockMined(bl *btc.Block) {
 	for _, tx := range bl.Txs[1:] {
 		txAccepted(tx.Hash.BIdx())
 	}
+	orphans := takeOrphansAccepted()
 	TxMutex.Unlock()
+	notifyOrphansAccepted(orphans)
 }
 
 func BlockUndone(bl *btc.Block) {

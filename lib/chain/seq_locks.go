@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
 )
 
@@ -113,4 +114,45 @@ func heightOfMTP(coinHeight uint32) uint32 {
 		return coinHeight - 1
 	}
 	return 0
+}
+
+// CheckTxFinalAtTip tells whether the given transaction could be included in the next block,
+// as far as its absolute (nLockTime) and relative (BIP68) lock-times are concerned.
+// It is the equivalent of CheckFinalTxAtTip() and CheckSequenceLocksAtTip() from Bitcoin Core,
+// meant for validating transactions entering the memory pool.
+// coinHeights holds, for each of the tx's inputs, the height of the block containing the output
+// being spent, or zero if the output has not been mined yet.
+// Set csv to false to skip the BIP68 part (i.e. when CSV is not enforced yet).
+func (ch *Chain) CheckTxFinalAtTip(tx *btc.Tx, coinHeights []uint32, csv bool) error {
+	prev := ch.LastBlock()
+	if prev == nil {
+		return nil // nothing to check it against
+	}
+	height := prev.Height + 1
+
+	if tx.Lock_time != 0 {
+		var blockTime uint32
+		if tx.Lock_time >= btc.LOCKTIME_THRESHOLD { // time based, so we need the median time past
+			ch.BlockIndexAccess.Lock()
+			blockTime = prev.GetMedianTimePast()
+			ch.BlockIndexAccess.Unlock()
+		}
+		if !tx.IsFinal(height, blockTime) {
+			return errors.New("CheckTxFinalAtTip(): lock-time not reached - RPC_Result:non-final")
+		}
+	}
+
+	if !csv || tx.Version < 2 {
+		return nil
+	}
+
+	var l seqLocks
+	for i := range tx.TxIn {
+		coinHeight := coinHeights[i]
+		if coinHeight == 0 {
+			coinHeight = height // not mined yet, so the next block at the earliest
+		}
+		l.add(tx.TxIn[i].Sequence, coinHeight)
+	}
+	return ch.checkSequenceLocks(&l, height)
 }

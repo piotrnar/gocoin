@@ -50,6 +50,7 @@ type OneTxToSend struct {
 	MemInputCnt         uint32
 	Footprint           uint32
 	Blocked             byte // if non-zero, it gives you the reason why this tx has not been routed
+	sortFinger          bool // set if the tx is in sortFingers
 	Local               bool
 	Final               bool // if true RFB will not work on it
 }
@@ -181,14 +182,16 @@ func removeExcessiveTxs() {
 		return // don't do it during mpget
 	}
 	if TransactionsToSendSize >= common.MaxMempoolSize()+1e6 { // only remove txs when we are 1MB over the maximum size
-		sorted_txs := GetSortedMempoolRBF()
+		sorted_txs, worst_spkb := getSortedMempoolRBF()
+		if worst_spkb != 0 {
+			CurrentFeeAdjustedSPKB = worst_spkb // new txs will need to pay more than the ones we are about to remove
+		}
 		FeePackagesDirty = true // do not update fee packages while doing this, as it will take forever
 		for idx := len(sorted_txs) - 1; idx >= 0; idx-- {
 			worst_tx := sorted_txs[idx]
 			cnt++
 			bytes += uint64(worst_tx.Footprint)
 			worst_tx.Delete(false, 0)
-			cnt++
 			if TransactionsToSendSize <= common.MaxMempoolSize() {
 				break
 			}
@@ -235,7 +238,46 @@ func txChecker(tx *btc.Tx) bool {
 	return ok
 }
 
-// GetChildren gets all first level children of the tx.
+// clusterBiggerThan returns true if there are more than max txs in the cluster(s) of the given txs.
+// A cluster is all the mempool's txs that are connected with each other, through their unconfirmed
+// parents or children, no matter how far away. The txs from skip are treated like if they were not there.
+// It stops as soon as it knows the answer, so it never visits more than max+1 txs.
+func clusterBiggerThan(txs []*OneTxToSend, skip map[*OneTxToSend]bool, max int) bool {
+	seen := make(map[*OneTxToSend]struct{}, max+1)
+	todo := make([]*OneTxToSend, 0, max+1)
+	add := func(t2s *OneTxToSend) (too_many bool) {
+		if t2s == nil || skip[t2s] {
+			return
+		}
+		if _, ok := seen[t2s]; ok {
+			return
+		}
+		seen[t2s] = struct{}{}
+		todo = append(todo, t2s)
+		return len(seen) > max
+	}
+	for _, t2s := range txs {
+		if add(t2s) {
+			return true
+		}
+	}
+	for idx := 0; idx < len(todo); idx++ {
+		t2s := todo[idx]
+		for i, meminput := range t2s.MemInputs {
+			if meminput && add(TransactionsToSend[btc.BIdx(t2s.TxIn[i].Input.Hash[:])]) {
+				return true
+			}
+		}
+		for vout := range t2s.TxOut {
+			if so, ok := SpentOutputs[btc.UIdx(t2s.Hash.Hash[:], uint32(vout))]; ok && add(TransactionsToSend[so]) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// HasNoChildren returns true if none of the tx's outputs is spent in the mempool.
 func (tx *OneTxToSend) HasNoChildren() bool {
 	for vout := range tx.TxOut {
 		uidx := btc.UIdx(tx.Hash.Hash[:], uint32(vout))
@@ -327,33 +369,7 @@ func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
 	return
 }
 
-// GetAllParents gets all the unconfirmed parents of the given tx.
-// The result is sorted by the oldest parent.
-func (tx *OneTxToSend) GetAllParents() (result []*OneTxToSend) {
-	already_in := make(map[*OneTxToSend]bool)
-	already_in[tx] = true
-	var do_one func(*OneTxToSend)
-	do_one = func(tx *OneTxToSend) {
-		if tx.MemInputCnt > 0 {
-			for idx := range tx.TxIn {
-				if tx.MemInputs[idx] {
-					par_tx := TransactionsToSend[btc.BIdx(tx.TxIn[idx].Input.Hash[:])]
-					if _, ok := already_in[par_tx]; !ok {
-						do_one(par_tx)
-					}
-				}
-			}
-		}
-		if _, ok := already_in[tx]; !ok {
-			result = append(result, tx)
-			already_in[tx] = true
-		}
-	}
-	do_one(tx)
-	return
-}
-
-// GetAllParents gets all the unconfirmed parents of the given tx, except for the input tx (and its parents).
+// GetAllParentsExcept gets all the unconfirmed parents of the given tx, except for the input tx (and its parents).
 // The result is sorted by the oldest parent.
 func (tx *OneTxToSend) GetAllParentsExcept(except *OneTxToSend) (result []*OneTxToSend) {
 	already_in := make(map[*OneTxToSend]bool)
@@ -407,6 +423,7 @@ func InitMempool() {
 	InitTransactionsRejected()
 
 	BestT2S, WorstT2S = nil, nil
+	resetSortFingers()
 	adjustSortIndexStep()
 	SortListDirty = false
 	ResortingSinceLastRedoTime = 0

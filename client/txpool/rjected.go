@@ -66,12 +66,14 @@ const (
 	TX_REJECTED_NO_TXOU     = 202
 	TX_REJECTED_BAD_PARENT  = 203
 	TX_REJECTED_LOW_FEE     = 205
+	TX_REJECTED_NOT_FINAL   = 206
 	TX_REJECTED_NOT_MINED   = 208
 	TX_REJECTED_CB_INMATURE = 209
 	TX_REJECTED_RBF_LOWFEE  = 210
 	TX_REJECTED_RBF_FINAL   = 211
 	TX_REJECTED_RBF_100     = 212
 	TX_REJECTED_REPLACED    = 213
+	TX_REJECTED_CLUSTER_BIG = 214
 )
 
 func TRIdxNext(idx int) int {
@@ -242,12 +244,6 @@ func (tr *OneTxRejected) cleanup() {
 	}
 }
 
-func RejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
-	TxMutex.Lock()
-	rejectTx(tx, why, missingid)
-	TxMutex.Unlock()
-}
-
 // rejectTx adds a transaction to the rejected list or not, if it has been mined already.
 // Make sure to call it with locked TxMutex.
 // Returns the OneTxRejected or nil if it has not been added.
@@ -272,6 +268,7 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 
 // call this function after the tx has been accepted,
 // to re-submit all txs that had been waiting for it
+// The ones that get accepted are added to orphansAccepted - see takeOrphansAccepted()
 func txAccepted(bidx btc.BIDX) {
 	recs2do := []btc.BIDX{bidx}
 	for delidx := 0; delidx < len(recs2do); delidx++ {
@@ -297,6 +294,7 @@ func txAccepted(bidx btc.BIDX) {
 			if res == 0 {
 				// if res was 0, t2s is not nil
 				recs2do = append(recs2do, t2s.Hash.BIdx())
+				orphansAccepted = append(orphansAccepted, t2s)
 				common.CountSafe("TxRetryAccepted")
 				continue
 			}
@@ -314,15 +312,6 @@ func txAccepted(bidx btc.BIDX) {
 			common.CountSafePar("TxRetryRjctd-", res)
 		}
 	}
-}
-
-// Make sure to call it with locked TxMutex
-func (tr *OneTxRejected) Discard() {
-	TransactionsRejectedSize -= uint64(tr.Footprint)
-	tr.cleanup()
-	tr.Tx = nil
-	tr.Footprint = uint32(tr.SysSize())
-	TransactionsRejectedSize += uint64(tr.Footprint)
 }
 
 func ReasonToString(reason byte) string {
@@ -355,6 +344,8 @@ func ReasonToString(reason byte) string {
 		return "BAD_PARENT"
 	case TX_REJECTED_LOW_FEE:
 		return "LOW_FEE"
+	case TX_REJECTED_NOT_FINAL:
+		return "NOT_FINAL"
 	case TX_REJECTED_NOT_MINED:
 		return "NOT_MINED"
 	case TX_REJECTED_CB_INMATURE:
@@ -367,6 +358,8 @@ func ReasonToString(reason byte) string {
 		return "RBF_100"
 	case TX_REJECTED_REPLACED:
 		return "REPLACED"
+	case TX_REJECTED_CLUSTER_BIG:
+		return "CLUSTER_BIG"
 	}
 	return fmt.Sprint("UNKNOWN_", reason)
 }
