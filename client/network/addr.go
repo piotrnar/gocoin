@@ -15,6 +15,9 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
+// MaxExternalIps is how many different IPs, reported to us by the peers as ours, we keep.
+const MaxExternalIps = 32
+
 var (
 	ExternalIp4            map[uint32][2]uint = make(map[uint32][2]uint) // [0]-count, [1]-timestamp
 	ExternalIpMutex        sync.Mutex

@@ -54,16 +54,9 @@ func (c *OneConnection) SendGetMP() error {
 }
 
 // TxInvNotify handles tx-inv notifications.
-func (c *OneConnection) TxInvNotify(hash []byte) (res bool) {
-	if txpool.NeedThisTxExt(btc.NewUint256(hash), nil) == 0 {
-		var b [1 + 4 + 32]byte
-		b[0] = 1                                              // One inv
-		binary.LittleEndian.PutUint32(b[1:5], MSG_WITNESS_TX) // SegWit Tx
-		copy(b[5:37], hash)
-		c.SendRawMsg("getdata", b[:], false)
-		res = true
-	}
-	return
+// It returns true if we want the peer to send us this tx (see sendGetTxs).
+func (c *OneConnection) TxInvNotify(hash []byte) bool {
+	return txpool.NeedThisTxExt(btc.NewUint256(hash), nil) == 0 && c.txRequestWanted(hash)
 }
 
 func isRoutable(rec *txpool.OneTxToSend) (yes bool, spkb uint64) {
@@ -189,6 +182,7 @@ func (c *OneConnection) ParseTxNet(cmd *BCmsg) {
 	}
 
 	tx.SetHash(cmd.pl)
+	txRequestDone(tx.Hash.BIdx())
 
 	txpool.NeedThisTxExt(&tx.Hash, func() {
 		// This body is called with a locked TxMutex
@@ -215,36 +209,48 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 		return
 	}
 
+	// check the count before using it for the allocation
+	if cnt > uint64(br.Len()/btc.Uint256IdxLen) {
+		fmt.Println("getmp message too short")
+		c.DoS("GetMPError2")
+		return
+	}
+
 	has_this_one := make(map[btc.BIDX]bool, cnt)
 	for i := 0; i < int(cnt); i++ {
 		var idx btc.BIDX
-		if n, _ := br.Read(idx[:]); n != len(idx) {
-			fmt.Println("getmp message too short")
-			c.DoS("GetMPError2")
-			return
-		}
+		br.Read(idx[:])
 		has_this_one[idx] = true
 	}
 
-	var data_sent_so_far int
 	var redo [1]byte
 
+	c.Mutex.Lock()
+	bts := c.BytesToSent()
+	c.Mutex.Unlock()
+
+	// Only pick the txs while holding TxMutex. Send them (which includes encrypting)
+	// after releasing it, so we do not block the mempool for all that time.
+	var to_send [][]byte
 	txpool.TxMutex.Lock()
 	txs := txpool.GetSortedMempoolRBF() // we want to send parent txs first, thus the sorting
 	for _, v := range txs {
-		c.Mutex.Lock()
-		bts := c.BytesToSent()
-		c.Mutex.Unlock()
 		if bts > SendBufSize/4 {
 			redo[0] = 1
 			break
 		}
 		if !has_this_one[v.Hash.BIdx()] {
-			c.SendRawMsg("tx", v.Raw, c.X.AuthAckGot)
-			data_sent_so_far += 24 + len(v.Raw)
+			to_send = append(to_send, v.Raw)
+			bts += 24 + len(v.Raw)
 		}
 	}
 	txpool.TxMutex.Unlock()
+
+	for _, raw := range to_send {
+		if c.SendRawMsg("tx", raw, c.X.AuthAckGot) != nil {
+			return // the connection is being closed
+		}
+	}
 
 	c.SendRawMsg("getmpdone", redo[:], false)
 }

@@ -24,7 +24,7 @@ const (
 	AskAddrsEvery      = (5 * time.Minute)
 	MaxAddrsPerMessage = 500
 	SendBufSize        = 16 * 1024 * 1024 // If you'd have this much in the send buffer, disconnect the peer
-	SendBufMask        = SendBufSize - 1
+	SendBufMinSize     = 64 * 1024        // The send buffer starts with this size and grows when needed
 
 	GetHeadersTimeout    = 2 * time.Minute  // Timeout to receive headers
 	VersionMsgTimeout    = 20 * time.Second // Timeout to receive the version message after connecting
@@ -231,8 +231,9 @@ type OneConnection struct {
 	sync.Mutex  // protects concurent access to any fields inside this structure
 	sendInvsNow sys.SyncBool
 
-	// Message sending state machine:
-	sendBuf [SendBufSize]byte
+	// Message sending state machine: a ring buffer that grows on demand, up to SendBufSize.
+	// Its length is always a power of two.
+	sendBuf []byte
 
 	ConnID uint32
 	broken bool // flag that the conenction has been broken / shall be disconnected
@@ -263,6 +264,7 @@ func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c.counters = make(map[string]uint64)
 	c.InvDone.Map = make(map[uint64]uint32, MAX_INV_HISTORY)
 	c.GetMP = make(chan bool, 1)
+	c.sendBuf = make([]byte, SendBufMinSize)
 	return
 }
 
@@ -338,11 +340,41 @@ func (v *OneConnection) MutexGetBool(addr *bool) (val bool) {
 
 // call it with locked mutex!
 func (v *OneConnection) BytesToSent() int {
-	if v.SendBufProd >= v.SendBufCons {
-		return v.SendBufProd - v.SendBufCons
-	} else {
-		return v.SendBufProd + SendBufSize - v.SendBufCons
+	return (v.SendBufProd - v.SendBufCons) & (len(v.sendBuf) - 1)
+}
+
+// makeSendRoom makes sure that more than the given number of bytes can be appended
+// to sendBuf, enlarging it if needed. We never allow the buffer to be totally full,
+// because then the producer would be equal to the consumer.
+// Returns false if that would make the buffer bigger than SendBufSize.
+// call it with locked mutex!
+func (c *OneConnection) makeSendRoom(need int) bool {
+	used := c.BytesToSent()
+	size := len(c.sendBuf)
+	if size-used > need {
+		return true
 	}
+	for size-used <= need {
+		if size >= SendBufSize {
+			return false
+		}
+		size <<= 1
+	}
+	// Move the pending data to the beginning of the new buffer. Note that the writing
+	// thread may be sending from the old buffer right now. That is fine, as the old
+	// buffer stays intact and the data keeps its order: when the thread is done, it
+	// only moves SendBufCons forward, by the number of bytes it has sent.
+	nb := make([]byte, size)
+	if c.SendBufProd >= c.SendBufCons {
+		copy(nb, c.sendBuf[c.SendBufCons:c.SendBufProd])
+	} else {
+		n := copy(nb, c.sendBuf[c.SendBufCons:])
+		copy(nb[n:], c.sendBuf[:c.SendBufProd])
+	}
+	c.sendBuf = nb
+	c.SendBufCons = 0
+	c.SendBufProd = used
+	return true
 }
 
 // call it with unlocked mutex!
@@ -389,11 +421,15 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte, encrypt bool) (e error
 	}*/
 
 	if !c.broken {
-		// we never allow the buffer to be totally full because then producer would be equal consumer
-		if bytes_left := SendBufSize - c.BytesToSent(); bytes_left <= len(pl)+24 {
+		need := len(pl) + 24
+		if encrypt && c.aesData != nil {
+			need += c.aesData.nonceSize + c.aesData.AEAD.Overhead() // encryption makes it longer
+		}
+		if !c.makeSendRoom(need) {
+			bytes_left := len(c.sendBuf) - c.BytesToSent()
 			c.Mutex.Unlock()
 			fmt.Println(c.PeerAddr.Ip(), c.Node.Version, c.Node.Agent, "Peer Send Buffer Overflow @",
-				cmd, bytes_left, len(pl)+24, c.SendBufProd, c.SendBufCons, c.BytesToSent())
+				cmd, bytes_left, need, c.SendBufProd, c.SendBufCons, c.BytesToSent())
 			c.DoS("SendBufferOverflow")
 			common.CountSafe("PeerSendOverflow")
 			return errors.New("send buffer overflow")
@@ -448,14 +484,14 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte, encrypt bool) (e error
 
 // append_to_send_buffer assumes that there is enough room inside sendBuf.
 func (c *OneConnection) append_to_send_buffer(d []byte) {
-	room_left := SendBufSize - c.SendBufProd
+	room_left := len(c.sendBuf) - c.SendBufProd
 	if room_left >= len(d) {
 		copy(c.sendBuf[c.SendBufProd:], d)
 	} else {
 		copy(c.sendBuf[c.SendBufProd:], d[:room_left])
 		copy(c.sendBuf[:], d[room_left:])
 	}
-	c.SendBufProd = (c.SendBufProd + len(d)) & SendBufMask
+	c.SendBufProd = (c.SendBufProd + len(d)) & (len(c.sendBuf) - 1)
 }
 
 func (c *OneConnection) Disconnect(dead bool, why string) {
@@ -495,14 +531,17 @@ func (c *OneConnection) expire_misbehave(now int64) {
 	if len(c.misbehave_history) > 0 {
 		var idx, sub int
 		for {
-			tim := (now & 0xffff0000) | int64(c.misbehave_history[idx][0])
+			// we only store the lowest 16 bits of the time
+			tim := (now &^ 0xffff) | int64(c.misbehave_history[idx][0])
 			if tim > now {
-				tim--
+				tim -= 0x10000 // it was recorded before these 16 bits wrapped around
 			}
 			if now-tim < 3600 {
 				break
 			}
-			if idx+1 == len(c.misbehave_history) {
+			// this record has expired
+			sub += int(c.misbehave_history[idx][1])
+			if idx++; idx == len(c.misbehave_history) {
 				if c.X.Debug {
 					fmt.Println("Un-misbehave "+c.PeerAddr.Ip(), "from", c.misbehave, "to zero")
 				}
@@ -510,8 +549,6 @@ func (c *OneConnection) expire_misbehave(now int64) {
 				c.misbehave_history = nil
 				return
 			}
-			idx++
-			sub += int(c.misbehave_history[idx][1])
 		}
 		if idx > 0 {
 			c.misbehave -= sub
@@ -749,22 +786,21 @@ func (c *OneConnection) writing_thread() {
 			continue
 		}
 
-		bytes_to_send := c.SendBufProd - c.SendBufCons
+		// Take the continuous part of the pending data. Get the slice while holding
+		// the mutex, as SendRawMsg() may replace c.sendBuf with a bigger one.
+		end := c.SendBufProd
+		if end < c.SendBufCons {
+			end = len(c.sendBuf)
+		}
+		buf := c.sendBuf[c.SendBufCons:end]
 		c.Mutex.Unlock() // unprotect access to c.SendBufProd
 
-		if bytes_to_send < 0 {
-			bytes_to_send += SendBufSize
-		}
-		if c.SendBufCons+bytes_to_send > SendBufSize {
-			bytes_to_send = SendBufSize - c.SendBufCons
-		}
-
-		n, e := common.SockWrite(c.Conn, c.sendBuf[c.SendBufCons:c.SendBufCons+bytes_to_send])
+		n, e := common.SockWrite(c.Conn, buf)
 		if n > 0 {
 			c.Mutex.Lock()
 			c.X.LastSent = time.Now()
 			c.X.BytesSent += uint64(n)
-			c.SendBufCons = (c.SendBufCons + n) & SendBufMask
+			c.SendBufCons = (c.SendBufCons + n) & (len(c.sendBuf) - 1)
 			c.Mutex.Unlock()
 		} else if e != nil {
 			c.Disconnect(true, "SendErr:"+e.Error())

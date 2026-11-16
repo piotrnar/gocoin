@@ -70,6 +70,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		return
 	}
 
+	var txs2get []byte // txids
 	for i := 0; i < cnt; i++ {
 		typ := binary.LittleEndian.Uint32(pl[of : of+4])
 		c.Mutex.Lock()
@@ -104,7 +105,9 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 			}
 		case MSG_TX:
 			if common.AcceptTx() {
-				c.TxInvNotify(pl[of+4 : of+36])
+				if c.TxInvNotify(pl[of+4 : of+36]) {
+					txs2get = append(txs2get, pl[of+4:of+36]...)
+				}
 			} else {
 				common.CountSafe("InvTxIgnored")
 			}
@@ -113,6 +116,9 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		}
 		of += 36
 	}
+
+	// ask for all the txs that we want from this inv, in a single message
+	c.sendGetTxs(txs2get)
 }
 
 func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint32 {

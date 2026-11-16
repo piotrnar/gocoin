@@ -156,10 +156,20 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		}
 	}
 
+	if use_this_ip && c.X.Incomming && !c.X.IsSpecial {
+		// Anyone can connect to us and report whatever IP, to make us advertise it as
+		// ours. So only trust the peers that we have chosen to connect to.
+		common.CountSafe("IgnoreExtIP-I")
+		use_this_ip = false
+	}
+
 	if use_this_ip {
 		ExternalIpMutex.Lock()
 		if _, known := ExternalIp4[c.Node.ReportedIp4]; !known { // New IP
-			use_this_ip = true
+			if len(ExternalIp4) >= MaxExternalIps {
+				use_this_ip = false // do not let the list grow forever
+				common.CountSafe("IgnoreExtIP-F")
+			}
 			for x, v := range IgnoreExternalIpFrom {
 				if c.Node.Agent == v {
 					use_this_ip = false

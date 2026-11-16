@@ -689,6 +689,7 @@ func NetworkTick() {
 			DoNetwork(ad)
 		}
 	}
+	txRequestsTick(now)
 	txpool.Tick()
 }
 

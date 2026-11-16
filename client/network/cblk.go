@@ -206,7 +206,7 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 	if b2g == nil {
 		common.CountSafePar("CmpctBlockRjctd-", sta)
 		switch sta {
-		case PH_STATUS_ERROR:
+		case PH_STATUS_ERROR, PH_STATUS_UNCON:
 			c.ReceiveHeadersNow()       // block doesn't connect so ask for the headers
 			c.Misbehave("BadCmpct", 50) // do it 20 times and you are banned
 		case PH_STATUS_FATAL:

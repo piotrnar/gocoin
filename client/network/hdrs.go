@@ -21,6 +21,7 @@ const (
 	PH_STATUS_OLD   = 3
 	PH_STATUS_ERROR = 4
 	PH_STATUS_FATAL = 5
+	PH_STATUS_UNCON = 6 // the header does not connect to any block that we know
 )
 
 func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
@@ -66,7 +67,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	// while holding BlockIndexAccess, as common.ApplyLTB() locks them the other way
 	// around. So hold BlockIndexAccess only for the part that needs the block index.
 	var node *chain.BlockTreeNode
-	var dos bool
+	var dos, unconnected bool
 	var er error
 	func() {
 		common.BlockChain.BlockIndexAccess.Lock()
@@ -86,7 +87,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 			common.CountSafe("HeaderRevived")
 			return
 		}
-		if dos, _, er = common.BlockChain.PreCheckBlock(bl); er != nil {
+		if dos, unconnected, er = common.BlockChain.PreCheckBlock(bl); er != nil {
 			return
 		}
 		node = common.BlockChain.AcceptHeader(bl)
@@ -99,6 +100,8 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 		}
 		if dos {
 			return PH_STATUS_FATAL, nil
+		} else if unconnected {
+			return PH_STATUS_UNCON, nil
 		} else {
 			return PH_STATUS_ERROR, nil
 		}
@@ -149,6 +152,7 @@ func (b2g *OneBlockToGet) addFetchSource(c *OneConnection) {
 
 func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 	var highest_block_found uint32
+	var unconnected bool
 
 	c.MutexSetBool(&c.X.GetHeadersInProgress, false)
 
@@ -171,7 +175,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 		MutexRcv.Lock()
 		defer MutexRcv.Unlock()
 
-		for i := 0; i < int(cnt); i++ {
+		for i := 0; i < int(cnt) && !unconnected; i++ {
 			hdr := make([]byte, 80)
 
 			if n, _ := b.Read(hdr); n != 80 {
@@ -196,6 +200,14 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 				case PH_STATUS_ERROR:
 					//fmt.Println("c.Misbehave(BadHeader)")
 					c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
+				case PH_STATUS_UNCON:
+					// We do not know the parent of this header, so we are missing some
+					// blocks that the peer has. Ask him for the headers (see below).
+					// The remaining headers of this message would not connect either,
+					// so skip them - not to punish the peer for each one of them.
+					common.CountSafe("HdrUnconnected")
+					c.Misbehave("HdrUnconnected", 50)
+					unconnected = true
 				}
 			} else {
 				if sta == PH_STATUS_NEW {
@@ -226,7 +238,9 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 	c.Mutex.Lock()
 	c.X.LastHeadersEmpty = highest_block_found <= c.X.LastHeadersHeightAsk
 	c.X.TotalNewHeadersCount += new_headers_got
-	if new_headers_got == 0 {
+	if unconnected {
+		c.X.AllHeadersReceived = false // this makes Tick() to send "getheaders"
+	} else if new_headers_got == 0 {
 		c.X.AllHeadersReceived = true
 	}
 	c.Mutex.Unlock()
