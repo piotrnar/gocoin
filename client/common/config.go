@@ -142,6 +142,10 @@ var (
 	defaultMemoryLimitSet = true
 )
 
+// unlimitedSizeBytes is stored as the size limit, when the config says zero (no limit).
+// It is not the max uint64, so the code can still safely add to it or cast it to int.
+const unlimitedSizeBytes = 1 << 62
+
 type oneAllowedAddr struct {
 	Addr, Mask uint32
 }
@@ -256,6 +260,10 @@ func InitConfig() {
 			os.Exit(1)
 		}
 		fmt.Println("Using config file", ConfigFile)
+	} else if e != nil && !os.IsNotExist(e) {
+		// the file is there, but cannot be read - do not overwrite it with the defaults
+		println("Error reading", ConfigFile, e.Error())
+		os.Exit(1)
 	} else {
 		new_config_file = true
 		fmt.Println("New config file", ConfigFile)
@@ -290,11 +298,22 @@ func InitConfig() {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"
 	}
 
-	if flag.Lookup("h") != nil {
-		flag.PrintDefaults()
-		os.Exit(0)
-	}
 	flag.Parse()
+
+	// The defaults of -t and -t3 come from the config file, so if only one
+	// of them was given in the command line, it overrides the other one.
+	var t4_given, t3_given bool
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "t":
+			t4_given = true
+		case "t3":
+			t3_given = true
+		}
+	})
+	if t3_given && testnet3 && !t4_given {
+		testnet4 = false
+	}
 
 	CFG.Testnet = testnet3 || testnet4
 	CFG.Testnet4 = testnet4
@@ -330,8 +349,9 @@ func InitConfig() {
 		// Create default config file
 		// Set to purge unspndable UTXO records, for lower system memory usage
 		CFG.Memory.PurgeUnspendableUTXO = true
-		SaveConfig()
-		println("Stored default configuration in", ConfigFile)
+		if SaveConfig() {
+			println("Stored default configuration in", ConfigFile)
+		}
 	}
 
 	if CFG.Memory.UseGoHeap {
@@ -363,14 +383,28 @@ func DataSubdir() string {
 	}
 }
 
+// SaveConfig stores the current config in ConfigFile. Returns false (after printing the error) if it failed.
 func SaveConfig() bool {
-	dat, _ := json.MarshalIndent(&CFG, "", "    ")
-	if dat == nil {
+	dat, e := json.MarshalIndent(&CFG, "", "    ")
+	if e == nil {
+		// The file holds the RPC password, so do not make a new one readable by others
+		mode := os.FileMode(0600)
+		if fi, er := os.Stat(ConfigFile); er == nil {
+			mode = fi.Mode().Perm() // ... but keep the permissions of an existing one
+		}
+		// Write to a temp file first, so a crash or a full disk cannot leave the config truncated
+		tmpfn := ConfigFile + ".tmp"
+		if e = os.WriteFile(tmpfn, dat, mode); e == nil {
+			if e = os.Rename(tmpfn, ConfigFile); e != nil {
+				os.Remove(tmpfn)
+			}
+		}
+	}
+	if e != nil {
+		fmt.Println("ERROR: could not save", ConfigFile, "-", e.Error())
 		return false
 	}
-	os.WriteFile(ConfigFile, dat, 0660)
 	return true
-
 }
 
 // make sure to call it with locked mutex_cfg
@@ -392,7 +426,7 @@ func Reset() {
 	DropSlowestEvery = time.Duration(CFG.DropPeers.DropEachMinutes) * time.Minute
 	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours) * time.Hour
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
-	AssureValueInRange("TXPool.ExpireInDays", &CFG.TXPool.ExpireInDays, 1, 1e6)
+	AssureValueInRange("TXPool.ExpireInDays", &CFG.TXPool.ExpireInDays, 1, 1e5) // more would overflow time.Duration
 	TxExpireAfter = time.Duration(CFG.TXPool.ExpireInDays) * time.Hour * 24
 
 	if CFG.TXPool.MaxSizeMB > 0 {
@@ -400,6 +434,7 @@ func Reset() {
 		atomic.StoreUint64(&maxMempoolSizeBytes, uint64(float64(CFG.TXPool.MaxSizeMB)*1e6))
 	} else {
 		fmt.Println("WARNING: TXPool config value MaxSizeMB is zero (unlimited mempool size)")
+		atomic.StoreUint64(&maxMempoolSizeBytes, unlimitedSizeBytes)
 	}
 	AssureValueInRange("TXPool.RejectRecCnt", &CFG.TXPool.RejectRecCnt, 100, 60000)
 	if CFG.TXPool.MaxRejectMB != 0 {
@@ -407,6 +442,7 @@ func Reset() {
 		atomic.StoreUint64(&MaxRejectedSizeBytes, uint64(CFG.TXPool.MaxRejectMB*1e6))
 	} else {
 		fmt.Println("WARNING: TXPool config value MaxRejectMB is zero (unlimited rejected txs cache size)")
+		atomic.StoreUint64(&MaxRejectedSizeBytes, unlimitedSizeBytes)
 	}
 	if CFG.TXPool.MaxNoUtxoMB == 0 {
 		atomic.StoreUint64(&MaxNoUtxoSizeBytes, atomic.LoadUint64(&MaxRejectedSizeBytes))

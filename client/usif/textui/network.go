@@ -271,7 +271,7 @@ func sync_stats(par string) {
 	fmt.Printf("@%d\tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d / %s\n",
 		lb, network.LowestIndexToBlocksToGet.Load()-lb-1, lencb,
 		common.AverageBlockSize.Get(), network.Fetch.CacheEmpty, network.Fetch.WastedCacheEmpty.String())
-	tot := common.DlBytesTotal
+	tot, _ := common.BytesTotal()
 	if tot > 0 {
 		wst := network.Fetch.BlockBytesWasted
 		fmt.Printf("\tWasted %d blocks carrying %d / %dMB, which was %.2f%% of total DL bandwidth\n",

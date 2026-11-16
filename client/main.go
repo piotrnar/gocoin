@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 	"unsafe"
@@ -45,7 +46,19 @@ var (
 
 	lastDefragDone    time.Time
 	lastMapDefragDone time.Time
+
+	clean_function func() // closes the log file, if there is one
 )
+
+// close_console flushes the pending console output (also to the log file).
+// Call it before any os.Exit(), as it does not execute the deferred functions.
+func close_console() {
+	if clean_function != nil {
+		clean_function()
+		clean_function = nil
+	}
+	vcon.Close() // flush whatever is still in the stdout/stderr pipes
+}
 
 const (
 	SaveBlockChainAfter       = 2 * time.Second
@@ -95,7 +108,7 @@ func exit_now() {
 	common.Last.Mutex.Lock()
 	print_sync_stats()
 	common.Last.Mutex.Unlock()
-	if tot := common.DlBytesTotal; tot > 0 {
+	if tot, _ := common.BytesTotal(); tot > 0 {
 		wst := network.Fetch.BlockBytesWasted
 		fmt.Printf("Wasted %d blocks carrying %d / %dMB, which was %.2f%% of total DL bandwidth\n",
 			network.Fetch.BlockSameRcvd, wst>>20, tot>>20, 100*float64(wst)/float64(tot))
@@ -104,6 +117,7 @@ func exit_now() {
 	fmt.Println("Executing exitat", *exitat, "  save:", *saveonexit)
 	if !*saveonexit {
 		fmt.Print("\n\n\n\n")
+		close_console()
 		os.Exit(0)
 	}
 	usif.Exit_now.Set()
@@ -303,6 +317,22 @@ func get_block_from_disk_cache(hash *btc.Uint256) (bl *btc.Block) {
 		if e = bl.BuildTxListExt(false); e != nil {
 			panic(e.Error())
 		}
+		var expected_len int
+		for _, tx := range bl.Txs {
+			expected_len += 32
+			if tx.SegWit != nil {
+				expected_len += 32
+			}
+		}
+		if len(hashes) != expected_len {
+			// the file is incomplete (e.g. disk was full) - calculate the hashes after all
+			fmt.Println("Incorrect length of block's hashes file:", len(hashes), "/", expected_len)
+			bl.TotalInputs = 0 // BuildTxListExt() has already counted them
+			if e = bl.BuildTxList(); e != nil {
+				panic(e.Error())
+			}
+			return
+		}
 		// now restore hashes:
 		var offs int
 		for _, tx := range bl.Txs {
@@ -440,7 +470,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	if CheckParentDiscarded(newbl.BlockTreeNode) {
 		common.CountSafe("DiscardFreshBlockA")
 		if newbl.Block == nil {
-			os.Remove(common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String())
+			del_block_from_disk_cache(newbl.BlockTreeNode.BlockHash)
 		}
 		retryCachedBlocks = network.CachedBlocksLen() > 0
 		return
@@ -532,7 +562,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 	}
 
 	for last != end {
-		if common.StopBlockProcessing {
+		if common.StopBlockProcessing.Load() {
 			time.Sleep(1e9)
 			continue
 		}
@@ -590,7 +620,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 
 func fetch_balances_now() {
 	var prev_progress uint32
-	var abort bool
+	var abort atomic.Bool
 	const info = "\rFetching all balances (Ctrl+C to skip) - "
 	__exit := make(chan bool)
 	var done sync.WaitGroup
@@ -600,7 +630,7 @@ func fetch_balances_now() {
 			select {
 			case s := <-common.KillChan:
 				fmt.Println(s)
-				abort = true
+				abort.Store(true)
 			case <-__exit:
 				done.Done()
 				return
@@ -608,7 +638,7 @@ func fetch_balances_now() {
 		}
 	}()
 	wallet.FetchingBalanceTick = func() bool {
-		if abort {
+		if abort.Load() {
 			return true
 		}
 		if new_progress := common.WalletProgress / 10; new_progress != prev_progress {
@@ -623,7 +653,7 @@ func fetch_balances_now() {
 	fmt.Print("\r                                                                 \r")
 	__exit <- true
 	done.Wait()
-	if !abort {
+	if !abort.Load() {
 		fmt.Println("All balances fetched in", time.Since(sta))
 		common.Set(&common.WalletON, true)
 		common.Set(&common.WalletOnIn, 0)
@@ -631,7 +661,7 @@ func fetch_balances_now() {
 }
 
 func main() {
-	var clean_function func()
+	var exit_val int // non-zero to exit the process with this code, after the cleanup
 
 	fmt.Println("Gocoin client version", gocoin.Version, " PID", os.Getpid())
 	if unsafe.Sizeof(uintptr(0)) < 8 {
@@ -641,7 +671,6 @@ func main() {
 	// Disable Ctrl+C
 	signal.Notify(common.KillChan, os.Interrupt, syscall.SIGTERM)
 	defer func() {
-		var exit_val int
 		if r := recover(); r != nil {
 			err, ok := r.(error)
 			if !ok {
@@ -651,10 +680,7 @@ func main() {
 			fmt.Println(string(debug.Stack()))
 			exit_val = 1
 		}
-		if clean_function != nil {
-			clean_function()
-		}
-		vcon.Close() // flush whatever is still in the stdout/stderr pipes
+		close_console()
 		if exit_val != 0 {
 			os.Exit(exit_val)
 		}
@@ -674,9 +700,12 @@ func main() {
 	}
 
 	if common.FLAG.SaveConfig {
-		common.SaveConfig()
-		fmt.Println("Configuration file saved")
-		os.Exit(0)
+		if common.SaveConfig() {
+			fmt.Println("Configuration file saved")
+		} else {
+			exit_val = 1
+		}
+		return
 	}
 
 	if common.FLAG.VolatileUTXO {
@@ -986,6 +1015,6 @@ func main() {
 	os.RemoveAll(common.TempBlocksDir())
 
 	if usif.Restart.Get() {
-		os.Exit(66)
+		exit_val = 66 // the deferred function will do the exit, after flushing the console
 	}
 }

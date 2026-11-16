@@ -132,6 +132,15 @@
 * Client: fixed a panic at the first new block when Stat.BSizeBlks was set to zero, and the average block size being calculated over an ever-growing number of blocks after lowering that value at runtime
 * Client: fixed a panic (nil connection) when a block loaded from the disk at startup failed the verification
 * Client: fixed the day of month in the "starting Gocoin client" line of the log file (-log) showing the hour instead
+* Client: the config file is no longer overwritten with the defaults when it exists but cannot be read; it is now saved through a temp file (a crash or a full disk cannot leave it truncated), a failed save is reported instead of printing "saved", and a newly created file is readable only by its owner
+* Client: fixed "-t3" command line switch being ignored when the config file was set to Testnet4
+* Client: TXPool.MaxSizeMB or TXPool.MaxRejectMB set to zero now really means no limit - it was not applied when changed at runtime, and at startup it made the limit zero (emptying the mempool as soon as it reached 1MB); TXPool.ExpireInDays is now limited to 100000, as more was overflowing the expire time
+* Client/WebUI: an invalid json submitted from the Config page no longer leaves the config partially changed
+* Client: fixed a race when miners.json was reloaded by one thread (each request of the Miners page) while another one was looking up a miner, and a possible read past the output script while checking for P2Pool
+* Client/Net: fixed the bandwidth limiter allowing extra bytes at the turn of a second and about 1000 times the limit during the second in which the OS clock was moved back
+* Client: the pending console output is now flushed (also to the log file) when exiting for a restart, with "-sc", with "-exitat ... -save=false" or after aborting the opening of the blockchain
+* Client: fixed the ".hashes" file of a discarded block staying in the temp folder till the shutdown, and an incomplete one (e.g. disk full) causing a panic or wrong tx hashes - they are now re-calculated
+* Client: print a warning when the auth key could not be saved (it would silently change at each restart)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

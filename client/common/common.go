@@ -93,7 +93,7 @@ var (
 
 	SyncMaxCacheBytes sys.SyncInt
 
-	StopBlockProcessing bool
+	StopBlockProcessing atomic.Bool
 )
 
 type TheLastBlock struct {

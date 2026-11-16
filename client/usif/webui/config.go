@@ -25,8 +25,11 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		if len(r.Form["configjson"]) > 0 {
 			common.LockCfg()
-			e := json.Unmarshal([]byte(r.Form["configjson"][0]), &common.CFG)
+			// unmarshal into a copy, so an error does not leave the config half-changed
+			new_cfg := common.CFG
+			e := json.Unmarshal([]byte(r.Form["configjson"][0]), &new_cfg)
 			if e == nil {
+				common.CFG = new_cfg
 				common.Reset()
 			}
 			if len(r.Form["save"]) > 0 {
@@ -167,10 +170,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(r.Form["savecfg"]) > 0 {
-		dat, _ := json.MarshalIndent(&common.CFG, "", "    ")
-		if dat != nil {
-			os.WriteFile(common.ConfigFile, dat, 0660)
-		}
+		common.SaveConfig()
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}

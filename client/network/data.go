@@ -142,7 +142,11 @@ func (c *OneConnection) netBlockReceived(cmd *BCmsg) {
 					buf = append(buf, tx.Hash.Hash[:]...)
 				}
 			}
-			os.WriteFile(fname+".hashes", buf, 0600)
+			if e = os.WriteFile(fname+".hashes", buf, 0600); e != nil {
+				// do not leave incomplete file - without it the hashes will get re-calculated
+				fmt.Println("write tmp block hashes:", e.Error())
+				os.Remove(fname + ".hashes")
+			}
 			bei = new(btc.BlockExtraInfo)
 			*bei = b2g.Block.BlockExtraInfo
 			b2g.Block = nil

@@ -37,8 +37,9 @@ func TickRecv() (ms int) {
 	ms = tn.Nanosecond() / 1e6
 	now := tn.Unix()
 	if now < dl_last_sec {
-		dl_last_sec = now // This is to prevent a lock-up when OS clock is updated back
-		ms = 1e6 - 1
+		// OS clock was moved back - start the second over, not to lock-up waiting for the old one
+		dl_last_sec = now
+		dl_bytes_so_far = 0
 	}
 	if now != dl_last_sec {
 		for now-dl_last_sec != 1 {
@@ -60,16 +61,15 @@ func TickSent() (ms int) {
 	ms = tn.Nanosecond() / 1e6
 	now := tn.Unix()
 	if now < ul_last_sec {
-		ul_last_sec = now // This is to prevent a lock-up when OS clock is updated back
-		ms = 1e6 - 1
+		// OS clock was moved back - start the second over, not to lock-up waiting for the old one
+		ul_last_sec = now
+		ul_bytes_so_far = 0
 	}
 	if now != ul_last_sec {
-		var loop_cnt int
 		for now-ul_last_sec != 1 {
 			UlBytesPrevSec[UlBytesPrevSecIdx] = 0
 			UlBytesPrevSecIdx++
 			ul_last_sec++
-			loop_cnt++
 		}
 		UlBytesPrevSec[UlBytesPrevSecIdx] = ul_bytes_priod
 		UlBytesPrevSecIdx++
@@ -100,6 +100,7 @@ func SockRead(con net.Conn, buf []byte) (n int, e error) {
 		}
 	}
 	dl_bytes_so_far += toread
+	sec := dl_last_sec
 	bw_mutex.Unlock()
 
 	if toread > 0 {
@@ -107,7 +108,10 @@ func SockRead(con net.Conn, buf []byte) (n int, e error) {
 		con.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
 		n, e = con.Read(buf[:toread])
 		bw_mutex.Lock()
-		dl_bytes_so_far -= toread
+		if dl_last_sec == sec {
+			// take the reservation back, unless a new second has already wiped it
+			dl_bytes_so_far -= toread
+		}
 		if n > 0 {
 			dl_bytes_so_far += n
 			DlBytesTotal += uint64(n)
@@ -140,6 +144,7 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 		}
 	}
 	ul_bytes_so_far += tosend
+	sec := ul_last_sec
 	bw_mutex.Unlock()
 	if tosend > 0 {
 		// We used to have SetWriteDeadline() here, but it was causing problems because
@@ -147,7 +152,10 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 		// see https://github.com/golang/go/issues/24727
 		n, e = con.Write(buf[:tosend])
 		bw_mutex.Lock()
-		ul_bytes_so_far -= tosend
+		if ul_last_sec == sec {
+			// take the reservation back, unless a new second has already wiped it
+			ul_bytes_so_far -= tosend
+		}
 		if n > 0 {
 			ul_bytes_so_far += n
 			UlBytesTotal += uint64(n)
@@ -157,6 +165,14 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	} else {
 		n = -1
 	}
+	return
+}
+
+// BytesTotal returns the total number of bytes downloaded and uploaded so far.
+func BytesTotal() (dl, ul uint64) {
+	bw_mutex.Lock()
+	dl, ul = DlBytesTotal, UlBytesTotal
+	bw_mutex.Unlock()
 	return
 }
 

@@ -43,7 +43,9 @@ func host_init() {
 	if len(common.SecretKey) != 32 {
 		common.SecretKey = make([]byte, 32)
 		rand.Read(common.SecretKey)
-		os.WriteFile(common.GocoinHomeDir+"authkey", common.SecretKey, 0600)
+		if er := os.WriteFile(common.GocoinHomeDir+"authkey", common.SecretKey, 0600); er != nil {
+			fmt.Println("WARNING: could not save the auth key, so it will change after restart:", er.Error())
+		}
 	}
 	common.PublicKeyBin = btc.PublicFromPrivate(common.SecretKey, true)
 	common.PublicKey = btc.Encodeb58(common.PublicKeyBin)
@@ -67,6 +69,7 @@ func host_init() {
 
 	if chain.AbortNow {
 		sys.UnlockDatabaseDir()
+		close_console()
 		os.Exit(1)
 	}
 
@@ -97,6 +100,7 @@ func host_init() {
 		fmt.Printf("Blockchain opening aborted after %s seconds\n", time.Since(sta).String())
 		common.BlockChain.Close()
 		sys.UnlockDatabaseDir()
+		close_console()
 		os.Exit(1)
 	}
 	__exit <- true

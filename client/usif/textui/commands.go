@@ -683,8 +683,8 @@ func utxo_defrag(par string) {
 }
 
 func blocks_stop(par string) {
-	common.StopBlockProcessing = par != "0" && par != "false"
-	fmt.Println("StopBlockProcessing:", common.StopBlockProcessing)
+	common.StopBlockProcessing.Store(par != "0" && par != "false")
+	fmt.Println("StopBlockProcessing:", common.StopBlockProcessing.Load())
 }
 
 func print_build_info(par string) {
