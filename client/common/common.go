@@ -47,6 +47,7 @@ var (
 	avg_bsize_idx     int
 	avg_bsize_next    uint32
 	avg_bsize_sum     uint
+	avg_bsize_span    int // the span that avg_bsize_history was built for
 
 	allBalMinVal uint64
 
@@ -64,7 +65,9 @@ var (
 	maxMempoolSizeBytes                      uint64
 	MaxRejectedSizeBytes, MaxNoUtxoSizeBytes uint64
 
-	KillChan chan os.Signal = make(chan os.Signal)
+	// It must be buffered, as signal.Notify does not block - with nobody
+	// receiving at the moment (main thread busy), the signal would be lost.
+	KillChan chan os.Signal = make(chan os.Signal, 1)
 
 	SecretKey    []byte // 32 bytes of secret key
 	PublicKeyBin []byte // 33 bytes of public key
@@ -258,9 +261,13 @@ func RecalcAverageBlockSize() {
 	mutex_cfg.Lock()
 	AVG_BSIZE_SPAN := int(CFG.Stat.BSizeBlks)
 	mutex_cfg.Unlock()
+	if AVG_BSIZE_SPAN < 1 {
+		AVG_BSIZE_SPAN = 1 // zero would make us index an empty history
+	}
 	n := BlockChain.LastBlock()
 	new_height := n.Height
-	if avg_bsize_next != 0 && n.Height == avg_bsize_next {
+	// if the span has changed (config update), rebuild the history from scratch
+	if avg_bsize_next != 0 && n.Height == avg_bsize_next && avg_bsize_span == AVG_BSIZE_SPAN {
 		le = uint(n.BlockSize)
 		if len(avg_bsize_history) == AVG_BSIZE_SPAN {
 			if avg_bsize_idx >= AVG_BSIZE_SPAN {
@@ -276,6 +283,7 @@ func RecalcAverageBlockSize() {
 		new_avg_size = int(avg_bsize_sum) / len(avg_bsize_history)
 	} else {
 		avg_bsize_history = make([]uint32, 0, AVG_BSIZE_SPAN)
+		avg_bsize_span = AVG_BSIZE_SPAN
 		avg_bsize_idx = 0
 		avg_bsize_sum = 0
 		for maxcnt := AVG_BSIZE_SPAN; maxcnt > 0 && n != nil; maxcnt-- {

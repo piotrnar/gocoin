@@ -15,7 +15,7 @@ func setupLogging(path string) (cleanup func(), err error) {
 		return nil, err
 	}
 
-	fmt.Fprintln(f, time.Now().Format("2006-01-03 15:04:05"), "starting Gocoin client version", gocoin.Version, " PID", os.Getpid())
+	fmt.Fprintln(f, time.Now().Format("2006-01-02 15:04:05"), "starting Gocoin client version", gocoin.Version, " PID", os.Getpid())
 
 	vcon.AddWriter(f)
 

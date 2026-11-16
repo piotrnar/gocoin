@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -273,7 +274,7 @@ func InitConfig() {
 	flag.UintVar(&CFG.Net.MaxUpKBps, "ul", CFG.Net.MaxUpKBps, "Upload limit in KB/s (0 for no limit)")
 	flag.UintVar(&CFG.Net.MaxDownKBps, "dl", CFG.Net.MaxDownKBps, "Download limit in KB/s (0 for no limit)")
 	flag.StringVar(&CFG.WebUI.Interface, "webui", CFG.WebUI.Interface, "Serve WebUI from the given interface")
-	flag.BoolVar(&CFG.TXRoute.Enabled, "txp", CFG.TXPool.Enabled, "Enable Memory Pool")
+	flag.BoolVar(&CFG.TXPool.Enabled, "txp", CFG.TXPool.Enabled, "Enable Memory Pool")
 	flag.BoolVar(&CFG.TXRoute.Enabled, "txr", CFG.TXRoute.Enabled, "Enable Transaction Routing")
 	flag.BoolVar(&CFG.TextUI_Enabled, "textui", CFG.TextUI_Enabled, "Enable processing TextUI commands (from stdin)")
 	flag.UintVar(&FLAG.UndoBlocks, "undo", 0, "Undo UTXO with this many blocks and exit")
@@ -512,7 +513,8 @@ func UpdateMemoryLimit() {
 				warningShown = false
 			}
 		} else {
-			debug.SetMemoryLimit(0)
+			// Mind that a zero limit would not disable it, but make the GC run nearly continuously
+			debug.SetMemoryLimit(math.MaxInt64)
 			debug.SetGCPercent(1)
 			if !warningShown {
 				fmt.Println("WARNING: Disabled MemoryLimitMB as it is too low:", new_limit, "<", utxo_bytes_used)

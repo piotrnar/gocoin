@@ -126,6 +126,12 @@
 * Client/Net: less CPU used by the network code: looking for the blocks to fetch does not start from the lowest one for each requested block, the sending thread of an idle peer wakes up once a second (not 100 times), the peers DB is fully scanned for a new peer to connect at most every 15 seconds (not each second) and a peer that had failed to deliver blocks does not get checked for more of them with each tick
 * Client/Net: "getheaders" is now answered only with the headers of the blocks that we have, "getdata" for a tx that we do not have is answered with "notfound", "getblocks" is answered with the blocks in the chain order (it was random) and only from the main chain, and a compact block of a version other than 2 is now really ignored (fetched as a regular block)
 * Client/Net: fixed the height remembered when sending "getheaders" (it was the height of the oldest locator, not of our top header, so a peer answering with nothing new was not always seen as such), "getmp" possibly carrying more txs than it declared, the entire raw data of a broken tx being printed on the console, and unprintable characters of a peer's user agent getting to the console and the WebUI
+* Client: fixed "-txp" command line switch changing TXRoute.Enabled instead of TXPool.Enabled - it was also overwriting TXRoute.Enabled from the config file with the value of TXPool.Enabled at each start
+* Client: fixed Ctrl+C / SIGTERM getting lost when it arrived while the main thread was busy (e.g. committing a block or loading the mempool or the balances) - it had to be repeated to shut the node down
+* Client: fixed MemoryLimitMB lower than the memory used by UTXO records making the garbage collector run nearly continuously (high CPU usage), instead of disabling the limit as the warning said
+* Client: fixed a panic at the first new block when Stat.BSizeBlks was set to zero, and the average block size being calculated over an ever-growing number of blocks after lowering that value at runtime
+* Client: fixed a panic (nil connection) when a block loaded from the disk at startup failed the verification
+* Client: fixed the day of month in the "starting Gocoin client" line of the log file (-log) showing the hour instead
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

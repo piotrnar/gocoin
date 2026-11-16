@@ -396,7 +396,9 @@ not_found:
 	e := LocalAcceptBlock(newbl)
 	if e != nil {
 		fmt.Println("AcceptBlock2", newbl.BlockTreeNode.BlockHash.String(), "-", e.Error())
-		newbl.Conn.Misbehave("LocalAcceptBl2", 250)
+		if newbl.Conn != nil { // nil for the blocks loaded from disk (do_the_blocks)
+			newbl.Conn.Misbehave("LocalAcceptBl2", 250)
+		}
 	}
 	if usif.Exit_now.Get() {
 		return false
@@ -460,7 +462,9 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	if e := LocalAcceptBlock(newbl); e != nil {
 		common.CountSafe("DiscardFreshBlockB")
 		fmt.Println("AcceptBlock1", newbl.Block.Hash.String(), "-", e.Error())
-		newbl.Conn.Misbehave("LocalAcceptBl1", 250)
+		if newbl.Conn != nil { // nil for the blocks loaded from disk (do_the_blocks)
+			newbl.Conn.Misbehave("LocalAcceptBl1", 250)
+		}
 	}
 	retryCachedBlocks = retry_cached_blocks()
 	if !retryCachedBlocks && network.BlocksToGetCnt() != 0 {
