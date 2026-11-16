@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -33,6 +34,10 @@ var (
 	web_queue   = make(chan string, InputQueueSize)
 
 	enabled bool
+
+	stdin_reader  = bufio.NewReader(os.Stdin)
+	stdin_enabled bool
+	stdin_busy    atomic.Bool // a read from the real console is in progress
 )
 
 func init() {
@@ -51,9 +56,9 @@ func Init(read_stdin bool) {
 		log.SetOutput(os.Stderr)
 		enabled = true
 	}
-	if read_stdin {
-		go stdin_thread()
-	}
+	// stdin is read lazily (see ReadLine), so whatever the user types while the node is
+	// shutting down stays in the terminal's buffer for the shell, instead of being swallowed.
+	stdin_enabled = read_stdin
 }
 
 // Close restores the original stdout & stderr and flushes whatever is still in the pipes.
@@ -182,6 +187,9 @@ func Fetch(from uint64, maxwait time.Duration) (data []byte, seq uint64) {
 
 // ReadLine returns the next command line, from either of the two consoles.
 func ReadLine() string {
+	if stdin_enabled && stdin_busy.CompareAndSwap(false, true) {
+		go stdin_read_line()
+	}
 	select {
 	case s := <-stdin_queue:
 		return s
@@ -207,20 +215,16 @@ func PostLine(s string) bool {
 	}
 }
 
-func stdin_thread() {
-	rd := bufio.NewReader(os.Stdin)
-	for {
-		li, er := rd.ReadString('\n')
-		li = strings.TrimRight(li, "\r\n")
-		if er != nil {
-			if li == "" {
-				return // stdin closed (e.g. running as a daemon) - only WebUI from now on
-			}
-			store([]byte(li + "\n"))
-			stdin_queue <- li
-			return
-		}
-		store([]byte(li + "\n")) // the real console has echoed it by itself
-		stdin_queue <- li
+// stdin_read_line reads one line from the real console, but only when ReadLine() asked for it.
+func stdin_read_line() {
+	li, er := stdin_reader.ReadString('\n')
+	li = strings.TrimRight(li, "\r\n")
+	if er != nil && li == "" {
+		stdin_enabled = false // stdin closed (e.g. running as a daemon) - only WebUI from now on
+		stdin_busy.Store(false)
+		return
 	}
+	store([]byte(li + "\n")) // the real console has echoed it by itself
+	stdin_queue <- li
+	stdin_busy.Store(false)
 }

@@ -103,6 +103,7 @@
 * License: changed to MIT - the software can now be used, modified and distributed also commercially (before it was free for non-commercial use only); the third-party packages (lib/others, lib/secp256k1) keep their own licenses
 * Lib/secp256k1: faster signature verification (the native Go one, used when no DLL/cgo speedup is active) - ECDSA by about 5-15% and Schnorr by about 10%, with much less memory allocated per signature; ECDSA verify no longer does a field inversion to compare R with the result and the wNAF conversion of the scalars works directly on their bits
 * Lib/secp256k1: fixed the native Go EC code on 32-bit platforms (e.g. 386, arm), where splitting a scalar assumed 64-bit words, so EC multiplication was returning wrong points - valid ECDSA and Schnorr signatures were rejected, public key recovery gave wrong keys and BIP340 signing failed
+* Client/TextUI: stdin is now read only while the TextUI waits for a command, so text typed in the OS terminal while the node is shutting down (e.g. "bs" after "quit") is no longer swallowed by the WebUI console mirroring and reaches the shell again
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
