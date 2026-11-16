@@ -221,7 +221,6 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 	if c.Node.SendCmpctVer != 2 {
 		common.CountSafe("CmpctBlockIgnore")
 		fmt.Println("Ignore compact block", b2g.Block.Height, "version", c.Node.SendCmpctVer, "from ConnID", c.ConnID)
-		c.MutexSetBool(&c.X.GetBlocksDataNow, true)
 	}
 
 	// if we got here, we shall download this block
@@ -229,6 +228,12 @@ func (c *OneConnection) ProcessCmpctBlock(cmd *BCmsg) {
 		c.Mutex.Lock()
 		c.Node.Height = b2g.Block.Height
 		c.Mutex.Unlock()
+	}
+
+	if c.Node.SendCmpctVer != 2 {
+		// we only do version 2, so fetch it as a regular block
+		c.MutexSetBool(&c.X.GetBlocksDataNow, true)
+		return
 	}
 
 	// If this peer is already delivering us this block (we either asked him for the

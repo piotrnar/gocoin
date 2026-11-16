@@ -21,7 +21,6 @@ import (
 )
 
 const (
-	AskAddrsEvery      = (5 * time.Minute)
 	MaxAddrsPerMessage = 500
 	SendBufSize        = 16 * 1024 * 1024 // If you'd have this much in the send buffer, disconnect the peer
 	SendBufMinSize     = 64 * 1024        // The send buffer starts with this size and grows when needed
@@ -265,6 +264,7 @@ func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c.InvDone.Map = make(map[uint64]uint32, MAX_INV_HISTORY)
 	c.GetMP = make(chan bool, 1)
 	c.sendBuf = make([]byte, SendBufMinSize)
+	c.writing_thread_push = make(chan bool, 1)
 	return
 }
 
@@ -778,10 +778,11 @@ func (c *OneConnection) writing_thread() {
 
 		if c.SendBufProd == c.SendBufCons {
 			c.Mutex.Unlock()
-			// wait for a new write, but time out just in case
+			// Wait for a new write (SendRawMsg) or for the connection to be closed
+			// (runCleanup) - both push the channel. But time out, just in case.
 			select {
 			case <-c.writing_thread_push:
-			case <-time.After(10 * time.Millisecond):
+			case <-time.After(time.Second):
 			}
 			continue
 		}

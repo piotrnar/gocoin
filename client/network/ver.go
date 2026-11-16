@@ -48,6 +48,19 @@ func (c *OneConnection) SendVersion() {
 	c.SendRawMsg("version", b.Bytes(), false)
 }
 
+// printableAgent converts the user agent from the version message to a string that is
+// safe to print (we show it on the console and in the WebUI) - the peer may put anything there.
+func printableAgent(ua []byte) string {
+	res := make([]byte, len(ua))
+	for i, ch := range ua {
+		if ch < ' ' || ch > '~' {
+			ch = '?'
+		}
+		res[i] = ch
+	}
+	return string(res)
+}
+
 func (c *OneConnection) IsGocoin() bool {
 	return strings.HasPrefix(c.Node.Agent, "/Gocoin:")
 }
@@ -78,7 +91,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 			return errors.New("MsgCorrupt")
 		}
 		of += 80
-		c.Node.Agent = string(pl[of : of+le])
+		c.Node.Agent = printableAgent(pl[of : of+le])
 		of += le
 		if len(pl) >= of+4 {
 			c.Node.Height = binary.LittleEndian.Uint32(pl[of : of+4])

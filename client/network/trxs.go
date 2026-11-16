@@ -3,7 +3,6 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync/atomic"
@@ -41,11 +40,11 @@ func (c *OneConnection) SendGetMP() error {
 		}
 	}
 	for k := range txpool.TransactionsRejected {
-		b.Write(k[:])
-		cnt++
 		if cnt == MAX_GETMP_TXS {
 			break
 		}
+		b.Write(k[:])
+		cnt++
 	}
 	txpool.CurrentFeeAdjustedSPKB = 0
 	common.SetMinFeePerKB(0)
@@ -169,7 +168,6 @@ func (c *OneConnection) ParseTxNet(cmd *BCmsg) {
 	tx, le := btc.NewTx(cmd.pl)
 	if tx == nil {
 		c.DoS("TxRejectedBroken")
-		fmt.Println(hex.EncodeToString(cmd.pl))
 		return
 	}
 	if le != len(cmd.pl) {

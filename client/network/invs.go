@@ -10,7 +10,6 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/chain"
 )
 
 const (
@@ -181,20 +180,8 @@ func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spk
 	return
 }
 
-// Call this function only when BlockIndexAccess is locked
-func addInvBlockBranch(inv map[[32]byte]bool, bl *chain.BlockTreeNode, stop *btc.Uint256) {
-	if len(inv) >= 500 || bl.BlockHash.Equal(stop) {
-		return
-	}
-	inv[bl.BlockHash.Hash] = true
-	for i := range bl.Childs {
-		if len(inv) >= 500 {
-			return
-		}
-		addInvBlockBranch(inv, bl.Childs[i], stop)
-	}
-}
-
+// GetBlocks handles "getblocks": it sends "inv" with (up to 500) blocks from our main
+// chain that follow the first block from the locator that is in our main chain.
 func (c *OneConnection) GetBlocks(pl []byte) {
 	h2get, hashstop, e := parseLocatorsPayload(pl)
 
@@ -209,33 +196,52 @@ func (c *OneConnection) GetBlocks(pl []byte) {
 	last := common.Last.Block
 	common.Last.Mutex.Unlock()
 
-	invs := make(map[[32]byte]bool, 500)
+	var invs []*btc.Uint256 // in the order of the chain
+	common.BlockChain.BlockIndexAccess.Lock()
 	for i := range h2get {
-		common.BlockChain.BlockIndexAccess.Lock()
-		if bl, ok := common.BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
-			// make sure that this block is in our main chain
-			for end := last; end != nil && end.Height >= bl.Height; end = end.Parent {
-				if end == bl {
-					addInvBlockBranch(invs, bl, hashstop) // Yes - this is the main chain
-					if len(invs) > 0 {
-						common.BlockChain.BlockIndexAccess.Unlock()
-
-						inv := new(bytes.Buffer)
-						btc.WriteVlen(inv, uint64(len(invs)))
-						for k := range invs {
-							binary.Write(inv, binary.LittleEndian, uint32(2))
-							inv.Write(k[:])
-						}
-						c.SendRawMsg("inv", inv.Bytes(), false)
-						return
-					}
-				}
+		bl, ok := common.BlockChain.BlockIndex[h2get[i].BIdx()]
+		if !ok || bl.Height >= last.Height {
+			continue
+		}
+		cnt := last.Height - bl.Height
+		if cnt > 500 {
+			cnt = 500
+		}
+		// go from the top down to the block from the locator, to see if it is in our main chain
+		hashes := make([]*btc.Uint256, cnt)
+		end := last
+		for ; end != nil && end.Height > bl.Height; end = end.Parent {
+			if idx := end.Height - bl.Height - 1; idx < cnt {
+				hashes[idx] = end.BlockHash
 			}
 		}
-		common.BlockChain.BlockIndexAccess.Unlock()
+		if end == bl { // Yes - this is the main chain
+			invs = hashes
+			break
+		}
+	}
+	common.BlockChain.BlockIndexAccess.Unlock()
+
+	// do not go past hashstop
+	for i, h := range invs {
+		if h.Equal(hashstop) {
+			invs = invs[:i+1]
+			break
+		}
 	}
 
-	common.CountSafe("GetblksMissed")
+	if len(invs) == 0 {
+		common.CountSafe("GetblksMissed")
+		return
+	}
+
+	inv := new(bytes.Buffer)
+	btc.WriteVlen(inv, uint64(len(invs)))
+	for _, h := range invs {
+		binary.Write(inv, binary.LittleEndian, MSG_BLOCK)
+		inv.Write(h.Hash[:])
+	}
+	c.SendRawMsg("inv", inv.Bytes(), false)
 }
 
 func (c *OneConnection) SendInvs() (res bool) {

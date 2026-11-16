@@ -34,6 +34,11 @@ var (
 	FriendsAccess      sync.Mutex
 
 	GetMPInProgressConnID sys.SyncInt
+
+	// cached list of the peers that we have not tried yet (only used by NetworkTick)
+	neverTriedPeers       peersdb.ManyPeers
+	neverTriedPeersMask   uint64
+	neverTriedPeersExpire time.Time
 )
 
 // call with unlocked c.Mutex
@@ -677,9 +682,18 @@ func NetworkTick() {
 		if len(adrs) > new_cnt {
 			new_cnt = len(adrs)
 		}
-		adrs2 := peersdb.GetRecentPeers(uint(new_cnt), true, func(ad *peersdb.PeerAddr) bool {
-			return ad.Banned != 0 || ad.SeenAlive || (ad.Services&required_mask) != required_mask // ignore those that have been seen alive
-		})
+		// This one goes through the entire DB and sorts the result, so do not do it with each tick.
+		if now.After(neverTriedPeersExpire) || required_mask != neverTriedPeersMask {
+			neverTriedPeers = peersdb.GetRecentPeers(128, true, func(ad *peersdb.PeerAddr) bool {
+				return ad.Banned != 0 || ad.SeenAlive || (ad.Services&required_mask) != required_mask // ignore those that have been seen alive
+			})
+			neverTriedPeersMask = required_mask
+			neverTriedPeersExpire = now.Add(15 * time.Second)
+		}
+		adrs2 := neverTriedPeers
+		if len(adrs2) > new_cnt {
+			adrs2 = adrs2[:new_cnt]
+		}
 		adrs = append(adrs, adrs2...)
 		// Now we should have 128 peers known to be alive and 32 never tried ones
 		// ... giving us 20% chance of selecting a never tried one.
@@ -807,8 +821,6 @@ func (c *OneConnection) Run() {
 			c.Disconnect(false, "Panic") // so the writing thread exits too
 		}
 	}()
-
-	c.writing_thread_push = make(chan bool, 1)
 
 	if !c.X.Incomming {
 		c.SendVersion()
@@ -1054,6 +1066,10 @@ func (c *OneConnection) runCleanup() {
 	c.releaseGetMPTicket() // ... and make sure it is released, whatever the state
 
 	c.Conn.SetWriteDeadline(time.Now()) // this should cause c.Conn.Write() to terminate
+	select {
+	case c.writing_thread_push <- true: // wake up the writing thread, if it is waiting for data
+	default:
+	}
 	c.writing_thread_done.Wait()
 
 	// never lock MutexRcv within c.Mutex (see ExpireHeadersAndGetData)

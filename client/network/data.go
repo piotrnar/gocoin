@@ -47,6 +47,14 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 func (c *OneConnection) processGetData(b *bytes.Reader) {
 	var typ uint32
 	var h [36]byte
+	var notfound []byte // the txs that we were asked for, but do not have
+	defer func() {
+		if cnt := len(notfound) / 36; cnt > 0 {
+			var b [9]byte
+			c.SendRawMsg("notfound", append(b[:btc.PutVlen(b[:], cnt)], notfound...), false)
+			common.CountSafeAdd("GetdataTxNotFound", uint64(cnt))
+		}
+	}()
 	for b.Len() > 0 {
 		if c.SendingPaused() {
 			// note that this function should not be called when c.unfinished_getdata is not nil
@@ -86,7 +94,7 @@ func (c *OneConnection) processGetData(b *bytes.Reader) {
 				c.SendRawMsg("tx", tx.Raw, c.X.AuthAckGot)
 			} else {
 				txpool.TxMutex.Unlock()
-				//notfound = append(notfound, h[:]...)
+				notfound = append(notfound, h[:]...)
 			}
 		} else if typ == MSG_CMPCT_BLOCK {
 			common.CountSafe("GetdataCmpctBlk")
@@ -98,6 +106,9 @@ func (c *OneConnection) processGetData(b *bytes.Reader) {
 			}
 		} else {
 			common.CountSafe("GetdataTypeInvalid")
+			if typ == MSG_TX {
+				notfound = append(notfound, h[:]...) // we only serve txs with the witness data
+			}
 		}
 	}
 }
@@ -361,6 +372,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	if c.X.BlocksExpired > 0 { // Do not fetch blocks from nodes that had not given us some in the past
 		c.Mutex.Unlock()
 		Fetch.HasBlocksExpired++
+		c.nextGetData = time.Now().Add(60 * time.Second) // do not come back here with every tick
 		return
 	}
 	cbip := len(c.GetBlockInProgress)
@@ -419,6 +431,9 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	var lowest_found *OneBlockToGet
 
 	resize_fetch_arrays(int(max_blocks_at_once))
+	// All the blocks below scan_from have already been checked for the current value of
+	// cnt_in_progress (and found not suitable), so we do not need to go through them again.
+	scan_from := LowestIndexToBlocksToGet.Load()
 	for {
 		if max_height > max_height_limit {
 			max_height = max_height_limit
@@ -428,7 +443,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			Fetch.BlksCntMax[cnt_in_progress]++
 			break
 		}
-		for bh := LowestIndexToBlocksToGet.Load(); bh <= max_height; bh++ {
+		for bh := scan_from; bh <= max_height; bh++ {
 			if idxlst, ok := IndexToBlocksToGet[bh]; ok {
 				for _, idx := range idxlst {
 					v := BlocksToGet[idx]
@@ -443,6 +458,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 						c.Mutex.Unlock()
 						if !ok {
 							lowest_found = v
+							scan_from = bh
 							goto found_it
 						}
 					}
@@ -457,6 +473,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		}
 		max_blocks_forward -= max_blocks_forward_decrease
 		max_height = last_block_height + max_blocks_forward
+		scan_from = LowestIndexToBlocksToGet.Load()
 		continue
 
 	found_it:

@@ -276,11 +276,12 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 
 	var best_block, last_block *chain.BlockTreeNode
 
-	//common.Last.Mutex.Lock()
-	MutexRcv.Lock()
-	last_block = LastCommitedHeader
-	MutexRcv.Unlock()
-	//common.Last.Mutex.Unlock()
+	// Only serve the headers of the blocks that we have, as the peer may then ask us
+	// for these blocks. LastCommitedHeader may be far ahead of what we have fetched.
+	// Never lock Last.Mutex while holding BlockIndexAccess (see GetBlocks)
+	common.Last.Mutex.Lock()
+	last_block = common.Last.Block
+	common.Last.Mutex.Unlock()
 
 	common.BlockChain.BlockIndexAccess.Lock()
 
@@ -340,6 +341,7 @@ func (c *OneConnection) sendGetHeaders() {
 	MutexRcv.Lock()
 	lb := LastCommitedHeader
 	MutexRcv.Unlock()
+	top_height := lb.Height
 	min_height := int(lb.Height) - chain.MovingCheckopintDepth
 	if min_height < 0 {
 		min_height = 0
@@ -374,7 +376,7 @@ func (c *OneConnection) sendGetHeaders() {
 	bmsg.Write(make([]byte, 32)) // null_stop
 
 	c.SendRawMsg("getheaders", bmsg.Bytes(), false)
-	c.X.LastHeadersHeightAsk = lb.Height
+	c.X.LastHeadersHeightAsk = top_height
 	c.MutexSetBool(&c.X.GetHeadersInProgress, true)
 	c.X.GetHeadersTimeOutAt = time.Now().Add(GetHeadersTimeout)
 	c.X.GetHeadersSentAtPingCnt = c.X.PingSentCnt
