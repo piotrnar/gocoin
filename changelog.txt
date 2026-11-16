@@ -104,6 +104,7 @@
 * Lib/secp256k1: faster signature verification (the native Go one, used when no DLL/cgo speedup is active) - ECDSA by about 5-15% and Schnorr by about 10%, with much less memory allocated per signature; ECDSA verify no longer does a field inversion to compare R with the result and the wNAF conversion of the scalars works directly on their bits
 * Lib/secp256k1: fixed the native Go EC code on 32-bit platforms (e.g. 386, arm), where splitting a scalar assumed 64-bit words, so EC multiplication was returning wrong points - valid ECDSA and Schnorr signatures were rejected, public key recovery gave wrong keys and BIP340 signing failed
 * Client/TextUI: stdin is now read only while the TextUI waits for a command, so text typed in the OS terminal while the node is shutting down (e.g. "bs" after "quit") is no longer swallowed by the WebUI console mirroring and reaches the shell again
+* Client/TXPool: fixed three issues that a remote peer could trigger with crafted transactions: (1) node hanging forever (inside BlockMined, with the mempool locked) after a tx was mined while an orphan was waiting for a non-existing output of it; (2) accepting a replacement (RBF) tx that spends an output of the very tx it replaces, which left it in the mempool with a missing parent (dropped from the sorted list, possible crash later); (3) accepting a tx that spends the same output twice, counting its value (thus the fee) twice
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

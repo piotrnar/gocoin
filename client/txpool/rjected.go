@@ -273,49 +273,42 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 // call this function after the tx has been accepted,
 // to re-submit all txs that had been waiting for it
 func txAccepted(bidx btc.BIDX) {
-	var delidx int
-	var wtg *OneWaitingList
-	var found bool
-	var txr *OneTxRejected
-
 	recs2do := []btc.BIDX{bidx}
-	for {
-		if wtg, found = WaitingForInputs[recs2do[delidx]]; !found {
-			if delidx++; delidx == len(recs2do) {
-				return
-			}
+	for delidx := 0; delidx < len(recs2do); delidx++ {
+		parent := recs2do[delidx]
+		wtg, found := WaitingForInputs[parent]
+		if !found {
 			continue
-		} else if CheckForErrors() && len(wtg.Ids) == 0 {
-			panic("WaitingForInput record has no Ids")
 		}
 
-		txr = TransactionsRejected[wtg.Ids[0]] // always remove the first one ...
-
-		if CheckForErrors() {
-			if txr == nil {
-				fmt.Println("ERROR: WaitingForInput not found in rejected", wtg.TxID.String(), btc.BIdxString(wtg.Ids[0]), "/", len(wtg.Ids))
-				panic("This should not happen")
-			} else if txr.Tx == nil || txr.Reason != TX_REJECTED_NO_TXOU {
-				fmt.Println("ERROR: WaitingForInput found in rejected, but bad data or reason:", txr.Id.String(), txr.Tx, txr.Reason)
-				panic("This should not happen")
+		// Each waiting tx is retried only once, so work on a copy of the list,
+		// as the original one changes while the records are removed (and possibly put back).
+		for _, id := range slices.Clone(wtg.Ids) {
+			txr := TransactionsRejected[id]
+			if txr == nil || txr.Tx == nil || txr.Waiting4 == nil || txr.Waiting4.BIdx() != parent {
+				// removed in the meantime (e.g. by limitRejectedSizeIfNeeded)
+				common.CountSafe("TxRetryGone")
+				continue
 			}
-		}
 
-		txr.Delete() // this will remove wtg.Ids[0] so the next time we will do (at least) wtg.Ids[1]
-		pendtxrcv := &TxRcvd{Tx: txr.Tx}
-		if res, t2s := processTx(pendtxrcv); res == 0 {
-			// if res was 0, t2s is not nil
-			recs2do = append(recs2do, t2s.Hash.BIdx())
-			common.CountSafe("TxRetryAccepted")
-		} else {
-			if res == TX_REJECTED_NO_TXOU && CheckForErrors() { // TODO: Remove this part when done testing
-				txrr := txr.Hash.BIdx()
-				if wtg, found = WaitingForInputs[recs2do[delidx]]; found {
-					if idx := slices.Index(wtg.Ids, txrr); idx >= 0 {
-						fmt.Println("w4txr", btc.BIdxString(txrr), "removed and then put back with", res, "at idx", idx, "of len", len(wtg.Ids))
-						panic("This should not happen")
-						//common.CountSafe("Tx*Weird")
-					}
+			tx := txr.Tx
+			txr.Delete()
+			res, t2s := processTx(&TxRcvd{Tx: tx})
+			if res == 0 {
+				// if res was 0, t2s is not nil
+				recs2do = append(recs2do, t2s.Hash.BIdx())
+				common.CountSafe("TxRetryAccepted")
+				continue
+			}
+
+			if res == TX_REJECTED_NO_TXOU {
+				if txr = TransactionsRejected[id]; txr != nil && txr.Waiting4 != nil && txr.Waiting4.BIdx() == parent {
+					// It is waiting for the same parent again, although we have it now.
+					// This means that it wants an output which does not exist (e.g. vout out of range),
+					// so it must not go back to the waiting list (it would be retried forever).
+					txr.Delete()
+					rejectTx(tx, TX_REJECTED_BAD_INPUT, nil)
+					res = TX_REJECTED_BAD_INPUT
 				}
 			}
 			common.CountSafePar("TxRetryRjctd-", res)

@@ -79,6 +79,19 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 		return TX_REJECTED_TOO_BIG, nil
 	}
 
+	// The same output must not be spent more than once (it would also count its value more than once)
+	if len(tx.TxIn) > 1 {
+		seen := make(map[btc.TxPrevOut]struct{}, len(tx.TxIn))
+		for i := range tx.TxIn {
+			if _, dup := seen[tx.TxIn[i].Input]; dup {
+				common.CountSafe("TxInputDuplicate")
+				rejectTx(tx, TX_REJECTED_BAD_INPUT, nil)
+				return TX_REJECTED_BAD_INPUT, nil
+			}
+			seen[tx.TxIn[i].Input] = struct{}{}
+		}
+	}
+
 	pos := make([]*btc.TxOut, len(tx.TxIn))
 	spent := make([]uint64, len(tx.TxIn))
 
@@ -188,6 +201,18 @@ func processTx(ntx *TxRcvd) (byte, *OneTxToSend) {
 		if pos[i].Value > btc.MAX_MONEY || totinp > btc.MAX_MONEY {
 			rejectTx(ntx.Tx, TX_REJECTED_BAD_VALUE, nil)
 			return TX_REJECTED_BAD_VALUE, nil
+		}
+	}
+
+	// A replacement must not spend outputs of the txs that it is replacing (nor of their children),
+	// as they are going to be removed from the mempool, leaving it with a non-existing input.
+	if rbf_tx_list != nil && frommem != nil {
+		for i := range tx.TxIn {
+			if frommem[i] && rbf_tx_list[TransactionsToSend[btc.BIdx(tx.TxIn[i].Input.Hash[:])]] {
+				common.CountSafe("TxRBFSpendsReplaced")
+				rejectTx(ntx.Tx, TX_REJECTED_BAD_INPUT, nil)
+				return TX_REJECTED_BAD_INPUT, nil
+			}
 		}
 	}
 
