@@ -149,6 +149,11 @@
 * Lib/btc: fixed EcdsaSign() with RFC6979 looping forever if the first nonce was out of range (extremely unlikely) and HMAC_Init() hashing a key of exactly 64 bytes instead of using it directly (no such keys were in use)
 * Lib/chain: consensus rules aligned with Bitcoin Core: Testnet4 blocks starting a difficulty period are rejected if their timestamp is more than 10 minutes before the previous block (BIP94 timewarp protection); BIP30 is now enforced (a block cannot overwrite a transaction that still has unspent outputs) wherever Core checks it - Testnet4, heights up to BIP34 activation and from 1983702
 * Lib/btc: consensus rules aligned with Bitcoin Core: sigops are counted also after OP_RETURN (the old workaround was only needed because of the OP_PUSHDATA4 size bug, fixed earlier), a segwit-encoded transaction with all witness stacks empty is rejected, and any data following the last transaction of a received block is ignored (not stored on disk nor sent to peers)
+* Lib/btc: faster hashing - signature hashes (legacy, segwit and taproot), tx serialization, tx IDs and merkle roots are calculated with far fewer memory allocations (serializing a tx is about 3 times faster), and inputs of the same tx no longer wait for each other while their signature hashes are being calculated
+* Lib/chain: scripts of a new block are verified by a fixed number of tasks (one per CPU thread) instead of a separate one for each input, and they are skipped as soon as the block is known to be invalid; the basic checks of block's transactions no longer start a task per tx
+* Lib/chain: looking for the best block (at startup and after a failed reorg) no longer uses recursion as deep as the chain is long, and counts the work of the last block too - so of two competing single blocks the one with the higher difficulty is chosen, not the first one found
+* Lib/chain: the names of the block data files are checked on the disk only once (not at each read of a block); BlockLength() returned zero for a compressed block that was still in the cache
+* Codebase: go.mod now declares Go 1.21, which the code already needed; added tests for lib/chain (blocks database, tree of blocks, accepting and rejecting of blocks, chain reorgs) and more for lib/btc
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

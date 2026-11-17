@@ -109,36 +109,80 @@ func (to *TxOut) String(testnet bool) (s string) {
 
 // Non-SegWit format
 func (t *Tx) WriteSerialized(wr io.Writer) {
-	// Version
-	binary.Write(wr, binary.LittleEndian, t.Version)
+	wr.Write(t.Serialize())
+}
 
-	//TxIns
-	WriteVlen(wr, uint64(len(t.TxIn)))
+func (ti *TxIn) appendSerialized(b []byte) []byte {
+	b = append(b, ti.Input.Hash[:]...)
+	b = binary.LittleEndian.AppendUint32(b, ti.Input.Vout)
+	b = AppendVlen(b, uint64(len(ti.ScriptSig)))
+	b = append(b, ti.ScriptSig...)
+	return binary.LittleEndian.AppendUint32(b, ti.Sequence)
+}
+
+func (to *TxOut) appendSerialized(b []byte) []byte {
+	b = binary.LittleEndian.AppendUint64(b, to.Value)
+	b = AppendVlen(b, uint64(len(to.Pk_script)))
+	return append(b, to.Pk_script...)
+}
+
+// serializedSize returns the exact number of bytes that appendSerialized() will add.
+func (t *Tx) serializedSize(witness bool) (n int) {
+	n = 4 + VLenSize(uint64(len(t.TxIn))) + VLenSize(uint64(len(t.TxOut))) + 4
 	for _, ti := range t.TxIn {
-		wr.Write(ti.Input.Hash[:])
-		binary.Write(wr, binary.LittleEndian, ti.Input.Vout)
-		WriteVlen(wr, uint64(len(ti.ScriptSig)))
-		wr.Write(ti.ScriptSig)
-		binary.Write(wr, binary.LittleEndian, ti.Sequence)
+		n += 36 + VLenSize(uint64(len(ti.ScriptSig))) + len(ti.ScriptSig) + 4
 	}
-
-	//TxOuts
-	WriteVlen(wr, uint64(len(t.TxOut)))
 	for _, to := range t.TxOut {
-		binary.Write(wr, binary.LittleEndian, to.Value)
-		WriteVlen(wr, uint64(len(to.Pk_script)))
-		wr.Write(to.Pk_script)
+		n += 8 + VLenSize(uint64(len(to.Pk_script))) + len(to.Pk_script)
+	}
+	if witness && t.SegWit != nil {
+		n += 2
+		for _, sw := range t.SegWit {
+			n += VLenSize(uint64(len(sw)))
+			for _, sws := range sw {
+				n += VLenSize(uint64(len(sws))) + len(sws)
+			}
+		}
+	}
+	return
+}
+
+// appendSerialized appends the serialized transaction to the given buffer.
+// The witness data is only added if requested and if the tx has any.
+func (t *Tx) appendSerialized(b []byte, witness bool) []byte {
+	witness = witness && t.SegWit != nil
+
+	b = binary.LittleEndian.AppendUint32(b, t.Version)
+	if witness {
+		b = append(b, 0x00, 0x01) // Marker & flag
 	}
 
-	//Lock_time
-	binary.Write(wr, binary.LittleEndian, t.Lock_time)
+	b = AppendVlen(b, uint64(len(t.TxIn)))
+	for _, ti := range t.TxIn {
+		b = ti.appendSerialized(b)
+	}
+
+	b = AppendVlen(b, uint64(len(t.TxOut)))
+	for _, to := range t.TxOut {
+		b = to.appendSerialized(b)
+	}
+
+	if witness {
+		for _, sw := range t.SegWit {
+			b = AppendVlen(b, uint64(len(sw)))
+			for _, sws := range sw {
+				b = AppendVlen(b, uint64(len(sws)))
+				b = append(b, sws...)
+			}
+		}
+	}
+
+	return binary.LittleEndian.AppendUint32(b, t.Lock_time)
 }
 
 // Non-SegWit format
 func (t *Tx) Serialize() []byte {
-	wr := new(bytes.Buffer)
-	t.WriteSerialized(wr)
-	return wr.Bytes()
+	return t.appendSerialized(make([]byte, 0, t.serializedSize(false)), false)
 }
 
 // SignatureHash returns the transaction's hash, that is about to get signed/verified.
@@ -160,69 +204,67 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType int32) []byte {
 
 	ht := hashType & 0x1f
 
-	sha := sha256.New()
+	// Build the whole preimage in one buffer and then hash it
+	le := binary.LittleEndian
+	b := make([]byte, 0, t.serializedSize(false)+len(scriptCode)+8)
 
-	binary.Write(sha, binary.LittleEndian, uint32(t.Version))
+	b = le.AppendUint32(b, t.Version)
 
 	if (hashType & SIGHASH_ANYONECANPAY) != 0 {
-		sha.Write([]byte{1}) // only 1 input
+		b = append(b, 1) // only 1 input
 		// The one input:
-		sha.Write(t.TxIn[nIn].Input.Hash[:])
-		binary.Write(sha, binary.LittleEndian, uint32(t.TxIn[nIn].Input.Vout))
-		WriteVlen(sha, uint64(len(scriptCode)))
-		sha.Write(scriptCode)
-		binary.Write(sha, binary.LittleEndian, uint32(t.TxIn[nIn].Sequence))
+		b = append(b, t.TxIn[nIn].Input.Hash[:]...)
+		b = le.AppendUint32(b, t.TxIn[nIn].Input.Vout)
+		b = AppendVlen(b, uint64(len(scriptCode)))
+		b = append(b, scriptCode...)
+		b = le.AppendUint32(b, t.TxIn[nIn].Sequence)
 	} else {
-		WriteVlen(sha, uint64(len(t.TxIn)))
+		b = AppendVlen(b, uint64(len(t.TxIn)))
 		for i := range t.TxIn {
-			sha.Write(t.TxIn[i].Input.Hash[:])
-			binary.Write(sha, binary.LittleEndian, uint32(t.TxIn[i].Input.Vout))
+			b = append(b, t.TxIn[i].Input.Hash[:]...)
+			b = le.AppendUint32(b, t.TxIn[i].Input.Vout)
 
 			if i == nIn {
-				WriteVlen(sha, uint64(len(scriptCode)))
-				sha.Write(scriptCode)
+				b = AppendVlen(b, uint64(len(scriptCode)))
+				b = append(b, scriptCode...)
 			} else {
-				sha.Write([]byte{0})
+				b = append(b, 0)
 			}
 
 			if (ht == SIGHASH_NONE || ht == SIGHASH_SINGLE) && i != nIn {
-				sha.Write([]byte{0, 0, 0, 0})
+				b = append(b, 0, 0, 0, 0)
 			} else {
-				binary.Write(sha, binary.LittleEndian, uint32(t.TxIn[i].Sequence))
+				b = le.AppendUint32(b, t.TxIn[i].Sequence)
 			}
 		}
 	}
 
 	if ht == SIGHASH_NONE {
-		sha.Write([]byte{0})
+		b = append(b, 0)
 	} else if ht == SIGHASH_SINGLE {
 		nOut := nIn
 		if nOut >= len(t.TxOut) {
-			// Return 1 as the satoshi client (utils.IsOn't ask me why 1, and not something else)
+			// Return 1 as the satoshi client (do not ask me why 1, and not something else)
 			return []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 		}
-		WriteVlen(sha, uint64(nOut+1))
+		b = AppendVlen(b, uint64(nOut+1))
 		for i := 0; i < nOut; i++ {
-			sha.Write([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0})
+			b = append(b, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0)
 		}
-		binary.Write(sha, binary.LittleEndian, uint64(t.TxOut[nOut].Value))
-		WriteVlen(sha, uint64(len(t.TxOut[nOut].Pk_script)))
-		sha.Write(t.TxOut[nOut].Pk_script)
+		b = t.TxOut[nOut].appendSerialized(b)
 	} else {
-		WriteVlen(sha, uint64(len(t.TxOut)))
+		b = AppendVlen(b, uint64(len(t.TxOut)))
 		for i := range t.TxOut {
-			binary.Write(sha, binary.LittleEndian, uint64(t.TxOut[i].Value))
-			WriteVlen(sha, uint64(len(t.TxOut[i].Pk_script)))
-			sha.Write(t.TxOut[i].Pk_script)
+			b = t.TxOut[i].appendSerialized(b)
 		}
 	}
 
-	binary.Write(sha, binary.LittleEndian, t.Lock_time)
-	binary.Write(sha, binary.LittleEndian, hashType)
-	tmp := sha.Sum(nil)
-	sha.Reset()
-	sha.Write(tmp)
-	return sha.Sum(nil)
+	b = le.AppendUint32(b, t.Lock_time)
+	b = le.AppendUint32(b, uint32(hashType))
+
+	h := sha256.Sum256(b)
+	h = sha256.Sum256(h[:])
+	return h[:]
 }
 
 // Sign signs a specified transaction input.
@@ -695,98 +737,86 @@ func (tx *Tx) GetLegacySigOpCount() (nSigOps uint) {
 }
 
 func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType int32) []byte {
-	var nullHash [32]byte
-	var hashPrevouts []byte
-	var hashSequence []byte
-	var hashOutputs []byte
+	var nullHash, singleOut [32]byte
+	var hashPrevouts, hashSequence, hashOutputs []byte
+	le := binary.LittleEndian
 
+	ht := hashType & 0x1f
+	anyone := (hashType & SIGHASH_ANYONECANPAY) != 0
+	all_outs := ht != SIGHASH_SINGLE && ht != SIGHASH_NONE
+
+	// The lock only protects the hashes that are shared by all the inputs of the tx
+	// (calculated once), so the rest can be done by many threads at the same time.
 	tx.hashLock.Lock()
-	defer tx.hashLock.Unlock()
-
-	sha := sha256.New()
-
-	if (hashType & SIGHASH_ANYONECANPAY) == 0 {
+	if !anyone {
 		if tx.hashPrevouts == nil {
+			b := make([]byte, 0, 36*len(tx.TxIn))
 			for _, vin := range tx.TxIn {
-				sha.Write(vin.Input.Hash[:])
-				binary.Write(sha, binary.LittleEndian, vin.Input.Vout)
+				b = append(b, vin.Input.Hash[:]...)
+				b = le.AppendUint32(b, vin.Input.Vout)
 			}
-			hashPrevouts = sha.Sum(nil)
-			sha.Reset()
-			sha.Write(hashPrevouts)
-			tx.hashPrevouts = new([32]byte)
-			copy(tx.hashPrevouts[:], sha.Sum(nil))
-			sha.Reset()
+			h := Sha2Sum(b)
+			tx.hashPrevouts = &h
 		}
 		hashPrevouts = tx.hashPrevouts[:]
 	} else {
 		hashPrevouts = nullHash[:]
 	}
 
-	if (hashType&SIGHASH_ANYONECANPAY) == 0 && (hashType&0x1f) != SIGHASH_SINGLE && (hashType&0x1f) != SIGHASH_NONE {
+	if !anyone && all_outs {
 		if tx.hashSequence == nil {
+			b := make([]byte, 0, 4*len(tx.TxIn))
 			for _, vin := range tx.TxIn {
-				binary.Write(sha, binary.LittleEndian, vin.Sequence)
+				b = le.AppendUint32(b, vin.Sequence)
 			}
-			hashSequence = sha.Sum(nil)
-			sha.Reset()
-			sha.Write(hashSequence)
-			tx.hashSequence = new([32]byte)
-			copy(tx.hashSequence[:], sha.Sum(nil))
-			sha.Reset()
+			h := Sha2Sum(b)
+			tx.hashSequence = &h
 		}
 		hashSequence = tx.hashSequence[:]
 	} else {
 		hashSequence = nullHash[:]
 	}
 
-	if (hashType&0x1f) != SIGHASH_SINGLE && (hashType&0x1f) != SIGHASH_NONE {
+	if all_outs {
 		if tx.hashOutputs == nil {
+			var b []byte
 			for _, vout := range tx.TxOut {
-				binary.Write(sha, binary.LittleEndian, vout.Value)
-				WriteVlen(sha, uint64(len(vout.Pk_script)))
-				sha.Write(vout.Pk_script)
+				b = vout.appendSerialized(b)
 			}
-			hashOutputs = sha.Sum(nil)
-			sha.Reset()
-			sha.Write(hashOutputs)
-			tx.hashOutputs = new([32]byte)
-			copy(tx.hashOutputs[:], sha.Sum(nil))
-			sha.Reset()
+			h := Sha2Sum(b)
+			tx.hashOutputs = &h
 		}
 		hashOutputs = tx.hashOutputs[:]
-	} else if (hashType&0x1f) == SIGHASH_SINGLE && nIn < len(tx.TxOut) {
-		binary.Write(sha, binary.LittleEndian, tx.TxOut[nIn].Value)
-		WriteVlen(sha, uint64(len(tx.TxOut[nIn].Pk_script)))
-		sha.Write(tx.TxOut[nIn].Pk_script)
-		hashOutputs = sha.Sum(nil)
-		sha.Reset()
-		sha.Write(hashOutputs)
-		hashOutputs = sha.Sum(nil)
-		sha.Reset()
-	} else {
-		hashOutputs = nullHash[:]
+	}
+	tx.hashLock.Unlock()
+
+	if !all_outs {
+		if ht == SIGHASH_SINGLE && nIn < len(tx.TxOut) {
+			singleOut = Sha2Sum(tx.TxOut[nIn].appendSerialized(nil))
+			hashOutputs = singleOut[:]
+		} else {
+			hashOutputs = nullHash[:]
+		}
 	}
 
-	binary.Write(sha, binary.LittleEndian, tx.Version)
-	sha.Write(hashPrevouts)
-	sha.Write(hashSequence)
-	sha.Write(tx.TxIn[nIn].Input.Hash[:])
-	binary.Write(sha, binary.LittleEndian, tx.TxIn[nIn].Input.Vout)
+	b := make([]byte, 0, 4+32+32+36+9+len(scriptCode)+8+4+32+4+4)
+	b = le.AppendUint32(b, tx.Version)
+	b = append(b, hashPrevouts...)
+	b = append(b, hashSequence...)
+	b = append(b, tx.TxIn[nIn].Input.Hash[:]...)
+	b = le.AppendUint32(b, tx.TxIn[nIn].Input.Vout)
 
-	WriteVlen(sha, uint64(len(scriptCode)))
-	sha.Write(scriptCode)
-	binary.Write(sha, binary.LittleEndian, amount)
-	binary.Write(sha, binary.LittleEndian, tx.TxIn[nIn].Sequence)
-	sha.Write(hashOutputs)
+	b = AppendVlen(b, uint64(len(scriptCode)))
+	b = append(b, scriptCode...)
+	b = le.AppendUint64(b, amount)
+	b = le.AppendUint32(b, tx.TxIn[nIn].Sequence)
+	b = append(b, hashOutputs...)
 
-	binary.Write(sha, binary.LittleEndian, tx.Lock_time)
-	binary.Write(sha, binary.LittleEndian, hashType)
+	b = le.AppendUint32(b, tx.Lock_time)
+	b = le.AppendUint32(b, uint32(hashType))
 
-	hashPrevouts = sha.Sum(nil)
-	sha.Reset()
-	sha.Write(hashPrevouts)
-	return sha.Sum(nil)
+	h := Sha2Sum(b)
+	return h[:]
 }
 
 func (tx *Tx) CountWitnessSigOps(inp int, scriptPubKey []byte) uint {
@@ -859,53 +889,12 @@ func (tx *Tx) VSize() int {
 
 // SegWit format
 func (t *Tx) WriteSerializedNew(wr io.Writer) {
-	if t.SegWit == nil {
-		t.WriteSerialized(wr)
-		return
-	}
-
-	// Version
-	binary.Write(wr, binary.LittleEndian, t.Version)
-
-	// Marker & flag
-	wr.Write([]byte{0x00, 0x01})
-
-	//TxIns
-	WriteVlen(wr, uint64(len(t.TxIn)))
-	for i := range t.TxIn {
-		wr.Write(t.TxIn[i].Input.Hash[:])
-		binary.Write(wr, binary.LittleEndian, t.TxIn[i].Input.Vout)
-		WriteVlen(wr, uint64(len(t.TxIn[i].ScriptSig)))
-		wr.Write(t.TxIn[i].ScriptSig[:])
-		binary.Write(wr, binary.LittleEndian, t.TxIn[i].Sequence)
-	}
-
-	//TxOuts
-	WriteVlen(wr, uint64(len(t.TxOut)))
-	for i := range t.TxOut {
-		binary.Write(wr, binary.LittleEndian, t.TxOut[i].Value)
-		WriteVlen(wr, uint64(len(t.TxOut[i].Pk_script)))
-		wr.Write(t.TxOut[i].Pk_script[:])
-	}
-
-	// Witness
-	for _, sw := range t.SegWit {
-		WriteVlen(wr, uint64(len(sw)))
-		for _, sws := range sw {
-			WriteVlen(wr, uint64(len(sws)))
-			wr.Write(sws)
-		}
-	}
-
-	//Lock_time
-	binary.Write(wr, binary.LittleEndian, t.Lock_time)
+	wr.Write(t.SerializeNew())
 }
 
 // SegWit format
 func (t *Tx) SerializeNew() []byte {
-	wr := new(bytes.Buffer)
-	t.WriteSerializedNew(wr)
-	return wr.Bytes()
+	return t.appendSerialized(make([]byte, 0, t.serializedSize(true)), true)
 }
 
 // ContainsOrdFile checks if there is a file (inscription) inside the transaction

@@ -2,7 +2,6 @@ package btc
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -149,6 +148,7 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 	var wg sync.WaitGroup
 	block_weight := 4 * (80 + uint64(VLenSize(uint64(bl.TxCount))))
 	do_txs := func(txlist []*Tx) {
+		var buf []byte // re-used for each segwit tx
 		for _, tx := range txlist {
 			coinbase := tx == bl.Txs[0]
 			tx.Size = uint32(len(tx.Raw))
@@ -158,12 +158,8 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 				}
 			}
 			if tx.SegWit != nil {
-				s := sha256.New()
-				tx.WriteSerialized(s)
-				tmp := s.Sum(nil)
-				s.Reset()
-				s.Write(tmp)
-				copy(tx.Hash.Hash[:], s.Sum(nil))
+				buf = tx.appendSerialized(buf[:0], false)
+				tx.Hash.Calc(buf)
 				if !coinbase {
 					tx.wTxID.Calc(tx.Raw)
 				}

@@ -112,18 +112,20 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 // findFarthestCommitted works like FindFarthestNode, except that it only follows
 // the nodes which have their block's data (not only the header) already committed.
 func (n *BlockTreeNode) findFarthestCommitted() (res *BlockTreeNode, pow float64) {
-	res = n
-	for _, c := range n.Childs {
-		if c.TxCount == 0 {
-			continue // only the header is known
+	return n.findFarthest(func(x *BlockTreeNode) []*BlockTreeNode {
+		for i, c := range x.Childs {
+			if c.TxCount == 0 { // only the header is known - leave it out
+				childs := append([]*BlockTreeNode(nil), x.Childs[:i]...)
+				for _, c := range x.Childs[i+1:] {
+					if c.TxCount != 0 {
+						childs = append(childs, c)
+					}
+				}
+				return childs
+			}
 		}
-		r, p := c.findFarthestCommitted()
-		p += btc.GetDifficulty(c.Bits())
-		if p > pow {
-			res, pow = r, p
-		}
-	}
-	return
+		return x.Childs
+	})
 }
 
 func (n *BlockTreeNode) BlockVersion() uint32 {
@@ -152,23 +154,64 @@ func (pindex *BlockTreeNode) GetMedianTimePast() uint32 {
 	return uint32(pmedian[pbegin+((pend-pbegin)/2)])
 }
 
-// FindFarthestNode looks for the farthest node.
+// FindFarthestNode looks for the farthest node - the one with the most work on the way to it.
+// The second returned value is the amount of this work (sum of the blocks' difficulties).
 func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, float64) {
-	//fmt.Println("FFN:", n.Height, "kids:", len(n.Childs))
-	if len(n.Childs) == 0 {
-		return n, 0
+	return n.findFarthest(func(x *BlockTreeNode) []*BlockTreeNode {
+		return x.Childs
+	})
+}
+
+// findFarthest does the job of FindFarthestNode, for the tree made of the nodes returned by kids().
+// It does not use recursion, as the tree is as deep as the blockchain is long.
+// Only a node having more than one child takes a record on the stack, and the work
+// is summed up separately for each branch, so its precision does not depend on the chain's length.
+func (n *BlockTreeNode) findFarthest(kids func(*BlockTreeNode) []*BlockTreeNode) (*BlockTreeNode, float64) {
+	type fork struct {
+		childs  []*BlockTreeNode
+		next    int            // index of the next child to check
+		best    *BlockTreeNode // the best node found so far, among the already checked children
+		bestPow float64
+		pow     float64 // work between the previous fork and this one (including)
 	}
-	res, pow := n.Childs[0].FindFarthestNode()
-	if len(n.Childs) > 1 {
-		for i := 1; i < len(n.Childs); i++ {
-			_re, _dept := n.Childs[i].FindFarthestNode()
-			if _dept > pow {
-				res = _re
-				pow = _dept
+	var stack []fork
+	var run float64 // work since the last fork
+	cur := n
+	for {
+		childs := kids(cur)
+		for len(childs) == 1 {
+			run += btc.GetDifficulty(cur.Bits())
+			cur = childs[0]
+			childs = kids(cur)
+		}
+		run += btc.GetDifficulty(cur.Bits())
+		if len(childs) > 1 {
+			stack = append(stack, fork{childs: childs, next: 1, pow: run})
+			cur = childs[0]
+			run = 0
+			continue
+		}
+
+		// the end of a branch - go back to the nearest fork that still has a child to check
+		res, pow := cur, run
+		for {
+			if len(stack) == 0 {
+				return res, pow
 			}
+			f := &stack[len(stack)-1]
+			if f.best == nil || pow > f.bestPow {
+				f.best, f.bestPow = res, pow
+			}
+			if f.next < len(f.childs) {
+				cur = f.childs[f.next]
+				f.next++
+				run = 0
+				break
+			}
+			res, pow = f.best, f.bestPow+f.pow
+			stack = stack[:len(stack)-1]
 		}
 	}
-	return res, pow + btc.GetDifficulty(n.Bits())
 }
 
 // FindPathTo returns the next node that leads to the given destination.

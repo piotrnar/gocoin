@@ -143,6 +143,7 @@ func VULe(b []byte) (le uint64, var_int_siz int) {
 
 func CalcMerkle(mtr [][32]byte) (res []byte, mutated bool) {
 	var j, i2 int
+	var buf [64]byte
 	for siz := len(mtr); siz > 1; siz = (siz + 1) / 2 {
 		for i := 0; i < siz; i += 2 {
 			if i+1 < siz-1 {
@@ -153,16 +154,10 @@ func CalcMerkle(mtr [][32]byte) (res []byte, mutated bool) {
 			if i != i2 && bytes.Equal(mtr[j+i][:], mtr[j+i2][:]) {
 				mutated = true
 			}
-			s := sha256.New()
-			s.Write(mtr[j+i][:])
-			s.Write(mtr[j+i2][:])
-			tmp := s.Sum(nil)
-			s.Reset()
-			s.Write(tmp)
-
-			var sum [32]byte
-			copy(sum[:], s.Sum(nil))
-			mtr = append(mtr, sum)
+			copy(buf[:32], mtr[j+i][:])
+			copy(buf[32:], mtr[j+i2][:])
+			sum := sha256.Sum256(buf[:])
+			mtr = append(mtr, sha256.Sum256(sum[:]))
 		}
 		j += siz
 	}
@@ -247,22 +242,22 @@ func ReadVLen(b io.Reader) (res uint64, e error) {
 
 // WriteVlen writes var_length field into the given writer.
 func WriteVlen(b io.Writer, var_len uint64) {
+	var buf [9]byte
+	b.Write(AppendVlen(buf[:0], var_len))
+}
+
+// AppendVlen appends var_length field to the given buffer.
+func AppendVlen(b []byte, var_len uint64) []byte {
 	if var_len < 0xfd {
-		b.Write([]byte{byte(var_len)})
-		return
+		return append(b, byte(var_len))
 	}
 	if var_len < 0x10000 {
-		b.Write([]byte{0xfd})
-		binary.Write(b, binary.LittleEndian, uint16(var_len))
-		return
+		return append(b, 0xfd, byte(var_len), byte(var_len>>8))
 	}
 	if var_len < 0x100000000 {
-		b.Write([]byte{0xfe})
-		binary.Write(b, binary.LittleEndian, uint32(var_len))
-		return
+		return binary.LittleEndian.AppendUint32(append(b, 0xfe), uint32(var_len))
 	}
-	b.Write([]byte{0xff})
-	binary.Write(b, binary.LittleEndian, var_len)
+	return binary.LittleEndian.AppendUint64(append(b, 0xff), var_len)
 }
 
 // WritePutLen writes opcode to put a specific number of bytes to stack.

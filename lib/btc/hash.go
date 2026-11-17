@@ -47,12 +47,9 @@ func init() {
 }
 
 func ShaHash(b []byte, out []byte) {
-	s := sha256.New()
-	s.Write(b[:])
-	tmp := s.Sum(nil)
-	s.Reset()
-	s.Write(tmp)
-	copy(out[:], s.Sum(nil))
+	h := sha256.Sum256(b)
+	h = sha256.Sum256(h[:])
+	copy(out, h[:])
 }
 
 // Sha2Sum returns hash: SHA256( SHA256( data ) ).
@@ -63,10 +60,9 @@ func Sha2Sum(b []byte) (out [32]byte) {
 }
 
 func RimpHash(in []byte, out []byte) {
-	sha := sha256.New()
-	sha.Write(in)
+	h := sha256.Sum256(in)
 	rim := ripemd160.New()
-	rim.Write(sha.Sum(nil)[:])
+	rim.Write(h[:])
 	copy(out, rim.Sum(nil))
 }
 

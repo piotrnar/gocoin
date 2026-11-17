@@ -105,6 +105,7 @@ type BlockDB struct {
 	maxidxfilepos, maxdatfilepos int64
 	max_data_file_size           uint64
 	mutex, disk_access           sync.Mutex
+	dat_names                    sync.Map // cache for dat_fname(): uint64 (index and the archive bit) -> string
 	maxdatfileidx                uint32
 	data_files_keep              uint32
 	data_files_backup            bool
@@ -197,7 +198,7 @@ func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 	db.mutex.Lock()
 	idx := bl.Hash.BIdx()
 	if rec, ok := db.blockIndex[idx]; !ok {
-		db.blockIndex[idx] = &oneBl{ipos: -1, trusted: bl.Trusted.Get()}
+		db.blockIndex[idx] = &oneBl{ipos: -1, trusted: bl.Trusted.Get(), olen: uint32(len(bl.Raw))}
 		db.addToCache(bl.Hash, bl.Raw, bl)
 		db.datToWrite += uint64(len(bl.Raw))
 		db.blocksToWrite <- oneB2W{idx: idx, h: bl.Hash.Hash, data: bl.Raw, height: height, txcount: uint32(bl.TxCount)}
@@ -605,6 +606,15 @@ func (db *BlockDB) BlockLength(hash *btc.Uint256, decode_if_needed bool) (length
 }
 
 func (db *BlockDB) dat_fname(idx uint32, archive bool) (fn string) {
+	// Which of the two naming schemes is in use for a given file never changes while we are running,
+	// so check it on the disk only once (not each time when a block is being read).
+	key := uint64(idx) << 1
+	if archive {
+		key |= 1
+	}
+	if v, ok := db.dat_names.Load(key); ok {
+		return v.(string)
+	}
 	dir := db.dirname
 	if archive {
 		dir += "oldat" + string(os.PathSeparator)
@@ -617,6 +627,7 @@ func (db *BlockDB) dat_fname(idx uint32, archive bool) (fn string) {
 	if _, er := os.Stat(fn); er != nil {
 		fn = dir + fmt.Sprintf("bl%08d.dat", idx)
 	}
+	db.dat_names.Store(key, fn)
 	return
 }
 

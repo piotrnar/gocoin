@@ -3,6 +3,7 @@ package chain
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -155,7 +156,21 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 	var wait4compl bool
 	var ver_err_cnt uint32
 
+	// The scripts are verified by a fixed number of workers (started when the first one is needed)
+	type verJob struct {
+		tx  *btc.Tx
+		idx int
+	}
+	var ver_jobs chan verJob
+	var ver_abort atomic.Bool
+
 	defer func() { // this is for when it returns from inside the range bl.Txs loop
+		if ver_jobs != nil {
+			if e != nil {
+				ver_abort.Store(true) // the block is invalid anyway, so skip the scripts still waiting
+			}
+			close(ver_jobs) // this makes the workers exit, after they are done with the queue
+		}
 		if wait4compl {
 			wg.Wait()
 		}
@@ -294,16 +309,27 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 			}
 
 			// second, verify the scrips:
-			if !tx_trusted { // run VerifyTxScript() in a parallel task
+			if !tx_trusted { // run VerifyTxScript() in parallel tasks
+				if ver_jobs == nil {
+					workers := runtime.GOMAXPROCS(0)
+					ver_jobs = make(chan verJob, 16*workers)
+					for ; workers > 0; workers-- {
+						go func() {
+							for job := range ver_jobs {
+								tx, i := job.tx, job.idx
+								if !ver_abort.Load() && !script.VerifyTxScript(tx.Spent_outputs[i].Pk_script,
+									&script.SigChecker{Amount: tx.Spent_outputs[i].Value, Idx: i, Tx: tx}, bl.VerifyFlags) {
+									atomic.AddUint32(&ver_err_cnt, 1)
+								}
+								wg.Done()
+							}
+						}()
+					}
+				}
+				wait4compl = true
 				for j := range tx.TxIn {
 					wg.Add(1)
-					go func(i int, tx *btc.Tx) {
-						if !script.VerifyTxScript(tx.Spent_outputs[i].Pk_script, &script.SigChecker{Amount: tx.Spent_outputs[i].Value, Idx: i, Tx: tx}, bl.VerifyFlags) {
-							atomic.AddUint32(&ver_err_cnt, 1)
-						}
-						wg.Done()
-					}(j, tx)
-					wait4compl = true
+					ver_jobs <- verJob{tx: tx, idx: j}
 				}
 			}
 		} else {
@@ -410,44 +436,61 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 // CheckTransactions checks transactions for consistency and finality.
 // Return nil if OK, otherwise a descripive error.
 func CheckTransactions(txs []*btc.Tx, height, btime uint32) (res error) {
+	check := func(tx *btc.Tx) error {
+		if er := tx.CheckTransaction(); er != nil {
+			return er
+		}
+		if !tx.IsFinal(height, btime) {
+			return errors.New("CheckTransactions() : not-final transaction - RPC_Result:bad-txns-nonfinal")
+		}
+		return nil
+	}
+
+	// Checking one tx takes very little, so do not start more tasks than it is worth.
+	const min_txs_per_task = 256
+	tasks := runtime.GOMAXPROCS(0)
+	if n := len(txs) / min_txs_per_task; n < tasks {
+		tasks = n
+	}
+	if tasks < 2 {
+		for _, tx := range txs {
+			if res = check(tx); res != nil {
+				return
+			}
+		}
+		return
+	}
+
 	var wg sync.WaitGroup
+	var mut sync.Mutex
+	var abort atomic.Bool // set when an error has already been reported
 
-	res_chan := make(chan error, 1)
-
-	for i := 0; len(res_chan) == 0 && i < len(txs); i++ {
+	per_task := (len(txs) + tasks - 1) / tasks
+	for offs := 0; offs < len(txs); offs += per_task {
+		end := offs + per_task
+		if end > len(txs) {
+			end = len(txs)
+		}
 		wg.Add(1)
-
-		go func(tx *btc.Tx) {
-			defer wg.Done() // call wg.Done() before returning from this goroutine
-
-			if len(res_chan) > 0 {
-				return // abort checking if a parallel error has already been reported
-			}
-
-			er := tx.CheckTransaction()
-
-			if len(res_chan) > 0 {
-				return // abort checking if a parallel error has already been reported
-			}
-
-			if er == nil && !tx.IsFinal(height, btime) {
-				er = errors.New("CheckTransactions() : not-final transaction - RPC_Result:bad-txns-nonfinal")
-			}
-
-			if er != nil {
-				select { // this is a non-blocking write to channel
-				case res_chan <- er:
-				default:
+		go func(txs []*btc.Tx) {
+			defer wg.Done()
+			for _, tx := range txs {
+				if abort.Load() {
+					return
+				}
+				if er := check(tx); er != nil {
+					abort.Store(true)
+					mut.Lock()
+					if res == nil {
+						res = er
+					}
+					mut.Unlock()
+					return
 				}
 			}
-		}(txs[i])
+		}(txs[offs:end])
 	}
-
 	wg.Wait() // wait for all the goroutines to complete
-
-	if len(res_chan) > 0 {
-		res = <-res_chan
-	}
 
 	return
 }
