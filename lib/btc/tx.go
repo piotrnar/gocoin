@@ -541,6 +541,7 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 	} else {
 		tx.NoWitSize = uint32(offs - 2 + 4) // -2 bytes for segwit marker and +4 bytes for the lock time at the end
 		tx.SegWit = make([][][]byte, len(tx.TxIn))
+		var has_witness bool
 		for i := range tx.TxIn {
 			le, n = VLen(b[offs:])
 			if n == 0 {
@@ -549,6 +550,9 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 			offs += n
 			if le < 0 || le > len(b)-offs {
 				return nil, 0
+			}
+			if le > 0 {
+				has_witness = true
 			}
 			tx.SegWit[i] = make([][]byte, le)
 			for idx = 0; idx < le; idx++ {
@@ -564,6 +568,11 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 				copy(tx.SegWit[i][idx], b[offs:offs+lel])
 				offs += lel
 			}
+		}
+		if !has_witness {
+			// It's illegal to encode witnesses when all witness stacks are empty
+			// (satoshi's client: "Superfluous witness record")
+			return nil, 0
 		}
 	}
 
@@ -615,6 +624,10 @@ func TxSize(b []byte) (offs int) {
 	offs += n
 	for le = txincnt; le > 0; le-- {
 		n = TxInSize(b[offs:])
+		if n <= 0 || n > len(b)-offs {
+			// must not continue without advancing, as the counter comes from the (untrusted) data
+			return 0
+		}
 		offs += n
 	}
 
@@ -626,6 +639,9 @@ func TxSize(b []byte) (offs int) {
 	offs += n
 	for ; le > 0; le-- {
 		n = TxOutSize(b[offs:])
+		if n <= 0 || n > len(b)-offs {
+			return 0
+		}
 		offs += n
 	}
 
@@ -641,11 +657,18 @@ func TxSize(b []byte) (offs int) {
 				if n == 0 {
 					return 0
 				}
-				offs += n + lel
+				offs += n
+				if lel > len(b)-offs {
+					return 0
+				}
+				offs += lel
 			}
 		}
 	}
 
+	if len(b)-offs < 4 {
+		return 0 // the tx does not fit in the buffer
+	}
 	offs += 4 // Lock_time
 
 	return

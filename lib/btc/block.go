@@ -140,6 +140,9 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 			bl.Txs[i] = tx
 			offs += n
 		}
+		if e == nil {
+			bl.cutTrailingData(offs)
+		}
 		return
 	}
 
@@ -203,7 +206,20 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 	}
 	wg.Wait()
 	bl.BlockWeight = uint(block_weight)
+	if e == nil {
+		bl.cutTrailingData(offs)
+	}
 	return
+}
+
+// cutTrailingData removes from bl.Raw any data that follows the last transaction.
+// Satoshi's client ignores such data when it decodes a block (it is not covered
+// by the block's hash), so we must not reject the block either - but neither
+// should we store it on disk nor send it to the other peers.
+func (bl *Block) cutTrailingData(end int) {
+	if end < len(bl.Raw) {
+		bl.Raw = bl.Raw[:end:end]
+	}
 }
 
 func (bl *Block) GetUserInfo() (res *BlockUserInfo) {

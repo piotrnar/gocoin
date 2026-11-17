@@ -635,8 +635,9 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 		BlockHash := btc.NewSha2Hash(b[56:136])
 
 		if (b[0] & BLOCK_INVALID) != 0 {
-			// just ignore it
+			// just ignore it (but it still occupies its place in the index file)
 			fmt.Println("BlockDB: Block", binary.LittleEndian.Uint32(b[36:40]), BlockHash.String(), "is invalid")
+			db.maxidxfilepos += 136
 			continue
 		}
 

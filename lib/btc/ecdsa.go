@@ -62,6 +62,7 @@ func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 			if nonce.Sign() > 0 && nonce.Cmp(&secp256k1.TheCurve.Order.Int) < 0 {
 				break
 			}
+			counter++ // try the next nonce, as otherwise it would loop forever
 		}
 	} else {
 		// Old method GoCoin nonce calculation

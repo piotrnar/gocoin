@@ -108,6 +108,34 @@ func (ch *Chain) CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 	return
 }
 
+// enforceBIP30 tells whether transactions of the block at the given height must be checked
+// for not overwriting the existing ones that have not been fully spent (BIP30).
+// Since BIP34 a coinbase (so also any other tx) cannot have the same ID as an earlier one,
+// until the height at which the number that BIP34 puts in the coinbase could match
+// a script of some coinbase mined before BIP34 (BIP34ImpliesBIP30Limit).
+// Unlike satoshi's client, we assume that the block at BIP34Height is the known one.
+func (ch *Chain) enforceBIP30(height uint32, hash *btc.Uint256) bool {
+	if ch.testnet4() && ch.testnet() {
+		return true // BIP34 was active from the first block, with no reference block hash
+	}
+	if height >= BIP34ImpliesBIP30Limit {
+		return true
+	}
+	if height > ch.Consensus.BIP34Height {
+		return false
+	}
+	if !ch.testnet() {
+		// The two blocks that had violated the rule before it was introduced
+		switch height {
+		case 91842:
+			return hash.String() != "00000000000a4d0a398161ffc163c503763b1f4360639393e0e4c8e300e0caec"
+		case 91880:
+			return hash.String() != "00000000000743f190a18c5577a3c2d2a1f610ae9601ac046a38084ccb7cd721"
+		}
+	}
+	return true
+}
+
 // commitTxs is ususually the most time consuming process when applying a new block.
 func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost uint32, e error) {
 	sumblockin := btc.GetBlockReward(changes.Height)
@@ -121,6 +149,7 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 
 	var seq_locks seqLocks
 	check_seq_locks := (bl.VerifyFlags & script.VER_CSV) != 0
+	check_bip30 := !bl.Trusted.Get() && ch.enforceBIP30(changes.Height, bl.Hash)
 
 	var wg sync.WaitGroup
 	var wait4compl bool
@@ -137,6 +166,21 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 		txoutsum, txinsum = 0, 0
 
 		sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount())
+
+		// BIP30 - do not allow overwriting of a transaction that still has unspent outputs
+		if check_bip30 && ch.Unspent.TxPresent(&tx.Hash) {
+			po := btc.TxPrevOut{Hash: tx.Hash.Hash}
+			for j := range tx.TxOut {
+				// satoshi's client does not keep unspendable outputs in its UTXO set, so skip them
+				if scr := tx.TxOut[j].Pk_script; len(scr) > 0 && scr[0] == btc.OP_RETURN || len(scr) > script.MAX_SCRIPT_SIZE {
+					continue
+				}
+				if po.Vout = uint32(j); ch.Unspent.UnspentGet(&po) != nil {
+					e = errors.New("commitTxs(): tried to overwrite transaction " + tx.Hash.String() + " - RPC_Result:bad-txns-BIP30")
+					return
+				}
+			}
+		}
 
 		// Check each tx for a valid input, except from the first one
 		if i > 0 {

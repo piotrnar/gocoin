@@ -85,6 +85,15 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (dos bool, maybelater bool, er err
 		return
 	}
 
+	// BIP94 (testnet4): check the timestamp of the first block of each difficulty
+	// adjustment interval against its parent, to prevent timewarp attacks.
+	if ch.Consensus.Enforce_BIP94 && bl.Height%targetInterval == 0 &&
+		int64(bl.BlockTime()) < int64(prevblk.Timestamp())-MaxTimewarp {
+		er = errors.New("CheckBlock: block's timestamp is too early on diff adjustment block - RPC_Result:time-timewarp-attack")
+		dos = true
+		return
+	}
+
 	if ver < 2 && bl.Height >= ch.Consensus.BIP34Height ||
 		ver < 3 && bl.Height >= ch.Consensus.BIP66Height ||
 		ver < 4 && bl.Height >= ch.Consensus.BIP65Height {

@@ -268,7 +268,7 @@ func WriteVlen(b io.Writer, var_len uint64) {
 // WritePutLen writes opcode to put a specific number of bytes to stack.
 func WritePutLen(b io.Writer, data_len uint32) {
 	switch {
-	case data_len <= OP_PUSHDATA1:
+	case data_len < OP_PUSHDATA1:
 		b.Write([]byte{byte(data_len)})
 
 	case data_len < 0x100:
@@ -428,9 +428,10 @@ func GetSigOpCount(scr []byte, fAccurate bool) (n uint) {
 	var lastOpcode byte = 0xff
 	for pc < len(scr) {
 		opcode, _, le, e := GetOpcode(scr[pc:])
-		if e != nil || opcode == 0x6a /* Break on OP_RETURN - Fix for testnet block #1971687/Txs[30] (too many sigops) */ {
+		if e != nil {
 			break
 		}
+		// Do not stop at OP_RETURN - satoshi's client keeps counting till the end of the script.
 		pc += le
 		if opcode == 0xac /*OP_CHECKSIG*/ || opcode == 0xad /*OP_CHECKSIGVERIFY*/ {
 			n++

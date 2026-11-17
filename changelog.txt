@@ -141,6 +141,14 @@
 * Client: the pending console output is now flushed (also to the log file) when exiting for a restart, with "-sc", with "-exitat ... -save=false" or after aborting the opening of the blockchain
 * Client: fixed the ".hashes" file of a discarded block staying in the temp folder till the shutdown, and an incomplete one (e.g. disk full) causing a panic or wrong tx hashes - they are now re-calculated
 * Client: print a warning when the auth key could not be saved (it would silently change at each restart)
+* Lib/btc: fixed a potential DoS attack vector: TxSize() could spin (practically forever) on a truncated tx with a huge inputs/outputs count, so a peer's corrupt "cmpctblock" or "blocktxn" message was able to freeze receiving of blocks; it also returns zero now if the tx does not fit in the buffer
+* Lib/btc: fixed WritePutLen() making a corrupt script when pushing exactly 76 bytes (it used the OP_PUSHDATA1 opcode as the length)
+* Lib/chain: fixed loading of the blocks index when it had a record of an invalid block - positions of all the later records were shifted, so after the restart new blocks were overwriting the last index records and the trusted/invalid flags were set for wrong blocks (could show up as missing blocks or "Last Block Hash not found" at a following start)
+* Lib/chain: fixed endless recursion (till the stack overflow) after a failed chain reorg, when the best known block was one with only the header received - now it goes back to the best block that has its data
+* Lib/chain: a block with no parent found in the blocks index is now always removed along with all its descendants - before it depended on a random order, and the descendants left in the index could later cause a panic
+* Lib/btc: fixed EcdsaSign() with RFC6979 looping forever if the first nonce was out of range (extremely unlikely) and HMAC_Init() hashing a key of exactly 64 bytes instead of using it directly (no such keys were in use)
+* Lib/chain: consensus rules aligned with Bitcoin Core: Testnet4 blocks starting a difficulty period are rejected if their timestamp is more than 10 minutes before the previous block (BIP94 timewarp protection); BIP30 is now enforced (a block cannot overwrite a transaction that still has unspent outputs) wherever Core checks it - Testnet4, heights up to BIP34 activation and from 1983702
+* Lib/btc: consensus rules aligned with Bitcoin Core: sigops are counted also after OP_RETURN (the old workaround was only needed because of the OP_PUSHDATA4 size bug, fixed earlier), a segwit-encoded transaction with all witness stacks empty is rejected, and any data following the last transaction of a received block is ignored (not stored on disk nor sent to peers)
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

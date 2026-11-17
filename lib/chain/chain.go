@@ -33,6 +33,7 @@ type Chain struct {
 		BIP34Height                         uint32
 		BIP65Height                         uint32
 		BIP66Height                         uint32
+		Enforce_BIP94                       bool // testnet4 only: the timewarp attack protection
 	}
 	blockTreeAccess  sync.Mutex
 	BlockIndexAccess sync.Mutex
@@ -72,6 +73,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 			ch.Consensus.Enforce_CSV = 1
 			ch.Consensus.Enforce_SEGWIT = 1
 			ch.Consensus.Enforce_Taproot = 1
+			ch.Consensus.Enforce_BIP94 = true
 		} else {
 			ch.Consensus.BIP34Height = 21111
 			ch.Consensus.BIP65Height = 581885

@@ -33,7 +33,7 @@ func (ch *Chain) loadBlockIndex() {
 	ch.Blocks.LoadBlockIndex(ch, nextBlock)
 	tlb := ch.Unspent.LastBlockHash
 	//fmt.Println("Building tree from", len(ch.BlockIndex), "nodes")
-	for k, v := range ch.BlockIndex {
+	for _, v := range ch.BlockIndex {
 		if AbortNow {
 			return
 		}
@@ -46,12 +46,12 @@ func (ch *Chain) loadBlockIndex() {
 		if !ok {
 			fmt.Println("ERROR: Block", v.Height, v.BlockHash.String(), "has no Parent")
 			fmt.Println("...", btc.NewUint256(v.BlockHeader[4:36]).String(), "- removing it from blocksDB")
-			delete(ch.BlockIndex, k)
-			continue
+			continue // it will be removed (along with its descendants) by removeDetachedNodes()
 		}
 		v.Parent = par
 		v.Parent.addChild(v)
 	}
+	ch.removeDetachedNodes()
 	if tlb == nil {
 		//fmt.Println("No last block - full rescan will be needed")
 		ch.SetLast(ch.BlockTreeRoot)
@@ -63,6 +63,39 @@ func (ch *Chain) loadBlockIndex() {
 			panic("Last Block Hash not found")
 		}
 		ch.SetLast(last)
+	}
+}
+
+// removeDetachedNodes removes from the block index all the nodes that are not
+// connected to the root of the tree (blocks with no parent and all their descendants).
+// The order in which the tree was being built does not matter here.
+func (ch *Chain) removeDetachedNodes() {
+	// first just count the nodes of the tree, as usually there is nothing to remove
+	var cnt int
+	stack := []*BlockTreeNode{ch.BlockTreeRoot}
+	for len(stack) > 0 {
+		n := stack[len(stack)-1]
+		stack = append(stack[:len(stack)-1], n.Childs...)
+		cnt++
+	}
+	if cnt == len(ch.BlockIndex) {
+		return
+	}
+
+	attached := make(map[*BlockTreeNode]struct{}, cnt)
+	stack = append(stack, ch.BlockTreeRoot)
+	for len(stack) > 0 {
+		n := stack[len(stack)-1]
+		stack = append(stack[:len(stack)-1], n.Childs...)
+		attached[n] = struct{}{}
+	}
+	for k, v := range ch.BlockIndex {
+		if _, ok := attached[v]; !ok {
+			if v.Parent != nil {
+				fmt.Println("ERROR: Block", v.Height, v.BlockHash.String(), "is not connected to the tree - removing it")
+			}
+			delete(ch.BlockIndex, k)
+		}
 	}
 }
 

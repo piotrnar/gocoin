@@ -100,7 +100,7 @@ type RFC6979_HMAC_SHA256 struct {
 func HMAC_Init(key []byte) (res *HMAC_SHA256) {
 	var rkey [64]byte
 	res = new(HMAC_SHA256)
-	if len(key) < 64 {
+	if len(key) <= 64 {
 		copy(rkey[:], key)
 	} else {
 		sha := sha256.New()

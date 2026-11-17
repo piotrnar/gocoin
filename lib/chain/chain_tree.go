@@ -95,10 +95,35 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	}
 
 	if !AbortNow && last != end {
-		end = ch.FindFarthestNodeLocked(ch.BlockTreeRoot)
-		fmt.Println("ParseTillBlock failed - now go to", end.Height)
-		ch.MoveToBlock(end)
+		// Go to the best block that we can actually get to (ignoring the nodes with only a header known).
+		ch.BlockIndexAccess.Lock()
+		nend, _ := ch.BlockTreeRoot.findFarthestCommitted()
+		ch.BlockIndexAccess.Unlock()
+		if nend == last || nend == end {
+			// Nothing better to go to - stay where we are, instead of trying the same thing forever.
+			fmt.Println("ParseTillBlock failed - staying at", last.Height)
+			return
+		}
+		fmt.Println("ParseTillBlock failed - now go to", nend.Height)
+		ch.MoveToBlock(nend)
 	}
+}
+
+// findFarthestCommitted works like FindFarthestNode, except that it only follows
+// the nodes which have their block's data (not only the header) already committed.
+func (n *BlockTreeNode) findFarthestCommitted() (res *BlockTreeNode, pow float64) {
+	res = n
+	for _, c := range n.Childs {
+		if c.TxCount == 0 {
+			continue // only the header is known
+		}
+		r, p := c.findFarthestCommitted()
+		p += btc.GetDifficulty(c.Bits())
+		if p > pow {
+			res, pow = r, p
+		}
+	}
+	return
 }
 
 func (n *BlockTreeNode) BlockVersion() uint32 {
