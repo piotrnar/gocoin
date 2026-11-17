@@ -824,6 +824,9 @@ func (c *OneConnection) Run() {
 
 	if !c.X.Incomming {
 		c.SendVersion()
+		common.CountSafe("NetConnOut")
+	} else {
+		common.CountSafe("NetConnIn")
 	}
 
 	c.Mutex.Lock()
