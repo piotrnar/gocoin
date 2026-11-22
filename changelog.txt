@@ -154,6 +154,7 @@
 * Lib/chain: looking for the best block (at startup and after a failed reorg) no longer uses recursion as deep as the chain is long, and counts the work of the last block too - so of two competing single blocks the one with the higher difficulty is chosen, not the first one found
 * Lib/chain: the names of the block data files are checked on the disk only once (not at each read of a block); BlockLength() returned zero for a compressed block that was still in the cache
 * Codebase: go.mod now declares Go 1.21, which the code already needed; added tests for lib/chain (blocks database, tree of blocks, accepting and rejecting of blocks, chain reorgs) and more for lib/btc
+* Client/WebUI/Miners: clicking on the "Others" slice (or its legend entry) of the chart did nothing - now it lists the blocks mined by all the small pools grouped there; pools below 1% are grouped there only when there are at least 3 of them (or more pools than chart colors), so one or two small ones get their own slices
 
 1.11.0 - 2025-11-13:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups

@@ -176,6 +176,7 @@ function refresh_mining_info() {
 var chart_colors = ["#4e79a7","#f28e2b","#e15759","#76b7b2","#59a14f",
 	"#edc948","#b07aa1","#ff9da7","#9c755f","#86bcb6","#d37295","#a0cbe8"]
 var CHART_MIN_FRAC = 0.01  // group smaller pools into "Others"
+var CHART_MIN_OTHERS = 3   // ... but only if there are at least that many of them
 
 var chart_slices = []
 var chart_hover = -1
@@ -186,22 +187,32 @@ function update_miners_chart(miners, block_count, avg_hashrate) {
 	chart_slices = []
 	var oth = null
 	var sorted = miners.slice().sort(function(a,b) {return b.Blocks-a.Blocks})
+	// group the small pools only when there are enough of them (or not enough colors)
+	var small_cnt = 0
+	for (var i=0; i<sorted.length; i++) {
+		if (sorted[i].Blocks/block_count < CHART_MIN_FRAC)  small_cnt++
+	}
+	var group = sorted.length>chart_colors.length || small_cnt>=CHART_MIN_OTHERS
 	for (var i=0; i<sorted.length; i++) {
 		var m = sorted[i]
 		var frac = m.Blocks/block_count
-		if (frac<CHART_MIN_FRAC || chart_slices.length>=chart_colors.length) {
+		if (group && (frac<CHART_MIN_FRAC || chart_slices.length>=chart_colors.length)) {
 			if (oth==null) {
-				oth = {name:"Others", frac:0, blocks:0, pools:0, color:"#8a8a8a"}
+				oth = {name:"Others", frac:0, blocks:0, pools:0, color:"#8a8a8a",
+					mnr:{Name:"Others", MinedBlocks:[]}}
 				chart_slices.push(oth)
 			}
 			oth.frac += frac
 			oth.blocks += m.Blocks
 			oth.pools++
+			oth.mnr.MinedBlocks = oth.mnr.MinedBlocks.concat(m.MinedBlocks)
 		} else {
 			chart_slices.push({name:m.Name, frac:frac, blocks:m.Blocks,
 				color:chart_colors[chart_slices.length], mnr:m})
 		}
 	}
+	// the grouped blocks as one list, the newest first (like each miner's own list)
+	if (oth!=null)  oth.mnr.MinedBlocks.sort(function(a,b) {return b.Height-a.Height})
 	draw_miners_chart()
 }
 
