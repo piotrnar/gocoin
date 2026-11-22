@@ -904,12 +904,6 @@ func (c *OneConnection) Run() {
 					c.Disconnect(false, "NoBlocks")
 					break
 				}
-				if strings.Contains(c.NodeAgent, "/Knots:") {
-					// It has been observed that most of these are performing badly
-					common.CountSafe("PeerDropKnots")
-					c.Disconnect(false, "Knots")
-					break
-				}
 			}
 
 			c.X.LastMinFeePerKByte = common.MinFeePerKB()
